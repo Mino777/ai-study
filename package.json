@@ -11,6 +11,7 @@
     "new-entry": "node scripts/new-entry.mjs"
   },
   "dependencies": {
+    "@shikijs/rehype": "^4.0.2",
     "flexsearch": "^0.8.212",
     "gray-matter": "^4.0.3",
     "mermaid": "^11.14.0",

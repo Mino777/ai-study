@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { compileMDX } from "next-mdx-remote/rsc";
 import remarkGfm from "remark-gfm";
+import rehypeShiki from "@shikijs/rehype";
 import { getEntry, getAllSlugs, getManifest } from "@/lib/content";
 import { SummaryCard } from "@/components/summary-card";
 import { mdxComponents } from "@/components/mdx-components";
@@ -71,7 +72,12 @@ export default async function WikiEntryPage({
       components: mdxComponents,
       options: {
         parseFrontmatter: false,
-        mdxOptions: { remarkPlugins: [remarkGfm] },
+        mdxOptions: {
+          remarkPlugins: [remarkGfm],
+          rehypePlugins: [
+            [rehypeShiki as never, { theme: "github-dark-default" }],
+          ],
+        },
       },
     });
     content = result.content;
