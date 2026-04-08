@@ -11,6 +11,7 @@ const PROJECTS = [
   {
     name: "Mino MoneyFlow",
     url: "https://mino-moneyflow.vercel.app/",
+    preview: "/projects/moneyflow-preview.svg",
     color: "#10b981",
     period: "2026.03 ~",
     stack: ["Next.js 16", "TypeScript", "Supabase", "Claude", "Gemini", "GPT", "Tailwind CSS 4"],
@@ -47,6 +48,7 @@ const PROJECTS = [
   {
     name: "Mino TaroSaju",
     url: "https://mino-tarosaju.vercel.app/",
+    preview: "/projects/tarosaju-preview.png",
     color: "#8b5cf6",
     period: "2026.02 ~",
     stack: ["Next.js 16", "TypeScript", "Supabase", "Claude Haiku", "Framer Motion", "Tailwind CSS 4"],
@@ -133,13 +135,12 @@ export default function ProjectsPage() {
                 rel="noopener noreferrer"
                 className="block rounded-[var(--radius-lg)] border border-border overflow-hidden mb-6 group relative"
               >
-                <div className="aspect-[16/9] bg-bg">
-                  <iframe
-                    src={project.url}
-                    className="w-full h-full pointer-events-none"
-                    loading="lazy"
-                    sandbox="allow-scripts allow-same-origin"
-                    title={project.name}
+                <div className="aspect-[16/9] bg-surface flex items-center justify-center">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={project.preview}
+                    alt={`${project.name} 미리보기`}
+                    className="w-full h-full object-cover"
                   />
                 </div>
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
