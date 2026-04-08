@@ -17,16 +17,16 @@ const CATEGORIES = [
   "frontend-ai",
 ];
 
-// 메인: iOS + Frontend AI. 백엔드/인프라는 곁다리.
+// 우선순위: AI 활용 방법론 > iOS/Frontend AI > 나머지
 const CATEGORY_PRIORITY = {
-  "ios-ai": 2.0,
-  "frontend-ai": 1.8,
-  "prompt-engineering": 1.5,
-  rag: 1.3,
-  agents: 1.3,
+  "prompt-engineering": 2.0,  // AI를 잘 쓰는 방법론이 최우선
+  agents: 1.8,                // 에이전트 활용도 방법론
+  rag: 1.8,                   // RAG도 핵심 방법론
+  "ios-ai": 1.5,              // iOS + AI 실무
+  "frontend-ai": 1.5,         // Frontend + AI 실무
+  evaluation: 1.2,            // 평가도 중요
   "fine-tuning": 1.0,
-  evaluation: 1.0,
-  infrastructure: 0.7,
+  infrastructure: 0.7,        // 곁다리
 };
 
 const CATEGORY_LABELS = {

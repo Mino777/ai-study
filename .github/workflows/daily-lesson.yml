@@ -40,7 +40,7 @@ jobs:
       - name: Check for changes
         id: changes
         run: |
-          git add content/ src/generated/
+          git add content/
           if git diff --cached --quiet; then
             echo "has_changes=false" >> $GITHUB_OUTPUT
           else
@@ -62,7 +62,7 @@ jobs:
           git config user.email "ai-tutor@ai-study.dev"
 
           git checkout -b "$BRANCH"
-          git add content/ src/generated/
+          git add content/
           git commit -m "📚 오늘의 학습: ${TOPIC}
 
           Category: ${CATEGORY}
