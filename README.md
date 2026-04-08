@@ -125,6 +125,21 @@ AI가 생성하는 모든 콘텐츠에 "자기 점검" 섹션 포함. 이해도 
 ### 2단계 주제 선택
 매일 아침 3개 주제를 Issue로 추천 → 번호로 선택하거나 자유 텍스트로 커스텀 주제 입력 → 선택한 주제로 콘텐츠 자동 생성.
 
+### TOC 스크롤 스파이
+위키 엔트리에서 h2/h3 헤딩을 자동 추출하여 우측에 고정 목차 표시. 스크롤에 따라 현재 위치 하이라이트. (xl 화면 이상)
+
+### RSS 피드
+`/feed.xml`로 최근 20개 엔트리를 RSS 구독 가능. 피드 리더에서 새 학습 콘텐츠를 추적.
+
+### 최근 업데이트 피드
+대시보드에 최근 5개 엔트리가 날짜와 함께 표시. 한눈에 최근 학습 현황 파악.
+
+### 주간 학습 리포트
+매주 일요일 자동으로 주간 학습 요약을 MDX로 생성. 이번 주 학습 엔트리, 카테고리별 분포, 다음 주 추천.
+
+### Vitest + CI
+prebuild 스크립트 단위 테스트 7개. PR마다 GitHub Actions에서 자동 테스트 + 빌드 검증.
+
 ## 기술 스택
 
 | 영역 | 기술 |
@@ -137,7 +152,8 @@ AI가 생성하는 모든 콘텐츠에 "자기 점검" 섹션 포함. 이해도 
 | Diagrams | Mermaid (dynamic import, client-side) |
 | Theme | next-themes (dark default) |
 | AI | Gemini 2.5 Flash (Google AI Studio) |
-| CI/CD | GitHub Actions (daily cron + issue comment trigger) |
+| Test | Vitest (manifest 단위 테스트) |
+| CI/CD | GitHub Actions (CI + daily lesson + weekly report) |
 | Deploy | Vercel (GitHub auto-deploy) |
 | Fonts | Satoshi (display) + Pretendard (body) + JetBrains Mono (code) |
 
