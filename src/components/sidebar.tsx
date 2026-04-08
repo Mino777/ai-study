@@ -78,7 +78,7 @@ export function Sidebar({ data }: SidebarProps) {
           <div key={category} className="mb-3">
             <button
               onClick={() => toggleCategory(category)}
-              className="flex w-full items-center gap-2 py-1.5 text-xs font-semibold uppercase tracking-wider text-muted hover:text-text transition-colors"
+              className="flex w-full items-center gap-2 py-1.5 text-xs font-semibold tracking-wider text-muted hover:text-text transition-colors"
             >
               <span
                 className="h-2 w-2 rounded-full shrink-0"
