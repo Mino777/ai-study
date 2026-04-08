@@ -158,9 +158,61 @@ function main() {
     }
   }
 
+  // Calculate streak
+  const dates = [...new Set(entries.map((e) => e.frontmatter.date))].sort().reverse();
+  let currentStreak = 0;
+  let longestStreak = 0;
+
+  if (dates.length > 0) {
+    // Current streak: count consecutive days backwards from today
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const dateSet = new Set(dates);
+
+    // Check from today backwards
+    let checkDate = new Date(today);
+    // If today has no entry, start from most recent entry date
+    const todayStr = checkDate.toISOString().split("T")[0];
+    if (!dateSet.has(todayStr)) {
+      checkDate = new Date(dates[0]);
+      checkDate.setHours(0, 0, 0, 0);
+    }
+
+    while (true) {
+      const dateStr = checkDate.toISOString().split("T")[0];
+      if (dateSet.has(dateStr)) {
+        currentStreak++;
+        checkDate.setDate(checkDate.getDate() - 1);
+      } else {
+        break;
+      }
+    }
+
+    // Longest streak: scan all dates
+    let streak = 1;
+    const sortedDates = [...dates].sort();
+    for (let i = 1; i < sortedDates.length; i++) {
+      const prev = new Date(sortedDates[i - 1]);
+      const curr = new Date(sortedDates[i]);
+      const diffDays = (curr - prev) / (1000 * 60 * 60 * 24);
+      if (diffDays === 1) {
+        streak++;
+      } else if (diffDays > 1) {
+        longestStreak = Math.max(longestStreak, streak);
+        streak = 1;
+      }
+    }
+    longestStreak = Math.max(longestStreak, streak);
+  }
+
   const manifest = {
     entries: entries.map((e) => ({ slug: e.slug, frontmatter: e.frontmatter })),
     graph: { nodes, edges },
+    streak: {
+      current: currentStreak,
+      longest: longestStreak,
+      lastActiveDate: dates[0] || null,
+    },
   };
 
   fs.mkdirSync(path.dirname(OUTPUT_FILE), { recursive: true });

@@ -79,4 +79,9 @@ export interface ContentManifest {
       target: string;
     }>;
   };
+  streak: {
+    current: number;
+    longest: number;
+    lastActiveDate: string | null;
+  };
 }

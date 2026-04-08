@@ -99,8 +99,47 @@ export default function DashboardPage() {
           학습 대시보드
         </h1>
 
+        {/* Learning Streak */}
+        {manifest.streak.current > 0 && (
+          <div className="rounded-[var(--radius-lg)] border border-accent/30 bg-accent/5 p-6 mb-8">
+            <div className="flex items-center gap-4">
+              <div className="text-4xl">🔥</div>
+              <div>
+                <div className="font-display text-2xl font-black text-text">
+                  연속 {manifest.streak.current}일째 학습 중!
+                </div>
+                <div className="text-sm text-muted mt-1">
+                  최장 기록: {manifest.streak.longest}일
+                  {manifest.streak.lastActiveDate && (
+                    <span className="ml-2">· 마지막 학습: {manifest.streak.lastActiveDate}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+            {manifest.streak.current >= 7 && (
+              <div className="flex gap-2 mt-4">
+                {manifest.streak.current >= 7 && (
+                  <span className="rounded-full bg-accent/10 border border-accent/20 px-3 py-1 text-xs font-semibold text-accent">
+                    🏅 7일 연속
+                  </span>
+                )}
+                {manifest.streak.current >= 14 && (
+                  <span className="rounded-full bg-accent/10 border border-accent/20 px-3 py-1 text-xs font-semibold text-accent">
+                    🏆 14일 연속
+                  </span>
+                )}
+                {manifest.streak.current >= 30 && (
+                  <span className="rounded-full bg-accent/10 border border-accent/20 px-3 py-1 text-xs font-semibold text-accent">
+                    👑 30일 연속
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Overall stats */}
-        <div className="grid grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
           <div className="rounded-[var(--radius-md)] border border-border bg-surface p-4 text-center">
             <div className="font-data text-2xl font-semibold text-text">{totalEntries}</div>
             <div className="text-xs text-muted mt-1">총 엔트리</div>
@@ -112,6 +151,10 @@ export default function DashboardPage() {
           <div className="rounded-[var(--radius-md)] border border-border bg-surface p-4 text-center">
             <div className="font-data text-2xl font-semibold text-text">{avgConfidence}</div>
             <div className="text-xs text-muted mt-1">평균 Confidence</div>
+          </div>
+          <div className="rounded-[var(--radius-md)] border border-border bg-surface p-4 text-center">
+            <div className="font-data text-2xl font-semibold text-text">{manifest.streak.current}</div>
+            <div className="text-xs text-muted mt-1">연속 학습</div>
           </div>
         </div>
 
