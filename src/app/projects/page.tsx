@@ -11,7 +11,6 @@ const PROJECTS = [
   {
     name: "Mino MoneyFlow",
     url: "https://mino-moneyflow.vercel.app/",
-    preview: "/projects/moneyflow-preview.svg",
     color: "#10b981",
     period: "2026.03 ~",
     stack: ["Next.js 16", "TypeScript", "Supabase", "Claude", "Gemini", "GPT", "Tailwind CSS 4"],
@@ -48,7 +47,6 @@ const PROJECTS = [
   {
     name: "Mino TaroSaju",
     url: "https://mino-tarosaju.vercel.app/",
-    preview: "/projects/tarosaju-preview.png",
     color: "#8b5cf6",
     period: "2026.02 ~",
     stack: ["Next.js 16", "TypeScript", "Supabase", "Claude Haiku", "Framer Motion", "Tailwind CSS 4"],
@@ -126,28 +124,15 @@ export default function ProjectsPage() {
                 </span>
               </div>
 
-              <p className="text-lg text-muted mb-6">{project.summary}</p>
+              <p className="text-lg text-muted mb-4">{project.summary}</p>
 
-              {/* Preview */}
               <a
                 href={project.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="block rounded-[var(--radius-lg)] border border-border overflow-hidden mb-6 group relative"
+                className="inline-flex items-center gap-2 rounded-[var(--radius-sm)] bg-surface border border-border px-4 py-2 text-sm font-medium text-accent hover:border-accent transition-colors mb-6"
               >
-                <div className="aspect-[16/9] bg-surface flex items-center justify-center">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={project.preview}
-                    alt={`${project.name} 미리보기`}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
-                  <span className="opacity-0 group-hover:opacity-100 transition-opacity bg-bg/90 text-text px-5 py-2.5 rounded-[var(--radius-md)] text-sm font-semibold backdrop-blur-sm">
-                    사이트 방문 →
-                  </span>
-                </div>
+                {project.url.replace("https://", "")} →
               </a>
 
               {/* Stats + Stack */}
