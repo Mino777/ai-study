@@ -3,9 +3,9 @@ import Link from "next/link";
 import { getManifest } from "@/lib/content";
 import { KnowledgeGraph } from "@/components/knowledge-graph";
 import { MobileCategories } from "@/components/mobile-categories";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { SearchDialog, SearchTrigger } from "@/components/search-dialog";
 import { GraphSearchProvider } from "@/contexts/graph-search-context";
+import { Header } from "@/components/header";
 
 function GraphSkeleton() {
   return (
@@ -50,28 +50,7 @@ export default function Home() {
   return (
     <GraphSearchProvider>
     <div className="min-h-screen bg-bg">
-      {/* Header overlay */}
-      <header className="fixed top-0 left-0 right-0 z-50 flex h-14 items-center justify-between px-4 bg-bg/50 backdrop-blur-sm border-b border-border/50">
-        <h1 className="font-display text-lg font-bold tracking-tight text-text">
-          AI Study Wiki
-        </h1>
-        <div className="flex items-center gap-3">
-          <SearchTrigger />
-          <Link href="/wiki" className="text-sm text-muted hover:text-text transition-colors hidden sm:block">
-            Wiki
-          </Link>
-          <Link href="/dashboard" className="text-sm text-muted hover:text-text transition-colors hidden sm:block">
-            Dashboard
-          </Link>
-          <Link href="/projects" className="text-sm text-muted hover:text-text transition-colors hidden sm:block">
-            Vibe Coding
-          </Link>
-          <Link href="/about" className="text-sm text-muted hover:text-text transition-colors hidden sm:block">
-            About
-          </Link>
-          <ThemeToggle />
-        </div>
-      </header>
+      <Header fixed />
 
       {/* Graph hero — desktop */}
       <div

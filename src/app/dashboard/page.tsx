@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { getManifest } from "@/lib/content";
-import { ThemeToggle } from "@/components/theme-toggle";
-import { SearchTrigger, SearchDialog } from "@/components/search-dialog";
+import { SearchDialog } from "@/components/search-dialog";
 import type { Category } from "@/lib/schema";
 import { GraphSearchProvider } from "@/contexts/graph-search-context";
+import { Header } from "@/components/header";
 
 const CATEGORY_LABELS: Record<string, string> = {
   "prompt-engineering": "Prompt Engineering",
@@ -92,24 +92,7 @@ export default function DashboardPage() {
   return (
     <GraphSearchProvider>
     <div className="min-h-screen bg-bg">
-      {/* Header */}
-      <header className="sticky top-0 z-50 h-14 border-b border-border bg-bg/80 backdrop-blur-sm">
-        <div className="flex h-full items-center justify-between px-4">
-          <Link
-            href="/"
-            className="font-display text-lg font-bold tracking-tight text-text hover:text-accent transition-colors"
-          >
-            AI Study Wiki
-          </Link>
-          <div className="flex items-center gap-3">
-            <SearchTrigger />
-            <Link href="/wiki" className="text-sm text-muted hover:text-text transition-colors">
-              Wiki
-            </Link>
-            <ThemeToggle />
-          </div>
-        </div>
-      </header>
+      <Header />
 
       <main className="mx-auto max-w-4xl px-6 py-8">
         <h1 className="font-display text-3xl font-black tracking-tight mb-8">
