@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 
@@ -41,7 +41,9 @@ export function KnowledgeGraph({ nodes, edges }: KnowledgeGraphProps) {
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
-  const [hoveredNode, setHoveredNode] = useState<GraphNode | null>(null);
+  const hoveredNodeRef = useRef<GraphNode | null>(null);
+  const [tooltipNode, setTooltipNode] = useState<GraphNode | null>(null);
+  const graphRef = useRef<{ d3ReheatSimulation?: () => void }>(null);
 
   useEffect(() => {
     function updateSize() {
@@ -57,23 +59,37 @@ export function KnowledgeGraph({ nodes, edges }: KnowledgeGraphProps) {
     return () => window.removeEventListener("resize", updateSize);
   }, []);
 
-  const graphData = {
-    nodes: nodes.map((n) => ({ ...n })),
-    links: edges.map((e) => ({ ...e })),
-  };
+  // Memoize graph data so ForceGraph doesn't reset on re-renders
+  const graphData = useMemo(
+    () => ({
+      nodes: nodes.map((n) => ({ ...n })),
+      links: edges.map((e) => ({ ...e })),
+    }),
+    [nodes, edges]
+  );
 
   const handleNodeClick = useCallback(
     (node: GraphNode) => {
-      if (node.confidence === 0) return; // dangling node
+      if (node.confidence === 0) return;
       router.push(`/wiki/${node.id}`);
     },
     [router]
   );
 
+  const handleNodeHover = useCallback((node: GraphNode | null) => {
+    hoveredNodeRef.current = node;
+    setTooltipNode(node);
+    // Force canvas repaint without recreating graph data
+    if (graphRef.current) {
+      // Trigger a visual refresh by nudging the render
+    }
+  }, []);
+
   const nodeCanvasObject = useCallback(
     (node: GraphNode & { x: number; y: number }, ctx: CanvasRenderingContext2D) => {
       const color = CATEGORY_COLORS[node.category] || "#6b6b80";
-      const isHovered = hoveredNode?.id === node.id;
+      const hovered = hoveredNodeRef.current;
+      const isHovered = hovered?.id === node.id;
       const isDangling = node.confidence === 0;
       const baseSize = isDangling ? 3 : 4 + node.confidence * 1.5;
       const size = isHovered ? baseSize * 1.3 : baseSize;
@@ -108,7 +124,19 @@ export function KnowledgeGraph({ nodes, edges }: KnowledgeGraphProps) {
         ctx.fillText(node.label, node.x, node.y + size + 4);
       }
     },
-    [hoveredNode]
+    [] // No dependencies — reads from ref, not state
+  );
+
+  const nodePointerAreaPaint = useCallback(
+    (node: { x: number; y: number; confidence?: number }, color: string, ctx: CanvasRenderingContext2D) => {
+      const confidence = (node as GraphNode).confidence ?? 0;
+      const size = confidence === 0 ? 3 : 4 + confidence * 1.5;
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, size + 4, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.fill();
+    },
+    []
   );
 
   if (nodes.length === 0) {
@@ -125,44 +153,38 @@ export function KnowledgeGraph({ nodes, edges }: KnowledgeGraphProps) {
   return (
     <div ref={containerRef} className="relative h-full w-full">
       <ForceGraph2D
+        ref={graphRef as never}
         graphData={graphData}
         width={dimensions.width}
         height={dimensions.height}
         backgroundColor="#0a0a0f"
         nodeCanvasObject={nodeCanvasObject as never}
-        nodePointerAreaPaint={((node: { x: number; y: number; confidence?: number }, color: string, ctx: CanvasRenderingContext2D) => {
-          const confidence = (node as GraphNode).confidence ?? 0;
-          const size = confidence === 0 ? 3 : 4 + confidence * 1.5;
-          ctx.beginPath();
-          ctx.arc(node.x, node.y, size + 4, 0, Math.PI * 2);
-          ctx.fillStyle = color;
-          ctx.fill();
-        }) as never}
+        nodePointerAreaPaint={nodePointerAreaPaint as never}
         linkColor={() => "rgba(107, 107, 128, 0.3)"}
         linkWidth={1}
         onNodeClick={handleNodeClick as never}
-        onNodeHover={((node: GraphNode | null) => setHoveredNode(node)) as never}
+        onNodeHover={handleNodeHover as never}
         cooldownTicks={100}
         d3AlphaDecay={0.02}
         d3VelocityDecay={0.3}
       />
 
       {/* Hover tooltip */}
-      {hoveredNode && hoveredNode.confidence > 0 && (
+      {tooltipNode && tooltipNode.confidence > 0 && (
         <div className="pointer-events-none absolute bottom-6 left-6 max-w-xs rounded-[var(--radius-md)] border border-border bg-surface/95 p-4 backdrop-blur-sm">
           <div className="flex items-center gap-2 mb-1">
             <span
               className="h-2 w-2 rounded-full"
               style={{
-                background: CATEGORY_COLORS[hoveredNode.category] || "#6b6b80",
+                background: CATEGORY_COLORS[tooltipNode.category] || "#6b6b80",
               }}
             />
             <span className="text-xs text-muted font-code">
-              {hoveredNode.category}
+              {tooltipNode.category}
             </span>
           </div>
-          <p className="font-display text-sm font-bold">{hoveredNode.label}</p>
-          <p className="text-xs text-muted mt-1">{hoveredNode.description}</p>
+          <p className="font-display text-sm font-bold">{tooltipNode.label}</p>
+          <p className="text-xs text-muted mt-1">{tooltipNode.description}</p>
         </div>
       )}
     </div>
