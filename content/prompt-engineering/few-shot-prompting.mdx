@@ -1,0 +1,40 @@
+---
+title: Few-shot Prompting
+category: prompt-engineering
+date: "2026-04-08"
+tags: [prompting, few-shot, in-context-learning, examples]
+confidence: 3
+connections: [prompt-engineering/chain-of-thought, rag/rag-overview]
+status: complete
+description: "예시를 통해 LLM의 출력을 가이드하는 기법. 적절한 예시 선택이 성능을 좌우한다."
+type: entry
+---
+
+## 핵심 개념
+
+Few-shot prompting은 LLM에게 원하는 출력 형식과 내용을 **예시를 통해** 보여주는 기법이다. Zero-shot(예시 없음)과 달리 모델이 패턴을 파악하고 따라할 수 있어 정확도가 크게 향상된다.
+
+## 기본 구조
+
+```
+[시스템 지시] + [예시 1] + [예시 2] + ... + [실제 질문]
+```
+
+예시의 수는 보통 2-5개가 적절하다. 너무 많으면 컨텍스트 윈도우를 낭비하고, 너무 적으면 패턴 파악이 어렵다.
+
+## 예시 선택 전략
+
+1. **다양성**: 다양한 케이스를 커버하는 예시를 선택
+2. **관련성**: 실제 질문과 유사한 도메인의 예시
+3. **난이도**: 쉬운 것부터 어려운 것 순으로 배치
+4. **형식 일관성**: 모든 예시가 동일한 출력 형식을 따르도록
+
+## Dynamic Few-shot
+
+정적 예시 대신 **입력에 따라 동적으로 예시를 선택**하는 방식. Vector DB에서 유사한 예시를 검색하여 프롬프트에 주입한다. RAG와 결합되는 패턴.
+
+## 한계
+
+- 컨텍스트 윈도우 제한으로 예시 수에 한계
+- 예시의 품질이 곧 출력의 품질을 결정
+- 복잡한 추론이 필요한 경우 Chain-of-Thought가 더 효과적

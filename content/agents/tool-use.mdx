@@ -1,0 +1,51 @@
+---
+title: Tool Use & Function Calling
+category: agents
+date: "2026-04-08"
+tags: [agents, tool-use, function-calling, api, mcp]
+confidence: 2
+connections: [prompt-engineering/chain-of-thought, agents/agent-architectures]
+status: in-progress
+description: "LLM이 외부 도구를 호출하여 실제 작업을 수행하는 패턴. API, DB, 파일시스템 연동."
+type: entry
+---
+
+## 핵심 개념
+
+Tool Use(Function Calling)는 LLM이 **텍스트 생성 외에 실제 행동을 수행**할 수 있게 하는 메커니즘이다. 모델이 "이 함수를 이런 인자로 호출해야겠다"고 판단하면 구조화된 함수 호출을 출력하고, 시스템이 실행하여 결과를 돌려준다.
+
+## 동작 흐름
+
+```
+User → LLM → "search_web(query='RAG best practices')" → System executes → Result → LLM → Final response
+```
+
+1. 사용 가능한 도구 목록을 시스템 프롬프트에 정의 (이름, 설명, 파라미터 스키마)
+2. LLM이 질문 분석 후 적절한 도구 선택
+3. 구조화된 JSON으로 함수 호출 출력
+4. 시스템이 실행하고 결과를 다시 LLM에 전달
+5. LLM이 결과를 해석하여 최종 응답 생성
+
+## 주요 프로토콜
+
+### OpenAI Function Calling
+가장 널리 쓰이는 구현. `tools` 배열로 함수 정의, `tool_calls`로 호출 결과 반환.
+
+### Anthropic Tool Use
+Claude의 구현. XML 기반 도구 정의. 병렬 도구 호출 지원.
+
+### MCP (Model Context Protocol)
+Anthropic이 제안한 표준 프로토콜. 도구, 리소스, 프롬프트를 표준화된 방식으로 LLM에 연결.
+
+## 설계 원칙
+
+- **도구 설명이 핵심**: LLM은 설명을 보고 도구를 선택. 설명이 모호하면 잘못된 도구 사용.
+- **최소 권한**: 필요한 도구만 노출. 너무 많으면 혼란.
+- **에러 핸들링**: 도구 실행 실패 시 LLM에게 에러를 전달하여 대안 탐색.
+- **확인 단계**: 위험한 작업(삭제, 결제 등)은 사용자 확인 필수.
+
+## 한계
+
+- 모델이 불필요하게 도구를 호출하는 "tool hallucination"
+- 복잡한 도구 체이닝에서의 에러 전파
+- 도구 응답이 너무 크면 컨텍스트 초과

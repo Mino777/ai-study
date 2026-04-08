@@ -1,0 +1,40 @@
+---
+title: Chain-of-Thought Prompting
+category: prompt-engineering
+date: "2026-04-08"
+tags: [prompting, chain-of-thought, reasoning, step-by-step]
+confidence: 3
+connections: [prompt-engineering/few-shot-prompting, agents/tool-use]
+status: complete
+description: "LLM이 단계적으로 추론하도록 유도하는 기법. '생각해봅시다'를 넘어선 구조적 추론."
+type: entry
+---
+
+## 핵심 개념
+
+Chain-of-Thought(CoT)는 LLM이 최종 답변에 도달하기 전 **중간 추론 과정을 명시적으로 생성**하도록 유도하는 기법이다. "Let's think step by step" 한 마디만으로도 수학, 논리, 코딩 문제의 정확도가 크게 향상된다.
+
+## 왜 효과적인가
+
+LLM은 기본적으로 다음 토큰을 예측하는 모델이다. 복잡한 문제를 한 번에 답하려 하면 중간 과정이 생략되어 오류가 발생한다. CoT는 중간 단계를 강제로 생성하게 하여 각 단계에서의 정확도를 높인다.
+
+## 변형들
+
+### Zero-shot CoT
+프롬프트 끝에 "단계별로 생각해보세요"를 추가하는 가장 간단한 형태.
+
+### Manual CoT
+Few-shot으로 추론 과정까지 포함된 예시를 제공.
+
+### Self-Consistency
+같은 질문에 대해 여러 CoT 경로를 생성하고, 다수결로 최종 답을 결정.
+
+### Tree-of-Thought
+여러 추론 경로를 트리 형태로 탐색. 각 분기점에서 유망한 방향을 평가.
+
+## 실전 팁
+
+- 복잡한 작업일수록 CoT 효과가 큼
+- 작은 모델에서는 효과가 제한적 (파라미터 100B+ 권장)
+- Few-shot + CoT 조합이 가장 강력
+- 출력 형식을 JSON으로 강제하면 CoT가 억제될 수 있음 — 추론은 별도 필드로 분리

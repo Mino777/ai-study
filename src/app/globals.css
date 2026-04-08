@@ -1,0 +1,187 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #0a0a0f;
+  --surface: #141420;
+  --surface-hover: #1c1c2e;
+  --border: #1e1e30;
+  --text: #e8e8ed;
+  --muted: #6b6b80;
+  --accent: #3b82f6;
+  --accent-hover: #2563eb;
+
+  /* Category colors (= Graph node colors) */
+  --cat-prompt: #f59e0b;
+  --cat-rag: #10b981;
+  --cat-agents: #8b5cf6;
+  --cat-finetune: #ec4899;
+  --cat-eval: #06b6d4;
+  --cat-infra: #f97316;
+
+  /* Semantic */
+  --success: #10b981;
+  --warning: #f59e0b;
+  --error: #ef4444;
+  --info: #3b82f6;
+
+  /* Radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+}
+
+[data-theme="light"] {
+  --bg: #fafafa;
+  --surface: #ffffff;
+  --surface-hover: #f0f0f5;
+  --text: #1a1a2e;
+  --muted: #6b6b80;
+  --border: #e0e0e8;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-cat-prompt: var(--cat-prompt);
+  --color-cat-rag: var(--cat-rag);
+  --color-cat-agents: var(--cat-agents);
+  --color-cat-finetune: var(--cat-finetune);
+  --color-cat-eval: var(--cat-eval);
+  --color-cat-infra: var(--cat-infra);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-error: var(--error);
+  --color-info: var(--info);
+  --font-display: 'Satoshi', sans-serif;
+  --font-body: 'Pretendard Variable', 'Pretendard', sans-serif;
+  --font-code: 'JetBrains Mono', monospace;
+  --font-data: 'Geist', sans-serif;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  line-height: 1.7;
+}
+
+::selection {
+  background: rgba(59, 130, 246, 0.3);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
+
+/* MDX prose styles */
+.prose-custom h2 {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-top: 2.5rem;
+  margin-bottom: 1rem;
+  color: var(--text);
+}
+.prose-custom h3 {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+  color: var(--text);
+}
+.prose-custom p {
+  margin-bottom: 1rem;
+  color: var(--text);
+}
+.prose-custom a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.prose-custom a:hover {
+  color: var(--accent-hover);
+}
+.prose-custom ul, .prose-custom ol {
+  margin-bottom: 1rem;
+  padding-left: 1.5rem;
+}
+.prose-custom li {
+  margin-bottom: 0.25rem;
+}
+.prose-custom strong {
+  font-weight: 600;
+  color: var(--text);
+}
+.prose-custom code {
+  font-family: var(--font-code);
+  font-size: 0.875em;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.15em 0.4em;
+}
+.prose-custom pre {
+  font-family: var(--font-code);
+  font-size: 0.875rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  overflow-x: auto;
+}
+.prose-custom pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: inherit;
+}
+.prose-custom table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1.5rem;
+  font-size: 0.875rem;
+}
+.prose-custom th {
+  text-align: left;
+  font-weight: 600;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 2px solid var(--border);
+  color: var(--text);
+}
+.prose-custom td {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+}
+.prose-custom blockquote {
+  border-left: 3px solid var(--accent);
+  padding-left: 1rem;
+  margin-bottom: 1rem;
+  color: var(--muted);
+  font-style: italic;
+}
+.prose-custom hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 2rem 0;
+}
