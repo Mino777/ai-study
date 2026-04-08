@@ -89,5 +89,4 @@ jobs:
 
           > 수정한 부분 = 당신의 학습 기록 (git diff로 추적됩니다)" \
             --base main \
-            --head "$BRANCH" \
-            --label "ai-lesson"
+            --head "$BRANCH"
