@@ -23,7 +23,7 @@ const CATEGORIES = [
   "infrastructure",
 ];
 
-const REQUIRED_FIELDS = ["title", "category", "date", "tags", "confidence", "description"];
+const REQUIRED_FIELDS = ["title", "category", "date", "tags", "description"];
 
 function findMdxFiles(dir) {
   const results = [];
@@ -100,9 +100,11 @@ function main() {
     }
 
     // Defaults
+    data.confidence = data.confidence || 1;
     data.connections = data.connections || [];
     data.status = data.status || "draft";
     data.type = data.type || "entry";
+    data.tags = data.tags || [];
 
     entries.push({ slug, frontmatter: data });
   }
@@ -205,6 +207,44 @@ function main() {
     longestStreak = Math.max(longestStreak, streak);
   }
 
+  // Calculate stats
+  const categoryStats = {};
+  for (const cat of CATEGORIES) {
+    const catEntries = entries.filter((e) => e.frontmatter.category === cat);
+    categoryStats[cat] = {
+      count: catEntries.length,
+      avgConfidence: catEntries.length > 0
+        ? +(catEntries.reduce((s, e) => s + e.frontmatter.confidence, 0) / catEntries.length).toFixed(1)
+        : 0,
+      complete: catEntries.filter((e) => e.frontmatter.status === "complete").length,
+    };
+  }
+
+  // Weekly stats (last 4 weeks)
+  const weeklyStats = [];
+  const now = new Date();
+  for (let w = 0; w < 4; w++) {
+    const weekEnd = new Date(now);
+    weekEnd.setDate(weekEnd.getDate() - w * 7);
+    const weekStart = new Date(weekEnd);
+    weekStart.setDate(weekStart.getDate() - 7);
+    const startStr = weekStart.toISOString().split("T")[0];
+    const endStr = weekEnd.toISOString().split("T")[0];
+    const weekEntries = entries.filter((e) => e.frontmatter.date >= startStr && e.frontmatter.date <= endStr);
+    weeklyStats.push({
+      week: w === 0 ? "이번 주" : `${w}주 전`,
+      count: weekEntries.length,
+      startDate: startStr,
+      endDate: endStr,
+    });
+  }
+
+  // Recent entries (last 5)
+  const recentEntries = [...entries]
+    .sort((a, b) => b.frontmatter.date.localeCompare(a.frontmatter.date))
+    .slice(0, 5)
+    .map((e) => ({ slug: e.slug, title: e.frontmatter.title, date: e.frontmatter.date, category: e.frontmatter.category }));
+
   const manifest = {
     entries: entries.map((e) => ({ slug: e.slug, frontmatter: e.frontmatter })),
     graph: { nodes, edges },
@@ -212,6 +252,16 @@ function main() {
       current: currentStreak,
       longest: longestStreak,
       lastActiveDate: dates[0] || null,
+    },
+    stats: {
+      totalEntries: entries.length,
+      totalComplete: entries.filter((e) => e.frontmatter.status === "complete").length,
+      avgConfidence: entries.length > 0
+        ? +(entries.reduce((s, e) => s + e.frontmatter.confidence, 0) / entries.length).toFixed(1)
+        : 0,
+      categoryStats,
+      weeklyStats,
+      recentEntries,
     },
   };
 

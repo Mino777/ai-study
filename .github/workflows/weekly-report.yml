@@ -1,0 +1,51 @@
+name: "📊 Weekly Learning Report"
+
+on:
+  schedule:
+    # 매주 일요일 21:00 KST (UTC 12:00)
+    - cron: "0 12 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  generate-report:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate weekly report
+        id: report
+        run: node scripts/generate-weekly-report.mjs
+
+      - name: Check for changes
+        id: changes
+        run: |
+          git add content/
+          if git diff --cached --quiet; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit and push
+        if: steps.changes.outputs.has_changes == 'true'
+        run: |
+          git config user.name "Mino777"
+          git config user.email "jomino7777@gmail.com"
+          git add content/
+          git commit -m "📊 ${{ steps.report.outputs.title }}"
+          git push origin main

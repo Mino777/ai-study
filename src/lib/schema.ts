@@ -46,7 +46,7 @@ export const frontmatterSchema = z.object({
   category: z.enum(CATEGORIES),
   date: z.string(),
   tags: z.array(z.string()),
-  confidence: z.number().min(1).max(5),
+  confidence: z.number().min(1).max(5).default(1),
   connections: z.array(z.string()).default([]),
   status: z.enum(["draft", "in-progress", "complete"]).default("draft"),
   description: z.string(),
@@ -83,5 +83,13 @@ export interface ContentManifest {
     current: number;
     longest: number;
     lastActiveDate: string | null;
+  };
+  stats: {
+    totalEntries: number;
+    totalComplete: number;
+    avgConfidence: number;
+    categoryStats: Record<string, { count: number; avgConfidence: number; complete: number }>;
+    weeklyStats: Array<{ week: string; count: number; startDate: string; endDate: string }>;
+    recentEntries: Array<{ slug: string; title: string; date: string; category: string }>;
   };
 }
