@@ -176,8 +176,8 @@ async function generateMDX(topic, manifest) {
     ? "\n대상 독자: 프론트엔드 개발자 (웹/모바일). React/Next.js/React Native 코드 예제 중심. 실무 적용 패턴 위주."
     : "\n대상 독자: iOS/프론트엔드 개발자가 AI를 실무에 적용하려는 맥락. 최신 트렌드와 실무 사용 사례 중심.";
 
-  const prompt = `당신은 AI 하네스 엔지니어링 전문 기술 블로거입니다.
-다음 주제에 대한 기술 블로그 글을 작성하세요.
+  const prompt = `다음 주제에 대한 기술 블로그 글을 작성하세요.
+인사말이나 자기소개 없이 바로 본문부터 시작하세요.
 
 주제: ${topic.title} (카테고리: ${CATEGORY_LABELS[topic.category]})
 ${contextNote}
