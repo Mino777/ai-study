@@ -1,46 +1,22 @@
-name: "🔄 Vercel Deploy Retry"
+name: "🔄 Vercel Redeploy"
 
 on:
-  # 30분마다 체크 (하루 48회, 약 48분 소비)
-  schedule:
-    - cron: "*/30 * * * *"
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  retry-deploy:
+  redeploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
       - name: Install Vercel CLI
         run: npm install -g vercel@latest
 
-      - name: Check and retry deploy
+      - name: Deploy to production
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-        run: |
-          # 최근 배포 상태 확인
-          STATUS=$(vercel ls --token "$VERCEL_TOKEN" --scope team_yeeDuapzToGaBetRXoV2rgXW 2>&1 | head -5 | grep -oE "Ready|Error|Queued|Building" | head -1)
-          echo "Latest deploy status: $STATUS"
-
-          if [ "$STATUS" = "Ready" ]; then
-            echo "✅ Latest deploy is healthy. No retry needed."
-            exit 0
-          fi
-
-          echo "🔄 Deploying to Vercel production..."
-          vercel deploy --prod \
-            --token "$VERCEL_TOKEN" \
-            --yes \
-            2>&1
-
-          echo "✅ Deploy triggered."
+        run: vercel deploy --prod --token "$VERCEL_TOKEN" --yes
