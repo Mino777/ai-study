@@ -53,7 +53,7 @@ function loadTopicPool() {
 
 // ─── 2. Topic recommendation engine ─────────────────────────────
 
-function recommendTopic(manifest, topicPool) {
+function recommendTopics(manifest, topicPool, count = 3) {
   const existingSlugs = new Set(manifest.entries.map((e) => e.slug));
   const categoryEntries = {};
   const categoryConfidence = {};
@@ -142,16 +142,14 @@ function recommendTopic(manifest, topicPool) {
   // Sort by score descending, random tiebreak
   candidates.sort((a, b) => b.score - a.score || Math.random() - 0.5);
 
-  const selected = candidates[0];
-  console.log(`📚 Selected topic: ${selected.slug} (score: ${selected.score}, source: ${selected.source})`);
-
-  // Find related existing entries for connections
-  const relatedSlugs = manifest.entries
-    .filter((e) => e.frontmatter.category === selected.category)
-    .map((e) => e.slug)
-    .slice(0, 3);
-
-  return { ...selected, connections: relatedSlugs };
+  // Return top N with connections
+  return candidates.slice(0, count).map((selected) => {
+    const relatedSlugs = manifest.entries
+      .filter((e) => e.frontmatter.category === selected.category)
+      .map((e) => e.slug)
+      .slice(0, 3);
+    return { ...selected, connections: relatedSlugs };
+  });
 }
 
 // ─── 3. Generate MDX with Gemini ────────────────────────────────
@@ -275,33 +273,75 @@ function writeMDX(topic, mdxContent) {
 
 // ─── Main ───────────────────────────────────────────────────────
 
-async function main() {
-  console.log("\n🎓 AI 과외 선생님 — 오늘의 학습 생성\n");
-
-  // Regenerate manifest first
+async function initManifest() {
   const { execSync } = await import("child_process");
   try {
     execSync("node scripts/generate-content-manifest.mjs", { stdio: "inherit" });
   } catch {
     console.warn("⚠️  Manifest generation had warnings, continuing...");
   }
+  return { manifest: loadManifest(), topicPool: loadTopicPool() };
+}
 
-  const manifest = loadManifest();
-  const topicPool = loadTopicPool();
-
+// Mode 1: suggest 3 topics (for daily issue)
+async function suggest() {
+  const { manifest, topicPool } = await initManifest();
   console.log(`📊 현재: ${manifest.entries.length}개 엔트리\n`);
 
-  const topic = recommendTopic(manifest, topicPool);
+  const topics = recommendTopics(manifest, topicPool, 3);
+
+  if (topics.length === 0) {
+    console.log("❌ No topics available.");
+    process.exit(0);
+  }
+
+  console.log("📚 오늘의 추천 주제 3가지:\n");
+  topics.forEach((t, i) => {
+    console.log(`  ${i + 1}. [${CATEGORY_LABELS[t.category]}] ${t.title} (score: ${t.score.toFixed(1)})`);
+  });
+
+  // Output for GitHub Actions
+  if (process.env.GITHUB_OUTPUT) {
+    topics.forEach((t, i) => {
+      fs.appendFileSync(process.env.GITHUB_OUTPUT, `topic_${i + 1}_title=${t.title}\n`);
+      fs.appendFileSync(process.env.GITHUB_OUTPUT, `topic_${i + 1}_slug=${t.slug}\n`);
+      fs.appendFileSync(process.env.GITHUB_OUTPUT, `topic_${i + 1}_category=${t.category}\n`);
+    });
+  }
+
+  return topics;
+}
+
+// Mode 2: generate a specific topic (after user picks one)
+async function generate(slug) {
+  const { manifest, topicPool } = await initManifest();
+
+  // Find the topic in candidates
+  const allTopics = recommendTopics(manifest, topicPool, 100);
+  let topic = allTopics.find((t) => t.slug === slug);
+
+  if (!topic) {
+    // Parse slug manually
+    const parts = slug.split("/");
+    const category = parts[0];
+    const topicSlug = parts.slice(1).join("/");
+    const relatedSlugs = manifest.entries
+      .filter((e) => e.frontmatter.category === category)
+      .map((e) => e.slug)
+      .slice(0, 3);
+    topic = { slug, category, topicSlug, title: topicSlug.replace(/-/g, " "), connections: relatedSlugs };
+  }
+
+  console.log(`\n🎓 생성 중: ${topic.title} (${CATEGORY_LABELS[topic.category]})\n`);
+
   const mdxContent = await generateMDX(topic, manifest);
   const filePath = writeMDX(topic, mdxContent);
 
-  // Output for GitHub Actions
   const relativePath = path.relative(process.cwd(), filePath);
   console.log(`\n📁 Generated: ${relativePath}`);
   console.log(`📌 Topic: ${topic.title}`);
   console.log(`📂 Category: ${CATEGORY_LABELS[topic.category]}`);
 
-  // Set output for GitHub Actions
   if (process.env.GITHUB_OUTPUT) {
     fs.appendFileSync(process.env.GITHUB_OUTPUT, `file_path=${relativePath}\n`);
     fs.appendFileSync(process.env.GITHUB_OUTPUT, `topic_title=${topic.title}\n`);
@@ -309,7 +349,17 @@ async function main() {
   }
 }
 
-main().catch((err) => {
-  console.error("❌ Fatal error:", err.message);
+// CLI entry point
+const args = process.argv.slice(2);
+const mode = args[0] || "suggest";
+
+if (mode === "suggest") {
+  suggest().catch((err) => { console.error("❌", err.message); process.exit(1); });
+} else if (mode === "generate") {
+  const slug = args[1];
+  if (!slug) { console.error("❌ Usage: generate-lesson.mjs generate <slug>"); process.exit(1); }
+  generate(slug).catch((err) => { console.error("❌", err.message); process.exit(1); });
+} else {
+  console.error(`❌ Unknown mode: ${mode}. Use "suggest" or "generate <slug>"`);
   process.exit(1);
-});
+}
