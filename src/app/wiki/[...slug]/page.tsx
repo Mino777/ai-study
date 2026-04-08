@@ -15,6 +15,8 @@ const CATEGORY_COLORS: Record<string, string> = {
   "fine-tuning": "var(--cat-finetune)",
   evaluation: "var(--cat-eval)",
   infrastructure: "var(--cat-infra)",
+  "ios-ai": "var(--cat-ios-ai)",
+  "frontend-ai": "var(--cat-frontend-ai)",
 };
 
 export function generateStaticParams() {

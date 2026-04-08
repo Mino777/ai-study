@@ -16,6 +16,8 @@ const CATEGORIES = [
   "agents",
   "fine-tuning",
   "evaluation",
+  "ios-ai",
+  "frontend-ai",
   "infrastructure",
 ];
 

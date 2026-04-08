@@ -1,0 +1,98 @@
+{
+  "prompt-engineering": [
+    "system-prompting",
+    "prompt-chaining",
+    "output-formatting",
+    "role-prompting",
+    "context-window-management",
+    "prompt-injection-defense",
+    "temperature-and-sampling",
+    "prompt-versioning",
+    "multimodal-prompting",
+    "prompt-testing-and-evaluation"
+  ],
+  "rag": [
+    "reranking",
+    "hybrid-search",
+    "chunking-strategies",
+    "embedding-models",
+    "query-expansion",
+    "parent-document-retrieval",
+    "contextual-compression",
+    "multi-modal-rag",
+    "rag-for-mobile-apps",
+    "on-device-rag"
+  ],
+  "agents": [
+    "agent-architectures",
+    "planning-patterns",
+    "memory-systems",
+    "multi-agent-communication",
+    "human-in-the-loop",
+    "react-pattern",
+    "agent-evaluation",
+    "autonomous-agents",
+    "mcp-model-context-protocol",
+    "ai-agent-in-ios-apps"
+  ],
+  "fine-tuning": [
+    "lora",
+    "qlora",
+    "dataset-preparation",
+    "evaluation-after-finetune",
+    "when-to-finetune",
+    "rlhf",
+    "dpo",
+    "synthetic-data-generation",
+    "core-ml-custom-models",
+    "on-device-fine-tuning"
+  ],
+  "evaluation": [
+    "llm-as-judge",
+    "ragas-framework",
+    "human-eval",
+    "a-b-testing-llm",
+    "benchmark-design",
+    "hallucination-detection",
+    "toxicity-evaluation",
+    "cost-quality-tradeoff",
+    "user-feedback-loop",
+    "llm-observability-metrics"
+  ],
+  "infrastructure": [
+    "model-serving",
+    "prompt-caching",
+    "cost-optimization",
+    "observability-for-llm",
+    "rate-limiting-patterns",
+    "gateway-patterns",
+    "model-routing",
+    "batch-processing",
+    "edge-ai-deployment",
+    "ai-sdk-integration-patterns"
+  ],
+  "ios-ai": [
+    "core-ml-introduction",
+    "apple-intelligence-api",
+    "on-device-llm-ios",
+    "vision-framework-with-ai",
+    "natural-language-framework",
+    "create-ml-training",
+    "ai-powered-swift-apps",
+    "siri-intents-with-llm",
+    "ios-mlx-swift",
+    "arkit-ai-integration"
+  ],
+  "frontend-ai": [
+    "ai-sdk-vercel",
+    "streaming-ui-patterns",
+    "ai-chatbot-nextjs",
+    "react-native-ai-integration",
+    "web-llm-browser",
+    "ai-powered-form-validation",
+    "real-time-translation-app",
+    "ai-image-generation-frontend",
+    "voice-ai-web-app",
+    "ai-search-autocomplete"
+  ]
+}

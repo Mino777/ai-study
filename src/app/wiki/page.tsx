@@ -23,6 +23,8 @@ const CATEGORY_COLORS: Record<string, string> = {
   "fine-tuning": "#ec4899",
   evaluation: "#06b6d4",
   infrastructure: "#f97316",
+  "ios-ai": "#3b82f6",
+  "frontend-ai": "#a855f7",
 };
 
 const CONFIDENCE_LABELS = ["", "들어봤다", "이해했다", "적용했다", "깊이 안다", "가르칠 수 있다"];

@@ -16,6 +16,8 @@ const CATEGORY_COLORS: Record<string, string> = {
   "fine-tuning": "var(--cat-finetune)",
   evaluation: "var(--cat-eval)",
   infrastructure: "var(--cat-infra)",
+  "ios-ai": "var(--cat-ios-ai)",
+  "frontend-ai": "var(--cat-frontend-ai)",
 };
 
 const CONFIDENCE_LABELS = ["", "들어봤다", "이해했다", "적용했다", "깊이 안다", "가르칠 수 있다"];

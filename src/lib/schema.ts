@@ -7,6 +7,8 @@ export const CATEGORIES = [
   "fine-tuning",
   "evaluation",
   "infrastructure",
+  "ios-ai",
+  "frontend-ai",
 ] as const;
 
 export type Category = (typeof CATEGORIES)[number];
@@ -18,6 +20,8 @@ export const CATEGORY_LABELS: Record<Category, string> = {
   "fine-tuning": "Fine-tuning",
   evaluation: "Evaluation",
   infrastructure: "Infrastructure",
+  "ios-ai": "iOS + AI",
+  "frontend-ai": "Frontend + AI",
 };
 
 export const CATEGORY_COLORS: Record<Category, string> = {
@@ -27,6 +31,8 @@ export const CATEGORY_COLORS: Record<Category, string> = {
   "fine-tuning": "#ec4899",
   evaluation: "#06b6d4",
   infrastructure: "#f97316",
+  "ios-ai": "#3b82f6",
+  "frontend-ai": "#a855f7",
 };
 
 export const frontmatterSchema = z.object({

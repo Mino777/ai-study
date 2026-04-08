@@ -8,9 +8,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "new-entry": "node scripts/new-entry.mjs"
+    "new-entry": "node scripts/new-entry.mjs",
+    "generate-lesson": "node scripts/generate-lesson.mjs"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@shikijs/rehype": "^4.0.2",
     "flexsearch": "^0.8.212",
     "gray-matter": "^4.0.3",
