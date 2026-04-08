@@ -17,6 +17,13 @@ export default function RootLayout({
   return (
     <html lang="ko" suppressHydrationWarning>
       <head>
+        {/* Font preconnect */}
+        <link rel="preconnect" href="https://api.fontshare.com" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* RSS */}
+        <link rel="alternate" type="application/rss+xml" title="AI Study Wiki" href="/feed.xml" />
         {/* Satoshi — display font */}
         <link
           href="https://api.fontshare.com/v2/css?f[]=satoshi@700,900&display=swap"

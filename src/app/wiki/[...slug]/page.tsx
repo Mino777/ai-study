@@ -7,6 +7,7 @@ import { getEntry, getAllSlugs, getManifest } from "@/lib/content";
 import { SummaryCard } from "@/components/summary-card";
 import { mdxComponents } from "@/components/mdx-components";
 import { EntryNav } from "@/components/entry-nav";
+import { TableOfContents } from "@/components/toc";
 import Link from "next/link";
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -115,6 +116,7 @@ export default async function WikiEntryPage({
       <SummaryCard frontmatter={entry.frontmatter} slug={slug} readingTime={readingTime} />
 
       <div className="prose-custom">{content}</div>
+      <TableOfContents />
 
       {/* Connected entries */}
       {connections.length > 0 && (

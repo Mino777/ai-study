@@ -160,6 +160,24 @@ export default function DashboardPage() {
 
         {/* Category progress */}
         <section className="mb-10">
+          <h2 className="font-display text-xl font-bold mb-4">최근 업데이트</h2>
+          <div className="space-y-2 mb-10">
+            {manifest.stats.recentEntries.map((entry) => (
+              <Link
+                key={entry.slug}
+                href={`/wiki/${entry.slug}`}
+                className="flex items-center gap-3 rounded-[var(--radius-sm)] px-3 py-2 transition-colors hover:bg-surface"
+              >
+                <span
+                  className="h-2 w-2 rounded-full shrink-0"
+                  style={{ background: CATEGORY_COLORS[entry.category] || "var(--accent)" }}
+                />
+                <span className="text-sm text-text truncate flex-1">{entry.title}</span>
+                <span className="text-xs text-muted font-code shrink-0">{entry.date}</span>
+              </Link>
+            ))}
+          </div>
+
           <h2 className="font-display text-xl font-bold mb-4">카테고리별 진도</h2>
           <div className="space-y-4">
             {Object.entries(categoryStats).map(([category, stats]) => {
