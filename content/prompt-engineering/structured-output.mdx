@@ -1,0 +1,139 @@
+---
+title: "Structured Output (구조화된 출력)"
+category: prompt-engineering
+date: "2026-04-09"
+tags: [structured-output, json-schema, parsing, validation, zod]
+confidence: 3
+connections: [prompt-engineering/few-shot-prompting, agents/multi-agent-pipeline, infrastructure/multi-provider-fallback]
+status: complete
+description: "LLM에서 JSON 등 구조화된 데이터를 안정적으로 추출하는 기법. 네이티브 스키마부터 프롬프트 기반까지."
+type: entry
+---
+
+## 핵심 개념
+
+LLM의 출력은 기본적으로 자유 형식 텍스트다. 하지만 프로덕션에서는 **파싱 가능한 구조화된 데이터**가 필요하다. JSON, enum, 특정 필드 강제 등. "JSON으로 답해줘"라고 말하는 것만으로는 불충분하다.
+
+## 3가지 접근법
+
+### 1. 네이티브 JSON Schema (가장 안정적)
+
+모델 API 레벨에서 JSON 스키마를 강제하는 방식.
+
+**OpenAI:**
+```typescript
+const response = await openai.chat.completions.create({
+  response_format: {
+    type: 'json_schema',
+    json_schema: {
+      name: 'analysis',
+      schema: {
+        type: 'object',
+        properties: {
+          signal: { enum: ['BUY', 'HOLD', 'SELL'] },
+          confidence: { type: 'number', minimum: 0, maximum: 100 },
+          reasoning: { type: 'string' },
+        },
+        required: ['signal', 'confidence', 'reasoning'],
+      },
+    },
+  },
+});
+```
+
+**Google Gemini:**
+```typescript
+const result = await model.generateContent({
+  contents: [{ role: 'user', parts: [{ text: prompt }] }],
+  generationConfig: {
+    responseMimeType: 'application/json',
+    responseSchema: { /* JSON Schema */ },
+  },
+});
+```
+
+### 2. 프롬프트 기반 강제 (Claude 등)
+
+네이티브 스키마를 지원하지 않는 모델에서는 프롬프트로 JSON 형식을 강제한다.
+
+```
+다음 JSON 형식으로만 응답하세요. 다른 텍스트는 포함하지 마세요:
+{
+  "signal": "BUY" | "HOLD" | "SELL",
+  "confidence": 0-100,
+  "reasoning": "문자열"
+}
+```
+
+### 3. Tool Use로 구조화 (Anthropic 권장)
+
+Claude에서는 Tool Use를 활용하면 구조화된 출력을 안정적으로 얻을 수 있다.
+
+## 방어적 파싱 (3단계 fallback)
+
+어떤 방식이든 파싱 실패에 대비해야 한다:
+
+```typescript
+function parseJSON(raw: string): Record<string, unknown> {
+  // 1단계: 직접 파싱
+  try { return JSON.parse(raw); } catch {}
+
+  // 2단계: 코드 블록에서 추출
+  const codeBlock = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (codeBlock) {
+    try { return JSON.parse(codeBlock[1]); } catch {}
+  }
+
+  // 3단계: 첫 번째 {...} 추출
+  const firstObj = raw.match(/\{[\s\S]*\}/);
+  if (firstObj) {
+    try { return JSON.parse(firstObj[0]); } catch {}
+  }
+
+  // 실패: 기본값 반환
+  return { signal: 'HOLD', confidence: 0, reasoning: 'Parse failed' };
+}
+```
+
+## 출력 후처리 (Normalization)
+
+파싱 성공 후에도 값을 정규화해야 한다:
+
+```typescript
+// signal 정규화: 대소문자, 공백, 유사 표현 처리
+if (typeof result.signal === 'string') {
+  const sig = result.signal.toUpperCase().replace(/\s+/g, '_');
+  if (sig.includes('STRONG') && sig.includes('BUY')) {
+    result.signal = 'STRONG_BUY';
+  }
+}
+
+// confidence 범위 강제
+result.confidence = Math.min(100, Math.max(0, Number(result.confidence) || 50));
+```
+
+## Zod로 런타임 검증
+
+TypeScript에서는 zod로 LLM 출력을 런타임 검증한다:
+
+```typescript
+import { z } from 'zod';
+
+const AnalysisSchema = z.object({
+  signal: z.enum(['STRONG_BUY', 'BUY', 'HOLD', 'SELL', 'STRONG_SELL']),
+  confidence: z.number().min(0).max(100),
+  reasoning: z.string().min(10),
+});
+
+const parsed = AnalysisSchema.safeParse(llmOutput);
+if (!parsed.success) {
+  // fallback 처리
+}
+```
+
+## 실전 팁
+
+- 네이티브 스키마가 가능하면 항상 사용하라 (파싱 실패율 ~0%)
+- 프롬프트 기반은 예시(few-shot)와 함께 사용하면 안정성 향상
+- 방어적 파싱은 프로덕션 필수. "파싱이 안 되면 어떡하지?"를 항상 고려
+- enum 값은 정규화 로직을 반드시 작성 (모델이 "strong buy"를 "STRONG_BUY"로 쓸 수도 있음)

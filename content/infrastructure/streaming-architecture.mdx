@@ -1,0 +1,109 @@
+---
+title: "LLM 스트리밍 아키텍처"
+category: infrastructure
+date: "2026-04-09"
+tags: [streaming, sse, readablestream, ux, real-time]
+confidence: 3
+connections: [infrastructure/multi-provider-fallback, agents/tool-use]
+status: complete
+description: "LLM 응답을 실시간으로 사용자에게 전달하는 스트리밍 아키텍처. Web Streams API 활용."
+type: entry
+---
+
+## 핵심 개념
+
+LLM 응답은 수 초가 걸린다. 스트리밍 없이 전체 응답을 기다리면 사용자는 빈 화면을 보게 된다. 스트리밍은 **토큰이 생성되는 즉시 사용자에게 전달**하여 체감 응답 시간을 크게 줄인다.
+
+## 실전 사례: Next.js + Anthropic 스트리밍
+
+mino-stock 프로젝트에서 구현한 패턴:
+
+### 서버 사이드 (API Route)
+
+```typescript
+// app/api/ai/portfolio-diagnosis/route.ts
+import Anthropic from '@anthropic-ai/sdk';
+
+export async function POST(request: Request) {
+  const anthropic = new Anthropic();
+
+  const stream = anthropic.messages.stream({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 2048,
+    system: SYSTEM_PROMPT,
+    messages: [{ role: 'user', content: userMessage }],
+  });
+
+  // Web ReadableStream으로 변환
+  const readableStream = new ReadableStream({
+    async start(controller) {
+      for await (const event of stream) {
+        if (event.type === 'content_block_delta' &&
+            event.delta.type === 'text_delta') {
+          controller.enqueue(
+            new TextEncoder().encode(event.delta.text)
+          );
+        }
+      }
+      controller.close();
+    },
+  });
+
+  return new Response(readableStream, {
+    headers: {
+      'Content-Type': 'text/plain; charset=utf-8',
+      'Cache-Control': 'no-cache',
+      'X-Content-Type-Options': 'nosniff',
+    },
+  });
+}
+```
+
+### 클라이언트 사이드
+
+```typescript
+// ReadableStream 소비
+const response = await fetch('/api/ai/analyze', { method: 'POST', body });
+const reader = response.body!.getReader();
+const decoder = new TextDecoder();
+
+while (true) {
+  const { done, value } = await reader.read();
+  if (done) break;
+  const chunk = decoder.decode(value);
+  setResult(prev => prev + chunk);
+}
+```
+
+## 스트리밍 vs 일반 응답 UX 비교
+
+| 항목 | 일반 응답 | 스트리밍 |
+|------|----------|---------|
+| 첫 토큰까지 시간 | 3-10초 | 0.3-1초 |
+| 사용자 체감 | "멈춤" → 갑자기 전체 표시 | 글자가 타이핑되는 듯 |
+| 이탈률 | 높음 (3초 이상 대기) | 낮음 (즉시 피드백) |
+| 에러 처리 | 깔끔 (성공/실패) | 복잡 (중간 끊김 가능) |
+
+## 마크다운 실시간 렌더링
+
+스트리밍 중인 텍스트를 마크다운으로 렌더링하는 것은 까다롭다. 불완전한 마크다운(열린 태그, 미완성 코드 블록)을 처리해야 한다.
+
+간단한 접근: 커스텀 파서로 헤더, 볼드, 리스트만 처리.
+
+```typescript
+function renderStreamingMarkdown(text: string) {
+  return text
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/^- (.+)$/gm, '<li>$1</li>');
+}
+```
+
+## 설계 포인트
+
+1. **Content-Type**: `text/plain` 또는 `text/event-stream` (SSE)
+2. **Cache-Control**: 반드시 `no-cache` — 스트리밍은 캐시하면 안 됨
+3. **에러 처리**: 스트림 중간에 에러나면 `controller.error(err)` 호출
+4. **타임아웃**: 클라이언트에서 30초 등 상한 설정
+5. **취소**: `AbortController`로 사용자가 중단할 수 있게
