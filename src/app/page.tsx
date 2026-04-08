@@ -63,6 +63,9 @@ export default function Home() {
           <Link href="/dashboard" className="text-sm text-muted hover:text-text transition-colors hidden sm:block">
             Dashboard
           </Link>
+          <Link href="/projects" className="text-sm text-muted hover:text-text transition-colors hidden sm:block">
+            Vibe Coding
+          </Link>
           <Link href="/about" className="text-sm text-muted hover:text-text transition-colors hidden sm:block">
             About
           </Link>
