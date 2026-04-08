@@ -11,30 +11,43 @@ AI 하네스 엔지니어링 학습 위키 + 포트폴리오. Next.js 15 App Rou
 - **Code:** shiki (@shikijs/rehype, github-dark-default theme)
 - **Diagrams:** Mermaid (dynamic import, client-side rendering)
 - **Theme:** next-themes (dark default, data-theme attribute)
+- **AI Generation:** Gemini 2.5 Flash (daily lesson pipeline)
+- **CI/CD:** GitHub Actions (daily topic suggestion + comment-triggered generation)
 - **Deploy:** Vercel (GitHub auto-deploy)
 
 ## Project Structure
 ```
-content/           → MDX wiki entries (frontmatter + content)
-scripts/           → prebuild manifest generator, watch script, new-entry CLI
-src/app/           → Next.js App Router pages
-src/components/    → React components (graph, sidebar, search, summary-card, mermaid)
+content/           → MDX wiki entries (10 카테고리별 디렉토리)
+scripts/           → prebuild manifest, watch, new-entry CLI, AI 과외 선생님
+src/app/           → Next.js App Router (홈, wiki, dashboard, projects)
+src/components/    → React components (header, graph, sidebar, search, summary-card, mermaid)
 src/contexts/      → GraphSearchContext (graph-search bidirectional state)
 src/lib/           → schema.ts (zod), content.ts (manifest/entry loaders)
 src/generated/     → content-manifest.json (gitignored, auto-generated)
+.github/workflows/ → daily-lesson, generate-on-pick, vercel-retry
 ```
 
 ## Key Commands
 - `npm run dev` — dev server + content watcher (concurrently)
-- `npm run build` — prebuild manifest → next build
+- `npm run build` — prebuild manifest (+ streak 계산) → next build
 - `npm run new-entry` — interactive CLI to create new MDX entry
+- `npm run generate-lesson` — AI 과외 선생님: 주제 3개 추천
+- `npm run generate-lesson generate <slug>` — 특정 주제로 콘텐츠 생성
+- `npm run generate-lesson generate-custom <텍스트>` — 커스텀 주제로 생성
 
 ## Content System
 - All content in `content/` as MDX files with frontmatter
-- `scripts/generate-content-manifest.mjs` reads all MDX → generates single `content-manifest.json`
+- `scripts/generate-content-manifest.mjs` reads all MDX → generates single `content-manifest.json` (entries + graph + streak)
 - Frontmatter schema defined in `src/lib/schema.ts` (zod validation)
-- Categories: prompt-engineering, rag, agents, fine-tuning, evaluation, infrastructure
+- 10 Categories: prompt-engineering, context-engineering, harness-engineering, rag, agents, fine-tuning, evaluation, infrastructure, ios-ai, frontend-ai
 - Confidence: 1-5 scale (들어봤다 → 가르칠 수 있다)
+- Streak: prebuild에서 frontmatter date 기반 연속 학습일 자동 계산
+
+## AI 과외 선생님 Pipeline
+- 매일 09:00 KST: GitHub Actions가 3개 주제 추천 Issue 생성
+- 사용자가 번호(1/2/3) 또는 자유 텍스트로 댓글 → 해당 주제로 Gemini가 MDX 생성 → 자동 PR
+- 주제 추천: 지식 그래프 분석 (빈 카테고리, dangling connections, 낮은 confidence) + 카테고리 우선순위
+- Secrets: GEMINI_API_KEY, VERCEL_TOKEN
 
 ## Design System
 Always read DESIGN.md before making any visual or UI decisions.
