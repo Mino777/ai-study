@@ -11,6 +11,10 @@ const CATEGORY_LABELS: Record<string, string> = {
   "fine-tuning": "Fine-tuning",
   evaluation: "Evaluation",
   infrastructure: "Infrastructure",
+  "ios-ai": "iOS + AI",
+  "frontend-ai": "Frontend + AI",
+  "context-engineering": "Context Engineering",
+  "harness-engineering": "Harness Engineering",
 };
 
 const CATEGORY_COLORS: Record<string, string> = {
