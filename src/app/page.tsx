@@ -57,11 +57,14 @@ export default function Home() {
         </h1>
         <div className="flex items-center gap-3">
           <SearchTrigger />
-          <Link
-            href="/wiki/prompt-engineering/few-shot-prompting"
-            className="text-sm text-muted hover:text-text transition-colors hidden sm:block"
-          >
+          <Link href="/wiki" className="text-sm text-muted hover:text-text transition-colors hidden sm:block">
             Wiki
+          </Link>
+          <Link href="/dashboard" className="text-sm text-muted hover:text-text transition-colors hidden sm:block">
+            Dashboard
+          </Link>
+          <Link href="/about" className="text-sm text-muted hover:text-text transition-colors hidden sm:block">
+            About
           </Link>
           <ThemeToggle />
         </div>

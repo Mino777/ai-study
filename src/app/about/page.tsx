@@ -42,6 +42,9 @@ export default function AboutPage() {
             AI Study Wiki
           </Link>
           <div className="flex items-center gap-3">
+            <Link href="/wiki" className="text-sm text-muted hover:text-text transition-colors">
+              Wiki
+            </Link>
             <Link href="/dashboard" className="text-sm text-muted hover:text-text transition-colors">
               Dashboard
             </Link>

@@ -95,7 +95,7 @@ export default function DashboardPage() {
           </Link>
           <div className="flex items-center gap-3">
             <SearchTrigger />
-            <Link href="/wiki/prompt-engineering/few-shot-prompting" className="text-sm text-muted hover:text-text transition-colors">
+            <Link href="/wiki" className="text-sm text-muted hover:text-text transition-colors">
               Wiki
             </Link>
             <ThemeToggle />
