@@ -11,6 +11,7 @@
     "new-entry": "node scripts/new-entry.mjs"
   },
   "dependencies": {
+    "flexsearch": "^0.8.212",
     "gray-matter": "^4.0.3",
     "next": "16.2.2",
     "next-mdx-remote": "^6.0.0",

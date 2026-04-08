@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { getSidebarData } from "@/lib/content";
+import { getSidebarData, getManifest } from "@/lib/content";
 import { Sidebar } from "@/components/sidebar";
+import { SearchDialog, SearchTrigger } from "@/components/search-dialog";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 export default function WikiLayout({
@@ -9,6 +10,15 @@ export default function WikiLayout({
   children: React.ReactNode;
 }) {
   const sidebarData = getSidebarData();
+  const manifest = getManifest();
+
+  const searchEntries = manifest.entries.map((e) => ({
+    slug: e.slug,
+    title: e.frontmatter.title,
+    category: e.frontmatter.category,
+    description: e.frontmatter.description,
+    tags: e.frontmatter.tags,
+  }));
 
   return (
     <div className="min-h-screen bg-bg">
@@ -22,6 +32,7 @@ export default function WikiLayout({
             AI Study Wiki
           </Link>
           <div className="flex items-center gap-3">
+            <SearchTrigger />
             <Link
               href="/dashboard"
               className="text-sm text-muted hover:text-text transition-colors"
@@ -40,6 +51,9 @@ export default function WikiLayout({
           <div className="mx-auto max-w-3xl">{children}</div>
         </main>
       </div>
+
+      {/* Search overlay */}
+      <SearchDialog entries={searchEntries} />
     </div>
   );
 }

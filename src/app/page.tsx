@@ -4,6 +4,7 @@ import { getManifest } from "@/lib/content";
 import { KnowledgeGraph } from "@/components/knowledge-graph";
 import { MobileCategories } from "@/components/mobile-categories";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { SearchDialog, SearchTrigger } from "@/components/search-dialog";
 
 function GraphSkeleton() {
   return (
@@ -37,6 +38,13 @@ export default function Home() {
         ).toFixed(1)
       : "0";
   const categories = new Set(manifest.entries.map((e) => e.frontmatter.category));
+  const searchEntries = manifest.entries.map((e) => ({
+    slug: e.slug,
+    title: e.frontmatter.title,
+    category: e.frontmatter.category,
+    description: e.frontmatter.description,
+    tags: e.frontmatter.tags,
+  }));
 
   return (
     <div className="min-h-screen bg-bg">
@@ -46,6 +54,7 @@ export default function Home() {
           AI Study Wiki
         </h1>
         <div className="flex items-center gap-3">
+          <SearchTrigger />
           <Link
             href="/wiki/prompt-engineering/few-shot-prompting"
             className="text-sm text-muted hover:text-text transition-colors hidden sm:block"
@@ -105,6 +114,9 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {/* Search overlay */}
+      <SearchDialog entries={searchEntries} />
     </div>
   );
 }
