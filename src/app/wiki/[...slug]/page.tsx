@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { compileMDX } from "next-mdx-remote/rsc";
 import remarkGfm from "remark-gfm";
@@ -19,6 +20,28 @@ export function generateStaticParams() {
   return slugs.map((slug) => ({
     slug: slug.split("/"),
   }));
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string[] }>;
+}): Promise<Metadata> {
+  const { slug: slugParts } = await params;
+  const slug = slugParts.join("/");
+  const entry = getEntry(slug);
+  if (!entry) return { title: "Not Found" };
+
+  return {
+    title: `${entry.frontmatter.title} — AI Study Wiki`,
+    description: entry.frontmatter.description,
+    openGraph: {
+      title: entry.frontmatter.title,
+      description: entry.frontmatter.description,
+      type: "article",
+      tags: entry.frontmatter.tags,
+    },
+  };
 }
 
 export default async function WikiEntryPage({
