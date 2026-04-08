@@ -70,8 +70,8 @@ jobs:
           DATE=$(date +%Y-%m-%d)
           BRANCH="lesson/${DATE}"
 
-          git config user.name "AI Tutor Bot"
-          git config user.email "ai-tutor@ai-study.dev"
+          git config user.name "Mino777"
+          git config user.email "jominhyuk0501@gmail.com"
 
           git checkout -b "$BRANCH"
           git add content/
