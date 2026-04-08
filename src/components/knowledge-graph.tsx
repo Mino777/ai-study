@@ -11,6 +11,8 @@ const ForceGraph2D = dynamic(() => import("react-force-graph-2d"), {
 
 const CATEGORY_COLORS: Record<string, string> = {
   "prompt-engineering": "#f59e0b",
+  "context-engineering": "#eab308",
+  "harness-engineering": "#84cc16",
   rag: "#10b981",
   agents: "#8b5cf6",
   "fine-tuning": "#ec4899",
@@ -190,6 +192,10 @@ export function KnowledgeGraph({ nodes, edges }: KnowledgeGraphProps) {
         nodePointerAreaPaint={nodePointerAreaPaint as never}
         linkColor={() => "rgba(107, 107, 128, 0.3)"}
         linkWidth={1}
+        // @ts-expect-error -- linkDistance not in types but works at runtime
+        linkDistance={120}
+        d3Force="charge"
+        d3ForceStrength={-300}
         onNodeClick={handleNodeClick as never}
         onNodeHover={handleNodeHover as never}
         cooldownTicks={100}

@@ -2,6 +2,8 @@ import { z } from "zod";
 
 export const CATEGORIES = [
   "prompt-engineering",
+  "context-engineering",
+  "harness-engineering",
   "rag",
   "agents",
   "fine-tuning",
@@ -15,6 +17,8 @@ export type Category = (typeof CATEGORIES)[number];
 
 export const CATEGORY_LABELS: Record<Category, string> = {
   "prompt-engineering": "Prompt Engineering",
+  "context-engineering": "Context Engineering",
+  "harness-engineering": "Harness Engineering",
   rag: "RAG",
   agents: "Agents",
   "fine-tuning": "Fine-tuning",
@@ -26,6 +30,8 @@ export const CATEGORY_LABELS: Record<Category, string> = {
 
 export const CATEGORY_COLORS: Record<Category, string> = {
   "prompt-engineering": "#f59e0b",
+  "context-engineering": "#eab308",
+  "harness-engineering": "#84cc16",
   rag: "#10b981",
   agents: "#8b5cf6",
   "fine-tuning": "#ec4899",

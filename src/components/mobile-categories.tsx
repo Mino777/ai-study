@@ -12,6 +12,8 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 const CATEGORY_COLORS: Record<string, string> = {
   "prompt-engineering": "#f59e0b",
+  "context-engineering": "#eab308",
+  "harness-engineering": "#84cc16",
   rag: "#10b981",
   agents: "#8b5cf6",
   "fine-tuning": "#ec4899",

@@ -14,6 +14,8 @@ interface SearchEntry {
 
 const CATEGORY_COLORS: Record<string, string> = {
   "prompt-engineering": "var(--cat-prompt)",
+  "context-engineering": "var(--cat-context)",
+  "harness-engineering": "var(--cat-harness)",
   rag: "var(--cat-rag)",
   agents: "var(--cat-agents)",
   "fine-tuning": "var(--cat-finetune)",

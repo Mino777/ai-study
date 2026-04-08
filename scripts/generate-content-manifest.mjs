@@ -12,6 +12,8 @@ const OUTPUT_FILE = path.join(
 
 const CATEGORIES = [
   "prompt-engineering",
+  "context-engineering",
+  "harness-engineering",
   "rag",
   "agents",
   "fine-tuning",

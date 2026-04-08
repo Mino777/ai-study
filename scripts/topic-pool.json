@@ -1,4 +1,24 @@
 {
+  "context-engineering": [
+    "context-window-optimization",
+    "token-budget-management",
+    "context-stuffing-patterns",
+    "long-context-strategies",
+    "context-compression",
+    "multi-turn-context-management",
+    "system-prompt-design",
+    "dynamic-context-injection"
+  ],
+  "harness-engineering": [
+    "ai-workflow-design",
+    "human-ai-collaboration-patterns",
+    "ai-powered-development-workflow",
+    "vibe-coding-methodology",
+    "ai-pair-programming",
+    "prompt-to-product-pipeline",
+    "ai-code-review-automation",
+    "ai-testing-strategies"
+  ],
   "prompt-engineering": [
     "system-prompting",
     "prompt-chaining",

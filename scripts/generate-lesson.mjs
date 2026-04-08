@@ -8,6 +8,8 @@ const TOPIC_POOL_PATH = path.join(process.cwd(), "scripts", "topic-pool.json");
 
 const CATEGORIES = [
   "prompt-engineering",
+  "context-engineering",
+  "harness-engineering",
   "rag",
   "agents",
   "fine-tuning",
@@ -19,14 +21,16 @@ const CATEGORIES = [
 
 // 우선순위: AI 활용 방법론 > iOS/Frontend AI > 나머지
 const CATEGORY_PRIORITY = {
-  "prompt-engineering": 2.0,  // AI를 잘 쓰는 방법론이 최우선
-  agents: 1.8,                // 에이전트 활용도 방법론
-  rag: 1.8,                   // RAG도 핵심 방법론
-  "ios-ai": 1.5,              // iOS + AI 실무
-  "frontend-ai": 1.5,         // Frontend + AI 실무
-  evaluation: 1.2,            // 평가도 중요
+  "prompt-engineering": 2.0,
+  "context-engineering": 2.0,
+  "harness-engineering": 2.0,
+  agents: 1.8,
+  rag: 1.8,
+  "ios-ai": 1.5,
+  "frontend-ai": 1.5,
+  evaluation: 1.2,
   "fine-tuning": 1.0,
-  infrastructure: 0.7,        // 곁다리
+  infrastructure: 0.7,
 };
 
 const CATEGORY_LABELS = {
@@ -38,6 +42,8 @@ const CATEGORY_LABELS = {
   infrastructure: "Infrastructure",
   "ios-ai": "iOS + AI",
   "frontend-ai": "Frontend + AI",
+  "context-engineering": "Context Engineering",
+  "harness-engineering": "Harness Engineering",
 };
 
 // ─── 1. Load manifest & topic pool ───────────────────────────────
@@ -349,6 +355,62 @@ async function generate(slug) {
   }
 }
 
+// Mode 3: generate from custom free-text topic
+async function generateCustom(topicText) {
+  const { manifest } = await initManifest();
+
+  // Determine best-fit category via keyword matching
+  const catKeywords = {
+    "prompt-engineering": ["프롬프트", "prompt", "프롬프팅", "system prompt"],
+    "context-engineering": ["컨텍스트", "context", "window", "토큰"],
+    "harness-engineering": ["하네스", "harness", "ai활용", "방법론", "워크플로우"],
+    rag: ["rag", "검색", "retrieval", "벡터", "임베딩", "embedding", "chunking"],
+    agents: ["에이전트", "agent", "tool", "mcp", "function calling"],
+    "fine-tuning": ["파인튜닝", "fine-tuning", "lora", "rlhf", "dpo"],
+    evaluation: ["평가", "eval", "벤치마크", "환각", "hallucination"],
+    infrastructure: ["인프라", "서빙", "캐싱", "게이트웨이", "배포"],
+    "ios-ai": ["ios", "swift", "core ml", "apple", "swiftui", "xcode"],
+    "frontend-ai": ["프론트", "react", "next", "웹", "frontend", "react native"],
+  };
+
+  const lower = topicText.toLowerCase();
+  let bestCat = "harness-engineering";
+  let bestScore = 0;
+  for (const [cat, keywords] of Object.entries(catKeywords)) {
+    const score = keywords.filter((k) => lower.includes(k)).length;
+    if (score > bestScore) { bestScore = score; bestCat = cat; }
+  }
+
+  const topicSlug = topicText
+    .toLowerCase()
+    .replace(/[^a-z0-9가-힣\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .trim();
+
+  const slug = `${bestCat}/${topicSlug}`;
+  const relatedSlugs = manifest.entries
+    .filter((e) => e.frontmatter.category === bestCat)
+    .map((e) => e.slug)
+    .slice(0, 3);
+
+  const topic = { slug, category: bestCat, topicSlug, title: topicText, connections: relatedSlugs };
+
+  console.log(`\n🎓 커스텀 주제 생성: ${topic.title} (${CATEGORY_LABELS[topic.category] || topic.category})\n`);
+
+  const mdxContent = await generateMDX(topic, manifest);
+  const filePath = writeMDX(topic, mdxContent);
+
+  const relativePath = path.relative(process.cwd(), filePath);
+  console.log(`\n📁 Generated: ${relativePath}`);
+
+  if (process.env.GITHUB_OUTPUT) {
+    fs.appendFileSync(process.env.GITHUB_OUTPUT, `file_path=${relativePath}\n`);
+    fs.appendFileSync(process.env.GITHUB_OUTPUT, `topic_title=${topic.title}\n`);
+    fs.appendFileSync(process.env.GITHUB_OUTPUT, `category=${topic.category}\n`);
+  }
+}
+
 // CLI entry point
 const args = process.argv.slice(2);
 const mode = args[0] || "suggest";
@@ -359,7 +421,11 @@ if (mode === "suggest") {
   const slug = args[1];
   if (!slug) { console.error("❌ Usage: generate-lesson.mjs generate <slug>"); process.exit(1); }
   generate(slug).catch((err) => { console.error("❌", err.message); process.exit(1); });
+} else if (mode === "generate-custom") {
+  const topic = args.slice(1).join(" ");
+  if (!topic) { console.error("❌ Usage: generate-lesson.mjs generate-custom <topic text>"); process.exit(1); }
+  generateCustom(topic).catch((err) => { console.error("❌", err.message); process.exit(1); });
 } else {
-  console.error(`❌ Unknown mode: ${mode}. Use "suggest" or "generate <slug>"`);
+  console.error(`❌ Unknown mode: ${mode}. Use "suggest", "generate <slug>", or "generate-custom <topic>"`);
   process.exit(1);
 }

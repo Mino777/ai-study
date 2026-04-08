@@ -12,6 +12,8 @@
 
   /* Category colors (= Graph node colors) */
   --cat-prompt: #f59e0b;
+  --cat-context: #eab308;
+  --cat-harness: #84cc16;
   --cat-rag: #10b981;
   --cat-agents: #8b5cf6;
   --cat-finetune: #ec4899;
@@ -51,6 +53,8 @@
   --color-accent: var(--accent);
   --color-accent-hover: var(--accent-hover);
   --color-cat-prompt: var(--cat-prompt);
+  --color-cat-context: var(--cat-context);
+  --color-cat-harness: var(--cat-harness);
   --color-cat-rag: var(--cat-rag);
   --color-cat-agents: var(--cat-agents);
   --color-cat-finetune: var(--cat-finetune);
