@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { CodeBlock } from "./code-block";
 
 const MermaidDiagram = dynamic(
   () => import("./mermaid-diagram").then((mod) => mod.MermaidDiagram),
@@ -29,7 +30,7 @@ function CustomPre({ children, ...props }: React.ComponentProps<"pre">) {
     return <MermaidDiagram chart={chart} />;
   }
 
-  return <pre {...props}>{children}</pre>;
+  return <CodeBlock {...props}>{children}</CodeBlock>;
 }
 
 export const mdxComponents = {

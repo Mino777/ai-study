@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ThemeProvider } from "next-themes";
+import { MobileNav } from "@/components/mobile-nav";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -32,13 +33,14 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="min-h-screen antialiased">
+      <body className="min-h-screen antialiased pb-14 lg:pb-0">
         <ThemeProvider
           attribute="data-theme"
           defaultTheme="dark"
           disableTransitionOnChange
         >
           {children}
+          <MobileNav />
         </ThemeProvider>
       </body>
     </html>

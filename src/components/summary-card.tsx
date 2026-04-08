@@ -30,9 +30,11 @@ const CONFIDENCE_LABELS = ["", "들어봤다", "이해했다", "적용했다", "
 
 interface SummaryCardProps {
   frontmatter: Frontmatter;
+  slug?: string;
+  readingTime?: number;
 }
 
-export function SummaryCard({ frontmatter }: SummaryCardProps) {
+export function SummaryCard({ frontmatter, slug, readingTime }: SummaryCardProps) {
   const catColor = CATEGORY_COLORS[frontmatter.category] || "var(--accent)";
 
   return (
@@ -51,8 +53,21 @@ export function SummaryCard({ frontmatter }: SummaryCardProps) {
           {CATEGORY_LABELS[frontmatter.category] || frontmatter.category}
         </span>
         <span className="text-xs text-muted font-code">{frontmatter.date}</span>
+        {readingTime && (
+          <span className="text-xs text-muted font-code">약 {readingTime}분</span>
+        )}
         {frontmatter.status !== "complete" && (
           <span className="text-xs text-warning font-code">{frontmatter.status}</span>
+        )}
+        {slug && (
+          <a
+            href={`https://github.com/Mino777/ai-study/edit/main/content/${slug}.mdx`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="ml-auto text-xs text-muted hover:text-accent transition-colors font-code"
+          >
+            GitHub에서 편집 →
+          </a>
         )}
       </div>
 

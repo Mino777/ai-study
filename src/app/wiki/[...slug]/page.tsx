@@ -6,6 +6,7 @@ import rehypeShiki from "@shikijs/rehype";
 import { getEntry, getAllSlugs, getManifest } from "@/lib/content";
 import { SummaryCard } from "@/components/summary-card";
 import { mdxComponents } from "@/components/mdx-components";
+import { EntryNav } from "@/components/entry-nav";
 import Link from "next/link";
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -61,7 +62,20 @@ export default async function WikiEntryPage({
 
   if (!entry) notFound();
 
+  // 읽기 시간 계산 (한국어 평균 500자/분)
+  const charCount = entry.content.length;
+  const readingTime = Math.max(1, Math.round(charCount / 500));
+
   const manifest = getManifest();
+
+  // 이전/다음 엔트리 (같은 카테고리 내)
+  const sameCat = manifest.entries.filter(
+    (e) => e.frontmatter.category === entry.frontmatter.category
+  );
+  const currentIdx = sameCat.findIndex((e) => e.slug === slug);
+  const prevEntry = currentIdx > 0 ? { slug: sameCat[currentIdx - 1].slug, title: sameCat[currentIdx - 1].frontmatter.title } : null;
+  const nextEntry = currentIdx < sameCat.length - 1 ? { slug: sameCat[currentIdx + 1].slug, title: sameCat[currentIdx + 1].frontmatter.title } : null;
+
   const connections = entry.frontmatter.connections
     .map((connSlug) => {
       const found = manifest.entries.find((e) => e.slug === connSlug);
@@ -98,7 +112,7 @@ export default async function WikiEntryPage({
 
   return (
     <article>
-      <SummaryCard frontmatter={entry.frontmatter} />
+      <SummaryCard frontmatter={entry.frontmatter} slug={slug} readingTime={readingTime} />
 
       <div className="prose-custom">{content}</div>
 
@@ -123,6 +137,8 @@ export default async function WikiEntryPage({
           </div>
         </div>
       )}
+
+      <EntryNav prev={prevEntry} next={nextEntry} />
     </article>
   );
 }
