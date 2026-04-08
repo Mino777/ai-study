@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
+import { useGraphSearch } from "@/contexts/graph-search-context";
 
 const ForceGraph2D = dynamic(() => import("react-force-graph-2d"), {
   ssr: false,
@@ -39,11 +40,18 @@ interface KnowledgeGraphProps {
 
 export function KnowledgeGraph({ nodes, edges }: KnowledgeGraphProps) {
   const router = useRouter();
+  const { highlightedNodes, selectNode } = useGraphSearch();
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
   const hoveredNodeRef = useRef<GraphNode | null>(null);
+  const highlightedRef = useRef<Set<string>>(new Set());
   const [tooltipNode, setTooltipNode] = useState<GraphNode | null>(null);
   const graphRef = useRef<{ d3ReheatSimulation?: () => void }>(null);
+
+  // Sync highlights to ref (avoid re-renders in canvas paint)
+  useEffect(() => {
+    highlightedRef.current = highlightedNodes;
+  }, [highlightedNodes]);
 
   useEffect(() => {
     function updateSize() {
@@ -71,9 +79,10 @@ export function KnowledgeGraph({ nodes, edges }: KnowledgeGraphProps) {
   const handleNodeClick = useCallback(
     (node: GraphNode) => {
       if (node.confidence === 0) return;
+      selectNode(node.id);
       router.push(`/wiki/${node.id}`);
     },
-    [router]
+    [router, selectNode]
   );
 
   const handleNodeHover = useCallback((node: GraphNode | null) => {
@@ -90,16 +99,31 @@ export function KnowledgeGraph({ nodes, edges }: KnowledgeGraphProps) {
       const color = CATEGORY_COLORS[node.category] || "#6b6b80";
       const hovered = hoveredNodeRef.current;
       const isHovered = hovered?.id === node.id;
+      const isHighlighted = highlightedRef.current.size > 0 && highlightedRef.current.has(node.id);
+      const isDimmed = highlightedRef.current.size > 0 && !isHighlighted && !isHovered;
       const isDangling = node.confidence === 0;
       const baseSize = isDangling ? 3 : 4 + node.confidence * 1.5;
-      const size = isHovered ? baseSize * 1.3 : baseSize;
+      const size = isHovered || isHighlighted ? baseSize * 1.3 : baseSize;
+
+      const opacity = isDimmed ? 0.2 : 1;
+
+      ctx.globalAlpha = opacity;
 
       // Glow effect
       if (!isDangling) {
         ctx.beginPath();
         ctx.arc(node.x, node.y, size + 4, 0, Math.PI * 2);
-        ctx.fillStyle = `${color}${isHovered ? "40" : "20"}`;
+        ctx.fillStyle = `${color}${isHovered || isHighlighted ? "50" : "20"}`;
         ctx.fill();
+      }
+
+      // Highlight ring
+      if (isHighlighted && !isDangling) {
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, size + 6, 0, Math.PI * 2);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
       }
 
       // Node circle
@@ -116,13 +140,15 @@ export function KnowledgeGraph({ nodes, edges }: KnowledgeGraphProps) {
       }
 
       // Label
-      if (isHovered || size > 6) {
-        ctx.font = `${isHovered ? "bold " : ""}11px Pretendard Variable, sans-serif`;
+      if (isHovered || isHighlighted || size > 6) {
+        ctx.font = `${isHovered || isHighlighted ? "bold " : ""}11px Pretendard Variable, sans-serif`;
         ctx.textAlign = "center";
         ctx.textBaseline = "top";
-        ctx.fillStyle = "#e8e8ed";
+        ctx.fillStyle = isDimmed ? "rgba(232,232,237,0.3)" : "#e8e8ed";
         ctx.fillText(node.label, node.x, node.y + size + 4);
       }
+
+      ctx.globalAlpha = 1;
     },
     [] // No dependencies — reads from ref, not state
   );

@@ -3,6 +3,7 @@ import { getSidebarData, getManifest } from "@/lib/content";
 import { Sidebar } from "@/components/sidebar";
 import { SearchDialog, SearchTrigger } from "@/components/search-dialog";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { GraphSearchProvider } from "@/contexts/graph-search-context";
 
 export default function WikiLayout({
   children,
@@ -21,6 +22,7 @@ export default function WikiLayout({
   }));
 
   return (
+    <GraphSearchProvider>
     <div className="min-h-screen bg-bg">
       {/* Header */}
       <header className="sticky top-0 z-50 h-14 border-b border-border bg-bg/80 backdrop-blur-sm">
@@ -55,5 +57,6 @@ export default function WikiLayout({
       {/* Search overlay */}
       <SearchDialog entries={searchEntries} />
     </div>
+    </GraphSearchProvider>
   );
 }

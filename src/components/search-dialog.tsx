@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useGraphSearch } from "@/contexts/graph-search-context";
 
 interface SearchEntry {
   slug: string;
@@ -26,6 +27,7 @@ interface SearchDialogProps {
 
 export function SearchDialog({ entries }: SearchDialogProps) {
   const router = useRouter();
+  const { highlightNodes, clearHighlights } = useGraphSearch();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -54,8 +56,15 @@ export function SearchDialog({ entries }: SearchDialogProps) {
       .slice(0, 8);
   }, [query, searchIndex, entries]);
 
-  // Reset selected index when results change
-  useEffect(() => setSelectedIndex(0), [results]);
+  // Reset selected index and sync graph highlights when results change
+  useEffect(() => {
+    setSelectedIndex(0);
+    if (query.trim() && results.length > 0) {
+      highlightNodes(results.map((r) => r.slug));
+    } else {
+      clearHighlights();
+    }
+  }, [results, query, highlightNodes, clearHighlights]);
 
   // Cmd+K to open
   useEffect(() => {
@@ -64,7 +73,10 @@ export function SearchDialog({ entries }: SearchDialogProps) {
         e.preventDefault();
         setOpen((prev) => !prev);
       }
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") {
+        setOpen(false);
+        clearHighlights();
+      }
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
@@ -81,9 +93,10 @@ export function SearchDialog({ entries }: SearchDialogProps) {
   const navigate = useCallback(
     (slug: string) => {
       setOpen(false);
+      clearHighlights();
       router.push(`/wiki/${slug}`);
     },
-    [router]
+    [router, clearHighlights]
   );
 
   function handleKeyDown(e: React.KeyboardEvent) {
@@ -103,7 +116,7 @@ export function SearchDialog({ entries }: SearchDialogProps) {
   return (
     <div
       className="fixed inset-0 z-[100] flex items-start justify-center pt-[20vh]"
-      onClick={() => setOpen(false)}
+      onClick={() => { setOpen(false); clearHighlights(); }}
     >
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />

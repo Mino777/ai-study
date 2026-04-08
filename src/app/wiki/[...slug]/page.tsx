@@ -4,6 +4,7 @@ import { compileMDX } from "next-mdx-remote/rsc";
 import remarkGfm from "remark-gfm";
 import { getEntry, getAllSlugs, getManifest } from "@/lib/content";
 import { SummaryCard } from "@/components/summary-card";
+import { mdxComponents } from "@/components/mdx-components";
 import Link from "next/link";
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -67,6 +68,7 @@ export default async function WikiEntryPage({
   try {
     const result = await compileMDX({
       source: entry.content,
+      components: mdxComponents,
       options: {
         parseFrontmatter: false,
         mdxOptions: { remarkPlugins: [remarkGfm] },

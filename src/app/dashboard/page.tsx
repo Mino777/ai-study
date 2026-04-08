@@ -3,6 +3,7 @@ import { getManifest } from "@/lib/content";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { SearchTrigger, SearchDialog } from "@/components/search-dialog";
 import type { Category } from "@/lib/schema";
+import { GraphSearchProvider } from "@/contexts/graph-search-context";
 
 const CATEGORY_LABELS: Record<string, string> = {
   "prompt-engineering": "Prompt Engineering",
@@ -81,6 +82,7 @@ export default function DashboardPage() {
   const completeCount = entries.filter((e) => e.frontmatter.status === "complete").length;
 
   return (
+    <GraphSearchProvider>
     <div className="min-h-screen bg-bg">
       {/* Header */}
       <header className="sticky top-0 z-50 h-14 border-b border-border bg-bg/80 backdrop-blur-sm">
@@ -231,5 +233,6 @@ export default function DashboardPage() {
 
       <SearchDialog entries={searchEntries} />
     </div>
+    </GraphSearchProvider>
   );
 }

@@ -5,6 +5,7 @@ import { KnowledgeGraph } from "@/components/knowledge-graph";
 import { MobileCategories } from "@/components/mobile-categories";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { SearchDialog, SearchTrigger } from "@/components/search-dialog";
+import { GraphSearchProvider } from "@/contexts/graph-search-context";
 
 function GraphSkeleton() {
   return (
@@ -47,6 +48,7 @@ export default function Home() {
   }));
 
   return (
+    <GraphSearchProvider>
     <div className="min-h-screen bg-bg">
       {/* Header overlay */}
       <header className="fixed top-0 left-0 right-0 z-50 flex h-14 items-center justify-between px-4 bg-bg/50 backdrop-blur-sm border-b border-border/50">
@@ -118,5 +120,6 @@ export default function Home() {
       {/* Search overlay */}
       <SearchDialog entries={searchEntries} />
     </div>
+    </GraphSearchProvider>
   );
 }
