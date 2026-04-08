@@ -5,25 +5,33 @@ AI 하네스 엔지니어링 학습 위키 + 포트폴리오. Next.js 15 App Rou
 ## Tech Stack
 - **Framework:** Next.js 15 (App Router, TypeScript)
 - **Styling:** Tailwind CSS 4 + CSS custom properties (DESIGN.md 참조)
-- **Content:** MDX (next-mdx-remote/rsc) + gray-matter + zod frontmatter validation
-- **Graph:** react-force-graph-2d (Client Component, ssr:false)
+- **Content:** MDX (next-mdx-remote/rsc) + gray-matter + zod frontmatter validation + remark-gfm
+- **Graph:** react-force-graph-2d (Client Component, ssr:false, linkDistance 120, charge -300)
 - **Search:** Client-side text matching (한국어 지원 검증 완료)
-- **Code:** shiki (@shikijs/rehype, github-dark-default theme)
-- **Diagrams:** Mermaid (dynamic import, client-side rendering)
+- **Code:** shiki (@shikijs/rehype, github-dark-default theme) + 복사 버튼
+- **Diagrams:** Mermaid (dynamic import, client-side rendering, dark theme)
 - **Theme:** next-themes (dark default, data-theme attribute)
 - **AI Generation:** Gemini 2.5 Flash (daily lesson pipeline)
 - **CI/CD:** GitHub Actions (daily topic suggestion + comment-triggered generation)
-- **Deploy:** Vercel (GitHub auto-deploy)
+- **Deploy:** Vercel (GitHub auto-deploy, push = 배포)
+
+## Pages
+- `/` — 홈 (지식 그래프 풀스크린 히어로)
+- `/wiki` — 위키 목록 (카테고리별 카드 그리드)
+- `/wiki/[category]/[slug]` — 위키 엔트리 (요약 카드 + MDX + 이전/다음 네비)
+- `/dashboard` — 학습 대시보드 (스트릭 + 진도 + 추천)
+- `/projects` — Vibe Coding 쇼케이스 (CE/HE 패턴 + 회고)
 
 ## Project Structure
 ```
 content/           → MDX wiki entries (10 카테고리별 디렉토리)
-scripts/           → prebuild manifest, watch, new-entry CLI, AI 과외 선생님
+scripts/           → prebuild manifest, watch, new-entry CLI, AI 과외 선생님, topic-pool.json
 src/app/           → Next.js App Router (홈, wiki, dashboard, projects)
-src/components/    → React components (header, graph, sidebar, search, summary-card, mermaid)
+src/components/    → header, graph, sidebar, search, summary-card, mermaid,
+                     code-block (복사), entry-nav (이전/다음), mobile-nav (하단 탭)
 src/contexts/      → GraphSearchContext (graph-search bidirectional state)
-src/lib/           → schema.ts (zod), content.ts (manifest/entry loaders)
-src/generated/     → content-manifest.json (gitignored, auto-generated)
+src/lib/           → schema.ts (zod, 10 categories), content.ts (manifest/entry loaders)
+src/generated/     → content-manifest.json (gitignored, entries + graph + streak)
 .github/workflows/ → daily-lesson, generate-on-pick, vercel-retry
 ```
 
@@ -37,17 +45,29 @@ src/generated/     → content-manifest.json (gitignored, auto-generated)
 
 ## Content System
 - All content in `content/` as MDX files with frontmatter
-- `scripts/generate-content-manifest.mjs` reads all MDX → generates single `content-manifest.json` (entries + graph + streak)
-- Frontmatter schema defined in `src/lib/schema.ts` (zod validation)
+- `scripts/generate-content-manifest.mjs` reads all MDX → single `content-manifest.json` (entries + graph + streak)
+- Frontmatter schema: `src/lib/schema.ts` (zod validation)
 - 10 Categories: prompt-engineering, context-engineering, harness-engineering, rag, agents, fine-tuning, evaluation, infrastructure, ios-ai, frontend-ai
-- Confidence: 1-5 scale (들어봤다 → 가르칠 수 있다)
+- Confidence: 1-5 (들어봤다 → 가르칠 수 있다)
 - Streak: prebuild에서 frontmatter date 기반 연속 학습일 자동 계산
 
 ## AI 과외 선생님 Pipeline
-- 매일 09:00 KST: GitHub Actions가 3개 주제 추천 Issue 생성
-- 사용자가 번호(1/2/3) 또는 자유 텍스트로 댓글 → 해당 주제로 Gemini가 MDX 생성 → 자동 PR
-- 주제 추천: 지식 그래프 분석 (빈 카테고리, dangling connections, 낮은 confidence) + 카테고리 우선순위
+- 매일 09:00 KST: GitHub Actions → 3개 주제 추천 Issue 생성
+- 사용자가 번호(1/2/3) 또는 자유 텍스트 댓글 → Gemini가 MDX 생성 → 자동 PR
+- 주제 추천: 지식 그래프 분석 (빈 카테고리, dangling connections, 낮은 confidence)
+- 카테고리 우선순위: AI 방법론(2.0x) > iOS/Frontend(1.5x) > Infrastructure(0.7x)
 - Secrets: GEMINI_API_KEY, VERCEL_TOKEN
+
+## Components
+- `Header` — 공통 헤더 (Wiki/Dashboard/Vibe Coding + 현재 탭 하이라이트)
+- `KnowledgeGraph` — force-directed 그래프 (useMemo graphData, useRef hover)
+- `SearchDialog` — Cmd+K 검색 + GraphSearchContext 연동
+- `Sidebar` — 카테고리 트리 (접이식, confidence dots)
+- `SummaryCard` — 엔트리 요약 (카테고리 배지, confidence, 읽기 시간, GitHub 편집)
+- `CodeBlock` — 코드 블록 + 복사 버튼
+- `MermaidDiagram` — mermaid 코드 블록 자동 렌더링
+- `EntryNav` — 이전/다음 엔트리 (같은 카테고리 내)
+- `MobileNav` — 모바일 하단 탭 바
 
 ## Design System
 Always read DESIGN.md before making any visual or UI decisions.

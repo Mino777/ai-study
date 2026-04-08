@@ -43,11 +43,15 @@
 - **Accent hover:** #2563eb
 - **Category colors (= Graph node colors):**
   - Prompt Engineering: #f59e0b (amber)
+  - Context Engineering: #eab308 (yellow)
+  - Harness Engineering: #84cc16 (lime)
   - RAG: #10b981 (emerald)
   - Agents: #8b5cf6 (violet)
   - Fine-tuning: #ec4899 (pink)
   - Evaluation: #06b6d4 (cyan)
   - Infrastructure: #f97316 (orange)
+  - iOS + AI: #3b82f6 (blue)
+  - Frontend + AI: #a855f7 (purple)
 - **Semantic:**
   - Success: #10b981
   - Warning: #f59e0b
@@ -95,3 +99,7 @@
 | 2026-04-08 | Graph node colors = site category system | Unified color language: graph IS the design system |
 | 2026-04-08 | Dark mode default | Developer audience + data visualization readability |
 | 2026-04-08 | Mobile: category cards instead of graph | Force-directed graph unusable on 375px |
+| 2026-04-09 | 카테고리 3개 추가 (Context/Harness/iOS/Frontend AI) | AI 방법론 세분화 + iOS/프론트엔드 실무 AI |
+| 2026-04-09 | 코드 복사 버튼 | 기술 블로그 UX 표준 |
+| 2026-04-09 | 모바일 하단 네비 바 | 모바일에서 주요 페이지 접근성 |
+| 2026-04-09 | 공통 Header 컴포넌트 | DRY: 5개 페이지에서 개별 헤더 제거 |
