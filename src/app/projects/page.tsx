@@ -15,7 +15,7 @@ const PROJECTS = [
     period: "2026.04 ~",
     stack: ["Next.js 16", "TypeScript", "Supabase", "Claude", "Gemini", "GPT", "Tailwind CSS 4"],
     summary: "AI 멀티 에이전트 투자 분석 SaaS. 13개 에이전트가 적대적 토론을 거쳐 투자 판단을 도출한다.",
-    scale: { files: 344, agents: 14, dataSources: 9, tests: 32 },
+    scale: { files: 344, lines: 82401, agents: 14, dataSources: 9, tests: 32 },
     work: [
       "13-에이전트 멀티 페이즈 파이프라인 설계 (4 병렬 분석가 → Bull/Bear 토론 → Judge → Trader → Risk → CIO → Devil's Advocate)",
       "Gemini/Claude/GPT 3개 프로바이더 자동 전환 + Circuit Breaker (3회 실패 → 2분 쿨다운)",
@@ -95,7 +95,7 @@ const PROJECTS = [
     period: "2026.04 ~",
     stack: ["Next.js 16", "TypeScript", "Supabase", "Claude Haiku", "Framer Motion", "Tailwind CSS 4"],
     summary: "AI 타로 & 사주 상담 서비스. 6개 존(세계관)에 47페이지, 314개 테스트, 8,652줄의 도메인 지식.",
-    scale: { files: 266, pages: 47, dataLines: 8652, tests: 314 },
+    scale: { files: 266, lines: 48100, pages: 47, dataLines: 8652, tests: 314 },
     work: [
       "6개 존(Zone) 테마 시스템: Hub/Tarot/Saju/Love/Psych/Dream 각각 다른 색상/폰트/파티클",
       "CSS Custom Properties + data-zone 속성으로 1줄 테마 전환 (47페이지 × 6테마 = 282가지 조합)",
@@ -228,13 +228,16 @@ export default function ProjectsPage() {
                 {Object.entries(project.scale).map(([key, val]) => {
                   const labels: Record<string, string> = {
                     files: "파일",
+                    lines: "코드 라인",
                     agents: "에이전트",
                     dataSources: "데이터 소스",
                     tests: "테스트",
                     pages: "페이지",
                     dataLines: "도메인 데이터",
                   };
-                  const display = key === "dataLines" ? `${(val as number).toLocaleString()}줄` : val;
+                  const display = key === "dataLines" || key === "lines"
+                    ? `${(val as number).toLocaleString()}줄`
+                    : val;
                   return <StatBadge key={key} label={labels[key] || key} value={display} />;
                 })}
               </div>
