@@ -17,10 +17,14 @@ AI 하네스 엔지니어링 학습 위키 + 포트폴리오. Next.js 15 App Rou
 
 ## Pages
 - `/` — 홈 (지식 그래프 풀스크린 히어로)
-- `/wiki` — 위키 목록 (카테고리별 카드 그리드)
+- `/wiki` — 위키 목록 (카테고리별 카드 그리드 + Coming Soon)
 - `/wiki/[category]/[slug]` — 위키 엔트리 (요약 카드 + MDX + 이전/다음 네비)
-- `/dashboard` — 학습 대시보드 (스트릭 + 진도 + 추천)
+- `/dashboard` — 학습 대시보드 (스트릭 + 히트맵 + 진도 + 추천)
 - `/projects` — Vibe Coding 쇼케이스 (CE/HE 패턴 + 회고)
+- `/admin` — 엔트리 관리 대시보드 (인증 필요)
+- `/admin/new` — 새 엔트리 작성 (MDX 에디터 + 프론트매터 폼)
+- `/admin/edit/[...slug]` — 엔트리 수정
+- `/admin/login` — 관리자 로그인
 
 ## Project Structure
 ```
@@ -73,6 +77,16 @@ src/generated/     → content-manifest.json (gitignored, entries + graph + stre
 
 ## API Routes
 - `/api/og` — OG 이미지 자동 생성 (Edge Runtime, next/og, Noto Sans KR)
+- `/api/auth/login` — 관리자 로그인 (HMAC-SHA256 쿠키)
+- `/api/auth/logout` — 로그아웃
+- `/api/admin/entries` — 엔트리 목록(GET) + 생성(POST)
+- `/api/admin/entries/[...slug]` — 조회(GET) + 수정(PUT) + 삭제(DELETE)
+
+## Admin / Auth
+- 쿠키 기반 HMAC-SHA256 인증 (middleware.ts)
+- 환경변수: ADMIN_PASSWORD, ADMIN_SECRET, GITHUB_TOKEN, GITHUB_REPO
+- GitHub Contents API로 MDX 파일 CRUD → Vercel 자동 재배포
+- 에디터: @uiw/react-md-editor (다크 테마, 실시간 프리뷰)
 
 ## Roadmap
 - See TODOS.md for deferred items and backlog
