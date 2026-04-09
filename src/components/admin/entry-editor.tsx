@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { CATEGORIES, CATEGORY_LABELS } from "@/lib/schema";
@@ -111,6 +111,10 @@ export function EntryEditor({
   const [dirty, setDirty] = useState(false);
   const [tagInput, setTagInput] = useState("");
   const editorCmds = useEditorCommands();
+  const [editorHeight, setEditorHeight] = useState(600);
+  const resizingRef = useRef(false);
+  const startYRef = useRef(0);
+  const startHeightRef = useRef(600);
 
   useEffect(() => {
     if (!dirty) return;
@@ -120,6 +124,29 @@ export function EntryEditor({
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
   }, [dirty]);
+
+  // Editor resize drag
+  useEffect(() => {
+    function onMouseMove(e: MouseEvent) {
+      if (!resizingRef.current) return;
+      const delta = e.clientY - startYRef.current;
+      const newHeight = Math.max(600, Math.min(900, startHeightRef.current + delta));
+      setEditorHeight(newHeight);
+    }
+    function onMouseUp() {
+      if (resizingRef.current) {
+        resizingRef.current = false;
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+      }
+    }
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+  }, []);
 
   const updateFm = useCallback(
     <K extends keyof Frontmatter>(key: K, value: Frontmatter[K]) => {
@@ -446,11 +473,25 @@ export function EntryEditor({
               setContent(val || "");
               setDirty(true);
             }}
-            height={600}
+            height={editorHeight}
             preview="live"
             visibleDragbar={false}
             {...(editorCmds ? { commands: editorCmds.toolbar as never[] } : {})}
           />
+          {/* Resize handle */}
+          <div
+            className="flex items-center justify-center h-3 cursor-ns-resize group hover:bg-surface/80 rounded-b-[var(--radius-md)] transition-colors"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              resizingRef.current = true;
+              startYRef.current = e.clientY;
+              startHeightRef.current = editorHeight;
+              document.body.style.cursor = "ns-resize";
+              document.body.style.userSelect = "none";
+            }}
+          >
+            <div className="w-8 h-1 rounded-full bg-border group-hover:bg-muted transition-colors" />
+          </div>
         </div>
       </div>
     </div>
