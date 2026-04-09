@@ -83,6 +83,19 @@ All font choices, colors, spacing, and aesthetic direction are defined there.
 Do not deviate without explicit user approval.
 In QA mode, flag any code that doesn't match DESIGN.md.
 
+## Documented Solutions
+
+`docs/solutions/` — 과거 문제 해결 기록 (빌드 에러, 런타임 버그, 모범 사례 등).
+카테고리별 정리 + YAML frontmatter. 비슷한 문제 발생 시 먼저 검색할 것.
+`docs/retrospectives/` — 스프린트 회고. 날짜별 작업 기록 + 복리 자산.
+
+## Compound Engineering
+
+모든 작업 사이클의 마지막에 `/compound`를 실행한다.
+Plan → Work → Review → **Compound**. 코드가 아니라 코드를 만드는 시스템을 쌓는다.
+CHANGELOG 업데이트 + 스프린트 회고 + 문제 해결 문서화.
+QA 완료 후 자동으로 트리거되도록 훅 설정됨.
+
 ## Skill routing
 
 When the user's request matches an available skill, ALWAYS invoke it using the Skill
@@ -98,3 +111,4 @@ Key routing rules:
 - Design system, brand → invoke design-consultation
 - Visual audit, design polish → invoke design-review
 - Architecture review → invoke plan-eng-review
+- 작업 완료, 스프린트 정리, 회고 → invoke compound
