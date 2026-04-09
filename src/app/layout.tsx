@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ThemeProvider } from "next-themes";
 import { MobileNav } from "@/components/mobile-nav";
+import { MagneticMode } from "@/components/magnetic-mode";
 import "./globals.css";
 
 const SITE_URL = "https://ai-study-wheat.vercel.app";
@@ -60,6 +61,7 @@ export default function RootLayout({
         >
           {children}
           <MobileNav />
+          <MagneticMode />
         </ThemeProvider>
       </body>
     </html>
