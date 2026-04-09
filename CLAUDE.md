@@ -20,6 +20,7 @@ AI 하네스 엔지니어링 학습 위키 + 포트폴리오. Next.js 15 App Rou
 - `/wiki` — 위키 목록 (카테고리별 카드 그리드 + Coming Soon)
 - `/wiki/[category]/[slug]` — 위키 엔트리 (요약 카드 + MDX + 이전/다음 네비)
 - `/dashboard` — 학습 대시보드 (스트릭 + 히트맵 + 진도 + 추천)
+- `/timeline` — 학습 타임라인 (날짜/월별 시간순 엔트리)
 - `/projects` — Vibe Coding 쇼케이스 (CE/HE 패턴 + 회고)
 - `/admin` — 엔트리 관리 대시보드 (인증 필요)
 - `/admin/new` — 새 엔트리 작성 (MDX 에디터 + 프론트매터 폼)

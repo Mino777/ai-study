@@ -2,6 +2,15 @@
 
 모든 주목할 만한 변경사항을 이 파일에 기록합니다.
 
+## [2026-04-09 autoceo-2 R1] — 학습 타임라인 + MDX 솔루션 문서
+
+### Added
+- `/timeline` 페이지 — 날짜별 학습 기록 시간순 뷰 (월별 그룹, 요일 표시)
+- 헤더 네비에 Timeline 탭 추가
+- docs/solutions/mdx/2026-04-09-br-tag-compile-error.md — MDX br 태그 컴파일 에러 솔루션 문서
+
+---
+
 ## [2026-04-09 R2] — autoceo Round 2
 
 ### Added

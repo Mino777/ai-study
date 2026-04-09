@@ -7,6 +7,7 @@ import { ThemeToggle } from "./theme-toggle";
 const NAV_ITEMS = [
   { href: "/wiki", label: "Wiki" },
   { href: "/dashboard", label: "Dashboard" },
+  { href: "/timeline", label: "Timeline" },
   { href: "/projects", label: "Vibe Coding" },
 ];
 
