@@ -6,6 +6,8 @@ import { MobileCategories } from "@/components/mobile-categories";
 import { SearchDialog, SearchTrigger } from "@/components/search-dialog";
 import { GraphSearchProvider } from "@/contexts/graph-search-context";
 import { Header } from "@/components/header";
+import { MagneticText } from "@/components/magnetic-text";
+import { CATEGORY_LABELS, CATEGORY_COLORS } from "@/lib/schema";
 
 function GraphSkeleton() {
   return (
@@ -76,6 +78,18 @@ export default function Home() {
           </p>
         </div>
         <MobileCategories manifest={manifest} />
+      </div>
+
+      {/* Magnetic category text — desktop */}
+      <div className="hidden lg:block border-t border-border/30 bg-bg/80 backdrop-blur-sm">
+        <div className="h-24">
+          <MagneticText
+            items={Object.entries(CATEGORY_LABELS).map(([key, label]) => ({
+              text: label,
+              color: CATEGORY_COLORS[key] || "#6b6b80",
+            }))}
+          />
+        </div>
       </div>
 
       {/* Stats bar */}
