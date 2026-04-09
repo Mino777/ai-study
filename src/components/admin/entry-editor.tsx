@@ -8,6 +8,17 @@ import type { Category } from "@/lib/schema";
 
 const MDEditor = dynamic(() => import("@uiw/react-md-editor"), { ssr: false });
 
+function Tip({ text }: { text: string }) {
+  return (
+    <span className="relative group ml-1 cursor-help">
+      <span className="inline-flex items-center justify-center h-3.5 w-3.5 rounded-full bg-border text-[9px] font-bold text-muted">?</span>
+      <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1.5 hidden group-hover:block w-52 rounded-[var(--radius-md)] border border-border bg-surface px-3 py-2 text-xs text-text shadow-lg z-50 leading-relaxed">
+        {text}
+      </span>
+    </span>
+  );
+}
+
 interface Frontmatter {
   title: string;
   category: Category;
@@ -185,7 +196,7 @@ export function EntryEditor({
           {/* Title */}
           <div>
             <label className="block text-xs text-muted mb-1.5 font-semibold">
-              제목
+              제목<Tip text="위키 목록과 검색에 표시됩니다. 핵심 키워드를 포함하세요." />
             </label>
             <input
               type="text"
@@ -199,7 +210,7 @@ export function EntryEditor({
           {/* Description */}
           <div>
             <label className="block text-xs text-muted mb-1.5 font-semibold">
-              설명
+              설명<Tip text="카드 미리보기와 OG 이미지에 표시되는 한 줄 요약입니다." />
             </label>
             <textarea
               value={fm.description}
@@ -213,7 +224,7 @@ export function EntryEditor({
           {/* Category */}
           <div>
             <label className="block text-xs text-muted mb-1.5 font-semibold">
-              카테고리
+              카테고리<Tip text="10개 학습 영역 중 하나를 선택. 파일 경로와 그래프 노드 색상이 결정됩니다." />
             </label>
             <select
               value={fm.category}
@@ -232,7 +243,7 @@ export function EntryEditor({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs text-muted mb-1.5 font-semibold">
-                날짜
+                날짜<Tip text="학습 날짜. 스트릭과 히트맵에 반영됩니다." />
               </label>
               <input
                 type="date"
@@ -243,7 +254,7 @@ export function EntryEditor({
             </div>
             <div>
               <label className="block text-xs text-muted mb-1.5 font-semibold">
-                상태
+                상태<Tip text="초안: 비공개, 작성 중: 표시되지만 미완성 표시, 완료: 정식 공개" />
               </label>
               <select
                 value={fm.status}
@@ -265,7 +276,7 @@ export function EntryEditor({
           {/* Confidence */}
           <div>
             <label className="block text-xs text-muted mb-1.5 font-semibold">
-              Confidence: {fm.confidence}
+              Confidence: {fm.confidence}<Tip text="이 주제에 대한 이해도. 1=들어봤다, 3=적용했다, 5=가르칠 수 있다. 그래프 노드 크기에 반영." />
             </label>
             <div className="flex gap-2">
               {[1, 2, 3, 4, 5].map((n) => (
@@ -294,7 +305,7 @@ export function EntryEditor({
           {/* Type */}
           <div>
             <label className="block text-xs text-muted mb-1.5 font-semibold">
-              타입
+              타입<Tip text="엔트리: 정식 학습 글. TIL: Today I Learned, 짧은 메모." />
             </label>
             <div className="flex gap-2">
               {(["entry", "til"] as const).map((t) => (
@@ -316,7 +327,7 @@ export function EntryEditor({
           {/* Tags */}
           <div>
             <label className="block text-xs text-muted mb-1.5 font-semibold">
-              태그
+              태그<Tip text="검색과 분류에 사용됩니다. 소문자 영어로 입력, Enter로 추가." />
             </label>
             <div className="flex gap-2 mb-2 flex-wrap">
               {fm.tags.map((tag) => (
@@ -354,7 +365,7 @@ export function EntryEditor({
           {/* Connections */}
           <div>
             <label className="block text-xs text-muted mb-1.5 font-semibold">
-              연결 ({fm.connections.length})
+              연결 ({fm.connections.length})<Tip text="관련 엔트리를 선택하면 지식 그래프에서 선으로 연결되고, 글 하단에 '관련 엔트리'로 표시됩니다." />
             </label>
             <div className="max-h-40 overflow-y-auto rounded-[var(--radius-md)] border border-border bg-bg p-2 space-y-1">
               {allSlugs
@@ -386,7 +397,7 @@ export function EntryEditor({
           data-color-mode="dark"
         >
           <label className="block text-xs text-muted mb-1.5 font-semibold">
-            본문 (MDX)
+            본문 (MDX)<Tip text="마크다운 + JSX. ## 제목, **굵게**, ```코드블록```, > 인용, - 목록 등. 좌측 편집, 우측 미리보기." />
           </label>
           <MDEditor
             value={content}
