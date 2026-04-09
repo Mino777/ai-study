@@ -56,8 +56,8 @@ describe("content-manifest 생성", () => {
   });
 
   it("카테고리 통계의 합이 전체 엔트리 수와 일치한다", () => {
-    const catTotal = Object.values(manifest.stats.categoryStats).reduce(
-      (sum: number, cat: { count: number }) => sum + cat.count,
+    const catTotal = (Object.values(manifest.stats.categoryStats) as Array<{ count: number }>).reduce(
+      (sum, cat) => sum + cat.count,
       0
     );
     expect(catTotal).toBe(manifest.entries.length);

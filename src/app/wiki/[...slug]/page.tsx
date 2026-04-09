@@ -8,6 +8,7 @@ import { SummaryCard } from "@/components/summary-card";
 import { mdxComponents } from "@/components/mdx-components";
 import { EntryNav } from "@/components/entry-nav";
 import { TableOfContents } from "@/components/toc";
+import { ScrollProgress } from "@/components/scroll-progress";
 import Link from "next/link";
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -144,6 +145,7 @@ export default async function WikiEntryPage({
 
   return (
     <article>
+      <ScrollProgress />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
