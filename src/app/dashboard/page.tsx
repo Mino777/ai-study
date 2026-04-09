@@ -4,6 +4,7 @@ import { SearchDialog } from "@/components/search-dialog";
 import type { Category } from "@/lib/schema";
 import { GraphSearchProvider } from "@/contexts/graph-search-context";
 import { Header } from "@/components/header";
+import { LearningHeatmap } from "@/components/learning-heatmap";
 
 const CATEGORY_LABELS: Record<string, string> = {
   "prompt-engineering": "Prompt Engineering",
@@ -137,6 +138,11 @@ export default function DashboardPage() {
             )}
           </div>
         )}
+
+        {/* Learning Heatmap */}
+        <div className="rounded-[var(--radius-md)] border border-border bg-surface p-5 mb-8">
+          <LearningHeatmap dailyEntries={manifest.dailyEntries || {}} />
+        </div>
 
         {/* Overall stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">

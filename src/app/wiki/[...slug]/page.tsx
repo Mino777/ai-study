@@ -40,6 +40,10 @@ export async function generateMetadata({
   const entry = getEntry(slug);
   if (!entry) return { title: "Not Found" };
 
+  const ogUrl = new URL("/api/og", "https://ai-study-wheat.vercel.app");
+  ogUrl.searchParams.set("title", entry.frontmatter.title);
+  ogUrl.searchParams.set("category", entry.frontmatter.category);
+
   return {
     title: `${entry.frontmatter.title} — AI Study Wiki`,
     description: entry.frontmatter.description,
@@ -48,6 +52,13 @@ export async function generateMetadata({
       description: entry.frontmatter.description,
       type: "article",
       tags: entry.frontmatter.tags,
+      images: [{ url: ogUrl.toString(), width: 1200, height: 630, alt: entry.frontmatter.title }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: entry.frontmatter.title,
+      description: entry.frontmatter.description,
+      images: [ogUrl.toString()],
     },
   };
 }
@@ -80,9 +91,15 @@ export default async function WikiEntryPage({
   const connections = entry.frontmatter.connections
     .map((connSlug) => {
       const found = manifest.entries.find((e) => e.slug === connSlug);
-      return found ? { slug: found.slug, title: found.frontmatter.title, category: found.frontmatter.category } : null;
+      return found ? {
+        slug: found.slug,
+        title: found.frontmatter.title,
+        category: found.frontmatter.category,
+        confidence: found.frontmatter.confidence,
+        description: found.frontmatter.description,
+      } : null;
     })
-    .filter(Boolean) as Array<{ slug: string; title: string; category: string }>;
+    .filter(Boolean) as Array<{ slug: string; title: string; category: string; confidence: number; description: string }>;
 
   let content;
   try {
@@ -127,13 +144,34 @@ export default async function WikiEntryPage({
               <Link
                 key={conn.slug}
                 href={`/wiki/${conn.slug}`}
-                className="flex items-center gap-3 rounded-[var(--radius-md)] border border-border bg-surface p-4 transition-colors hover:border-accent"
+                className="rounded-[var(--radius-md)] border border-border bg-surface p-4 transition-colors hover:border-accent group"
               >
-                <span
-                  className="h-2.5 w-2.5 rounded-full shrink-0"
-                  style={{ background: CATEGORY_COLORS[conn.category] || "var(--accent)" }}
-                />
-                <span className="text-sm font-medium text-text">{conn.title}</span>
+                <div className="flex items-center gap-2 mb-2">
+                  <span
+                    className="inline-block rounded-full px-2 py-0.5 text-xs font-semibold font-code"
+                    style={{
+                      background: `color-mix(in srgb, ${CATEGORY_COLORS[conn.category] || "var(--accent)"} 15%, transparent)`,
+                      color: CATEGORY_COLORS[conn.category] || "var(--accent)",
+                    }}
+                  >
+                    {conn.category.replace(/-/g, " ")}
+                  </span>
+                  <span className="inline-flex gap-0.5">
+                    {[1, 2, 3, 4, 5].map((i) => (
+                      <span
+                        key={i}
+                        className="h-1 w-1 rounded-full"
+                        style={{ background: i <= conn.confidence ? "var(--accent)" : "var(--border)" }}
+                      />
+                    ))}
+                  </span>
+                </div>
+                <p className="text-sm font-medium text-text group-hover:text-accent transition-colors">
+                  {conn.title}
+                </p>
+                <p className="text-xs text-muted mt-1 line-clamp-1">
+                  {conn.description}
+                </p>
               </Link>
             ))}
           </div>

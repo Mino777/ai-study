@@ -35,6 +35,24 @@ const CATEGORY_COLORS: Record<string, string> = {
 
 const CONFIDENCE_LABELS = ["", "들어봤다", "이해했다", "적용했다", "깊이 안다", "가르칠 수 있다"];
 
+const ALL_CATEGORIES = [
+  "prompt-engineering",
+  "context-engineering",
+  "harness-engineering",
+  "rag",
+  "agents",
+  "fine-tuning",
+  "evaluation",
+  "infrastructure",
+  "ios-ai",
+  "frontend-ai",
+];
+
+const COMING_SOON_TOPICS: Record<string, string[]> = {
+  "fine-tuning": ["LoRA / QLoRA", "RLHF & DPO", "데이터셋 준비"],
+  "frontend-ai": ["React + AI 패턴", "On-device Inference", "AI UX 설계"],
+};
+
 export default function WikiIndexPage() {
   const manifest = getManifest();
 
@@ -45,16 +63,20 @@ export default function WikiIndexPage() {
     grouped[cat].push(entry);
   }
 
+  const emptyCategories = ALL_CATEGORIES.filter((cat) => !grouped[cat] || grouped[cat].length === 0);
+
   return (
     <div>
       <h1 className="font-display text-3xl font-black tracking-tight mb-2">
         위키
       </h1>
       <p className="text-muted mb-8">
-        {manifest.entries.length}개의 엔트리가 있습니다
+        {manifest.entries.length}개의 엔트리 · {ALL_CATEGORIES.length - emptyCategories.length}/{ALL_CATEGORIES.length} 카테고리
       </p>
 
-      {Object.entries(grouped).map(([category, entries]) => (
+      {ALL_CATEGORIES.filter((cat) => grouped[cat] && grouped[cat].length > 0).map((category) => {
+        const entries = grouped[category];
+        return (
         <section key={category} className="mb-10">
           <div className="flex items-center gap-2 mb-4">
             <span
@@ -125,7 +147,48 @@ export default function WikiIndexPage() {
             ))}
           </div>
         </section>
-      ))}
+        );
+      })}
+
+      {/* Coming Soon categories */}
+      {emptyCategories.length > 0 && (
+        <section className="mb-10">
+          <h2 className="font-display text-xl font-bold mb-4 text-muted">
+            Coming Soon
+          </h2>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {emptyCategories.map((category) => {
+              const topics = COMING_SOON_TOPICS[category];
+              return (
+                <div
+                  key={category}
+                  className="rounded-[var(--radius-md)] border border-border/50 bg-surface/50 p-5 opacity-60"
+                >
+                  <div className="flex items-center gap-2 mb-3">
+                    <span
+                      className="h-3 w-3 rounded-full opacity-50"
+                      style={{ background: CATEGORY_COLORS[category] }}
+                    />
+                    <span className="font-display text-lg font-bold text-muted">
+                      {CATEGORY_LABELS[category] || category}
+                    </span>
+                  </div>
+                  {topics && (
+                    <ul className="text-xs text-muted space-y-1">
+                      {topics.map((topic) => (
+                        <li key={topic} className="flex items-center gap-1.5">
+                          <span className="h-1 w-1 rounded-full bg-border" />
+                          {topic}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

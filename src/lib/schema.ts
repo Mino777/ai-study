@@ -84,6 +84,7 @@ export interface ContentManifest {
     longest: number;
     lastActiveDate: string | null;
   };
+  dailyEntries: Record<string, number>;
   stats: {
     totalEntries: number;
     totalComplete: number;

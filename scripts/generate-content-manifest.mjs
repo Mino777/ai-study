@@ -160,6 +160,33 @@ function main() {
     }
   }
 
+  // Add placeholder nodes for empty categories (shown as grey in graph)
+  const categoriesWithEntries = new Set(entries.map((e) => e.frontmatter.category));
+  const CATEGORY_LABELS = {
+    "prompt-engineering": "Prompt Engineering",
+    "context-engineering": "Context Engineering",
+    "harness-engineering": "Harness Engineering",
+    rag: "RAG",
+    agents: "Agents",
+    "fine-tuning": "Fine-tuning",
+    evaluation: "Evaluation",
+    infrastructure: "Infrastructure",
+    "ios-ai": "iOS + AI",
+    "frontend-ai": "Frontend + AI",
+  };
+  for (const cat of CATEGORIES) {
+    if (!categoriesWithEntries.has(cat)) {
+      const nodeId = `__empty__${cat}`;
+      nodes.push({
+        id: nodeId,
+        label: CATEGORY_LABELS[cat] || cat,
+        category: cat,
+        confidence: 0,
+        description: "Coming Soon",
+      });
+    }
+  }
+
   // Calculate streak
   const dates = [...new Set(entries.map((e) => e.frontmatter.date))].sort().reverse();
   let currentStreak = 0;
@@ -205,6 +232,13 @@ function main() {
       }
     }
     longestStreak = Math.max(longestStreak, streak);
+  }
+
+  // Build dailyEntries map (date → count) for heatmap
+  const dailyEntries = {};
+  for (const entry of entries) {
+    const d = entry.frontmatter.date;
+    dailyEntries[d] = (dailyEntries[d] || 0) + 1;
   }
 
   // Calculate stats
@@ -253,6 +287,7 @@ function main() {
       longest: longestStreak,
       lastActiveDate: dates[0] || null,
     },
+    dailyEntries,
     stats: {
       totalEntries: entries.length,
       totalComplete: entries.filter((e) => e.frontmatter.status === "complete").length,

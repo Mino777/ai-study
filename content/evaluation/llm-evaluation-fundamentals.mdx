@@ -1,0 +1,169 @@
+---
+title: "LLM Evaluation 기초 — AI 시스템 품질 측정법"
+category: evaluation
+date: "2026-04-09"
+tags: [evaluation, benchmark, metrics, hallucination, human-eval]
+confidence: 2
+connections: [prompt-engineering/quality-guards, harness-engineering/harness-engineering-overview, prompt-engineering/chain-of-thought]
+status: complete
+description: "AI 시스템이 '잘 동작하는지' 어떻게 측정하는가. 자동 평가, 인간 평가, LLM-as-Judge까지 실전 평가 기법."
+type: entry
+---
+
+## 핵심 개념
+
+"이 LLM 앱이 잘 작동하는가?"에 답하는 것이 Evaluation이다. 감으로 판단하면 안 된다. **측정 가능한 기준**이 있어야 개선할 수 있다.
+
+```
+┌──────────────────────────────────────────┐
+│              Eval Pipeline                │
+│                                          │
+│  Test Cases  →  LLM 실행  →  판정 기준   │
+│  (입력 모음)    (실제 호출)   (맞았나?)   │
+│                                          │
+│  결과: 정확도 82%, 환각률 5%, 지연 1.2s  │
+└──────────────────────────────────────────┘
+```
+
+## 왜 Eval이 어려운가
+
+전통 소프트웨어 테스트는 `assertEqual(expected, actual)`이면 된다. 하지만 LLM 출력은:
+
+- **비결정적**: 같은 입력에 다른 출력
+- **열린 형식**: "좋은 답변"의 기준이 모호
+- **맥락 의존적**: 같은 질문이라도 대화 흐름에 따라 정답이 달라짐
+
+그래서 LLM Eval은 **하나의 정답이 아니라 품질 차원(dimensions)**으로 평가한다.
+
+## 평가의 3가지 축
+
+### 1. 자동 평가 (Automated Metrics)
+
+코드로 계산 가능한 지표. 빠르고 재현 가능하지만, 뉘앙스를 놓칠 수 있다.
+
+```typescript
+// 정확도: 정답이 있는 경우
+function exactMatch(predicted: string, expected: string): boolean {
+  return normalize(predicted) === normalize(expected);
+}
+
+// 포함 여부: 핵심 정보가 들어있는지
+function containsKey(response: string, keyFacts: string[]): number {
+  const found = keyFacts.filter(fact =>
+    response.toLowerCase().includes(fact.toLowerCase())
+  );
+  return found.length / keyFacts.length; // 0.0 ~ 1.0
+}
+
+// 구조 검증: JSON 스키마 준수 여부
+function structureValid(response: string, schema: ZodSchema): boolean {
+  try {
+    const parsed = JSON.parse(response);
+    return schema.safeParse(parsed).success;
+  } catch {
+    return false;
+  }
+}
+```
+
+### 2. LLM-as-Judge (AI 판정)
+
+다른 LLM이 출력의 품질을 점수 매기는 방식. 인간 평가보다 빠르고, 자동 지표보다 뉘앙스를 잡는다.
+
+```typescript
+const judgePrompt = `
+다음 응답의 품질을 1-5점으로 평가하세요.
+
+[질문]
+{question}
+
+[응답]
+{response}
+
+[평가 기준]
+- 정확성: 사실에 부합하는가? (1: 완전 틀림, 5: 완벽히 정확)
+- 완전성: 질문에 충분히 답했는가? (1: 핵심 누락, 5: 완벽히 커버)
+- 명확성: 이해하기 쉬운가? (1: 혼란스러움, 5: 매우 명확)
+
+JSON으로 응답: { "accuracy": N, "completeness": N, "clarity": N, "reasoning": "..." }
+`;
+
+async function llmJudge(question: string, response: string) {
+  const prompt = judgePrompt
+    .replace('{question}', question)
+    .replace('{response}', response);
+
+  const result = await llm.generate(prompt, {
+    response_format: { type: 'json_object' },
+  });
+
+  return JSON.parse(result);
+}
+```
+
+**주의**: Judge 모델은 평가 대상 모델보다 같거나 더 강한 모델을 사용해야 한다. GPT-4o로 생성한 답변을 GPT-4o-mini로 판정하면 신뢰도가 떨어진다.
+
+### 3. 인간 평가 (Human Evaluation)
+
+가장 정확하지만 가장 느리고 비싸다. 핵심 의사결정에만 사용한다.
+
+```
+사용 시점:
+├── 새 모델 도입 검토 (A/B 비교)
+├── 프롬프트 대규모 변경 후
+├── LLM-as-Judge의 점수가 의심될 때
+└── 사용자 피드백과 자동 지표가 괴리될 때
+```
+
+## 실전 Eval 세트 설계
+
+```typescript
+interface EvalCase {
+  id: string;
+  input: string;              // 테스트 입력
+  expectedOutput?: string;     // 정답 (있으면)
+  keyFacts?: string[];         // 포함해야 할 핵심 정보
+  category: string;            // 분류 (easy/medium/hard)
+  metadata?: Record<string, unknown>;
+}
+
+// 최소 Eval 세트: 카테고리별 10-20개
+const evalSet: EvalCase[] = [
+  {
+    id: 'factual-001',
+    input: 'TypeScript에서 제네릭의 역할은?',
+    keyFacts: ['타입 안전성', '재사용', '컴파일 타임'],
+    category: 'factual',
+  },
+  {
+    id: 'reasoning-001',
+    input: '마이크로서비스와 모놀리스 중 스타트업에 적합한 것은?',
+    keyFacts: ['팀 규모', '복잡도', '배포 속도'],
+    category: 'reasoning',
+  },
+];
+```
+
+## 핵심 지표 정리
+
+| 지표 | 측정 대상 | 자동화 | 사용 시점 |
+|------|----------|--------|----------|
+| Exact Match | 정답 일치 | 완전 자동 | 분류, 추출 태스크 |
+| Key Fact Recall | 핵심 정보 포함률 | 완전 자동 | QA, 요약 |
+| Schema Compliance | 구조 준수 | 완전 자동 | Structured Output |
+| LLM Judge Score | 종합 품질 | 반자동 | 생성형 태스크 |
+| Hallucination Rate | 근거 없는 주장 비율 | 반자동 | RAG, 사실 기반 QA |
+| Latency p95 | 95번째 백분위 응답 시간 | 완전 자동 | 전체 |
+| Token Efficiency | 답변 품질 / 소비 토큰 | 완전 자동 | 비용 최적화 |
+
+## 자기 점검
+
+1. 내 AI 프로젝트에 Eval 세트가 있는가? 없다면 가장 중요한 5개 케이스를 만들 수 있는가?
+2. "이 프롬프트가 더 좋다"는 판단을 어떤 근거로 하고 있는가?
+3. LLM-as-Judge를 사용할 때, judge 모델과 대상 모델의 관계를 고려하고 있는가?
+
+## 다음 단계
+
+- **Quality Guards**: Eval 결과를 런타임 가드레일로 전환하는 방법
+- **Chain of Thought**: 추론 과정을 평가에 활용하는 기법
+- **Harness Engineering**: Eval을 하네스 파이프라인에 내장하는 패턴

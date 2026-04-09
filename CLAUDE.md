@@ -50,6 +50,7 @@ src/generated/     → content-manifest.json (gitignored, entries + graph + stre
 - 10 Categories: prompt-engineering, context-engineering, harness-engineering, rag, agents, fine-tuning, evaluation, infrastructure, ios-ai, frontend-ai
 - Confidence: 1-5 (들어봤다 → 가르칠 수 있다)
 - Streak: prebuild에서 frontmatter date 기반 연속 학습일 자동 계산
+- dailyEntries: prebuild에서 날짜별 엔트리 수 맵 생성 (히트맵용)
 
 ## AI 과외 선생님 Pipeline
 - 매일 09:00 KST: GitHub Actions → 3개 주제 추천 Issue 생성
@@ -60,7 +61,7 @@ src/generated/     → content-manifest.json (gitignored, entries + graph + stre
 
 ## Components
 - `Header` — 공통 헤더 (Wiki/Dashboard/Vibe Coding + 현재 탭 하이라이트)
-- `KnowledgeGraph` — force-directed 그래프 (useMemo graphData, useRef hover)
+- `KnowledgeGraph` — force-directed 그래프 (useMemo graphData, useRef hover, 빈 카테고리 회색 노드)
 - `SearchDialog` — Cmd+K 검색 + GraphSearchContext 연동
 - `Sidebar` — 카테고리 트리 (접이식, confidence dots)
 - `SummaryCard` — 엔트리 요약 (카테고리 배지, confidence, 읽기 시간, GitHub 편집)
@@ -68,6 +69,13 @@ src/generated/     → content-manifest.json (gitignored, entries + graph + stre
 - `MermaidDiagram` — mermaid 코드 블록 자동 렌더링
 - `EntryNav` — 이전/다음 엔트리 (같은 카테고리 내)
 - `MobileNav` — 모바일 하단 탭 바
+- `LearningHeatmap` — GitHub 스타일 학습 히트맵 (12주, dailyEntries 기반)
+
+## API Routes
+- `/api/og` — OG 이미지 자동 생성 (Edge Runtime, next/og, Noto Sans KR)
+
+## Roadmap
+- See TODOS.md for deferred items and backlog
 
 ## Design System
 Always read DESIGN.md before making any visual or UI decisions.

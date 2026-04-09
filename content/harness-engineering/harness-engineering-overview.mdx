@@ -1,0 +1,181 @@
+---
+title: "Harness Engineering 개요 — AI 시스템을 감싸는 프레임워크 설계"
+category: harness-engineering
+date: "2026-04-09"
+tags: [harness-engineering, ai-harness, orchestration, guardrails, pipeline]
+confidence: 2
+connections: [context-engineering/context-engineering-fundamentals, prompt-engineering/quality-guards, agents/tool-use]
+status: complete
+description: "LLM 하나로는 프로덕션 시스템을 만들 수 없다. 입출력 검증, 라우팅, 폴백, 캐싱을 포함하는 AI 하네스 설계의 기초."
+type: entry
+---
+
+## 핵심 개념
+
+AI 하네스(Harness)란 **LLM을 프로덕션에서 안전하고 효율적으로 사용하기 위해 감싸는 소프트웨어 계층**이다.
+
+LLM API를 직접 호출하는 것은 프로토타입에서는 충분하지만, 프로덕션에서는 부족하다. 입력 검증, 출력 파싱, 에러 처리, 비용 제어, 품질 보장이 모두 필요하다.
+
+```
+┌─────────────────────────────────────────────────┐
+│                  AI Harness                       │
+│                                                   │
+│  ┌──────────┐   ┌──────────┐   ┌──────────┐     │
+│  │ 입력 검증 │ → │ Context  │ → │  LLM     │     │
+│  │ + 라우팅  │   │ Assembly │   │  호출    │     │
+│  └──────────┘   └──────────┘   └──────────┘     │
+│       ↑                              │           │
+│       │         ┌──────────┐         ↓           │
+│       │         │ 캐시     │   ┌──────────┐     │
+│       │         └──────────┘   │ 출력 검증 │     │
+│       │                        │ + 파싱    │     │
+│       │                        └──────────┘     │
+│       │                              │           │
+│       └──────── 재시도 / 폴백 ◄──────┘           │
+└─────────────────────────────────────────────────┘
+```
+
+## 왜 하네스가 필요한가
+
+| LLM 직접 호출 | 하네스를 통한 호출 |
+|--------------|------------------|
+| 할루시네이션 그대로 노출 | 출력 검증 + 필터링 |
+| API 장애 시 서비스 중단 | 폴백 모델로 자동 전환 |
+| 불필요한 API 호출 = 비용 증가 | 시맨틱 캐싱으로 비용 절감 |
+| 느린 응답 그대로 전달 | 스트리밍 + 타임아웃 관리 |
+| 프롬프트 인젝션에 취약 | 입력 필터링 + 가드레일 |
+
+## 하네스의 5가지 핵심 계층
+
+### 1. 입력 계층 (Input Layer)
+
+사용자 입력을 검증하고, 적절한 처리 파이프라인으로 라우팅한다.
+
+```typescript
+async function processInput(userMessage: string) {
+  // 1. 입력 검증
+  if (userMessage.length > MAX_INPUT_LENGTH) {
+    throw new InputTooLongError();
+  }
+
+  // 2. 프롬프트 인젝션 감지
+  if (detectInjection(userMessage)) {
+    return { type: 'blocked', reason: 'injection_detected' };
+  }
+
+  // 3. 의도 분류 → 파이프라인 라우팅
+  const intent = await classifyIntent(userMessage);
+  return routeToPipeline(intent, userMessage);
+}
+```
+
+### 2. 컨텍스트 조립 (Context Assembly)
+
+사용자의 질문에 필요한 맥락을 수집하고 구조화한다. Context Engineering의 실행 단계.
+
+```typescript
+async function assembleContext(query: string, user: User) {
+  const [docs, history, rules] = await Promise.all([
+    vectorSearch(query, { topK: 5 }),
+    getChatHistory(user.id, { limit: 10 }),
+    getDomainRules(user.domain),
+  ]);
+
+  return buildPrompt({ docs, history, rules, query });
+}
+```
+
+### 3. LLM 호출 계층 (Inference Layer)
+
+실제 모델 호출. 타임아웃, 재시도, 폴백을 관리한다.
+
+```typescript
+async function callLLM(prompt: string, options: LLMOptions) {
+  try {
+    // 1차: 주 모델
+    return await callWithTimeout(primaryModel, prompt, { timeout: 10000 });
+  } catch (err) {
+    if (err instanceof TimeoutError) {
+      // 폴백: 더 빠른 모델로 전환
+      return await callWithTimeout(fallbackModel, prompt, { timeout: 5000 });
+    }
+    throw err;
+  }
+}
+```
+
+### 4. 출력 계층 (Output Layer)
+
+LLM 응답을 검증하고 파싱한다.
+
+```typescript
+async function processOutput(rawResponse: string, schema: ZodSchema) {
+  // 1. 구조 파싱
+  const parsed = safeJsonParse(rawResponse);
+  if (!parsed) {
+    return await retryWithFix(rawResponse, schema);
+  }
+
+  // 2. 스키마 검증
+  const result = schema.safeParse(parsed);
+  if (!result.success) {
+    return await retryWithFix(rawResponse, schema);
+  }
+
+  // 3. 콘텐츠 필터링
+  if (containsBlockedContent(result.data)) {
+    return { blocked: true, reason: 'content_policy' };
+  }
+
+  return result.data;
+}
+```
+
+### 5. 관측 계층 (Observability Layer)
+
+모든 호출을 추적하고 모니터링한다.
+
+```typescript
+async function tracedCall(fn: Function, metadata: TraceMetadata) {
+  const span = tracer.startSpan('llm.call', metadata);
+  const start = Date.now();
+  try {
+    const result = await fn();
+    span.setAttributes({
+      'llm.tokens.input': result.usage.inputTokens,
+      'llm.tokens.output': result.usage.outputTokens,
+      'llm.latency_ms': Date.now() - start,
+    });
+    return result;
+  } catch (err) {
+    span.setStatus({ code: SpanStatusCode.ERROR });
+    throw err;
+  } finally {
+    span.end();
+  }
+}
+```
+
+## 실전 예시: 이 프로젝트의 하네스
+
+이 AI Study Wiki의 AI 과외 선생님 파이프라인이 바로 하네스의 실전 예시다:
+
+```
+1. 입력: 사용자가 주제 선택 (GitHub Issue 댓글)
+2. 컨텍스트: 기존 manifest 분석 → 빈 카테고리/약한 영역 파악
+3. LLM 호출: Gemini 2.5 Flash로 MDX 생성
+4. 출력 검증: frontmatter 스키마 검증 (zod)
+5. 관측: GitHub Actions 로그 + PR 생성
+```
+
+## 자기 점검
+
+1. 내 AI 프로젝트에서 LLM 호출 실패 시 사용자에게 어떤 경험을 제공하는가?
+2. 프롬프트 인젝션에 대한 방어가 있는가?
+3. LLM 호출 비용과 지연 시간을 모니터링하고 있는가?
+
+## 다음 단계
+
+- **Quality Guards**: 출력 계층의 구체적 구현 패턴
+- **Tool Use**: LLM이 외부 도구를 호출하는 에이전트 패턴
+- **Context Engineering**: 컨텍스트 조립 계층의 심화
