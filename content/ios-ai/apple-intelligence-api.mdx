@@ -193,20 +193,20 @@ graph TD
     A[iOS 앱 개발자] --> B{IntelligenceKit API};
     B --> C{Apple Intelligence Layer};
     C --> D[온디바이스 모델];
-    C --> E[Private Cloud Compute (PCC)];
+    C --> E["Private Cloud Compute (PCC)"];
     D --> F[시스템 컨텍스트 저장소];
     E --> F;
     F --> C;
-    C --> G[사용자 의도 & 선호도];
+    C --> G["사용자 의도 및 선호도"];
     G --> C;
-    C --> H[시스템 서비스 & 앱];
+    C --> H["시스템 서비스 및 앱"];
     H --> C;
     C --> I{지능형 응답 / 액션};
     I --> B;
     B --> A;
 
-    subgraph 사용자 데이터 및 개인 정보 보호 경계
-        F -- 암호화 & 비공개 --> C;
+    subgraph PRIVACY ["사용자 데이터 및 개인 정보 보호 경계"]
+        F -- "암호화 및 비공개" --> C;
         C -- 필요한 최소 정보 전송 --> E;
     end
 
