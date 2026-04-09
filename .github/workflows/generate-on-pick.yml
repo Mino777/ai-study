@@ -84,7 +84,8 @@ jobs:
           TOPIC="${{ steps.generate.outputs.topic_title }}"
           CATEGORY="${{ steps.generate.outputs.category }}"
           DATE=$(date +%Y-%m-%d)
-          BRANCH="lesson/${DATE}"
+          SHORT_ID=$(date +%H%M%S)
+          BRANCH="lesson/${DATE}-${SHORT_ID}"
 
           git config user.name "Mino777"
           git config user.email "jomino7777@gmail.com"
