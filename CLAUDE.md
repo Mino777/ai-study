@@ -6,7 +6,7 @@ AI 하네스 엔지니어링 학습 위키 + 포트폴리오. Next.js 15 App Rou
 - **Framework:** Next.js 15 (App Router, TypeScript)
 - **Styling:** Tailwind CSS 4 + CSS custom properties (DESIGN.md 참조)
 - **Content:** MDX (next-mdx-remote/rsc) + gray-matter + zod frontmatter validation + remark-gfm
-- **Graph:** react-force-graph-2d (Client Component, ssr:false, linkDistance 120, charge -300)
+- **Graph:** react-force-graph-2d (Client Component, ssr:false, linkDistance 180, charge -500)
 - **Search:** Client-side text matching (한국어 지원 검증 완료)
 - **Code:** shiki (@shikijs/rehype, github-dark-default theme) + 복사 버튼
 - **Diagrams:** Mermaid (dynamic import, client-side rendering, dark theme)

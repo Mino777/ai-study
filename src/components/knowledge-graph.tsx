@@ -95,8 +95,8 @@ export function KnowledgeGraph({ nodes, edges }: KnowledgeGraphProps) {
       const isHighlighted = highlightedRef.current.size > 0 && highlightedRef.current.has(node.id);
       const isDimmed = highlightedRef.current.size > 0 && !isHighlighted && !isHovered;
       const isDangling = node.confidence === 0;
-      const baseSize = isDangling ? 3 : 4 + node.confidence * 1.5;
-      const size = isHovered || isHighlighted ? baseSize * 1.3 : baseSize;
+      const baseSize = isDangling ? 4 : 6 + node.confidence * 1.5;
+      const size = isHovered || isHighlighted ? baseSize * 1.4 : baseSize;
 
       const opacity = isDimmed ? 0.2 : 1;
 
@@ -132,13 +132,14 @@ export function KnowledgeGraph({ nodes, edges }: KnowledgeGraphProps) {
         ctx.fill();
       }
 
-      // Label
-      if (isHovered || isHighlighted || size > 6) {
-        ctx.font = `${isHovered || isHighlighted ? "bold " : ""}11px Pretendard Variable, sans-serif`;
+      // Label — 항상 표시 (dangling은 작게)
+      if (!isDangling || isHovered) {
+        const fontSize = isHovered || isHighlighted ? 12 : isDangling ? 9 : 11;
+        ctx.font = `${isHovered || isHighlighted ? "bold " : ""}${fontSize}px Pretendard Variable, sans-serif`;
         ctx.textAlign = "center";
         ctx.textBaseline = "top";
-        ctx.fillStyle = isDimmed ? "rgba(232,232,237,0.3)" : "#e8e8ed";
-        ctx.fillText(node.label, node.x, node.y + size + 4);
+        ctx.fillStyle = isDimmed ? "rgba(232,232,237,0.3)" : isDangling ? "rgba(232,232,237,0.5)" : "#e8e8ed";
+        ctx.fillText(node.label, node.x, node.y + size + 6);
       }
 
       ctx.globalAlpha = 1;
@@ -149,7 +150,7 @@ export function KnowledgeGraph({ nodes, edges }: KnowledgeGraphProps) {
   const nodePointerAreaPaint = useCallback(
     (node: { x: number; y: number; confidence?: number }, color: string, ctx: CanvasRenderingContext2D) => {
       const confidence = (node as GraphNode).confidence ?? 0;
-      const size = confidence === 0 ? 3 : 4 + confidence * 1.5;
+      const size = confidence === 0 ? 4 : 6 + confidence * 1.5;
       ctx.beginPath();
       ctx.arc(node.x, node.y, size + 4, 0, Math.PI * 2);
       ctx.fillStyle = color;
@@ -182,9 +183,9 @@ export function KnowledgeGraph({ nodes, edges }: KnowledgeGraphProps) {
         linkColor={() => "rgba(107, 107, 128, 0.3)"}
         linkWidth={1}
         // @ts-expect-error -- linkDistance not in types but works at runtime
-        linkDistance={120}
+        linkDistance={180}
         d3Force="charge"
-        d3ForceStrength={-300}
+        d3ForceStrength={-500}
         onNodeClick={handleNodeClick as never}
         onNodeHover={handleNodeHover as never}
         cooldownTicks={100}
