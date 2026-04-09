@@ -2,6 +2,17 @@
 
 모든 주목할 만한 변경사항을 이 파일에 기록합니다.
 
+## [2026-04-09 R1] — autoceo Round 1
+
+### Added
+- Fine-tuning 기초 엔트리 — LoRA, QLoRA, SFT 핵심 개념
+- Frontend + AI 패턴 엔트리 — 스트리밍 UI, 에러 핸들링, 비용 관리
+
+### Changed
+- 빈 카테고리 0개 달성 (10/10 카테고리 커버)
+- wiki 목록 ALL_CATEGORIES 하드코딩 → schema.ts CATEGORIES로 통일
+- Light mode에 accent/semantic 색상 추가
+
 이 프로젝트는 [Keep a Changelog](https://keepachangelog.com/) 형식을 따르고,
 [Semantic Versioning](https://semver.org/)을 준수합니다.
 
