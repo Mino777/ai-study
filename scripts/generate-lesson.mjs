@@ -183,13 +183,16 @@ async function generateMDX(topic, manifest) {
   const prompt = `다음 주제에 대한 기술 블로그 글을 작성하세요.
 인사말이나 자기소개 없이 바로 본문부터 시작하세요.
 
-주제: ${topic.title} (카테고리: ${CATEGORY_LABELS[topic.category]})
+사용자 요청: ${topic.title} (카테고리: ${CATEGORY_LABELS[topic.category]})
 ${contextNote}
 
 이미 존재하는 엔트리들 (중복 내용 피하세요):
 ${existingTitles || "(없음)"}
 
 요구사항:
+- 첫 번째 줄에 반드시 TITLE: 정제된 제목 을 작성하세요 (예: "TITLE: Compound Engineering 기초 — 복리형 AI 개발 방법론"). 사용자 요청을 기술 블로그에 어울리는 전문적인 제목으로 변환하세요. 구어체/요청문("~하고싶어", "~에 대해" 등)은 제거하고, 핵심 키워드 + 부제 형식으로 작성.
+- 그 다음 줄에 DESC: 한 줄 설명 을 작성하세요 (예: "DESC: 모든 작업이 다음 작업을 더 쉽게 만드는 복리형 개발 워크플로우.").
+- 그 다음부터 본문을 작성하세요.
 - 핵심 개념 설명 (왜 중요한지부터 시작)
 - 실제 동작하는 코드 예제 포함 (카테고리에 맞는 언어: Swift, TypeScript, Python 등)
 - Mermaid 다이어그램 1개 이상 포함 (\`\`\`mermaid 코드 블록)
@@ -202,9 +205,7 @@ ${existingTitles || "(없음)"}
 - 한국어로 작성, 영어 기술 용어는 원문 유지
 - 2000-3000자 분량
 - h2(##)와 h3(###) 헤딩을 적절히 사용
-- 마크다운 테이블이 있으면 좋음
-
-본문만 작성하세요 (frontmatter는 제가 추가합니다).`;
+- 마크다운 테이블이 있으면 좋음`;
 
   console.log("🤖 Calling Gemini 2.5 Flash...");
 
@@ -238,20 +239,32 @@ ${existingTitles || "(없음)"}
     content = retryResult.response.text();
   }
 
+  // Extract TITLE and DESC from generated content
+  const titleMatch = content.match(/^TITLE:\s*(.+)$/m);
+  const descMatch = content.match(/^DESC:\s*(.+)$/m);
+  const refinedTitle = titleMatch ? titleMatch[1].trim() : topic.title.split(" ").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+  const refinedDesc = descMatch ? descMatch[1].trim() : `${topic.title} 개념 정리 및 실전 적용`;
+
+  // Remove TITLE/DESC lines from content body
+  content = content.replace(/^TITLE:.*\n?/m, "").replace(/^DESC:.*\n?/m, "").replace(/^\n+/, "");
+
+  // Update topic title for output
+  topic.title = refinedTitle;
+
   // Build frontmatter
   const tags = topic.topicSlug.split("-").filter((t) => t.length > 2);
   tags.push(topic.category);
 
   const frontmatter = [
     "---",
-    `title: "${topic.title.split(" ").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")}"`,
+    `title: "${refinedTitle}"`,
     `category: ${topic.category}`,
     `date: "${today}"`,
     `tags: [${tags.map((t) => `${t}`).join(", ")}]`,
     `confidence: 1`,
     `connections: [${topic.connections.map((c) => `${c}`).join(", ")}]`,
     `status: draft`,
-    `description: "${topic.title.replace(/-/g, " ")} 개념 정리 및 실전 적용"`,
+    `description: "${refinedDesc}"`,
     `type: entry`,
     "---",
   ].join("\n");
