@@ -7,6 +7,46 @@ import { CATEGORIES, CATEGORY_LABELS } from "@/lib/schema";
 import type { Category } from "@/lib/schema";
 
 const MDEditor = dynamic(() => import("@uiw/react-md-editor"), { ssr: false });
+const commands = import("@uiw/react-md-editor").then((mod) => mod.commands);
+
+function useEditorCommands() {
+  const [cmds, setCmds] = useState<{
+    toolbar: unknown[];
+  } | null>(null);
+
+  useEffect(() => {
+    commands.then((c) => {
+      // 한국어 툴팁으로 오버라이드
+      const withTip = (cmd: Record<string, unknown>, tip: string) => ({
+        ...cmd,
+        buttonProps: { ...(cmd.buttonProps as object || {}), title: tip, "aria-label": tip },
+      });
+
+      setCmds({
+        toolbar: [
+          withTip(c.bold as Record<string, unknown>, "굵게 (Ctrl+B)"),
+          withTip(c.italic as Record<string, unknown>, "기울임 (Ctrl+I)"),
+          withTip(c.strikethrough as Record<string, unknown>, "취소선"),
+          withTip(c.hr as Record<string, unknown>, "구분선"),
+          c.divider,
+          withTip(c.title as Record<string, unknown>, "제목 (H1~H6)"),
+          withTip(c.link as Record<string, unknown>, "링크 삽입 (Ctrl+K)"),
+          withTip(c.quote as Record<string, unknown>, "인용문"),
+          withTip(c.code as Record<string, unknown>, "인라인 코드"),
+          withTip(c.codeBlock as Record<string, unknown>, "코드 블록 (``` 언어명)"),
+          withTip(c.image as Record<string, unknown>, "이미지 삽입"),
+          c.divider,
+          withTip(c.unorderedListCommand as Record<string, unknown>, "목록 (-)"),
+          withTip(c.orderedListCommand as Record<string, unknown>, "번호 목록 (1.)"),
+          withTip(c.checkedListCommand as Record<string, unknown>, "체크리스트"),
+          withTip(c.table as Record<string, unknown>, "표 삽입"),
+        ],
+      });
+    });
+  }, []);
+
+  return cmds;
+}
 
 function Tip({ text }: { text: string }) {
   return (
@@ -70,6 +110,7 @@ export function EntryEditor({
   const [error, setError] = useState("");
   const [dirty, setDirty] = useState(false);
   const [tagInput, setTagInput] = useState("");
+  const editorCmds = useEditorCommands();
 
   useEffect(() => {
     if (!dirty) return;
@@ -408,6 +449,7 @@ export function EntryEditor({
             height={600}
             preview="live"
             visibleDragbar={false}
+            {...(editorCmds ? { commands: editorCmds.toolbar as never[] } : {})}
           />
         </div>
       </div>
