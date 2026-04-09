@@ -83,18 +83,29 @@ All font choices, colors, spacing, and aesthetic direction are defined there.
 Do not deviate without explicit user approval.
 In QA mode, flag any code that doesn't match DESIGN.md.
 
-## Documented Solutions
-
-`docs/solutions/` — 과거 문제 해결 기록 (빌드 에러, 런타임 버그, 모범 사례 등).
-카테고리별 정리 + YAML frontmatter. 비슷한 문제 발생 시 먼저 검색할 것.
-`docs/retrospectives/` — 스프린트 회고. 날짜별 작업 기록 + 복리 자산.
-
 ## Compound Engineering
 
-모든 작업 사이클의 마지막에 `/compound`를 실행한다.
-Plan → Work → Review → **Compound**. 코드가 아니라 코드를 만드는 시스템을 쌓는다.
-CHANGELOG 업데이트 + 스프린트 회고 + 문제 해결 문서화.
-QA 완료 후 자동으로 트리거되도록 훅 설정됨.
+```
+코드 작업 → git commit → 🔒 자동 빌드 체크 (실패시 차단)
+                              ↓ 통과
+                         git push → 📦 /compound 리마인더
+                                         ↓
+                              CHANGELOG + 회고 + 솔루션 자동 생성
+```
+
+- `git commit` 전 — `npm run build` 자동 실행, 실패하면 커밋 차단
+- `git push` 후 — "/compound 실행하세요" 리마인더
+- `/compound` 실행 — CHANGELOG + 회고 + 솔루션 문서 자동 생성
+
+### 지식 저장소
+
+| 저장소 | 용도 | 접근 |
+|--------|------|------|
+| `docs/solutions/` | 구체적 문제 해결 기록 | git (카테고리별 정리) |
+| `docs/retros/` | 스프린트 회고 | git (날짜별) |
+| Claude 메모리 | 유저 선호/패턴 | Claude Code (개인) |
+
+솔루션 카테고리: build-errors, runtime-errors, next-patterns, mdx, ai-pipeline, performance, workflow, github-actions
 
 ## Skill routing
 

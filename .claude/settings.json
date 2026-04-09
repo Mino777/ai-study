@@ -6,7 +6,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "if echo \"$CLAUDE_TOOL_INPUT\" | grep -qE 'git commit'; then echo 'QA_GATE: 커밋 전에 /qa 진행했나요? 안 했으면 먼저 QA를 실행하세요.'; fi"
+            "command": "if echo \"$CLAUDE_TOOL_INPUT\" | grep -qE 'git commit' 2>/dev/null; then cd /Users/jominho/Develop/ai-study && npm run build 2>&1 | grep -E 'error|Error|✓|✅' | tail -5; if [ $? -ne 0 ]; then echo '❌ QA_GATE FAILED: 빌드 실패. 커밋 차단.'; exit 1; fi; echo '✅ QA_GATE PASSED'; fi",
+            "timeout": 300000
           }
         ]
       }
@@ -17,7 +18,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "if echo \"$CLAUDE_TOOL_INPUT\" | grep -qE 'git push'; then echo 'COMPOUND_REMINDER: push 완료! /compound를 실행해서 CHANGELOG + 회고 + 문서화를 진행하세요.'; fi"
+            "command": "if echo \"$CLAUDE_TOOL_INPUT\" | grep -qE 'git push' 2>/dev/null; then echo '📦 COMPOUND: push 완료! /compound 실행하여 changelog + 회고 + 솔루션 문서화하세요.'; fi",
+            "timeout": 3000
           }
         ]
       }
