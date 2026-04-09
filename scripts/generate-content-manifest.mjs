@@ -125,13 +125,17 @@ function main() {
       description: e.frontmatter.description,
     }));
 
+  const nodeIds = new Set(nodes.map((n) => n.id));
   const edges = [];
   const danglingConnections = [];
 
   for (const entry of entries) {
+    if (!nodeIds.has(entry.slug)) continue; // draft 등 필터된 엔트리는 edge도 스킵
     for (const target of entry.frontmatter.connections) {
-      if (allSlugs.has(target)) {
+      if (nodeIds.has(target)) {
         edges.push({ source: entry.slug, target });
+      } else if (allSlugs.has(target)) {
+        // 노드는 있지만 필터됨 (draft) — edge 스킵
       } else {
         danglingConnections.push({ from: entry.slug, to: target });
       }
