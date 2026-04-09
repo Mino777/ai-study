@@ -1,12 +1,23 @@
 {
   "hooks": {
-    "PostToolUse": [
+    "PreToolUse": [
       {
-        "matcher": "Skill",
+        "matcher": "Bash",
         "hooks": [
           {
             "type": "command",
-            "command": "if echo \"$CLAUDE_TOOL_INPUT\" | grep -qE '\"skill\"\\s*:\\s*\"(qa|qa-only)\"'; then echo 'COMPOUND_REMINDER: QA 완료! /compound를 실행해서 CHANGELOG + 회고 + 문서화를 진행하세요.'; fi"
+            "command": "if echo \"$CLAUDE_TOOL_INPUT\" | grep -qE 'git commit'; then echo 'QA_GATE: 커밋 전에 /qa 진행했나요? 안 했으면 먼저 QA를 실행하세요.'; fi"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_TOOL_INPUT\" | grep -qE 'git push'; then echo 'COMPOUND_REMINDER: push 완료! /compound를 실행해서 CHANGELOG + 회고 + 문서화를 진행하세요.'; fi"
           }
         ]
       }
