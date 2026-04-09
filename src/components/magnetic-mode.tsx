@@ -15,6 +15,7 @@ const SELECTOR = [
 const REPEL_RADIUS = 90;
 const REPEL_STRENGTH = 20;
 const RETURN_SPEED = 0.1;
+const GLOW_RADIUS = 120;
 
 interface TrackedElement {
   el: HTMLElement;
@@ -23,13 +24,47 @@ interface TrackedElement {
 }
 
 export function MagneticMode() {
-  const mouseRef = useRef({ x: -9999, y: -9999 });
+  const mouseRef = useRef({ x: -9999, y: -9999, active: false });
   const trackedRef = useRef<TrackedElement[]>([]);
   const rafRef = useRef<number>(0);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const animate = useCallback(() => {
     const mouse = mouseRef.current;
     const tracked = trackedRef.current;
+
+    // Draw cursor glow
+    const canvas = canvasRef.current;
+    if (canvas) {
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        const dpr = window.devicePixelRatio || 1;
+        // Resize canvas if needed
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        if (canvas.width !== w * dpr || canvas.height !== h * dpr) {
+          canvas.width = w * dpr;
+          canvas.height = h * dpr;
+          canvas.style.width = `${w}px`;
+          canvas.style.height = `${h}px`;
+        }
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        if (mouse.active) {
+          const grad = ctx.createRadialGradient(
+            mouse.x * dpr, mouse.y * dpr, 0,
+            mouse.x * dpr, mouse.y * dpr, GLOW_RADIUS * dpr
+          );
+          grad.addColorStop(0, "rgba(59, 130, 246, 0.18)");
+          grad.addColorStop(0.4, "rgba(59, 130, 246, 0.08)");
+          grad.addColorStop(1, "transparent");
+          ctx.fillStyle = grad;
+          ctx.beginPath();
+          ctx.arc(mouse.x * dpr, mouse.y * dpr, GLOW_RADIUS * dpr, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    }
 
     const vh = window.innerHeight;
     for (const t of tracked) {
@@ -98,11 +133,11 @@ export function MagneticMode() {
     }
 
     function onMouseMove(e: MouseEvent) {
-      mouseRef.current = { x: e.clientX, y: e.clientY };
+      mouseRef.current = { x: e.clientX, y: e.clientY, active: true };
     }
 
     function onMouseLeave() {
-      mouseRef.current = { x: -9999, y: -9999 };
+      mouseRef.current = { x: -9999, y: -9999, active: false };
     }
 
     gatherElements();
@@ -128,5 +163,11 @@ export function MagneticMode() {
     };
   }, [animate]);
 
-  return null;
+  return (
+    <canvas
+      ref={canvasRef}
+      className="pointer-events-none fixed inset-0 z-[40]"
+      style={{ mixBlendMode: "screen" }}
+    />
+  );
 }
