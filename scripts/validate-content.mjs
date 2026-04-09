@@ -11,6 +11,8 @@
 import fs from "fs";
 import path from "path";
 import matter from "gray-matter";
+import { compile } from "@mdx-js/mdx";
+import remarkGfm from "remark-gfm";
 
 const CONTENT_DIR = path.join(process.cwd(), "content");
 
@@ -111,11 +113,12 @@ function validateMermaid(code, filename) {
   return errors;
 }
 
-function main() {
+async function main() {
   const files = findMdxFiles(CONTENT_DIR);
   let totalErrors = 0;
-  let totalFiles = 0;
+  let mermaidFiles = 0;
   let totalBlocks = 0;
+  let mdxErrors = 0;
 
   console.log(`🔍 Validating ${files.length} MDX files...\n`);
 
@@ -124,10 +127,23 @@ function main() {
     const raw = fs.readFileSync(file, "utf-8");
     const { content } = matter(raw);
 
+    // 1. MDX 컴파일 검증 (모든 파일)
+    try {
+      await compile(content, { remarkPlugins: [remarkGfm] });
+    } catch (err) {
+      console.error(`❌ ${rel} (MDX 컴파일 에러)`);
+      console.error(`   ${err.message}`);
+      console.error("");
+      mdxErrors++;
+      totalErrors++;
+      continue;
+    }
+
+    // 2. Mermaid 블록 검증
     const blocks = extractMermaidBlocks(content);
     if (blocks.length === 0) continue;
 
-    totalFiles++;
+    mermaidFiles++;
     const fileErrors = [];
 
     for (const block of blocks) {
@@ -142,7 +158,7 @@ function main() {
     }
 
     if (fileErrors.length > 0) {
-      console.error(`❌ ${rel}`);
+      console.error(`❌ ${rel} (Mermaid)`);
       for (const err of fileErrors) {
         console.error(`   Line ~${err.line}: ${err.message}`);
       }
@@ -151,12 +167,15 @@ function main() {
     }
   }
 
-  console.log(`📊 결과: ${totalFiles}개 파일, ${totalBlocks}개 Mermaid 블록 검증`);
+  console.log(`📊 결과: ${files.length}개 MDX 파일 컴파일 검증, ${mermaidFiles}개 파일에서 ${totalBlocks}개 Mermaid 블록 검증`);
   if (totalErrors > 0) {
-    console.error(`❌ ${totalErrors}개 에러 발견`);
+    console.error(`❌ ${mdxErrors}개 MDX 에러, ${totalErrors - mdxErrors}개 Mermaid 에러`);
     process.exit(1);
   }
-  console.log("✅ 모든 Mermaid 블록 정상");
+  console.log("✅ 모든 MDX + Mermaid 블록 정상");
 }
 
-main();
+main().catch((err) => {
+  console.error("Validation failed:", err);
+  process.exit(1);
+});
