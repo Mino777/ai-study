@@ -1,0 +1,117 @@
+---
+title: "Fine-tuning 기초 — 사전학습 모델을 내 데이터에 맞추기"
+category: fine-tuning
+date: "2026-04-09"
+tags: [fine-tuning, lora, qlora, sft, training]
+confidence: 2
+connections: [evaluation/llm-evaluation-fundamentals, prompt-engineering/few-shot-prompting]
+status: complete
+description: "프롬프트만으로 부족할 때, 모델 자체를 내 도메인에 맞추는 기술. LoRA, QLoRA, SFT의 핵심."
+type: entry
+---
+
+## 핵심 개념
+
+프롬프트 엔지니어링은 "모델에게 잘 물어보는 기술"이다. Fine-tuning은 한 단계 더 나아가 **모델 자체를 내 데이터와 도메인에 맞추는 기술**이다.
+
+```
+프롬프트 엔지니어링: "이런 형식으로 답해줘" → 매번 지시
+Fine-tuning: "이런 형식이 기본이야" → 한 번 학습, 이후 자동
+```
+
+## 언제 Fine-tuning이 필요한가
+
+| 상황 | 프롬프트로 충분 | Fine-tuning 필요 |
+|------|---------------|-----------------|
+| 일반 QA | O | X |
+| 특정 톤/스타일 | △ (프롬프트 길어짐) | O |
+| 도메인 전문 용어 | △ (few-shot 한계) | O |
+| 응답 형식 고정 | O (structured output) | △ |
+| 지연 시간 줄이기 | X | O (작은 모델 사용 가능) |
+| 비용 절감 | X | O (작은 모델로 대체) |
+
+**판단 기준:** 프롬프트에 매번 10줄 이상의 지시를 반복하고 있다면, fine-tuning을 고려할 때다.
+
+## Fine-tuning 방식 비교
+
+### 1. Full Fine-tuning
+
+모델의 모든 파라미터를 업데이트. 가장 강력하지만 비용이 크다.
+
+```
+GPT-4 급 모델: 수백 GPU 시간, 수만 달러
+7B 모델: 8× A100 GPU, 수 시간
+```
+
+### 2. LoRA (Low-Rank Adaptation)
+
+모델 가중치를 직접 수정하지 않고, **작은 어댑터 행렬**만 학습한다.
+
+```python
+# 개념적 설명
+# 원래 가중치 W (변경 안 함) + 작은 행렬 A, B (학습)
+# 출력 = W·x + A·B·x
+# A: (d, r), B: (r, d) — r은 rank (보통 8~64)
+```
+
+장점:
+- 원본 모델의 0.1~1% 파라미터만 학습
+- GPU 메모리 대폭 절감
+- 여러 LoRA 어댑터를 스왑 가능 (용도별 전환)
+
+### 3. QLoRA (Quantized LoRA)
+
+LoRA + 4비트 양자화. 16GB GPU 하나로 7B 모델 fine-tuning 가능.
+
+```
+7B 모델 Full: 28GB+ VRAM
+7B 모델 LoRA: 16GB VRAM
+7B 모델 QLoRA: 6GB VRAM ← 일반 GPU로 가능
+```
+
+## 데이터 준비가 핵심
+
+Fine-tuning의 80%는 데이터 준비다. 모델 학습은 20%.
+
+```typescript
+// SFT (Supervised Fine-Tuning) 데이터 형식
+interface TrainingExample {
+  messages: [
+    { role: "system", content: string },
+    { role: "user", content: string },
+    { role: "assistant", content: string },  // 이것이 정답
+  ];
+}
+
+// 최소 100개, 이상적으로 1000개 이상
+// 품질 > 양 — 잘못된 예시 10개가 좋은 예시 100개를 망친다
+```
+
+**데이터 품질 체크리스트:**
+- 정답이 진짜 정답인가? (전문가 검증)
+- 다양한 케이스를 커버하는가?
+- 엣지 케이스가 포함되어 있는가?
+- 편향이 있지 않은가?
+
+## Eval이 없으면 Fine-tuning은 도박
+
+학습 전후를 비교할 Eval 세트가 반드시 필요하다.
+
+```
+1. Eval 세트 준비 (학습 데이터와 겹치면 안 됨)
+2. Base 모델로 Eval 실행 → 기준 점수
+3. Fine-tuning 실행
+4. Fine-tuned 모델로 Eval 실행 → 비교
+5. 점수가 올랐으면 성공, 내렸으면 데이터/하이퍼파라미터 재검토
+```
+
+## 자기 점검
+
+1. 내 문제가 프롬프트 엔지니어링으로 해결 가능한지 먼저 확인했는가?
+2. Fine-tuning에 사용할 고품질 데이터가 최소 100개 이상 있는가?
+3. 학습 전후를 비교할 Eval 세트를 준비했는가?
+
+## 다음 단계
+
+- **Evaluation**: Fine-tuning 전후 품질을 측정하는 방법
+- **Few-shot Prompting**: Fine-tuning 전에 시도할 가벼운 대안

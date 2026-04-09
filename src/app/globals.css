@@ -41,6 +41,12 @@
   --text: #1a1a2e;
   --muted: #6b6b80;
   --border: #e0e0e8;
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --success: #059669;
+  --warning: #d97706;
+  --error: #dc2626;
+  --info: #2563eb;
 }
 
 @theme inline {

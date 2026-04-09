@@ -1,0 +1,166 @@
+---
+title: "Frontend + AI 패턴 — 웹 프론트엔드에서 AI를 활용하는 방법"
+category: frontend-ai
+date: "2026-04-09"
+tags: [frontend-ai, react, streaming, ai-ux, vercel-ai-sdk]
+confidence: 2
+connections: [harness-engineering/harness-engineering-overview, prompt-engineering/structured-output]
+status: complete
+description: "React/Next.js에서 AI 기능을 구현할 때의 핵심 패턴. 스트리밍 UI, 에러 핸들링, 로딩 상태, 비용 관리."
+type: entry
+---
+
+## 핵심 개념
+
+AI를 백엔드에서만 쓰는 시대는 지났다. 프론트엔드에서 **AI 응답을 실시간으로 스트리밍하고, 사용자 경험을 최적화하고, 에러를 우아하게 처리**하는 것이 현대 웹 앱의 핵심 역량이다.
+
+## 패턴 1: 스트리밍 UI
+
+사용자가 "로딩..." 을 3초 동안 보는 대신, 글자가 실시간으로 나타나게.
+
+```typescript
+// Next.js App Router + Vercel AI SDK
+import { useChat } from 'ai/react';
+
+export function ChatUI() {
+  const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({
+    api: '/api/chat',
+  });
+
+  return (
+    <div>
+      {messages.map(m => (
+        <div key={m.id} className={m.role === 'user' ? 'text-right' : ''}>
+          {m.content}
+        </div>
+      ))}
+      {isLoading && <TypingIndicator />}
+      <form onSubmit={handleSubmit}>
+        <input value={input} onChange={handleInputChange} />
+      </form>
+    </div>
+  );
+}
+```
+
+```typescript
+// API Route (서버)
+import { streamText } from 'ai';
+import { anthropic } from '@ai-sdk/anthropic';
+
+export async function POST(req: Request) {
+  const { messages } = await req.json();
+  const result = streamText({
+    model: anthropic('claude-sonnet-4-20250514'),
+    messages,
+  });
+  return result.toDataStreamResponse();
+}
+```
+
+## 패턴 2: 낙관적 UI + 폴백
+
+AI 응답이 느릴 때, 즉시 피드백을 주고 나중에 결과를 교체.
+
+```typescript
+function AnalysisButton({ data }: { data: StockData }) {
+  const [result, setResult] = useState<Analysis | null>(null);
+  const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
+
+  async function analyze() {
+    setStatus('loading');
+    // 즉시 보여줄 로컬 분석 (AI 없이)
+    setResult(quickLocalAnalysis(data));
+
+    try {
+      // AI 분석 (느림)
+      const aiResult = await fetch('/api/analyze', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }).then(r => r.json());
+
+      setResult(aiResult); // 교체
+      setStatus('done');
+    } catch {
+      // 로컬 분석 결과는 그대로 유지
+      setStatus('error');
+    }
+  }
+
+  return (
+    <div>
+      <button onClick={analyze}>분석</button>
+      {result && <AnalysisCard data={result} isAI={status === 'done'} />}
+      {status === 'error' && <p className="text-muted">AI 분석 실패. 기본 분석 결과입니다.</p>}
+    </div>
+  );
+}
+```
+
+## 패턴 3: 토큰 비용 인식 UI
+
+사용자에게 AI 호출 비용을 투명하게 보여주기.
+
+```typescript
+function TokenBudget({ used, limit }: { used: number; limit: number }) {
+  const percentage = (used / limit) * 100;
+  return (
+    <div className="flex items-center gap-2">
+      <div className="h-2 flex-1 rounded-full bg-border">
+        <div
+          className="h-full rounded-full bg-accent"
+          style={{ width: `${Math.min(percentage, 100)}%` }}
+        />
+      </div>
+      <span className="text-xs text-muted">
+        {used.toLocaleString()} / {limit.toLocaleString()} 토큰
+      </span>
+    </div>
+  );
+}
+```
+
+## 패턴 4: 에러 바운더리 for AI
+
+AI 호출은 일반 API보다 실패 확률이 높다 (rate limit, timeout, 모델 장애). 전용 에러 처리가 필요.
+
+```typescript
+type AIErrorType = 'rate_limit' | 'timeout' | 'model_error' | 'network';
+
+function AIErrorFallback({ error, retry }: { error: AIErrorType; retry: () => void }) {
+  const messages: Record<AIErrorType, string> = {
+    rate_limit: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.',
+    timeout: 'AI 응답이 느립니다. 다시 시도해주세요.',
+    model_error: 'AI 서비스에 일시적 문제가 있습니다.',
+    network: '네트워크 연결을 확인해주세요.',
+  };
+
+  return (
+    <div className="rounded-md border border-warning bg-warning/10 p-4">
+      <p className="text-sm">{messages[error]}</p>
+      <button onClick={retry} className="mt-2 text-sm text-accent">
+        다시 시도
+      </button>
+    </div>
+  );
+}
+```
+
+## 이 프로젝트의 Frontend + AI 패턴
+
+이 AI Study Wiki 자체가 Frontend + AI 패턴의 실전 예시:
+
+- **OG 이미지 생성** (`/api/og`): Edge Runtime에서 서버사이드 이미지 생성
+- **AI 과외 선생님**: Gemini API → MDX 생성 → SSG 빌드 → Vercel 배포
+- **Admin 에디터**: GitHub API로 콘텐츠 CRUD → 자동 재배포
+
+## 자기 점검
+
+1. AI 응답을 기다리는 동안 사용자에게 무엇을 보여주고 있는가?
+2. AI 호출이 실패했을 때 사용자 경험이 어떻게 되는가?
+3. AI 비용을 추적하고 제한하는 메커니즘이 있는가?
+
+## 다음 단계
+
+- **Harness Engineering**: AI 호출을 안전하게 감싸는 프레임워크
+- **Structured Output**: AI 응답을 프론트엔드에서 파싱 가능한 형태로 받기

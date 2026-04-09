@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getManifest } from "@/lib/content";
-import { CATEGORY_LABELS, CATEGORY_COLORS } from "@/lib/schema";
+import { CATEGORIES, CATEGORY_LABELS, CATEGORY_COLORS } from "@/lib/schema";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -8,21 +8,7 @@ export const metadata: Metadata = {
   description: "AI 하네스 엔지니어링 위키 엔트리 전체 목록",
 };
 
-
 const CONFIDENCE_LABELS = ["", "들어봤다", "이해했다", "적용했다", "깊이 안다", "가르칠 수 있다"];
-
-const ALL_CATEGORIES = [
-  "prompt-engineering",
-  "context-engineering",
-  "harness-engineering",
-  "rag",
-  "agents",
-  "fine-tuning",
-  "evaluation",
-  "infrastructure",
-  "ios-ai",
-  "frontend-ai",
-];
 
 const COMING_SOON_TOPICS: Record<string, string[]> = {
   "fine-tuning": ["LoRA / QLoRA", "RLHF & DPO", "데이터셋 준비"],
@@ -39,7 +25,7 @@ export default function WikiIndexPage() {
     grouped[cat].push(entry);
   }
 
-  const emptyCategories = ALL_CATEGORIES.filter((cat) => !grouped[cat] || grouped[cat].length === 0);
+  const emptyCategories = CATEGORIES.filter((cat) => !grouped[cat] || grouped[cat].length === 0);
 
   return (
     <div>
@@ -47,10 +33,10 @@ export default function WikiIndexPage() {
         위키
       </h1>
       <p className="text-muted mb-8">
-        {manifest.entries.length}개의 엔트리 · {ALL_CATEGORIES.length - emptyCategories.length}/{ALL_CATEGORIES.length} 카테고리
+        {manifest.entries.length}개의 엔트리 · {CATEGORIES.length - emptyCategories.length}/{CATEGORIES.length} 카테고리
       </p>
 
-      {ALL_CATEGORIES.filter((cat) => grouped[cat] && grouped[cat].length > 0).map((category) => {
+      {CATEGORIES.filter((cat) => grouped[cat] && grouped[cat].length > 0).map((category) => {
         const entries = grouped[category];
         return (
         <section key={category} className="mb-10">
