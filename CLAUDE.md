@@ -137,3 +137,4 @@ Key routing rules:
 - Visual audit, design polish → invoke design-review
 - Architecture review → invoke plan-eng-review
 - 작업 완료, 스프린트 정리, 회고 → invoke compound
+- 자동 스프린트, 풀 자동 개발 루프 → invoke autoceo
