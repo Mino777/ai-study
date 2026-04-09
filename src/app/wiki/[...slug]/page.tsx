@@ -91,18 +91,48 @@ export default async function WikiEntryPage({
   const prevEntry = currentIdx > 0 ? { slug: sameCat[currentIdx - 1].slug, title: sameCat[currentIdx - 1].frontmatter.title } : null;
   const nextEntry = currentIdx < sameCat.length - 1 ? { slug: sameCat[currentIdx + 1].slug, title: sameCat[currentIdx + 1].frontmatter.title } : null;
 
-  const connections = entry.frontmatter.connections
+  // Outgoing connections (이 엔트리가 참조하는 것)
+  const outgoing = new Set(entry.frontmatter.connections);
+  // Incoming connections (이 엔트리를 참조하는 다른 엔트리)
+  const incoming = new Set(
+    manifest.entries
+      .filter((e) => e.frontmatter.connections.includes(slug))
+      .map((e) => e.slug)
+  );
+  // 양방향 병합
+  const allConnectedSlugs = new Set([...outgoing, ...incoming]);
+
+  const connections = Array.from(allConnectedSlugs)
     .map((connSlug) => {
       const found = manifest.entries.find((e) => e.slug === connSlug);
-      return found ? {
+      if (!found) return null;
+      return {
         slug: found.slug,
         title: found.frontmatter.title,
         category: found.frontmatter.category,
         confidence: found.frontmatter.confidence,
         description: found.frontmatter.description,
-      } : null;
+        mutual: outgoing.has(connSlug) && incoming.has(connSlug),
+        direction: outgoing.has(connSlug) && incoming.has(connSlug)
+          ? "mutual" as const
+          : outgoing.has(connSlug)
+            ? "outgoing" as const
+            : "incoming" as const,
+      };
     })
-    .filter(Boolean) as Array<{ slug: string; title: string; category: string; confidence: number; description: string }>;
+    .filter(Boolean) as Array<{
+      slug: string; title: string; category: string; confidence: number; description: string;
+      mutual: boolean; direction: "mutual" | "outgoing" | "incoming";
+    }>;
+
+  // 같은 카테고리 우선, mutual 우선 정렬
+  connections.sort((a, b) => {
+    const catA = a.category === entry.frontmatter.category ? 0 : 1;
+    const catB = b.category === entry.frontmatter.category ? 0 : 1;
+    if (catA !== catB) return catA - catB;
+    if (a.mutual !== b.mutual) return a.mutual ? -1 : 1;
+    return 0;
+  });
 
   let content;
   try {
@@ -175,6 +205,18 @@ export default async function WikiEntryPage({
                     }}
                   >
                     {conn.category.replace(/-/g, " ")}
+                  </span>
+                  <span
+                    className="text-xs text-muted font-code"
+                    title={
+                      conn.direction === "mutual"
+                        ? "양방향 연결"
+                        : conn.direction === "outgoing"
+                          ? "이 글이 참조함"
+                          : "이 글을 참조함"
+                    }
+                  >
+                    {conn.direction === "mutual" ? "↔" : conn.direction === "outgoing" ? "→" : "←"}
                   </span>
                   <span className="inline-flex gap-0.5">
                     {[1, 2, 3, 4, 5].map((i) => (
