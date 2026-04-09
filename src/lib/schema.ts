@@ -15,7 +15,7 @@ export const CATEGORIES = [
 
 export type Category = (typeof CATEGORIES)[number];
 
-export const CATEGORY_LABELS: Record<Category, string> = {
+export const CATEGORY_LABELS: Record<string, string> = {
   "prompt-engineering": "Prompt Engineering",
   "context-engineering": "Context Engineering",
   "harness-engineering": "Harness Engineering",
@@ -28,7 +28,7 @@ export const CATEGORY_LABELS: Record<Category, string> = {
   "frontend-ai": "Frontend + AI",
 };
 
-export const CATEGORY_COLORS: Record<Category, string> = {
+export const CATEGORY_COLORS: Record<string, string> = {
   "prompt-engineering": "#f59e0b",
   "context-engineering": "#eab308",
   "harness-engineering": "#84cc16",

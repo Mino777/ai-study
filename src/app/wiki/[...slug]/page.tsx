@@ -45,13 +45,15 @@ export async function generateMetadata({
   ogUrl.searchParams.set("category", entry.frontmatter.category);
 
   return {
-    title: `${entry.frontmatter.title} — AI Study Wiki`,
+    title: entry.frontmatter.title,
     description: entry.frontmatter.description,
+    alternates: { canonical: `/wiki/${slug}` },
     openGraph: {
       title: entry.frontmatter.title,
       description: entry.frontmatter.description,
       type: "article",
       tags: entry.frontmatter.tags,
+      publishedTime: entry.frontmatter.date,
       images: [{ url: ogUrl.toString(), width: 1200, height: 630, alt: entry.frontmatter.title }],
     },
     twitter: {
@@ -128,8 +130,24 @@ export default async function WikiEntryPage({
     );
   }
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: entry.frontmatter.title,
+    description: entry.frontmatter.description,
+    datePublished: entry.frontmatter.date,
+    author: { "@type": "Person", name: "Jominho" },
+    publisher: { "@type": "Organization", name: "AI Study Wiki" },
+    url: `https://ai-study-wheat.vercel.app/wiki/${slug}`,
+    keywords: entry.frontmatter.tags.join(", "),
+  };
+
   return (
     <article>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <SummaryCard frontmatter={entry.frontmatter} slug={slug} readingTime={readingTime} />
 
       <div className="prose-custom">{content}</div>

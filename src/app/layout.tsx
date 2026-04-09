@@ -3,10 +3,22 @@ import { ThemeProvider } from "next-themes";
 import { MobileNav } from "@/components/mobile-nav";
 import "./globals.css";
 
+const SITE_URL = "https://ai-study-wheat.vercel.app";
+
 export const metadata: Metadata = {
-  title: "AI Study Wiki",
+  title: { default: "AI Study Wiki", template: "%s — AI Study Wiki" },
   description:
     "AI 하네스 엔지니어링 학습 위키 — 프롬프트 엔지니어링, RAG, 에이전트, 파인튜닝",
+  metadataBase: new URL(SITE_URL),
+  alternates: { canonical: "/" },
+  openGraph: {
+    type: "website",
+    locale: "ko_KR",
+    siteName: "AI Study Wiki",
+    images: [{ url: "/api/og", width: 1200, height: 630 }],
+  },
+  twitter: { card: "summary_large_image" },
+  robots: { index: true, follow: true },
 };
 
 export default function RootLayout({

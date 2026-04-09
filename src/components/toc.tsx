@@ -49,7 +49,7 @@ export function TableOfContents() {
   if (headings.length < 3) return null;
 
   return (
-    <nav className="hidden xl:block fixed right-8 top-20 w-56 max-h-[calc(100vh-120px)] overflow-y-auto">
+    <nav aria-label="목차" className="hidden xl:block fixed right-8 top-20 w-56 max-h-[calc(100vh-120px)] overflow-y-auto">
       <p className="text-xs font-semibold text-muted mb-3 tracking-wider">목차</p>
       <ul className="space-y-1">
         {headings.map((h) => (

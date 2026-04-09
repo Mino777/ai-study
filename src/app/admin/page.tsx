@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { CATEGORY_COLORS } from "@/lib/schema";
+import type { Category } from "@/lib/schema";
 
 interface Entry {
   slug: string;
@@ -16,18 +18,6 @@ interface Entry {
   };
 }
 
-const CATEGORY_COLORS: Record<string, string> = {
-  "prompt-engineering": "#f59e0b",
-  "context-engineering": "#eab308",
-  "harness-engineering": "#84cc16",
-  rag: "#10b981",
-  agents: "#8b5cf6",
-  "fine-tuning": "#ec4899",
-  evaluation: "#06b6d4",
-  infrastructure: "#f97316",
-  "ios-ai": "#3b82f6",
-  "frontend-ai": "#a855f7",
-};
 
 export default function AdminDashboard() {
   const [entries, setEntries] = useState<Entry[]>([]);

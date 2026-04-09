@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getManifest } from "@/lib/content";
+import { CATEGORY_LABELS, CATEGORY_COLORS } from "@/lib/schema";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -7,31 +8,6 @@ export const metadata: Metadata = {
   description: "AI 하네스 엔지니어링 위키 엔트리 전체 목록",
 };
 
-const CATEGORY_LABELS: Record<string, string> = {
-  "prompt-engineering": "Prompt Engineering",
-  rag: "RAG",
-  agents: "Agents",
-  "fine-tuning": "Fine-tuning",
-  evaluation: "Evaluation",
-  infrastructure: "Infrastructure",
-  "ios-ai": "iOS + AI",
-  "frontend-ai": "Frontend + AI",
-  "context-engineering": "Context Engineering",
-  "harness-engineering": "Harness Engineering",
-};
-
-const CATEGORY_COLORS: Record<string, string> = {
-  "prompt-engineering": "#f59e0b",
-  "context-engineering": "#eab308",
-  "harness-engineering": "#84cc16",
-  rag: "#10b981",
-  agents: "#8b5cf6",
-  "fine-tuning": "#ec4899",
-  evaluation: "#06b6d4",
-  infrastructure: "#f97316",
-  "ios-ai": "#3b82f6",
-  "frontend-ai": "#a855f7",
-};
 
 const CONFIDENCE_LABELS = ["", "들어봤다", "이해했다", "적용했다", "깊이 안다", "가르칠 수 있다"];
 

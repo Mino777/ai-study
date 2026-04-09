@@ -1,36 +1,19 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { getManifest } from "@/lib/content";
 import { SearchDialog } from "@/components/search-dialog";
 import type { Category } from "@/lib/schema";
+import { CATEGORY_LABELS, CATEGORY_COLORS } from "@/lib/schema";
 import { GraphSearchProvider } from "@/contexts/graph-search-context";
 import { Header } from "@/components/header";
 import { LearningHeatmap } from "@/components/learning-heatmap";
 
-const CATEGORY_LABELS: Record<string, string> = {
-  "prompt-engineering": "Prompt Engineering",
-  rag: "RAG",
-  agents: "Agents",
-  "fine-tuning": "Fine-tuning",
-  evaluation: "Evaluation",
-  infrastructure: "Infrastructure",
-  "ios-ai": "iOS + AI",
-  "frontend-ai": "Frontend + AI",
-  "context-engineering": "Context Engineering",
-  "harness-engineering": "Harness Engineering",
+export const metadata: Metadata = {
+  title: "학습 대시보드",
+  description: "AI 하네스 엔지니어링 학습 진도, 스트릭, 카테고리별 통계",
+  alternates: { canonical: "/dashboard" },
 };
 
-const CATEGORY_COLORS: Record<string, string> = {
-  "prompt-engineering": "#f59e0b",
-  "context-engineering": "#eab308",
-  "harness-engineering": "#84cc16",
-  rag: "#10b981",
-  agents: "#8b5cf6",
-  "fine-tuning": "#ec4899",
-  evaluation: "#06b6d4",
-  infrastructure: "#f97316",
-  "ios-ai": "#3b82f6",
-  "frontend-ai": "#a855f7",
-};
 
 const CONFIDENCE_LABELS = ["", "들어봤다", "이해했다", "적용했다", "깊이 안다", "가르칠 수 있다"];
 

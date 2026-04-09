@@ -1,30 +1,6 @@
 import type { Frontmatter } from "@/lib/schema";
+import { CATEGORY_LABELS, CATEGORY_COLORS } from "@/lib/schema";
 
-const CATEGORY_LABELS: Record<string, string> = {
-  "prompt-engineering": "Prompt Engineering",
-  rag: "RAG",
-  agents: "Agents",
-  "fine-tuning": "Fine-tuning",
-  evaluation: "Evaluation",
-  infrastructure: "Infrastructure",
-  "ios-ai": "iOS + AI",
-  "frontend-ai": "Frontend + AI",
-  "context-engineering": "Context Engineering",
-  "harness-engineering": "Harness Engineering",
-};
-
-const CATEGORY_COLORS: Record<string, string> = {
-  "prompt-engineering": "var(--cat-prompt)",
-  "context-engineering": "var(--cat-context)",
-  "harness-engineering": "var(--cat-harness)",
-  rag: "var(--cat-rag)",
-  agents: "var(--cat-agents)",
-  "fine-tuning": "var(--cat-finetune)",
-  evaluation: "var(--cat-eval)",
-  infrastructure: "var(--cat-infra)",
-  "ios-ai": "var(--cat-ios-ai)",
-  "frontend-ai": "var(--cat-frontend-ai)",
-};
 
 const CONFIDENCE_LABELS = ["", "들어봤다", "이해했다", "적용했다", "깊이 안다", "가르칠 수 있다"];
 

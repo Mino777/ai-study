@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useGraphSearch } from "@/contexts/graph-search-context";
+import { CATEGORY_COLORS } from "@/lib/schema";
 
 interface SearchEntry {
   slug: string;
@@ -12,18 +13,6 @@ interface SearchEntry {
   tags: string[];
 }
 
-const CATEGORY_COLORS: Record<string, string> = {
-  "prompt-engineering": "var(--cat-prompt)",
-  "context-engineering": "var(--cat-context)",
-  "harness-engineering": "var(--cat-harness)",
-  rag: "var(--cat-rag)",
-  agents: "var(--cat-agents)",
-  "fine-tuning": "var(--cat-finetune)",
-  evaluation: "var(--cat-eval)",
-  infrastructure: "var(--cat-infra)",
-  "ios-ai": "var(--cat-ios-ai)",
-  "frontend-ai": "var(--cat-frontend-ai)",
-};
 
 interface SearchDialogProps {
   entries: SearchEntry[];

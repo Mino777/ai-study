@@ -26,7 +26,7 @@ export function Header({ fixed = false }: { fixed?: boolean }) {
         >
           AI Study Wiki
         </Link>
-        <nav className="flex items-center gap-1 sm:gap-3">
+        <nav aria-label="메인 네비게이션" className="flex items-center gap-1 sm:gap-3">
           {NAV_ITEMS.map((item) => {
             const isActive =
               pathname === item.href || pathname.startsWith(item.href + "/");
@@ -34,6 +34,7 @@ export function Header({ fixed = false }: { fixed?: boolean }) {
               <Link
                 key={item.href}
                 href={item.href}
+                aria-current={isActive ? "page" : undefined}
                 className={`rounded-[var(--radius-sm)] px-2.5 py-1.5 text-sm transition-colors ${
                   isActive
                     ? "bg-surface text-text font-medium"

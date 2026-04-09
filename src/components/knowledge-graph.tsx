@@ -4,23 +4,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useGraphSearch } from "@/contexts/graph-search-context";
+import { CATEGORY_COLORS } from "@/lib/schema";
 
 const ForceGraph2D = dynamic(() => import("react-force-graph-2d"), {
   ssr: false,
 });
 
-const CATEGORY_COLORS: Record<string, string> = {
-  "prompt-engineering": "#f59e0b",
-  "context-engineering": "#eab308",
-  "harness-engineering": "#84cc16",
-  rag: "#10b981",
-  agents: "#8b5cf6",
-  "fine-tuning": "#ec4899",
-  evaluation: "#06b6d4",
-  infrastructure: "#f97316",
-  "ios-ai": "#3b82f6",
-  "frontend-ai": "#a855f7",
-};
 
 interface GraphNode {
   id: string;
@@ -181,7 +170,7 @@ export function KnowledgeGraph({ nodes, edges }: KnowledgeGraphProps) {
   }
 
   return (
-    <div ref={containerRef} className="relative h-full w-full">
+    <div ref={containerRef} className="relative h-full w-full" role="region" aria-label="지식 그래프 — 학습 엔트리 간 연결 관계 시각화">
       <ForceGraph2D
         ref={graphRef as never}
         graphData={graphData}
