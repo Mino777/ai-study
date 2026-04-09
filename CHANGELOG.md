@@ -2,6 +2,20 @@
 
 모든 주목할 만한 변경사항을 이 파일에 기록합니다.
 
+## [2026-04-09 R2] — autoceo Round 2
+
+### Added
+- 스크롤 프로그레스 바 (위키 엔트리 읽기 진행률, accent 색상)
+
+### Fixed
+- tests/manifest.test.ts 타입 에러 수정 (Object.values 타입 단언)
+- TODOS.md Light mode 항목 완료 처리
+
+### Metrics
+- tsc --noEmit: 0 에러 달성
+
+---
+
 ## [2026-04-09 R1] — autoceo Round 1
 
 ### Added
