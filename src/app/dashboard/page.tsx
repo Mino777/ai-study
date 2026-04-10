@@ -7,6 +7,7 @@ import { CATEGORY_LABELS, CATEGORY_COLORS } from "@/lib/schema";
 import { GraphSearchProvider } from "@/contexts/graph-search-context";
 import { Header } from "@/components/header";
 import { LearningHeatmap } from "@/components/learning-heatmap";
+import { QuizWidget } from "@/components/quiz-widget";
 
 export const metadata: Metadata = {
   title: "학습 대시보드",
@@ -64,6 +65,16 @@ export default function DashboardPage() {
     description: e.frontmatter.description,
     tags: e.frontmatter.tags,
   }));
+
+  // Quizable entries (have quiz frontmatter with at least one question)
+  const quizableEntries = entries
+    .filter((e) => Array.isArray(e.frontmatter.quiz) && e.frontmatter.quiz.length > 0)
+    .map((e) => ({
+      slug: e.slug,
+      title: e.frontmatter.title,
+      category: e.frontmatter.category,
+      questionCount: e.frontmatter.quiz?.length ?? 0,
+    }));
 
   // Overall stats
   const totalEntries = entries.length;
@@ -146,6 +157,9 @@ export default function DashboardPage() {
             <div className="text-xs text-muted mt-1">연속 학습</div>
           </div>
         </div>
+
+        {/* Quiz widget */}
+        <QuizWidget quizableEntries={quizableEntries} />
 
         {/* Category progress */}
         <section className="mb-10">
