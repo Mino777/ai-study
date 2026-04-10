@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import yaml from "js-yaml";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const CONTENT_DIR = path.join(process.cwd(), "content");
@@ -251,6 +252,17 @@ ${existingTitles || "(없음)"}
   // Update topic title for output
   topic.title = refinedTitle;
 
+  // ── Generate self-check quiz (separate call for reliability) ──
+  let quizYaml = "";
+  try {
+    const quiz = await generateQuiz(model, refinedTitle, content);
+    if (quiz.length > 0) {
+      quizYaml = "\nquiz:\n" + quizArrayToYaml(quiz);
+    }
+  } catch (err) {
+    console.warn(`⚠️  Quiz generation failed: ${err.message}. Skipping quiz.`);
+  }
+
   // Build frontmatter
   const tags = topic.topicSlug.split("-").filter((t) => t.length > 2);
   tags.push(topic.category);
@@ -265,11 +277,89 @@ ${existingTitles || "(없음)"}
     `connections: [${topic.connections.map((c) => `${c}`).join(", ")}]`,
     `status: draft`,
     `description: "${refinedDesc}"`,
-    `type: entry`,
+    `type: entry${quizYaml}`,
     "---",
   ].join("\n");
 
   return `${frontmatter}\n\n${content}`;
+}
+
+// ─── Quiz generation ────────────────────────────────────────────
+
+async function generateQuiz(model, title, body) {
+  const prompt = `다음 기술 블로그 본문을 바탕으로 자가 점검용 객관식 퀴즈를 만들어주세요.
+
+제목: ${title}
+
+본문:
+${body.slice(0, 6000)}
+
+요구사항:
+- 정확히 3문항
+- 각 문항은 객관식 4지선다
+- 본문에서 직접 추론 가능한 핵심 개념을 묻는 질문
+- 단순 암기가 아닌 이해도를 측정
+- 오답도 그럴듯하게 (단순히 명백히 틀린 것 X)
+- 각 문항에 정답 해설(왜 정답이고 왜 다른 선택지가 틀렸는지)을 포함
+- 한국어로 작성
+
+응답은 반드시 아래 JSON 형식으로만 반환 (마크다운 코드 펜스 없이):
+[
+  {
+    "question": "문제 본문",
+    "choices": ["선택지1", "선택지2", "선택지3", "선택지4"],
+    "answer": 0,
+    "explanation": "정답 해설"
+  }
+]
+
+answer는 0~3 사이의 정수 (정답 선택지의 인덱스).`;
+
+  const result = await model.generateContent(prompt);
+  let text = result.response.text().trim();
+
+  // Strip optional markdown fence
+  text = text.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
+
+  let parsed;
+  try {
+    parsed = JSON.parse(text);
+  } catch (err) {
+    throw new Error(`JSON parse error: ${err.message}`);
+  }
+
+  if (!Array.isArray(parsed)) {
+    throw new Error("Quiz response is not an array");
+  }
+
+  return parsed
+    .filter(
+      (q) =>
+        q &&
+        typeof q.question === "string" &&
+        Array.isArray(q.choices) &&
+        q.choices.length >= 2 &&
+        q.choices.every((c) => typeof c === "string") &&
+        typeof q.answer === "number" &&
+        q.answer >= 0 &&
+        q.answer < q.choices.length
+    )
+    .slice(0, 5);
+}
+
+// Serialize quiz array to YAML, indented to fit under "quiz:" key
+function quizArrayToYaml(quiz) {
+  // js-yaml emits a top-level sequence; indent it 2 spaces so it nests under "quiz:"
+  const dumped = yaml.dump(quiz, {
+    lineWidth: -1, // no automatic line wrapping
+    noRefs: true,
+    quotingType: '"',
+    forceQuotes: false,
+  });
+  return dumped
+    .split("\n")
+    .map((line) => (line.length > 0 ? "  " + line : line))
+    .join("\n");
 }
 
 // ─── 4. Write file ──────────────────────────────────────────────
