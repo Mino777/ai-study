@@ -56,6 +56,7 @@ src/generated/     → content-manifest.json (gitignored, entries + graph + stre
 - Confidence: 1-5 (들어봤다 → 가르칠 수 있다)
 - Streak: prebuild에서 frontmatter date 기반 연속 학습일 자동 계산
 - dailyEntries: prebuild에서 날짜별 엔트리 수 맵 생성 (히트맵용)
+- Optional `quiz` 필드: 객관식 자가 점검 문항 배열 (`question` / `choices` / `answer` / `explanation`). 위키 엔트리 본문 하단에 Quiz 컴포넌트로 자동 렌더. Gemini 파이프라인이 새 엔트리 생성 시 3문항 자동 작성.
 
 ## AI 과외 선생님 Pipeline
 - 매일 09:00 KST: GitHub Actions → 3개 주제 추천 Issue 생성
@@ -75,6 +76,8 @@ src/generated/     → content-manifest.json (gitignored, entries + graph + stre
 - `EntryNav` — 이전/다음 엔트리 (같은 카테고리 내)
 - `MobileNav` — 모바일 하단 탭 바
 - `LearningHeatmap` — GitHub 스타일 학습 히트맵 (12주, dailyEntries 기반)
+- `Quiz` — frontmatter quiz 배열 기반 객관식 자가 점검 (즉시 채점 + 해설 + localStorage 저장)
+- `QuizWidget` — 대시보드용 퀴즈 통계 + Spaced Repetition 큐 ("오늘 복습할 엔트리"). `lib/quiz-storage.ts`의 SM-2 단순화 알고리즘 사용 (간격 1→3→7→14→30→60일)
 
 ## API Routes
 - `/api/og` — OG 이미지 자동 생성 (Edge Runtime, next/og, Noto Sans KR)
