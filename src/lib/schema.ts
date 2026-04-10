@@ -41,6 +41,15 @@ export const CATEGORY_COLORS: Record<string, string> = {
   "frontend-ai": "#a855f7",
 };
 
+export const quizQuestionSchema = z.object({
+  question: z.string(),
+  choices: z.array(z.string()).min(2),
+  answer: z.number().int().min(0),
+  explanation: z.string().optional(),
+});
+
+export type QuizQuestion = z.infer<typeof quizQuestionSchema>;
+
 export const frontmatterSchema = z.object({
   title: z.string(),
   category: z.enum(CATEGORIES),
@@ -51,6 +60,7 @@ export const frontmatterSchema = z.object({
   status: z.enum(["draft", "in-progress", "complete"]).default("draft"),
   description: z.string(),
   type: z.enum(["entry", "til"]).default("entry"),
+  quiz: z.array(quizQuestionSchema).optional(),
 });
 
 export type Frontmatter = z.infer<typeof frontmatterSchema>;

@@ -8,6 +8,31 @@ connections: [context-engineering/context-engineering-fundamentals, prompt-engin
 status: complete
 description: "LLM 하나로는 프로덕션 시스템을 만들 수 없다. 입출력 검증, 라우팅, 폴백, 캐싱을 포함하는 AI 하네스 설계의 기초."
 type: entry
+quiz:
+  - question: "AI 하네스가 LLM 직접 호출 대비 가장 핵심적으로 해결하는 문제는?"
+    choices:
+      - "더 큰 모델을 사용하여 정확도를 높이는 것"
+      - "프로덕션 운영에 필요한 검증, 폴백, 비용·관측을 모델 외부에 추가하는 것"
+      - "프롬프트 길이를 줄여 토큰 비용을 낮추는 것"
+      - "사용자 인터페이스의 디자인 일관성을 보장하는 것"
+    answer: 1
+    explanation: "하네스의 본질은 모델 자체가 아니라 모델을 둘러싼 운영 계층(검증·폴백·캐싱·관측)을 제공하는 것이다."
+  - question: "다음 중 출력 계층(Output Layer)의 책임이 아닌 것은?"
+    choices:
+      - "스키마(zod 등)로 응답 검증"
+      - "콘텐츠 정책 위반 필터링"
+      - "프롬프트 인젝션 패턴 차단"
+      - "JSON 파싱 실패 시 재시도"
+    answer: 2
+    explanation: "프롬프트 인젝션 차단은 입력 계층(Input Layer)에서 처리한다. 출력 계층은 모델 응답을 검증·파싱·필터링한다."
+  - question: "주 모델 호출이 타임아웃됐을 때 권장되는 패턴은?"
+    choices:
+      - "동일한 모델로 즉시 같은 프롬프트를 재시도한다"
+      - "에러를 그대로 사용자에게 노출한다"
+      - "더 빠른 폴백 모델로 짧은 타임아웃을 걸어 재호출한다"
+      - "캐시에 저장된 가장 최근 응답을 무조건 반환한다"
+    answer: 2
+    explanation: "Inference Layer에서는 주 모델 → 폴백 모델 순으로 점진적 degrade를 통해 가용성을 유지한다. 동일 모델 재시도는 같은 원인으로 다시 실패할 가능성이 높다."
 ---
 
 ## 핵심 개념

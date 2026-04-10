@@ -9,6 +9,7 @@ import { mdxComponents } from "@/components/mdx-components";
 import { EntryNav } from "@/components/entry-nav";
 import { TableOfContents } from "@/components/toc";
 import { ScrollProgress } from "@/components/scroll-progress";
+import { Quiz } from "@/components/quiz";
 import Link from "next/link";
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -184,6 +185,15 @@ export default async function WikiEntryPage({
 
       <div className="prose-custom">{content}</div>
       <TableOfContents />
+
+      {/* Self-check quiz */}
+      {entry.frontmatter.quiz && entry.frontmatter.quiz.length > 0 && (
+        <Quiz
+          slug={slug}
+          category={entry.frontmatter.category}
+          questions={entry.frontmatter.quiz}
+        />
+      )}
 
       {/* Connected entries */}
       {connections.length > 0 && (
