@@ -180,6 +180,47 @@ worktree로 origin/main에서 깨끗하게 분기되므로,
 
 > *"준비된 패치를 박제하는 것은 다음 사이클의 작업을 *기다리는 동안*에도 시리즈가 굴러가게 한다. Compound Engineering의 진짜 힘은 *매 사이클 코드를 만지는 것*이 아니라 *각 사이클이 자기 시점에 가능한 최대치*를 박제하는 것."*
 
+## For AI Agents
+
+**Trigger**: 새 작업을 시작해야 할 때 *항상* (코드/문서 변경 무관). 특히 squash merge가 있는 환경.
+
+**Prerequisites**:
+- [Harness Journal 003 — squash merge 함정](/wiki/harness-engineering/harness-journal-003-squash-merge-trap-pattern)
+
+**Actionable Steps (슬래시 커맨드 호출)**:
+```bash
+/wt-branch <branch-name>
+```
+
+이 커맨드가 내부적으로 수행:
+1. `git rev-parse --show-toplevel` — 프로젝트 루트 자동 감지 (이식성)
+2. `git fetch origin` — 최신 origin/main 확보
+3. `git worktree add -b <branch-name> /tmp/<project>-<branch> origin/main`
+4. 작업 디렉터리 안내 + cleanup 명령
+5. 이후 모든 git 명령은 worktree 안에서 (`git -C /tmp/...` 또는 `cd`)
+6. 작업 완료 + 머지 후: `git -C <project-root> worktree remove /tmp/<project>-<branch>`
+
+**수동 호출이 필요한 경우** (슬래시 커맨드 사용 불가 환경):
+```bash
+git -C <project-root> fetch origin
+git -C <project-root> worktree add -b <branch-name> /tmp/<project>-<branch> origin/main
+cd /tmp/<project>-<branch>
+# 작업
+git push -u origin <branch-name>
+# 머지 후
+cd -
+git -C <project-root> worktree remove /tmp/<project>-<branch>
+```
+
+**Anti-patterns**:
+- ❌ 원본 working tree에서 `git checkout -b` (stale changes + 옛 SHA 상속)
+- ❌ 원본 working tree의 modified 파일을 worktree로 이동 (의도 불명)
+- ❌ worktree 작업 중 원본 working tree도 동시 수정
+- ❌ 작업 끝나고 worktree 정리 안 하기 (디스크 누적)
+- ❌ `<project-root>`를 추측해서 하드코딩
+
+---
+
 ## 자기 점검
 
 1. 자율 모드에서 *내가 진행 가능한 영역*과 *진행 불가 영역*의 경계를 매번 분명히 인식하는가?

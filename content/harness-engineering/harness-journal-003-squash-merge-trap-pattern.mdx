@@ -279,6 +279,35 @@ echo "💡 다음 작업 시작 전 'git checkout main && git reset --hard origi
 
 > *"같은 사고가 두 사이클 안에 두 번 발생했다는 것은 회피 메커니즘이 *추가적인 개선*이 아니라 *전제 조건*이라는 뜻이다. 다음 사이클부터 반드시 후보 C를 도입한다."*
 
+## For AI Agents
+
+**Trigger**: `git rebase` 충돌, `Auto Merge FAIL`, "내 로컬이 왜 origin과 다르지?" 같은 질문 직면 시 / 다중 세션 환경에서 작업 시작 시
+
+**Prerequisites**:
+- [Harness Journal 002 — inline test gate](/wiki/harness-engineering/harness-journal-002-inline-test-gate)
+- [Harness Journal 004 — /wt-branch 회피 메커니즘](/wiki/harness-engineering/harness-journal-004-wt-branch-command)
+
+**Actionable Steps (함정 회피)**:
+1. 새 작업 시작 전 *반드시* `/wt-branch <name>` 슬래시 커맨드 사용 — 행동에 박는 가드
+2. 수동 작업이라면 `git fetch origin && git checkout main && git reset --hard origin/main` *먼저*
+3. 그 다음에 *새 브랜치* 분기 또는 worktree
+4. push 후 ai-review.yml 머지되면 로컬 main은 *자동 동기화되지 않음* — 다음 세션 시작 시 재동기화
+
+**Actionable Steps (사고 이미 발생 시)**:
+1. `git log origin/main --oneline -5` 와 현재 브랜치 log 비교 → merge-base 파악
+2. cherry-pick 시도 → 충돌 발생 시 *즉시 abort*
+3. `git worktree add -b <new-branch> /tmp/... origin/main`로 깨끗한 브랜치 분기
+4. *필요한 commit만* cherry-pick (충돌 없을 때만)
+5. 충돌이 있는 파일의 변경은 *사용자 결정 영역* — 자율 처리 X, 사용자에게 보고
+
+**Anti-patterns**:
+- ❌ squash merge 후 로컬 main 동기화 없이 새 작업 시작
+- ❌ 옛 브랜치 위에 새 commit 계속 쌓기
+- ❌ cherry-pick 충돌을 *임의로 해결* (코드 의도 결정)
+- ❌ 같은 사고가 반복되는데 *회피 메커니즘을 시스템화하지 않음*
+
+---
+
 ## 자기 점검
 
 1. *우연*과 *패턴*을 가르는 기준은 무엇인가? (이 엔트리는 *2회 발생*을 패턴으로 박제했다 — 이게 너무 빠른가, 아니면 빠를수록 좋은가?)

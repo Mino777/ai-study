@@ -271,6 +271,33 @@ const response = await client.messages.create({
 
 이게 *비대칭이 만드는 자동 큐*. 추측이 아니라 *베이스라인 비교*가 큐를 만든다.
 
+## For AI Agents
+
+**Trigger**: LLM API 호출 코드를 *직접 작성*하거나 기존 호출이 *단순 직접 호출* 수준일 때
+
+**Prerequisites**:
+- [Harness Engineering Overview](/wiki/harness-engineering/harness-engineering-overview)
+
+**Actionable Steps (우선순위 순, 각 30분 이내)**:
+1. **Timeout 추가** (가장 시급) — `AbortController` + `setTimeout(abort, 60_000)` + `client.*.create({ ...opts }, { signal })`. 무한 대기 즉시 차단.
+2. **Try/catch 추가** — 에러를 사용자에게 그대로 노출하지 말고 *안전 메시지*로 대체
+3. **지수 백오프 재시도** (2회) — rate_limit(429) 4x, server_error(5xx) 2x, timeout 1x
+4. **에러 종류별 분류** — `client_error`는 *재시도 무의미*라 즉시 throw
+5. **프롬프트 캐싱** — system을 array 형식으로 + `cache_control: { type: "ephemeral" }` (최소 1024 토큰 이상일 때만 효과)
+6. **Circuit Breaker** — 3회 연속 실패 → 2분 쿨다운 → half-open. *다중 프로바이더 환경*에서 가장 가치 큼
+7. **에이전트별 모델 라우팅** — 한 모델 = 한 도구 매핑은 anti-pattern. 작업 종류별로 최적 모델
+
+**Anti-patterns**:
+- ❌ `new Anthropic()`를 여러 파일에서 각자 생성 (wrapper 없이)
+- ❌ timeout 없이 호출 (무한 대기 위험)
+- ❌ retry 있지만 에러 종류 무관 동일 백오프 (rate_limit에 선형 재시도는 역효과)
+- ❌ Circuit Breaker 없이 많은 동시 호출 (장애 전파)
+- ❌ 프롬프트 캐싱 적용했지만 *효과 측정 안 함* (캐시 미스가 silent fail)
+
+**관련 이식 사례**: [Harness Journal 006 — tarosaju Anthropic hardening](/wiki/harness-engineering/harness-journal-006-tarosaju-anthropic-hardening) — 이 엔트리의 패턴 1~2+4 실제 적용.
+
+---
+
 ## 자기 점검
 
 1. 내가 호출하는 LLM API의 실패 모드를 *5가지 이상* 나열할 수 있는가?

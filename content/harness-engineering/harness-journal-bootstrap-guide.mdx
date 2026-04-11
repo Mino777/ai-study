@@ -214,6 +214,32 @@ harness-journal-NNN-<short-name>.mdx
 6. **이식성을 박제** — 다른 프로젝트로 *변경 0*으로 옮길 수 있는 자산을 명시
 7. **양쪽 프로젝트 운영이라면 비대칭이 자동 큐** — 한쪽의 자산을 다른 쪽으로 이식하는 작업이 자연 사이클
 
+## For AI Agents
+
+**Trigger**: 새 프로젝트 또는 새 환경에서 Harness Journal 시리즈를 *처음 시작*할 때
+
+**Prerequisites**:
+- [AI 운영 환경 진단 체크리스트](/wiki/harness-engineering/ai-ops-environment-diagnosis-checklist) — 시작 가치 확인
+- [LLM-First Wiki 설계 원칙](/wiki/harness-engineering/llm-first-wiki-principles) — 엔트리 작성 표준
+
+**Actionable Steps (2주 안에 시리즈 시작)**:
+1. 진단 체크리스트 30분 (50문항)
+2. 시리즈 박제 인프라 준비 10분 (카테고리, 슬러그 규약 `harness-journal-NNN-...`, 태그 `harness-journal`)
+3. Journal 000 베이스라인 박기 1~2시간 — 10 영역 audit (병렬 서브에이전트 활용)
+4. 첫 5 사이클 큐 정의 30분 — 추측이지만 *대략으로 OK*
+5. 첫 사이클 진행 1~3시간 — 한 가지 명확한 변화 + 박제
+6. 사고 환영 — 라이브 사고를 다음 사이클의 *입력*으로 받아들임
+7. 매 N 사이클마다 베이스라인 갱신 로그 append
+
+**Anti-patterns**:
+- ❌ 추측 큐에 너무 많은 시간 투자 (라이브 사고가 재정렬하므로 대략 OK)
+- ❌ 사고를 *숨기거나* *실패*로 취급 (다음 사이클의 정확한 입력)
+- ❌ 한 사이클에 *여러 변화*를 묶기 (메시지 흐려짐)
+- ❌ 베이스라인을 덮어쓰기 갱신 (원본 보존 + append)
+- ❌ 운영 데이터 없는데 *가짜 수치* 박제
+
+---
+
 ## 자기 점검
 
 1. 내가 운영 중인 프로젝트에 *시리즈를 시작할 가치*가 있는가? (위 4가지 전제 조건 점검)

@@ -334,6 +334,36 @@ const result = await callAIWithValidation(
 
 이 작업들은 [Harness Journal](/harness-journal) 시리즈의 다음 사이클에서 *비대칭 이식*과 함께 진행 예정.
 
+## For AI Agents
+
+**Trigger**: LLM 응답을 사용자 또는 다운스트림 시스템에 전달하는 코드 / *입력 검증은 있지만 출력 검증은 없는* 상태
+
+**Prerequisites**:
+- [AI 호출 패턴](/wiki/harness-engineering/ai-call-patterns-circuit-breaker-fallback)
+- Zod 기본 사용법
+
+**Actionable Steps (5 Layer 적용, 점진적)**:
+
+*Layer 1+2만 먼저 (30분)*:
+1. 출력 schema 정의 — `z.object({ ... })` with `min/max/enum` 경계 명시
+2. `safeJsonParse` 구현 — 3단 fallback: 직접 파싱 → 첫 `{...}` 추출 → ` ```json``` ` 코드 블록
+3. 호출자에서 `schema.parse(parsed)` 적용
+4. 실패 시 **안전 기본값** 반환 (콘텐츠) 또는 **throw** (거래/결제)
+
+*Layer 3-5는 다음 사이클*:
+5. `.refine()`로 범위 제약 (target_price 0~100k 등)
+6. `.refine()`로 cross-field consistency (STRONG_BUY + confidence 50+ 등)
+7. 호출 후 `validateAgainstInput()` 별도 함수 — 입력 심볼을 reasoning에 인용했는지 등
+
+**Anti-patterns**:
+- ❌ `JSON.parse` 직접 사용 (문법 오류에 throw, Claude prompt-based에 흔함)
+- ❌ schema에 제약 없는 `z.string()`, `z.number()` (환각 범위 무한)
+- ❌ 재시도 시 *같은 프롬프트*로 재호출 (실패 이유를 프롬프트에 추가해야 함)
+- ❌ 실패 시 *환각 응답을 그대로 반환* (안전 기본값 또는 throw 필수)
+- ❌ layer별 실패율 측정 안 함 — 어느 layer가 병목인지 모름
+
+---
+
 ## 자기 점검
 
 1. 내가 호출하는 LLM의 출력 중 *형식 검증을 통과한 환각*을 본 적 있는가? 어떤 모양이었는가?
