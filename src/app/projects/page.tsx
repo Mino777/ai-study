@@ -1,11 +1,117 @@
-import Link from "next/link";
 import { Header } from "@/components/header";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Vibe Coding — AI Study Wiki",
-  description: "AI와 함께 바이브코딩으로 만든 프로젝트들. 작업 내용, 배운 점, 회고.",
+  description: "AI가 자유롭게 달릴 수 있는 환경을 만든다. 코드가 아니라 코드를 만드는 시스템 — Compound / Context / Harness Engineering으로 운영한 두 프로젝트.",
 };
+
+// ─────────────────────────────────────────────────────────────
+// FOUNDATION — 두 프로젝트 모두에 깔린 AI 운영 토대
+// ─────────────────────────────────────────────────────────────
+
+const FOUNDATION_COMPOUND = [
+  {
+    code: "C-1",
+    title: "Pre-commit QA Gate",
+    detail: ".claude/settings.json의 PreToolUse 훅이 git commit 직전 vitest + next build를 자동 실행. 하나라도 실패하면 커밋 자체가 차단된다. AI가 \"통과했다고 생각함\"으로 잘못 판단할 여지를 구조적으로 제거.",
+  },
+  {
+    code: "C-2",
+    title: "Post-push /compound 리마인더",
+    detail: "git push 직후 PostToolUse 훅이 \"/compound 실행\" 메시지를 자동 출력. 사람의 기억력 대신 훅이 다음 단계를 강제. 회고가 누락되는 것 자체를 시스템이 막는다.",
+  },
+  {
+    code: "C-3",
+    title: "/compound 슬래시 커맨드",
+    detail: "CHANGELOG.md + docs/retros/ + docs/solutions/ + 메모리 업데이트를 한 번에 처리. 회고 → 솔루션 → 메모리 → 다음 사이클 입력으로 이어지는 루프를 5분 안에 닫는다.",
+  },
+  {
+    code: "C-4",
+    title: "Retro \"다음 후보\" → 다음 사이클의 입력",
+    detail: "매 회고의 마지막 섹션에 \"다음에 할 만한 것\" 후보를 명시. 다음 세션은 그 후보를 그대로 입력으로 받는다. 사람의 to-do list가 아니라 *문서 기반 큐*. v0.9.10 → v0.9.11에서 ROI 한 사이클 만에 검증됨.",
+  },
+  {
+    code: "C-5",
+    title: "5 commit batched push",
+    detail: "Vercel 무료 100 deploys/day 제한을 넘기지 않기 위해 커밋은 자유롭게, push는 스프린트 단위로 모아서. 배포 비용 자체가 아키텍처 결정에 들어간다.",
+  },
+];
+
+const FOUNDATION_CONTEXT = [
+  {
+    code: "CE-1",
+    title: "Layered Context Loading",
+    detail: "매 세션 시작 시 CLAUDE.md → MEMORY.md → git log -10 → PLAN.md → git status 순서로 컨텍스트 주입. \"이전 세션이 어디까지 했는지\"를 사람의 기억이 아닌 *파일*에서 복원.",
+  },
+  {
+    code: "CE-2",
+    title: "Signal-to-Noise 압축",
+    detail: "2000줄 파일 전체를 절대 읽지 않음. offset/limit으로 필요한 줄 범위만, 타입/인터페이스 우선(정보 밀도 3-5배), 마크다운 테이블 > JSON. 컨텍스트 창 유한성을 디자인 제약으로 받아들임.",
+  },
+  {
+    code: "CE-3",
+    title: "Search Before Assume",
+    detail: "\"비슷한 게 있을 것 같다\"는 추측 금지. Grep/Glob으로 먼저 확인. v0.9.11 retro의 grep 한 줄(\"reflection\" 사용처 0건)이 그 자체로 안티패턴 후보를 즉시 확정한 사례.",
+  },
+  {
+    code: "CE-4",
+    title: "Write-back으로 다음 세션에 전달",
+    detail: "결정·학습은 즉시 CLAUDE.md / 메모리 / docs/retros 에 기록. 같은 사고를 두 번째 세션에서 다시 발견하지 않도록 *문서가 곧 채널*.",
+  },
+  {
+    code: "CE-5",
+    title: "Pattern Following",
+    detail: "새 기능 추가 시 grep으로 유사 기능 먼저 찾고 그 패턴을 따라 만든다. \"더 나은 방법\"이 있어도 일관성 우선 — 다음 에이전트가 읽을 수 있어야 함.",
+  },
+  {
+    code: "CE-6",
+    title: "에이전트별 컨텍스트 격리",
+    detail: "멀티 에이전트에서 각자 자기 전문 영역만 본다. 기술 분석 에이전트는 기술 지표만, 뉴스 에이전트는 뉴스만. 자기 영역 밖의 데이터를 보면 환각이 늘어난다는 걸 운영 데이터로 학습.",
+  },
+];
+
+const FOUNDATION_HARNESS = [
+  {
+    code: "HE-1",
+    title: "입력 검증 — 쓰레기 in, 쓰레기 out",
+    detail: "AI에 데이터를 넘기기 전 타입/범위/null/길이 검증. 잘못된 입력을 받지 않는 게 잘못된 출력을 사후에 잡는 것보다 100배 싸다.",
+  },
+  {
+    code: "HE-2",
+    title: "출력 검증 — AI 말 맹신 금지",
+    detail: "JSON 스키마 / 숫자 합리적 범위 / 내부 일관성 / 입력 데이터와의 일치 검증. \"STRONG_BUY인데 confidence 30%\" 같은 모순을 자동 차단. AI는 자신감 있게 틀린다.",
+  },
+  {
+    code: "HE-3",
+    title: "Bounded Retry + 폴백 계층",
+    detail: "재시도 → 대체 모델(Gemini→Claude→GPT) → 경량 처리 → 안전 기본값. 같은 방법 2회 실패 시 다른 접근법으로 강제 전환. \"에러를 삼키고 잘못된 결과 반환\"은 절대 금지.",
+  },
+  {
+    code: "HE-4",
+    title: "Conditional Routing",
+    detail: "단순 작업 → 저비용 모델, 복잡한 판단 → 고비용 모델, 합의 높으면 토론 축소, 불확실하면 심층 분석. 라우팅 자체가 비용 제어이자 품질 제어.",
+  },
+  {
+    code: "HE-5",
+    title: "5단계 Quality Gate",
+    detail: "Read → Edit → Build(0 에러) → Browser QA(최소 3페이지) → Commit. 단계 건너뛰기 불가. 게이트 자체가 사람 검토보다 더 꼼꼼한 경우가 많음(타로사주 R21에서 RLS 정적 회귀 테스트가 수동 감사를 능가).",
+  },
+  {
+    code: "HE-6",
+    title: "비용 인식 — API 콜 = 돈, 배포 = 한도",
+    detail: "maxTokens 적정화(4096 → 800-1500), 프롬프트 캐싱(반복 시스템 메시지 90% 할인), 동일 요청 캐싱, 5 커밋 묶어 1 push. \"무제한\"은 존재하지 않는다.",
+  },
+  {
+    code: "HE-7",
+    title: "실패도 영구 자산화",
+    detail: "타로사주 R23의 eslint 9→10 업그레이드 실패는 docs/maintenance/deferred-upgrades.md로 박제됨. 다음 시도자가 같은 조사를 반복하지 않는다. *실패도 compound 자산*이라는 것이 핵심 통찰.",
+  },
+];
+
+// ─────────────────────────────────────────────────────────────
+// PROJECTS — 같은 토대 위에서 각 프로젝트가 만든 AI 환경
+// ─────────────────────────────────────────────────────────────
 
 const PROJECTS = [
   {
@@ -13,162 +119,128 @@ const PROJECTS = [
     url: "https://mino-moneyflow.vercel.app/",
     color: "#10b981",
     period: "2026.04 ~",
-    stack: ["Next.js 16", "TypeScript", "Supabase", "Claude", "Gemini", "GPT", "Tailwind CSS 4"],
-    summary: "AI 멀티 에이전트 투자 분석 SaaS. 13개 에이전트가 적대적 토론을 거쳐 투자 판단을 도출한다.",
-    scale: { files: 344, lines: 82401, agents: 14, dataSources: 9, tests: 32 },
-    work: [
-      "13-에이전트 멀티 페이즈 파이프라인 설계 (4 병렬 분석가 → Bull/Bear 토론 → Judge → Trader → Risk → CIO → Devil's Advocate)",
-      "Gemini/Claude/GPT 3개 프로바이더 자동 전환 + Circuit Breaker (3회 실패 → 2분 쿨다운)",
-      "에이전트별 최적 모델 라우팅 (데이터 분석 → Gemini, 비판적 분석 → Claude, 토론 → GPT)",
-      "Yahoo Finance/Naver/SEC 등 9개 데이터 소스 병렬 수집 + 5분 캐시",
-      "BM25 알고리즘으로 유사 과거 트레이딩 검색 → 교훈 자동 추출 → 다음 분석에 반영",
-      "Upstash Redis 기반 분산 레이트 리미팅 (서버리스 환경)",
-    ],
-    contextEngineering: [
+    version: "v0.9.11",
+    tagline: "13개 AI 에이전트가 적대적 토론으로 투자 판단을 도출하는 SaaS — 그러나 진짜 작업은 에이전트들이 서로 견제하도록 만든 *환경 설계*에 있다.",
+    stack: ["Next.js 16", "TypeScript", "Supabase", "Claude", "Gemini", "GPT", "Upstash Redis"],
+    metrics: {
+      tests: 678,
+      agents: 14,
+      providers: 3,
+      compoundCycles: "13+ (PM v2 Phase 1~5 + 안전성 R1~R5 × 다회차)",
+    },
+    environment: [
       {
-        code: "CE-1",
-        title: "에이전트별 컨텍스트 격리",
-        detail: "Market Analyst는 기술 지표만, Fundamentals는 재무 데이터만 본다. 전체 데이터를 한 에이전트에 몰아넣으면 집중도가 떨어진다. 역할별로 필터링된 컨텍스트를 주입해서 전문성을 확보.",
+        title: "Multi-Agent 적대적 토론 파이프라인",
+        detail: "4 병렬 분석가(기술/펀더멘털/뉴스/매크로) → Bull/Bear 토론 → Judge → Trader → Risk → CIO → Devil's Advocate. 단일 에이전트가 결론을 내리는 게 아니라 *논쟁하는 구조* 자체가 환각을 줄인다. 토론 에이전트는 반드시 상대방의 가장 강한 논거(Steelman)를 먼저 제시한 후에야 반박 가능 — 허수아비 논증을 구조로 차단.",
       },
       {
-        code: "CE-2",
-        title: "품질 가드 레이어드 주입",
-        detail: "공통 가드(베이스레이트, 정량적 근거 필수) → 역할별 가드(PM에게만 프리모템, 펀더멘탈에게만 기대치 갭) → 상황별 가드(모멘텀 다이버전스). 3단 레이어로 프롬프트를 조립한다.",
+        title: "Multi-Provider Circuit Breaker",
+        detail: "Claude 429가 피크 시간에 10분 3회 발생. Circuit Breaker 없으면 서비스 중단. 3회 연속 실패 → 2분 쿨다운 → 반개방에서 1회 재시도. 에이전트별로 최적 모델 라우팅(데이터 분석→Gemini, 비판적 분석→Claude, 토론→GPT). 프로바이더별 독립 상태 관리.",
       },
       {
-        code: "CE-3",
-        title: "실제 데이터 우선, 환각 방지",
-        detail: "Yahoo Finance에서 가져온 실제 PER/EPS를 프롬프트에 주입. 데이터 있으면 confidence 85-95 허용, 없으면 35-60으로 강제 제한. '모르는 수치를 만들어내지 마세요' 명시.",
+        title: "Memory-Based Learning Loop",
+        detail: "BM25로 과거 유사 트레이딩을 검색해서 Bull/Bear 토론에 교훈을 주입. 단, \"현재 데이터를 우선하라\" 앵커링 방지 프롬프트를 항상 같이 넣는다. 에이전트가 자기 과거를 보고 학습하는 루프 — *AI 시스템이 시간을 가로질러 자기 자신과 협업*.",
       },
       {
-        code: "CE-4",
-        title: "메모리 기반 컨텍스트 (BM25)",
-        detail: "과거 유사 트레이딩을 BM25 검색으로 찾아서 Bull/Bear 토론에 교훈을 주입. 단, '현재 데이터를 우선하세요' 앵커링 방지 프롬프트를 같이 넣는다.",
-      },
-    ],
-    harnessEngineering: [
-      {
-        code: "HE-1",
-        title: "Circuit Breaker + 지수 백오프",
-        detail: "3회 연속 실패 → 2분 쿨다운 → 반개방 상태에서 1회 재시도. Rate limit은 4배, 서버 에러는 2배, 타임아웃은 선형 백오프. 프로바이더별 독립 상태 관리.",
+        title: "Trading Reflection 회고 자동화",
+        detail: "trade_memories.reflection + lessons_learned 필드 — 분석 결과의 1주/1달 후 alpha 측정, was_correct 여부와 함께 회고를 자동 생성. 적중/빗나감 색상 분기로 사용자에게도 노출. AI가 자기 트레이딩을 *돌아보고 다음 분석에 반영*하는 두 번째 루프.",
       },
       {
-        code: "HE-2",
-        title: "Structured Output 3단계 파싱",
-        detail: "Gemini/OpenAI는 네이티브 JSON Schema 강제. Claude는 프롬프트 기반. 그래도 실패하면 정규식으로 첫 번째 {...} 추출. 3단계 fallback으로 파싱 실패율 거의 0%.",
+        title: "Confidence Calibration (3 버킷 + 단조성)",
+        detail: "lib/portfolio/calibration.ts: confidence를 low(<60)/mid(60-75)/high(≥75) 3 버킷으로 분류해서 실제 alpha와 비교. 단조성 검사로 \"높은 confidence가 정말 더 높은 성과를 내는지\"를 측정. AI 자신감과 실제 적중률의 간극을 데이터로 추적.",
       },
       {
-        code: "HE-3",
-        title: "Steelman 의무 + 교차 인용",
-        detail: "토론 에이전트는 반드시 상대방의 가장 강한 논거를 먼저 제시한 후에야 반박 가능. Steelman 없는 주장은 Judge가 50% 가중치로 처리. 허수아비 논증을 구조적으로 방지.",
-      },
-      {
-        code: "HE-4",
-        title: "프롬프트 캐싱 (90% 할인)",
-        detail: "Claude의 cache_control: ephemeral로 반복되는 시스템 프롬프트(품질 가드)를 5분간 캐싱. 같은 역할의 에이전트가 연속 호출되면 캐시 히트 → API 비용 90% 절감.",
+        title: "Layered Quality Guards 프롬프트 조립",
+        detail: "공통 가드(베이스레이트, 정량적 근거 필수) → 역할별 가드(PM에게만 프리모템, 펀더멘탈에게만 기대치 갭) → 상황별 가드(모멘텀 다이버전스). 3단 레이어로 시스템 프롬프트를 조립 + Claude cache_control: ephemeral로 90% 할인.",
       },
     ],
-    learned: [
+    cycles: [
       {
-        title: "LLM은 기본적으로 과신한다",
-        detail: "에이전트가 80% confidence라고 해도 실제 정확도는 65%. 100+ 과거 시그널로 캘리브레이션 커브를 만들어 사후 보정했다. 베이스레이트 주입, 프리모템 분석이 핵심.",
+        title: "PM v2 Phase 1~5 — 백엔드와 UI 가시화를 한 사이클 안에",
+        detail: "v0.9.7 retro에서 검증한 \"한 사이클은 백엔드만 하지 말고 UI 가시화까지\" 패턴이 v0.9.8/9/10에 모두 적용됨. 매 사이클 끝에 *유저가 보이는 결과물*. 순수 로직은 lib/portfolio/ 모듈로 분리해서 테스트 100%, UI 컴포넌트는 모듈 호출만 — 테스트 부담 분리.",
       },
       {
-        title: "토론 구조가 단일 에이전트보다 낫다",
-        detail: "Bull/Bear가 상대방 논거를 직접 인용하고 반박하는 구조. 허수아비 논증 방지 + 과신 20-30% 감소. 단, 토론 시간이 분석 시간의 40%를 차지해서 타임아웃 관리가 어려웠다.",
+        title: "안티패턴 발견 → 즉시 솔루션 → 다음 사이클 입력 (Compound Learning 실증)",
+        detail: "v0.9.9에서 \"DB 저장 + UI 미사용 필드\" 안티패턴 1건 발견 → docs/solutions/workflow/2026-04-11-db-stored-ui-unused-fields.md 작성 → 메모리에 박제 → v0.9.10에서 두 번째 사례를 *retro가 가이드한 대로* 즉시 발견 → v0.9.11에서 세 번째 케이스 청소(reflection+lessons_learned 가시화). retro→solution→memory→다음 사이클 입력 회로가 의도대로 작동한 첫 사례.",
       },
       {
-        title: "멀티 프로바이더는 선택이 아니라 필수",
-        detail: "Claude 429 에러가 피크 시간에 10분에 3번 발생. Circuit Breaker 없었으면 서비스 중단.",
-      },
-      {
-        title: "비용 제어가 곧 제품 설계",
-        detail: "무료 사용자는 Gemini Flash 7에이전트, 프로 사용자는 Claude 14에이전트. 모델 선택 자체가 비즈니스 모델. 하루 $5 상한이 아키텍처의 60%를 결정했다.",
+        title: "안전성 5라운드 × 여러 사이클 (currency, react-patterns, runtime-errors)",
+        detail: "R1 → R5(=compound) 5라운드 × 다회차로 환율 fetch 정리, useEffect race condition cancellation token, useQuery r.ok 가드, mutation onError 누락 차단, 외부 fetch timeout 등을 한 묶음씩 처리. 매 사이클의 R5는 compound 단계 — 회고와 솔루션이 다음 사이클의 입력이 됨.",
       },
     ],
-    retrospective: "처음엔 \"Claude에게 주식 분석을 시키자\"로 시작했다. 단일 프롬프트로는 환각이 심했고, 에이전트를 나누기 시작했다. 4개 → 8개 → 13개. 에이전트가 늘어날수록 오케스트레이션이 핵심 문제가 됐다. 가장 큰 전환점은 \"토론 구조\" 도입. 결론을 내리는 게 아니라 논쟁을 시키니까 품질이 확 올라갔다.\n\n돌아보면 이 프로젝트가 Compound Engineering 그 자체였다. 코드를 직접 치는 시간은 전체의 20%도 안 됐다. 나머지는 에이전트 파이프라인 설계, 품질 가드 규칙 정의, 리뷰. \"코드가 산출물이 아니라 코드를 만드는 시스템이 산출물\"이라는 감각을 여기서 처음 체득했다. Circuit Breaker 패턴을 한 번 만들어두니 다음 프로바이더 추가할 때 5분이면 끝났고, Structured Output 3단계 파싱도 다음 프로젝트에서 그대로 재활용했다. 복리가 진짜로 쌓이는 경험.\n\n제일 어려웠던 건 코드가 아니라 \"언제 멈출 것인가\"였다. 에이전트를 더 추가하면 항상 조금 더 나아지는데, 비용과 시간이 선형으로 증가한다. 14개에서 멈춘 건 비용 상한($5/day) 때문이었다.",
+    retrospective:
+      "이 프로젝트의 진짜 산출물은 \"트레이딩 분석\"이 아니라 \"AI 에이전트들이 서로 견제하도록 만든 환경\"이다. 13개 에이전트를 일렬로 호출하는 건 누구나 할 수 있다. 어려운 건 *어떤 에이전트가 어떤 데이터만 봐야 환각이 줄어드는지*, *어느 시점에 토론을 끊어야 비용이 폭주하지 않는지*, *어느 confidence 구간이 실제로 신뢰할 만한지*를 데이터로 측정하면서 환경을 조정하는 일이다.\n\nCompound Engineering이 가장 강하게 와닿은 순간은 v0.9.10 → v0.9.11이었다. v0.9.10 retro에 \"DB 저장 + UI 미사용 필드 청소\"를 다음 사이클 후보로 명시해뒀더니, 다음 세션이 그 후보를 그대로 입력으로 받아 reflection+lessons_learned 가시화를 만들었다. 사람의 to-do list가 아니라 *문서 기반 큐*. 메모리 시스템의 ROI가 한 사이클 만에 검증된 것.\n\n가장 큰 교훈: 에이전트를 1개 더 추가하는 것보다, 에이전트가 *자기 결과를 회고하고 다음 분석에 반영하는 루프*를 만드는 게 훨씬 큰 변화를 만든다. 14개에서 멈춘 건 비용 상한($5/day) 때문이지만, 사실 그 이후는 \"몇 개를 더 붙이느냐\"가 아니라 \"이미 있는 에이전트들이 시간을 가로질러 어떻게 학습하느냐\"가 본질이었다.",
   },
   {
     name: "Mino TaroSaju",
     url: "https://mino-tarosaju.vercel.app/",
     color: "#8b5cf6",
     period: "2026.04 ~",
-    stack: ["Next.js 16", "TypeScript", "Supabase", "Claude Haiku", "Framer Motion", "Tailwind CSS 4"],
-    summary: "AI 타로 & 사주 상담 서비스. 6개 존(세계관)에 47페이지, 314개 테스트, 8,652줄의 도메인 지식.",
-    scale: { files: 266, lines: 48100, pages: 47, dataLines: 8652, tests: 314 },
-    work: [
-      "6개 존(Zone) 테마 시스템: Hub/Tarot/Saju/Love/Psych/Dream 각각 다른 색상/폰트/파티클",
-      "CSS Custom Properties + data-zone 속성으로 1줄 테마 전환 (47페이지 × 6테마 = 282가지 조합)",
-      "오행 상생상극, 삼합/육합/충, 천간합 등 한국 명리학을 알고리즘으로 변환 (8,652줄)",
-      "Claude Haiku 실시간 타로 채팅 (별빛 선생님 페르소나, 5턴 제한)",
-      "시드 기반 결정론적 결과 생성 → URL 공유 시 동일 결과 재현 (바이럴 루프)",
-      "Canvas 파티클 엔진 (별/연기/하트/비누방울) + 모바일 성능 최적화 (30fps 유지)",
-    ],
-    contextEngineering: [
+    version: "R25 (안전성 5차수)",
+    tagline: "6개 존 점술 SaaS — 그러나 진짜 자랑할 만한 건 25라운드 안전성 스프린트로 12축 → 15축까지 확장된 *AI 운영 인프라 baseline*.",
+    stack: ["Next.js 16", "TypeScript", "Supabase", "Claude Haiku", "motion/react", "Sentry", "Playwright"],
+    metrics: {
+      tests: 565,
+      rounds: 25,
+      compoundCycles: 5,
+      stabilityAxes: "12 → 15",
+    },
+    environment: [
       {
-        code: "CE-1",
-        title: "시스템 프롬프트 = 도메인 제약",
-        detail: "타로 채팅의 시스템 프롬프트에 뽑힌 카드 목록 + 사용자 이름을 동적 주입. AI의 출력을 사용자 상태에 바인딩한다. '따뜻하고 공감적인 톤', '2-3문단', '~요 체' 등 톤/형식/길이를 명시적으로 제약.",
+        title: "RLS 정적 감사 + 회귀 테스트 — AI가 사람보다 꼼꼼하게",
+        detail: "Supabase service role key 없이도 supabase/migrations/*.sql을 regex로 parse해서 \"UPDATE WITH CHECK 누락\" 같은 RLS 이슈를 정적 분석으로 발견. R21에서 사람이 수동 감사로 2건(user_profiles, user_consents) 잡은 뒤 회귀 테스트를 작성했더니, 테스트가 *3번째 이슈*(push_subscriptions)를 자동으로 잡아냄. **자동화 게이트가 사람보다 꼼꼼한 경우가 있다**는 것을 운영 데이터로 입증.",
       },
       {
-        code: "CE-2",
-        title: "다층 시맨틱 메타데이터",
-        detail: "타로 카드 데이터에 기본 의미(upright/reversed) + 상세 해석(detailedReading) + 분야별 조언(love/money/health) + 학술 메타데이터(행성/원소/원형/영웅여정/수비학)까지 7겹. AI가 깊은 해석을 할 수 있는 시맨틱 밀도.",
+        title: "Sentry + Web Vitals + Lighthouse CI 3중 관측",
+        detail: "R11에서 Sentry @sentry/nextjs 정식 도입(DSN optional). R16에서 Web Vitals를 A/B variant 태그와 함께 커스텀 리포터로 수집. R18에서 Lighthouse CI를 GitHub Actions에 회귀 warn gate로 추가. 사람이 매번 보지 않아도 *변화가 발생한 순간*에 알림이 가는 구조.",
       },
       {
-        code: "CE-3",
-        title: "도메인 지식 8,652줄 인코딩",
-        detail: "오행 상생상극, 삼합/육합/충, 천간합, 12동물 × 4카테고리 운세 템플릿. 전문가 지식을 코드로 번역. AI가 만들어내는 게 아니라 검증된 데이터를 기반으로 계산.",
+        title: "Playwright E2E + GitHub Actions (인증 회귀 차단)",
+        detail: "R12-R14에서 인증 5 시나리오(ISSUE-001 회귀 방지) + Critical flow 6개(사주/타로/일일운세 + ErrorState) E2E 인프라 구축. R15에서 GitHub Actions Playwright 통합. 모바일 Safari PKCE 쿠키 사고 같은 *환경 의존 버그*를 다시 만들지 않기 위한 가드.",
       },
       {
-        code: "CE-4",
-        title: "CE/HE 커밋 태깅 체계",
-        detail: "모든 커밋 메시지에 [CE-N], [HE-N] 태그를 붙여서 어떤 엔지니어링 원칙이 적용됐는지 추적. AI 에이전트 협업의 품질을 측정 가능하게 만든다.",
-      },
-    ],
-    harnessEngineering: [
-      {
-        code: "HE-1",
-        title: "Phase 1/2 점진적 AI 도입",
-        detail: "Phase 1은 템플릿 기반(API 키 불필요, 무료). Phase 2에서 Claude API로 업그레이드. API 실패 시 자동으로 Phase 1 템플릿으로 fallback. 사용자는 차이를 모른다.",
+        title: "Phase 1/2 점진적 AI 도입 + 자동 폴백",
+        detail: "Phase 1은 템플릿 기반(API 키 불필요, 무료). Phase 2에서 Claude Haiku로 업그레이드. API 실패 시 자동으로 Phase 1 템플릿으로 fallback — 사용자는 차이를 모른다. AI를 켜고 끄는 스위치가 아니라 *AI가 부드럽게 degrade*하는 환경.",
       },
       {
-        code: "HE-2",
-        title: "결정론적 시드 = 공유 가능한 결과",
-        detail: "dayOfYear % N으로 시드된 랜덤. 같은 생년월일 + 같은 날짜 = 항상 같은 결과. URL로 공유하면 동일 결과 재현. 이게 카카오톡 바이럴 루프의 핵심 메커니즘.",
+        title: "Zod 입력 검증 + env runtime 검증 + Logger Error Boundary",
+        detail: "R6-R8에서 API 7 routes에 Zod 입력 검증, email HTML escape, env 변수 runtime 검증(process.env.X! 제거), 프로덕션 에러 리포팅 logger 확장 + error boundary 훅까지 한 묶음으로 박음. AI가 만든 코드라도 *경계 검증은 시스템 차원*에서 강제.",
       },
       {
-        code: "HE-3",
-        title: "5단계 품질 게이트",
-        detail: "Read → Edit → Build(0 에러) → Browser QA(최소 3페이지) → Commit. 단계를 건너뛸 수 없다. 배포는 스프린트 단위로 모아서 push (Vercel 100 deploys/day 제한 대응).",
-      },
-      {
-        code: "HE-4",
-        title: "점수 범위 강제 제한",
-        detail: "운세 점수를 Math.min(100, Math.max(40, score))로 강제. AI가 0점이나 100점을 내보내지 못하게. 오행 조화(harmony)면 기본 82점, 충돌(clash)면 58점으로 앵커링.",
+        title: "Deferred Upgrades 트래킹 — 실패도 자산",
+        detail: "R23에서 eslint 9→10 업그레이드 시도 실패(upstream 블로커: eslint-plugin-react 호환 안 됨). 그 실패 자체를 docs/maintenance/deferred-upgrades.md에 박제. 다음 시도자가 같은 조사를 반복하지 않음. **실패도 compound 자산이라는 것**이 R23 한 라운드의 진짜 메시지.",
       },
     ],
-    learned: [
+    cycles: [
       {
-        title: "도메인 지식 인코딩이 제일 어렵다",
-        detail: "사주학/명리학을 코드로 옮기는 건 알고리즘이 아니라 번역에 가깝다. love 관련 로직만 27번 커밋하며 수정했다.",
+        title: "안전성 1차(R1-5) — Rate limit / DB index / Security headers / ISR",
+        detail: "초기 baseline. 미들웨어 rate limiter, Supabase index 감사, security headers, ISR 캐싱, rateLimit 회귀 테스트. 이 baseline이 다음 4 사이클의 출발점이 됨.",
       },
       {
-        title: "CSS 변수가 JS Context보다 테마에 유리하다",
-        detail: "처음엔 React Context로 테마를 관리했는데, 리렌더링 비용이 컸다. data-zone + CSS Custom Properties로 바꾸니 성능도 좋아지고 코드도 깨끗해졌다.",
+        title: "안전성 2차(R6-10) — Boundary Validation",
+        detail: "Zod, env, logger, API tests, dep updates. 모든 *시스템 경계*에 검증 게이트 박기. 새 비즈니스 로직이 아니라 *경계의 일관성*을 통일하는 사이클.",
       },
       {
-        title: "결정론적 결과 = 바이럴의 핵심",
-        detail: "같은 생년월일이면 항상 같은 결과. Seeded PRNG를 구현했는데, JS 엔진마다 미묘하게 다른 부분이 있어서 고생.",
+        title: "안전성 3차(R11-15) — Observability + E2E",
+        detail: "Sentry, Playwright, GitHub Actions CI. 사람이 매번 보지 않아도 변화를 감지하는 구조. ISSUE-001 인증 회귀 방지 5 시나리오 E2E.",
       },
       {
-        title: "인증은 환경별로 다르다",
-        detail: "PKCE 인증이 데스크톱에서는 되는데 모바일 Safari에서는 쿠키가 날아갔다. 6번 커밋. 실기기 테스트 필수.",
+        title: "안전성 4차(R16-20) — Performance Monitoring",
+        detail: "Web Vitals + variant 태깅, bundle baseline, Lighthouse CI, 이미지 전략 감사, zone font display:swap. \"지금 빠른가\"가 아니라 \"지금부터 느려지면 알 수 있는가\"를 만드는 사이클.",
+      },
+      {
+        title: "안전성 5차(R21-25) — Security + Maintenance",
+        detail: "RLS 16 테이블 정적 감사 + WITH CHECK fix 3건 + 회귀 테스트, framer-motion → motion/react migrate(191 files, sed 일괄 + 테스트가 회귀 감지), eslint 10 시도→실패→박제, @anthropic-ai/sdk 0.82→0.87. *수동 감사 + 자동 테스트 둘 다 필요한 이유*를 R21이 한 사례로 입증.",
       },
     ],
-    retrospective: "\"타로 앱 하나 만들어볼까\"로 시작해서 사주, 꿈해몽, 궁합, 심리 테스트, 수비학까지 6개 세계관으로 확장됐다. 가장 예상 못한 난이도는 도메인 지식이었다. 오행 상생상극을 코드로 표현하는 건 어렵지 않은데, \"이게 맞는지\"를 확인하는 과정이 끝없었다.\n\nMoneyFlow에서 쌓은 복리가 여기서 터졌다. Circuit Breaker, 품질 가드 패턴, AI fallback 전략 같은 걸 CLAUDE.md에 정리해뒀더니, 두 번째 프로젝트는 인프라 고민 없이 도메인 로직에만 집중할 수 있었다. 이게 Compound Engineering의 4단계 \"복리화\"다. 기능을 만드는 게 아니라, 기능을 더 잘 만드는 시스템을 축적하는 것.\n\nZone 시스템은 자랑할 만하다. 47페이지가 6개 세계관을 오가는데 CSS 변수 하나로 전환된다. data-zone 속성 하나 바꾸면 색상, 폰트, 파티클이 다 바뀐다. 이것도 복리의 결과물. 처음 만들 때 30분 더 투자해서 시스템으로 만들어두니까 이후 5개 존 추가가 각각 10분이면 끝났다.\n\n가장 뿌듯한 순간은 카카오 공유가 처음 동작했을 때. 시드 기반 결정론 덕분에 친구에게 공유한 결과를 클릭하면 동일한 결과가 나온다. 이게 바이럴 루프의 핵심이었다.",
+    retrospective:
+      "이 프로젝트의 자랑은 콘텐츠가 아니라 *Round 번호*다. R1부터 R25까지 25라운드를 돌면서, 매 5라운드마다 compound 단계로 회고와 솔루션을 박았다. 각 라운드의 마지막은 항상 \"다음에 할 만한 후보\" 목록을 남기고, 다음 사이클은 그 목록을 입력으로 받는다. *사람의 to-do list가 아니라 문서 기반 큐*.\n\nMoneyFlow에서 쌓은 인프라 패턴이 그대로 이식돼 첫 라운드부터 baseline 위에서 시작할 수 있었다. Circuit Breaker 패턴, Quality Gate 5단계, env runtime 검증, 5 commit batched push, 회고 포맷, 솔루션 카테고리 디렉터리 — 전부 한 번 만들어두니 두 번째 프로젝트는 \"이식\"으로 끝났다. *이게 Compound Engineering이 말하는 \"다음 작업이 더 쉬워진다\"의 실체*. \"다른 프로젝트도 더 쉬워진다\"까지 확장된다는 게 한 단계 더 큰 발견이었다.\n\n가장 중요한 메타 학습: AI가 만든 결과물의 품질을 사람이 매번 검토하는 건 확장 불가능하다. 그 자리를 *자동화 게이트*가 메워야 한다. R21의 RLS 회귀 테스트가 사람 감사보다 더 꼼꼼하게 누락을 잡은 사례가 결정적이었다 — 사람 검토는 \"있으면 좋은 것\"이지 \"기댈 수 있는 것\"이 아니다. AI가 자유롭게 달리도록 하려면, 사람의 시선이 아니라 *테스트와 훅과 정적 분석*이 울타리 역할을 해야 한다.",
   },
 ];
+
+// ─────────────────────────────────────────────────────────────
+// COMPONENTS
+// ─────────────────────────────────────────────────────────────
 
 function StatBadge({ label, value }: { label: string; value: string | number }) {
   return (
@@ -179,36 +251,167 @@ function StatBadge({ label, value }: { label: string; value: string | number }) 
   );
 }
 
+function PrincipleCard({
+  code,
+  title,
+  detail,
+  accentClass,
+}: {
+  code: string;
+  title: string;
+  detail: string;
+  accentClass: string;
+}) {
+  return (
+    <div className="rounded-[var(--radius-md)] border border-border bg-surface p-4">
+      <div className="flex items-center gap-2 mb-2">
+        <span className={`rounded px-1.5 py-0.5 text-xs font-bold font-code ${accentClass}`}>
+          {code}
+        </span>
+        <h4 className="font-display text-sm font-bold text-text">{title}</h4>
+      </div>
+      <p className="text-xs text-muted leading-relaxed">{detail}</p>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// PAGE
+// ─────────────────────────────────────────────────────────────
+
 export default function ProjectsPage() {
   return (
     <div className="min-h-screen bg-bg">
       <Header />
 
       <main className="mx-auto max-w-4xl px-6 py-12">
+        {/* Page header */}
         <div className="mb-12">
           <h1 className="font-display text-4xl font-black tracking-tight mb-3">
             Vibe Coding
           </h1>
           <p className="text-lg text-muted leading-relaxed mb-4">
-            AI와 함께 바이브코딩으로 만든 프로젝트들.
-            아이디어에서 프로덕션까지, 만들면서 배운 것들을 기록합니다.
+            코드가 아니라 <span className="text-text font-semibold">환경</span>을 만든다.
+            AI가 자유롭게 달릴 수 있는 울타리를 치고, 매 사이클이 다음 사이클의 자산이 되도록 시스템을 쌓는다.
           </p>
           <div className="rounded-[var(--radius-md)] border border-accent/20 bg-accent/5 p-4">
             <p className="text-sm text-text leading-relaxed">
-              <span className="font-bold text-accent">Compound Engineering</span> 방식으로 진행.
-              코드가 아니라 &ldquo;코드를 만드는 시스템&rdquo;을 쌓는다.
-              계획(Plan) → 실행(Work) → 리뷰(Review) → 복리화(Compound).
-              매번 만든 가드레일, 프롬프트 패턴, 에러 핸들링이 다음 프로젝트의 기반이 된다.
-              80%는 계획과 리뷰, 20%가 실행.
+              <span className="font-bold text-accent">Compound Engineering</span> · <span className="font-bold text-accent">Context Engineering</span> · <span className="font-bold text-accent">Harness Engineering</span> 세 가지 방법론 위에서 운영.
+              두 프로젝트 모두 동일한 토대를 공유하고, MoneyFlow에서 검증된 패턴이 TaroSaju로 그대로 이식되며, 다시 그 자산이 다음 프로젝트로 흘러간다.
+              사람이 코드 한 줄을 직접 치는 비중은 거의 0에 수렴하고, 대부분의 시간은 <span className="font-semibold">에이전트가 안전하게 달릴 환경을 조정하는 일</span>에 들어간다.
             </p>
           </div>
+        </div>
+
+        {/* ───────────────────────────────────────────────────── */}
+        {/* FOUNDATION                                             */}
+        {/* ───────────────────────────────────────────────────── */}
+        <section className="mb-20">
+          <div className="mb-6">
+            <div className="flex items-center gap-3 mb-2">
+              <span className="h-4 w-4 rounded-full bg-accent" />
+              <h2 className="font-display text-3xl font-black tracking-tight">
+                Foundation
+              </h2>
+              <span className="text-sm text-muted font-code ml-auto">
+                두 프로젝트 공유 토대
+              </span>
+            </div>
+            <p className="text-base text-muted leading-relaxed">
+              모든 프로젝트가 같은 인프라 위에서 시작한다.
+              훅으로 강제되는 QA 게이트, 슬래시 커맨드로 자동화된 회고 루프, 매 세션 자동 로드되는 AI 협업 헌장.
+              이 토대 자체가 가장 큰 compound 자산이다.
+            </p>
+          </div>
+
+          {/* Compound Engineering 워크플로 */}
+          <div className="mb-10">
+            <h3 className="font-display text-xl font-bold mb-2">
+              <span className="text-accent">Compound</span> Engineering — 회고가 다음 사이클의 입력이 되는 루프
+            </h3>
+            <p className="text-sm text-muted leading-relaxed mb-4">
+              <code className="font-code text-xs bg-surface px-1.5 py-0.5 rounded">.claude/settings.json</code>의 훅이 commit/push 양쪽을 강제하고,
+              <code className="font-code text-xs bg-surface px-1.5 py-0.5 rounded ml-1">/compound</code> 슬래시 커맨드가 회고·솔루션·메모리 업데이트를 한 번에 처리한다.
+              매 회고 끝의 &ldquo;다음 후보&rdquo;가 다음 세션의 입력 큐가 된다.
+            </p>
+            <div className="space-y-3">
+              {FOUNDATION_COMPOUND.map((c) => (
+                <PrincipleCard
+                  key={c.code}
+                  code={c.code}
+                  title={c.title}
+                  detail={c.detail}
+                  accentClass="bg-accent/10 text-accent"
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Context Engineering */}
+          <div className="mb-10">
+            <h3 className="font-display text-xl font-bold mb-2">
+              <span className="text-cat-prompt">Context</span> Engineering — AI에게 무엇을 보여줄 것인가
+            </h3>
+            <p className="text-sm text-muted leading-relaxed mb-4">
+              <span className="italic">&ldquo;AI는 보여준 만큼만 안다. 잘 보여주면 시니어, 못 보여주면 인턴.&rdquo;</span>{" "}
+              매 세션 시작 시 정해진 순서로 컨텍스트를 주입하고, 노이즈를 배제하고, 패턴을 따른다.
+              이 6원칙이 두 프로젝트의 <code className="font-code text-xs bg-surface px-1.5 py-0.5 rounded">AI-AGENT-GUIDE.md</code>에 박혀 있어 모든 세션이 동일한 출발점을 갖는다.
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {FOUNDATION_CONTEXT.map((c) => (
+                <PrincipleCard
+                  key={c.code}
+                  code={c.code}
+                  title={c.title}
+                  detail={c.detail}
+                  accentClass="bg-cat-prompt/10 text-cat-prompt"
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Harness Engineering */}
+          <div className="mb-4">
+            <h3 className="font-display text-xl font-bold mb-2">
+              <span className="text-cat-rag">Harness</span> Engineering — AI에게 어떤 울타리를 칠 것인가
+            </h3>
+            <p className="text-sm text-muted leading-relaxed mb-4">
+              <span className="italic">&ldquo;말(Horse)에 하네스(Harness)를 씌워서 원하는 방향으로 안전하게 달리게 한다.&rdquo;</span>{" "}
+              범위 제한 + 검증 + 폴백 + 라우팅 + 비용 제어. 7원칙이 모든 AI 호출과 모든 커밋에 적용된다.
+              단계 건너뛰기 불가, 폴백 없는 호출 금지, 검증 없는 출력 금지.
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {FOUNDATION_HARNESS.map((h) => (
+                <PrincipleCard
+                  key={h.code}
+                  code={h.code}
+                  title={h.title}
+                  detail={h.detail}
+                  accentClass="bg-cat-rag/10 text-cat-rag"
+                />
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ───────────────────────────────────────────────────── */}
+        {/* PROJECTS                                               */}
+        {/* ───────────────────────────────────────────────────── */}
+        <div className="mb-6">
+          <h2 className="font-display text-3xl font-black tracking-tight mb-2">
+            Projects
+          </h2>
+          <p className="text-base text-muted leading-relaxed">
+            같은 토대 위에서 각 프로젝트가 만든 AI 운영 환경.
+            기능 목록이 아니라 <span className="text-text font-semibold">에이전트가 어떻게 안전하게 달리는가</span>의 기록.
+          </p>
         </div>
 
         <div className="space-y-16">
           {PROJECTS.map((project) => (
             <article key={project.name}>
               {/* Header */}
-              <div className="flex items-center gap-3 mb-4">
+              <div className="flex items-center gap-3 mb-3">
                 <span
                   className="h-4 w-4 rounded-full"
                   style={{ background: project.color }}
@@ -217,11 +420,11 @@ export default function ProjectsPage() {
                   {project.name}
                 </h2>
                 <span className="text-sm text-muted font-code ml-auto">
-                  {project.period}
+                  {project.period} · {project.version}
                 </span>
               </div>
 
-              <p className="text-lg text-muted mb-4">{project.summary}</p>
+              <p className="text-base text-text leading-relaxed mb-5">{project.tagline}</p>
 
               <a
                 href={project.url}
@@ -232,122 +435,86 @@ export default function ProjectsPage() {
                 {project.url.replace("https://", "")} →
               </a>
 
-              {/* Stats + Stack */}
+              {/* AI 운영 지표 */}
               <div className="flex flex-wrap gap-3 mb-6">
-                {Object.entries(project.scale).map(([key, val]) => {
+                {Object.entries(project.metrics).map(([key, val]) => {
                   const labels: Record<string, string> = {
-                    files: "파일",
-                    lines: "코드 라인",
-                    agents: "에이전트",
-                    dataSources: "데이터 소스",
                     tests: "테스트",
-                    pages: "페이지",
-                    dataLines: "도메인 데이터",
+                    agents: "에이전트",
+                    providers: "프로바이더",
+                    rounds: "라운드",
+                    compoundCycles: "Compound 사이클",
+                    stabilityAxes: "안정성 축",
                   };
-                  const display = key === "dataLines" || key === "lines"
-                    ? `${(val as number).toLocaleString()}줄`
-                    : val;
-                  return <StatBadge key={key} label={labels[key] || key} value={display} />;
+                  return <StatBadge key={key} label={labels[key] || key} value={val} />;
                 })}
               </div>
 
               <div className="flex flex-wrap gap-2 mb-8">
                 {project.stack.map((s) => (
-                  <span key={s} className="rounded-full bg-surface px-3 py-1 text-xs text-muted font-code border border-border">
+                  <span
+                    key={s}
+                    className="rounded-full bg-surface px-3 py-1 text-xs text-muted font-code border border-border"
+                  >
                     {s}
                   </span>
                 ))}
               </div>
 
-              {/* Work */}
+              {/* 환경 조성 */}
               <section className="mb-8">
-                <h3 className="font-display text-xl font-bold mb-4">작업 내용</h3>
-                <ul className="space-y-2">
-                  {project.work.map((w, i) => (
-                    <li key={i} className="flex gap-3 text-sm text-text leading-relaxed">
-                      <span
-                        className="mt-2 h-1.5 w-1.5 rounded-full shrink-0"
-                        style={{ background: project.color }}
-                      />
-                      {w}
-                    </li>
-                  ))}
-                </ul>
-              </section>
-
-              {/* Context Engineering */}
-              {project.contextEngineering && (
-                <section className="mb-8">
-                  <h3 className="font-display text-xl font-bold mb-4">
-                    <span className="text-cat-prompt">Context</span> Engineering
-                  </h3>
-                  <div className="space-y-3">
-                    {project.contextEngineering.map((ce) => (
-                      <div
-                        key={ce.code}
-                        className="rounded-[var(--radius-md)] border border-border bg-surface p-4"
-                      >
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="rounded bg-cat-prompt/10 px-1.5 py-0.5 text-xs font-bold font-code text-cat-prompt">
-                            {ce.code}
-                          </span>
-                          <h4 className="font-display text-sm font-bold text-text">{ce.title}</h4>
-                        </div>
-                        <p className="text-xs text-muted leading-relaxed">{ce.detail}</p>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-              )}
-
-              {/* Harness Engineering */}
-              {project.harnessEngineering && (
-                <section className="mb-8">
-                  <h3 className="font-display text-xl font-bold mb-4">
-                    <span className="text-cat-rag">Harness</span> Engineering
-                  </h3>
-                  <div className="space-y-3">
-                    {project.harnessEngineering.map((he) => (
-                      <div
-                        key={he.code}
-                        className="rounded-[var(--radius-md)] border border-border bg-surface p-4"
-                      >
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="rounded bg-cat-rag/10 px-1.5 py-0.5 text-xs font-bold font-code text-cat-rag">
-                            {he.code}
-                          </span>
-                          <h4 className="font-display text-sm font-bold text-text">{he.title}</h4>
-                        </div>
-                        <p className="text-xs text-muted leading-relaxed">{he.detail}</p>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-              )}
-
-              {/* Learned */}
-              <section className="mb-8">
-                <h3 className="font-display text-xl font-bold mb-4">배운 점</h3>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  {project.learned.map((l) => (
+                <h3 className="font-display text-xl font-bold mb-2">
+                  AI가 안전하게 달리는 환경
+                </h3>
+                <p className="text-xs text-muted leading-relaxed mb-4">
+                  Foundation 위에 이 프로젝트만의 특화 환경을 추가로 깔았다.
+                </p>
+                <div className="space-y-3">
+                  {project.environment.map((e, i) => (
                     <div
-                      key={l.title}
+                      key={i}
                       className="rounded-[var(--radius-md)] border border-border bg-surface p-4"
+                      style={{ borderLeftColor: project.color, borderLeftWidth: 3 }}
                     >
-                      <h4 className="font-display text-sm font-bold mb-2 text-text">
-                        {l.title}
+                      <h4 className="font-display text-sm font-bold text-text mb-2">
+                        {e.title}
                       </h4>
-                      <p className="text-xs text-muted leading-relaxed">
-                        {l.detail}
-                      </p>
+                      <p className="text-xs text-muted leading-relaxed">{e.detail}</p>
                     </div>
                   ))}
                 </div>
               </section>
 
-              {/* Retrospective */}
+              {/* 사이클 흐름 */}
+              <section className="mb-8">
+                <h3 className="font-display text-xl font-bold mb-2">사이클 흐름</h3>
+                <p className="text-xs text-muted leading-relaxed mb-4">
+                  매 사이클의 마지막 단계는 항상 compound — 회고와 솔루션이 다음 사이클의 입력이 된다.
+                </p>
+                <div className="space-y-3">
+                  {project.cycles.map((c, i) => (
+                    <div
+                      key={i}
+                      className="rounded-[var(--radius-md)] border border-border bg-surface p-4"
+                    >
+                      <div className="flex items-baseline gap-2 mb-2">
+                        <span
+                          className="font-code text-xs font-bold"
+                          style={{ color: project.color }}
+                        >
+                          {String(i + 1).padStart(2, "0")}
+                        </span>
+                        <h4 className="font-display text-sm font-bold text-text">{c.title}</h4>
+                      </div>
+                      <p className="text-xs text-muted leading-relaxed pl-6">{c.detail}</p>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              {/* AI 운영 회고 */}
               <section className="rounded-[var(--radius-lg)] border border-border bg-surface p-6">
-                <h3 className="font-display text-xl font-bold mb-3">회고</h3>
+                <h3 className="font-display text-xl font-bold mb-3">AI 운영 회고</h3>
                 <p className="text-sm text-muted leading-relaxed whitespace-pre-line">
                   {project.retrospective}
                 </p>
