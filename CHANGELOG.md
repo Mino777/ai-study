@@ -2,6 +2,28 @@
 
 모든 주목할 만한 변경사항을 이 파일에 기록합니다.
 
+## [2026-04-11] — 인터랙티브 퀴즈 + Spaced Repetition
+
+### Added
+- **인터랙티브 자가 점검 퀴즈** — `frontmatterSchema`에 `quiz` 배열 필드 추가. 위키 엔트리 본문 하단에 Quiz 컴포넌트가 자동 렌더링되어 즉시 채점·해설·재시도 지원. 결과는 localStorage에 저장되어 재방문 시 유지.
+- **대시보드 퀴즈 위젯** — 정답률, 약한 카테고리 Top 3, 최근 응시 5개, 아직 안 푼 퀴즈 추천을 한 화면에 표시. 모든 집계가 클라이언트 localStorage 기반.
+- **Spaced Repetition (SM-2 단순화)** — 정답률 ≥80%면 다음 복습 주기 1→3→7→14→30→60일 순 증가, 50% 미만이면 1일로 리셋. 대시보드 "오늘 복습할 엔트리" 패널에 만기 항목 자동 노출.
+- **AI 과외 선생님 quiz 자동 생성** — Gemini가 새 엔트리 생성 시 본문과 별도로 객관식 3문항을 함께 만들어 `js-yaml`로 frontmatter에 안전 직렬화. 생성 실패 시에도 본문은 정상 진행 (graceful degradation).
+- 샘플 엔트리 2건에 quiz 3문항씩 추가 (`chain-of-thought`, `harness-engineering-overview`).
+
+### Fixed
+- **context-compression.mdx** — Mermaid subgraph 이름에 공백이 있어 빌드 실패. `subgraph id ["Label"]` 형식으로 수정. (push 직전 rebuild에서 포착)
+- **agent-architectures.mdx** — 표 안 `<br>` 태그가 MDX 컴파일 실패를 유발하여 Vercel 배포 차단. `<br />` self-closing으로 교체. (2026-04-09 `br-tag-compile-error` 솔루션과 동일 패턴 재발)
+
+### Metrics
+- 파일 변경: 14
+- 코드 +/−: +1,221 / −5
+- 새 컴포넌트: 2 (Quiz, QuizWidget)
+- 새 lib: 1 (quiz-storage.ts — attempts log + SRS schedule)
+- P2 백로그 완료: 2건 (인터랙티브 퀴즈, Spaced repetition)
+
+---
+
 ## [2026-04-09 autoceo-2 R2] — 양방향 연결된 개념
 
 ### Changed

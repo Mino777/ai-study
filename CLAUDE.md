@@ -35,7 +35,9 @@ src/app/           → Next.js App Router (홈, wiki, dashboard, projects)
 src/components/    → header, graph, sidebar, search, summary-card, mermaid,
                      code-block (복사), entry-nav (이전/다음), mobile-nav (하단 탭)
 src/contexts/      → GraphSearchContext (graph-search bidirectional state)
-src/lib/           → schema.ts (zod, 10 categories), content.ts (manifest/entry loaders)
+src/lib/           → schema.ts (zod, 10 categories, quizQuestionSchema),
+                     content.ts (manifest/entry loaders),
+                     quiz-storage.ts (localStorage attempts + SM-2 SRS schedule)
 src/generated/     → content-manifest.json (gitignored, entries + graph + streak)
 .github/workflows/ → daily-lesson, generate-on-pick, vercel-retry
 ```
