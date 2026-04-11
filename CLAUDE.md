@@ -144,6 +144,7 @@ Key routing rules:
 - Architecture review → invoke plan-eng-review
 - 작업 완료, 스프린트 정리, 회고 → invoke compound
 - 자동 스프린트, 풀 자동 개발 루프 → invoke autoceo
+- 외부 URL(유튜브/블로그/논문/스레드) 정리, 학습 엔트리로 가공 → invoke ingest
 
 <!-- rtk-instructions v2 -->
 # RTK (Rust Token Killer) - Token-Optimized Commands

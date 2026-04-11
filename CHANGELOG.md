@@ -2,6 +2,31 @@
 
 모든 주목할 만한 변경사항을 이 파일에 기록합니다.
 
+## [2026-04-11 wave 2] — 인용구 사고 → /ingest 게이트 → 첫 dogfooding
+
+### Added
+- **`/ingest` 슬래시 커맨드** (`.claude/commands/ingest.md`) — 외부 URL을 7단계 게이트(사전점검 / 메타데이터 2회 교차 / 본문 2개 독립 소스 / 카테고리 매핑 + 의미 모순 체크 / 초안 / 빌드 검증 / 커밋 + 보고)를 거쳐 검증된 학습 엔트리로 가공. `feedback_external_source_verification.md` 메모리의 5단계 절차를 *프로젝트 파일* 에 박아 사람의 기억력 의존을 제거.
+- **하네스 엔지니어링 5가지 레버 엔트리** — 외부 영상을 계기로 한 한국어 정리 자료들 교차 확인. 본문 상단에 "정보 출처 고지" 박스 포함.
+- **Compound Engineering 엔트리** — `/ingest` 첫 dogfooding. every.to 원본 + GeekNews 한국어 정리 + Every 추가 글 교차 검증. 4단계 루프(Plan/Work/Review/Compound) + 5단계 ladder 정리 + 이미 실천 중인 `/compound` 워크플로의 원본 정의서. 같은 종류 사고 0건.
+
+### Fixed
+- **하네스 5레버 — 메타데이터 오기재** (`0221d4b`) — oembed 단일 소스만 믿어 영상 제목·채널명을 잘못 적음. 1글자 차이("실밸"↔"실버")가 가장 위험. → 2회 교차 검증 절차로 시스템화.
+- **하네스 5레버 — 가짜 인용구 6개** (`d1255d5`) — 영상 미시청 상태에서 `"..."` 직접 인용 6개를 본문에 박음. 실제 출처는 2차 정리글의 paraphrase 또는 작성자 자체 paraphrase. **단순 오기가 아닌 fabrication**. → 인용구 6개 전부 제거 + 본문 상단 "정보 출처 고지" 박스 + 메모리 박제 + `/ingest` 금지 사항에 하드코딩.
+
+### Compound assets
+- `feedback_external_source_verification.md` (Claude 메모리) — 5단계 검증 절차 텍스트 원본
+- `.claude/commands/ingest.md` — 같은 절차의 게이트 구현
+- `docs/solutions/workflow/2026-04-11-ingest-command-design.md` — 설계 의도와 첫 dogfooding 결과
+- `docs/solutions/ai-pipeline/2026-04-11-fake-quotes-from-ai-summary.md` — 가짜 인용구 사고의 5가지 발생 조건과 3계층 방어
+
+### Metrics
+- 커밋: 5 (학습 1 + 메타데이터 hotfix 1 + 인용구 hotfix 1 + 기능 1 + 학습 1)
+- 사고 → 시스템화 → dogfooding 사이클 1회 (당일 클로즈)
+- `/ingest` 첫 적용 시 hotfix 0건 (직전 사고 대비 -2)
+- 새 엔트리: 2 (five-levers, compound-engineering-philosophy)
+
+---
+
 ## [2026-04-11] — 인터랙티브 퀴즈 + Spaced Repetition
 
 ### Added
