@@ -1,0 +1,223 @@
+---
+title: "Harness Journal 005 — wt-branch 양쪽 이식, dogfooding 성공, 그리고 시리즈 자체 동력의 첫 라이브 검증"
+category: harness-engineering
+date: "2026-04-12"
+tags: [harness-journal, harness-engineering, git-worktree, dogfooding, transferable-pattern, cross-project-port]
+confidence: 5
+connections:
+  - harness-engineering/harness-journal-004-wt-branch-command
+  - harness-engineering/harness-journal-003-squash-merge-trap-pattern
+  - harness-engineering/compound-engineering-philosophy
+status: complete
+description: "Journal 004에서 정의한 /wt-branch 슬래시 커맨드가 양쪽 프로젝트에 이식되고 첫 dogfooding에 성공. tarosaju는 다른 세션이 *별도 안내 없이* 이식(시리즈 자체 동력의 첫 라이브 검증), moneyflow는 이 사이클에서 *worktree로 dogfood*하며 이식."
+type: entry
+quiz:
+  - question: "이 사이클의 *가장 큰 라이브 메시지*는?"
+    choices:
+      - "wt-branch가 기술적으로 작동했다"
+      - "*다른 세션이 ai-study의 박제 패치를 별도 안내 없이 발견해서 자기 프로젝트(tarosaju)에 이식했다* — 즉, ai-study의 박제가 *자체 동력으로* 다른 세션에 전파되는 것을 첫 라이브로 입증. 시리즈가 *방법론으로서 작동*함을 증명"
+      - "git worktree가 처음 사용됐다"
+      - "PR #94가 머지됐다"
+    answer: 1
+    explanation: "시리즈의 *진짜 가치*는 기술 자체가 아니라 *그 자산이 다른 세션/다른 프로젝트로 전파되는 것*. Journal 004에서 박제한 이식 패치가 *내가 따로 안내하지 않았는데도* 다른 세션이 발견해서 적용했다는 것은, 시리즈가 *문서 기반 소통 채널*로 작동한다는 첫 증거. 이게 Compound Engineering이 말하는 *다음 작업이 더 쉬워진다*가 *다른 사람에게도* 확장되는 순간."
+  - question: "moneyflow 이식 작업이 *worktree로 진행*된 것이 *단순한 안전 선택* 이상의 의미를 갖는 이유는?"
+    choices:
+      - "worktree가 빠르기 때문"
+      - "*wt-branch 슬래시 커맨드가 정의하는 회피 패턴을 그 커맨드 자체를 이식하는 작업에 적용* — 완벽한 dogfooding. 자신이 정의한 패턴이 자신의 이식 작업에 즉시 적용되는 순환 구조"
+      - "worktree가 main 책임 분리 패턴을 지원하기 때문"
+      - "다른 세션이 아직 작업 중일 가능성 때문"
+    answer: 1
+    explanation: "dogfooding의 가장 강한 형태는 *자신의 도구로 자신을 만드는 것*. wt-branch가 정의한 *origin/main에서 깨끗한 분기*를 wt-branch 이식 작업 자체에 적용하면, *이식 작업 자체가 wt-branch의 첫 사용 사례*가 된다. Journal 002의 ai-review.yml이 자기 자신을 검증한 것과 정확히 같은 패턴의 반복 — 이게 시리즈의 *자기 검증 구조*."
+  - question: "양쪽 프로젝트가 이제 *4-게이트 표준 + wt-branch 표준*으로 수렴한 것이 큐에 미치는 영향은?"
+    choices:
+      - "모든 이식이 끝났으므로 시리즈가 종료"
+      - "*비대칭이 줄어들면서 이식 큐가 자동 축소*. 남은 큐는 *양쪽이 아직 미적용*한 패턴(Zod 검증, 비용 추적 등)으로 좁혀짐. 비대칭이 자동 큐를 만들던 시기가 끝나고 *공통 미적용* 영역이 새 큐의 원천이 됨"
+      - "GitHub Actions 비용이 절감됨"
+      - "새 갭이 발견되지 않음"
+    answer: 1
+    explanation: "이식이 *끝났다*는 것은 *한쪽의 강점이 양쪽의 강점이 됐다*는 뜻. 비대칭이 줄면 *비대칭 비교표*가 만들던 자동 큐도 줄어든다. 다음 큐는 *양쪽이 함께 미적용*인 영역 — Zod 검증, 비용 추적, Skill 시스템 등 *제안 엔트리*로 이미 박제된 것들이 자연스럽게 다음 사이클의 입력."
+---
+
+## 갭 (Before)
+
+[Harness Journal 004](/wiki/harness-engineering/harness-journal-004-wt-branch-command)에서 `/wt-branch` 슬래시 커맨드를 ai-study에서 정의하고 *양쪽 프로젝트 이식 완성 패치*를 박제했다. 그 시점:
+
+> ai-study `.claude/commands/wt-branch.md` ✅  
+> moneyflow `.claude/commands/wt-branch.md` ⏳  
+> tarosaju `.claude/commands/wt-branch.md` ⏳
+
+이 사이클은 두 ⏳를 ✅로 만드는 것. 그러나 *라이브*에서는 예상과 전혀 다른 경로로 진행됐다.
+
+## 만든 환경 (After) — 두 개의 이식 경로
+
+### tarosaju — *다른 세션이 별도 안내 없이* 이식
+
+양쪽 프로젝트의 [Journal 000 베이스라인](/wiki/harness-engineering/harness-journal-000-baseline)에서 다른 세션은 ai-study의 wt-branch 박제를 *발견*하고, 내가 이전 메시지에서 한 번 언급한 것을 기반으로 자기 판단으로 tarosaju에 이식했다.
+
+tarosaju main의 commit:
+
+```
+52e5cdc chore: /wt-branch slash command 추가 (ai-study에서 복사)
+```
+
+커밋 메시지가 *정확히* Journal 004의 이식 패치 지침을 따른다 — `ai-study에서 복사`. 이게 결정적 증거. **내가 박제한 문서가 *자체 동력으로 읽히고 적용*되는 순간**.
+
+이건 이 시리즈가 *단순 기록물*이 아니라 *방법론으로서 작동한다*는 첫 라이브 증거다. Journal 004는 *이식 큐*를 정의했고, 다른 세션이 그 큐를 *자기 사이클의 입력*으로 받아들였다.
+
+### moneyflow — 이 사이클에서 *worktree로 dogfooding*
+
+moneyflow는 아직 미이식 상태. 이번 사이클에서 이식 작업을 진행 — *worktree로*.
+
+```bash
+# Phase 2: origin 동기화
+git -C /Users/jominho/Develop/mino-moneyflow fetch origin
+
+# Phase 3: worktree 분기 (origin/main에서, 원본 working tree 영향 0)
+git -C /Users/jominho/Develop/mino-moneyflow worktree add \
+  -b ai-ops/wt-branch-import /tmp/mf-wtbranch origin/main
+
+# Phase 4: 복사 + 수정
+cp /Users/jominho/Develop/ai-study/.claude/commands/wt-branch.md \
+   /tmp/mf-wtbranch/.claude/commands/wt-branch.md
+# CLAUDE.md Compound Engineering 섹션에 슬래시 커맨드 표 추가
+
+# Phase 5: commit + push (worktree 안에서)
+git -C /tmp/mf-wtbranch commit -m "chore: /wt-branch 이식 + CLAUDE.md 슬래시 표"
+git -C /tmp/mf-wtbranch push -u origin ai-ops/wt-branch-import
+
+# Phase 6: ai-review.yml inline test gate가 자기 검증 → PR #94 머지
+# (Journal 002의 dogfooding 패턴 그대로 작동)
+
+# Phase 7: worktree 제거
+git -C /Users/jominho/Develop/mino-moneyflow worktree remove /tmp/mf-wtbranch --force
+```
+
+**완벽한 메타 구조**: *wt-branch가 정의하는 회피 패턴*을 *wt-branch 자체를 이식하는 작업*에 적용. 자기 자신을 *자기 자신의 도구*로 이식. 이건 Journal 002의 ai-review.yml이 자기 자신을 검증한 것과 정확히 같은 패턴의 반복. 시리즈의 *자기 검증 구조*.
+
+### CLAUDE.md 슬래시 커맨드 표 추가 (moneyflow)
+
+Compound Engineering 섹션에 신설:
+
+```markdown
+### 프로젝트 슬래시 커맨드
+
+| 슬래시 커맨드 | 역할 | 언제 쓰는지 |
+|---|---|---|
+| `/compound` | 회고/솔루션/CHANGELOG 박제 + 메모리 동기화 | 매 스프린트/배포 후 |
+| `/autoceo` | N라운드 자동 스프린트 루프 (CEO→Dev→QA→Compound) | 자율 작업 시 |
+| `/wt-branch` | 새 작업을 worktree로 origin/main에서 안전하게 분기 | **매 새 작업 시작 시** — squash merge 함정 회피 (Harness Journal 003 / 004) |
+```
+
+이 한 줄이 *다음 세션*에 *wt-branch의 맥락*을 자동 전달. AI-AGENT-GUIDE나 별도 안내 없이도 AI가 *언제 이 커맨드를 호출해야 하는지*를 CLAUDE.md에서 바로 발견.
+
+## 운영 데이터
+
+### PR 결과
+
+```
+tarosaju: 52e5cdc (다른 세션) — main에 직접 commit
+moneyflow PR #94: 2026-04-11T17:14:26Z 머지 완료
+  - push → workflow startedAt (T+0)
+  - Test Gate [ok] (test-gate.yml)
+  - Auto Merge to main [ok] (ai-review.yml의 inline test gate)
+  - Squash merge + Reset branch to main
+  - 총 소요: ~2분
+```
+
+### 이식 자산 비교
+
+| 항목 | Before Journal 005 | After Journal 005 |
+|---|---|---|
+| ai-study `/wt-branch` | ✅ | ✅ |
+| moneyflow `/wt-branch` | ❌ | ✅ (이 사이클) |
+| tarosaju `/wt-branch` | ❌ | ✅ (다른 세션) |
+| moneyflow CLAUDE.md 슬래시 표 | ❌ | ✅ (이 사이클) |
+| *3 프로젝트 통일* | 33% | **100%** |
+
+### 사고 발생률 측정 시작
+
+Journal 003에서 박제한 *squash merge 함정*이 *wt-branch 도입 후* 몇 번 발생하는지 측정 시작. 베이스라인:
+
+- Journal 001~004 기간: **2회** (PR #91, PR #93)
+- Journal 005 기간 (이 사이클): **0회** (PR #94는 worktree에서 분기되어 충돌 0)
+
+다음 N 사이클 동안 사고 0이 유지되면 회피 메커니즘 효과 검증. 재발하면 *행동에 박는 가드*의 실패 — 추가 대응 필요.
+
+## 배운 것 / 다음 후보
+
+### 핵심 통찰 1 — 시리즈 자체 동력의 라이브 증거
+
+*다른 세션이 ai-study의 박제 패치를 별도 안내 없이 발견해서 적용했다*는 것이 이 사이클의 가장 큰 메시지. 시리즈가 *단순 기록물*이 아니라 *문서 기반 소통 채널*로 작동한다는 것을 처음으로 라이브 검증.
+
+이건 Compound Engineering의 *"다음 작업이 더 쉬워진다"*가 *같은 사람*뿐 아니라 *다른 세션/다른 사람*에게도 적용된다는 첫 사례. 박제가 *전이성*을 가진다는 증명.
+
+### 핵심 통찰 2 — 자기 자신을 자기 도구로 이식
+
+moneyflow 이식을 *worktree로* 진행한 것은 *wt-branch가 정의하는 회피 패턴을 wt-branch 자체의 이식에 적용*하는 메타 구조. 이게 *자기 검증*의 가장 강한 형태.
+
+같은 패턴의 다른 사례:
+- [Journal 002](/wiki/harness-engineering/harness-journal-002-inline-test-gate): ai-review.yml inline test gate가 *자기 자신의 변경*을 검증
+- [Journal 005](#): wt-branch가 *자기 자신의 이식*에 사용됨
+
+시리즈가 5 에피소드에 도달한 시점에 이런 *자기 검증 구조*가 두 번 등장. 우연이 아니라 *시리즈의 본질적 속성*. 모든 도구가 *자기 자신에 적용될 수 있어야* 진짜 검증됐다고 할 수 있다.
+
+### 핵심 통찰 3 — 비대칭이 줄면서 큐 원천이 바뀐다
+
+Journal 000~004 기간의 큐는 대부분 *양쪽 프로젝트의 비대칭 이식*에서 왔다. 이번 사이클로 `wt-branch` 비대칭이 해소되면서, 남은 비대칭 큐는:
+
+- Circuit Breaker (moneyflow ✅, tarosaju ❌) — [AI 호출 패턴](/wiki/harness-engineering/ai-call-patterns-circuit-breaker-fallback) 큐
+- 프롬프트 캐싱 (moneyflow ✅, tarosaju ❌) — 위와 연결
+- Zod 입력 검증 중앙화 (tarosaju ✅, moneyflow ❌) — 역방향 이식
+
+이 3개 이식이 끝나면 *양쪽 비대칭이 거의 0*. 그 다음 큐는 *양쪽이 함께 미적용*한 영역([Zod 출력 검증](/wiki/harness-engineering/ai-output-zod-validation-pattern), [비용 추적](/wiki/harness-engineering/ai-api-cost-tracking-pattern), [Skill 시스템](/wiki/harness-engineering/skill-system-introduction))으로 자연 이동. *제안 엔트리*들이 이미 박제돼 있어서 다음 큐의 입력 준비 완료.
+
+### 다음 후보 (Journal 006~)
+
+| Journal | 작업 | 종류 |
+|---|---|---|
+| 006 | tarosaju에 Anthropic timeout 60s + 2회 retry 추가 | 비대칭 이식 (작음) |
+| 007 | tarosaju Anthropic system message에 cache_control 추가 | 비대칭 이식 (작음) |
+| 008 | tarosaju에 Anthropic Circuit Breaker 전체 이식 | 비대칭 이식 (큼) |
+| 009 | moneyflow/tarosaju 양쪽에 Zod 출력 검증 layer 1+2 | 공통 미적용 (중간) |
+| 010 | 양쪽에 AI API 비용 추적 (api_calls_log + /cost-check) | 공통 미적용 (중간) |
+
+006~008은 *비대칭 이식 마무리*. 009부터 *공통 미적용* 영역. 시리즈의 입력 구조가 *비대칭 → 공통*으로 자연 전환되는 것이 이 사이클의 메시지.
+
+### 회고 한 줄
+
+> *"박제는 다른 세션의 사이클 입력이 될 수 있다. 이 시리즈가 *내 시리즈*가 아니라 *우리 사이의 문서 소통 채널*임을 처음 라이브로 확인한 사이클."*
+
+## 자기 점검
+
+1. 내가 박제한 자산이 *다른 세션/다른 사람*에게 *자체 동력으로* 전달된 적 있는가? 없다면 *왜* — 박제의 *전이성*이 부족한가, *발견 가능성*이 부족한가?
+2. 내 도구 중 *자기 자신에 적용할 수 있는* 것은 몇 개인가? *자기 자신을 자기 도구로 만드는* 메타 구조가 없는 도구는 정말 검증됐다고 할 수 있는가?
+3. 양쪽 프로젝트 비대칭이 줄어드는 지금, *다음 시리즈 입력*은 어디서 올 것인가? 공통 미적용? 새 라이브 사고?
+4. wt-branch 도입 후 *실제로* squash merge 함정이 안 발생하는지 *몇 사이클* 측정하면 충분한가?
+5. (열린 질문) 시리즈가 *10 에피소드*에 도달했을 때 Journal 000 베이스라인은 얼마나 달라져 있을 것인가?
+
+### 실습 과제
+
+이 사이클의 *자기 검증 패턴*을 자신의 도구에 적용:
+
+1. 내 슬래시 커맨드/훅/스킬 중 하나를 골라서
+2. *그 도구 자체를 만드는 작업*에 *그 도구를 사용*해 보기
+3. 사용 불가능하다면 *왜* — 도구의 설계가 *자기 적용을 고려하지 않았기* 때문
+4. 결과를 회고 한 줄에 박제
+
+자기 자신에 적용되지 않는 도구는 *실전에서도 일관되게 적용되지 않을 가능성*이 높다.
+
+## 출처
+
+- [Harness Journal 004](/wiki/harness-engineering/harness-journal-004-wt-branch-command) — 이식 대상 슬래시 커맨드 정의 + 완성 패치
+- tarosaju 이식 커밋: `52e5cdc chore: /wt-branch slash command 추가 (ai-study에서 복사)` (다른 세션 작업)
+- moneyflow 이식 PR: [Mino777/mino-moneyflow#94](https://github.com/Mino777/mino-moneyflow/pull/94) (이 사이클)
+- [Harness Journal 002](/wiki/harness-engineering/harness-journal-002-inline-test-gate) — 자기 검증 구조의 첫 사례 (ai-review.yml inline test gate)
+- [Harness Journal 003](/wiki/harness-engineering/harness-journal-003-squash-merge-trap-pattern) — 함정 발생률 측정 베이스라인
+
+### 검증 메모
+
+- tarosaju 이식이 *별도 안내 없이* 발생했다는 결론은 `git log origin/main`의 `52e5cdc chore: /wt-branch slash command 추가 (ai-study에서 복사)` 커밋 메시지에서 직접 확인. 커밋 작성자가 *ai-study에서 복사했다*고 명시.
+- moneyflow PR #94의 dogfooding 시간(2분)은 `gh run list --branch ai-ops/wt-branch-import` 결과와 `gh pr list`의 mergedAt(2026-04-11T17:14:26Z)에서 직접 확인
+- 사고 발생률 0회는 *이 사이클 기간*에만 해당. N 사이클 후 재측정 필요.
+- "시리즈 자체 동력"이라는 표현은 *해석*이지만, 커밋 커뮤니케이션 경로가 *ai-study → 다른 세션 → tarosaju 적용*으로 추적 가능한 것을 근거로 함
+- 자기 검증 구조가 *우연이 아닌 시리즈의 본질*이라는 결론은 Journal 002와 005 두 사례에 기반. 더 많은 사례가 모이면 재평가 필요.
