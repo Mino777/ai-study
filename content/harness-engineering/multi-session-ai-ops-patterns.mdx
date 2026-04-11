@@ -1,0 +1,261 @@
+---
+title: "Multi-Session AI Ops — 여러 Claude 세션이 동시에 작업할 때의 함정과 패턴"
+category: harness-engineering
+date: "2026-04-12"
+tags: [harness-engineering, multi-session, ai-ops, git-worktree, session-coordination, transferable-pattern]
+confidence: 4
+connections:
+  - harness-engineering/harness-journal-003-squash-merge-trap-pattern
+  - harness-engineering/harness-journal-004-wt-branch-command
+  - harness-engineering/harness-journal-000-baseline
+status: complete
+description: "여러 Claude Code 세션이 같은 프로젝트(또는 같은 사용자의 여러 프로젝트)에서 동시에 작업할 때 발생하는 함정과 회피 패턴. 라이브로 경험한 다중 세션 사고를 박제한 운영 가이드."
+type: entry
+quiz:
+  - question: "*단일 세션* 환경에서는 안 보이다가 *다중 세션*에서 즉시 드러나는 함정의 본질은?"
+    choices:
+      - "API rate limit 공유"
+      - "*git 상태와 working tree*가 *세션마다 다르게 보임* — 한 세션이 squash merge로 origin을 변경해도 다른 세션의 로컬 git 상태는 그것을 모름. 단일 세션에선 *내가 모든 변경을 알고 있어서* 보이지 않던 갭이 다중 세션에서 *세션 간 동기화 부재*로 즉시 드러남"
+      - "메모리 파일 충돌"
+      - "Claude API 동시성 제한"
+    answer: 1
+    explanation: "단일 세션은 *모든 변경의 단일 source*. 다중 세션은 *각 세션이 부분적인 view*를 가진다. 그 view들이 origin의 *변형*(squash merge, force push, branch reset)을 자동으로 흡수하지 못하면 *서로 다른 세계*에서 작업하다가 push 시점에 충돌."
+  - question: "이 가이드가 권장하는 *세션 책임 분리* 패턴은?"
+    choices:
+      - "모든 세션이 동일한 책임"
+      - "세션 1: 코드 / 세션 2: 박제 / 세션 3: 회고 — 영역별 분리"
+      - "*한 세션이 main의 git 상태 책임* — 다른 세션은 *worktree로 분기*해서 main을 직접 만지지 X. 책임의 단일성이 사고를 막는 가장 강력한 패턴"
+      - "세션마다 별도 프로젝트"
+    answer: 2
+    explanation: "여러 세션이 *같은 main 브랜치를 동시에 만지면* git diverge가 *반드시* 발생한다. 한 세션을 *main 책임자*로 정하고 다른 세션은 worktree로 분기하면 *각 세션이 자기 영역만* 만진다. 단일 책임은 git 다중 세션의 핵심."
+  - question: "이번 세션이 *다른 세션의 작업을 직접 정리하지 않은* 이유는?"
+    choices:
+      - "권한이 없어서"
+      - "다른 세션이 동시에 같은 영역을 만지고 있을 가능성이 있어서, 내가 cherry-pick을 시도하면 *세 번째 사고*를 만들 위험. *자율 모드의 경계*는 *물리적 충돌 위험*까지 포함하고, cherry-pick의 충돌 해결은 *코드 결정*이라 다른 세션 영역"
+      - "cherry-pick 명령이 실패해서"
+      - "Claude Code가 worktree를 지원하지 않아서"
+    answer: 1
+    explanation: "안전한 자율의 핵심은 *경계 인식*. 자율로 처리할 수 있는 것(분석, 박제, 자기 영역 작업)과 *없는 것*(다른 세션 동시 작업 영역, 코드 의도 결정)을 구분. PR #93 cherry-pick 충돌은 후자라서 박제 + 다른 세션에 전달이 정확한 행동."
+---
+
+## 갭 (라이브 발견)
+
+[Harness Journal 시리즈](/harness-journal)를 운영하면서 *2026-04-12 같은 사이클 안에* 발견한 새 갭(베이스라인 #9):
+
+> AI 자동 squash merge 환경에서 *로컬 git 상태와 origin이 갈라지는 것*은 단일 세션에서도 발생하지만, **다중 세션 환경에서는 즉시 폭발**. 한 세션이 origin을 변경해도 다른 세션은 그것을 모른다.
+
+이 글은 [Journal 003](/wiki/harness-engineering/harness-journal-003-squash-merge-trap-pattern)에서 *우연이 아닌 패턴*으로 입증된 사고를 *다중 세션 운영 가이드*로 일반화한다.
+
+## 라이브 사례 — 같은 사이클 두 번 발생
+
+### 사고 #1: PR #91 (Journal 002 첫 시도, 같은 세션 내)
+
+```
+1. Journal 001 PR #90 squash merge 완료 (15:01:07Z)
+2. ai-review.yml의 reset branch가 origin의 001 브랜치를 main으로 force-push
+3. 같은 세션의 *로컬* 001 브랜치는 여전히 squash 전 SHA를 가리킴
+4. 같은 세션이 002 브랜치를 *로컬 001 위치*에서 분기 → diverge
+5. 002 push → ai-review.yml rebase 시도 → 충돌 → fail
+```
+
+해결: git worktree로 origin/main에서 깨끗한 v2 분기 → PR #92 (dogfooding 성공)
+
+### 사고 #2: PR #93 (Journal 003, *다른* 세션)
+
+```
+1. 같은 사이클의 다른 세션이 mino-moneyflow에서 v0.9.14 작업 진행
+2. *현재 브랜치가 main이라고 생각*했으나 사실은 harness-journal-002-merge-gate-inline (이전 사고로 사용 중단된 브랜치)
+3. v0.9.14 commit이 그 브랜치 위에 쌓임
+4. v0.9.12, v0.9.13(사용자가 미push한 로컬 작업)도 같은 브랜치에 누적
+5. push → ai-review.yml 트리거 → rebase 충돌 → fail
+6. 다른 세션이 사용자에게 옵션 3가지를 묻고 멈춤
+```
+
+이 두 번째 사고의 핵심: **다른 세션이 *내가 만든 함정*에 빠졌다**. 단일 세션 환경에선 *내가 다음 작업 시작 시 fetch + reset*하면 되지만, 다중 세션에선 *다른 세션은 내 사이클을 모른다*. 사고가 *시간차*로 폭발.
+
+## 다중 세션 환경의 본질적 함정 5가지
+
+### 함정 1 — 단일 source 부재
+
+*git 상태가 세션마다 다르게 보임*. 한 세션의 reset/force-push가 다른 세션에 자동 전파되지 않음.
+
+**증상**: rebase 충돌, "왜 이 commit이 두 번 있지?", 같은 파일의 두 버전이 동시에 commit됨
+
+### 함정 2 — 보호 파일을 다른 세션이 만짐
+
+한 세션의 보호 파일 목록을 *다른 세션이 모름*. .env, supabase/migrations/, package.json deps 같은 것을 다른 세션이 자유롭게 수정.
+
+**증상**: 결제 정책 변경, 환경변수 누락, dependency 다운그레이드
+
+### 함정 3 — 박제 트랙과 코드 트랙이 같은 commit에 섞임
+
+한 세션이 *박제만* 하고 다른 세션이 *코드만* 한다고 생각하지만, 사실은 *둘 다 같은 main에 commit*. CHANGELOG가 어느 세션이 만든 건지 모호.
+
+**증상**: 회고에 *없던 변경*, CHANGELOG와 git log의 불일치
+
+### 함정 4 — 동시 push 경쟁
+
+두 세션이 거의 동시에 push하면 *늦은 쪽이 force-with-lease로 거절*되거나 (안전), *force push로 덮어씀* (위험).
+
+**증상**: "내 commit이 사라짐", git log에 다른 세션 작업이 사라짐
+
+### 함정 5 — 다른 세션의 *멈춘 상태*를 모름
+
+세션 A가 *사용자 결정 대기*로 멈춰 있는데 세션 B가 그 영역을 진행. 사용자 결정이 도착하면 세션 A가 *이미 변한 상태에서* 작업 재개 → 잘못된 결정.
+
+**증상**: "이 결정 이미 끝난 줄 알았는데", "세션 A가 멈춰 있는 동안 세션 B가 다 해버림"
+
+## 회피 패턴 5가지
+
+### 패턴 1 — *한 세션을 main 책임자*로 정하기
+
+가장 강력한 패턴. 여러 세션 중 *한 세션*만 main 브랜치를 직접 만진다. 다른 세션은 *반드시 worktree*로 분기해서 자기 영역에서만 작업.
+
+```
+세션 A (main 책임자): main에 직접 push 가능
+세션 B (worktree): /tmp/<project>-<branch>에서만 작업, 자기 브랜치 push만
+세션 C (worktree): /tmp/<project>-<other>에서만 작업
+```
+
+세션 A의 작업이 끝나면 다른 세션들은 *자기 worktree에서 git fetch origin*만으로 동기화. main을 직접 안 만지므로 diverge 없음.
+
+### 패턴 2 — 매 세션 시작 시 *git fetch + status* 강제
+
+[`/wt-branch` 슬래시 커맨드](/wiki/harness-engineering/harness-journal-004-wt-branch-command)가 이 패턴을 *행동에 박는다*. 세션 시작 시 자동:
+
+```bash
+git fetch origin
+git status --short
+git log HEAD..origin/main --oneline | head
+```
+
+세션 시작 시 *5초*가 추가되지만 함정 1을 *구조적으로* 차단.
+
+### 패턴 3 — *책임 영역 명시 + 보호 파일 공유*
+
+CLAUDE.md에 *세션별 책임 영역*을 명시:
+
+```markdown
+## 세션 책임
+
+- **메인 세션** (main 브랜치 직접 만짐): 사용자가 직접 작업하는 IDE
+- **AI 박제 세션** (ai-study에서만 작업): Harness Journal 박제, ai-study 인프라
+- **AI 코드 세션** (worktree에서만 작업): /tmp/* 에서 분기, main 직접 만짐 X
+
+## 보호 파일 (모든 세션)
+
+- src/lib/trading/tiers.ts (결제)
+- .env*
+- supabase/migrations/* (새 파일 생성만)
+- package.json dependencies (버전 변경 X)
+- .claude/settings.json (훅 설정)
+```
+
+이게 *모든 세션이 공유하는 룰*. 매 세션이 *자기 영역만*.
+
+### 패턴 4 — 박제 세션과 코드 세션 *물리적으로* 분리
+
+가장 깔끔한 분리 — *다른 프로젝트*에서 작업.
+
+- **코드 세션**: mino-moneyflow, mino-tarosaju에서 코드 작업
+- **박제 세션**: ai-study에서 [Harness Journal](/harness-journal) 박제
+
+이번 세션이 *정확히 이 패턴*. 코드 작업(PR #93 정리)은 다른 세션이, 박제는 ai-study에서. 같은 commit 영역에 두 세션이 동시에 들어가지 않음.
+
+### 패턴 5 — 사용자 결정 대기를 *다른 세션에 전달*
+
+세션 A가 사용자 결정 대기 중이면 *그 결정 + 결과*를 즉시 다른 세션에 공유. 사용자가 *나에게 결정 메시지*를 보내면 그것을 *다른 세션에도 전달*.
+
+이번 세션의 사례:
+```
+다른 세션 → 사용자: "PR #93을 어떻게 정리할까요? 옵션 3가지..."
+사용자 → 나: "이런 메시지 왔는데?"
+나 → 사용자: "옵션 D 추천. 머지 후 fetch+reset 필수"
+사용자 → 다른 세션: "D로 가, 머지 후 fetch+reset"
+```
+
+이게 *세션 간 간접 통신*. 사용자가 *메시지 brokering* 역할. 직접 통신은 안 되지만 사용자를 거쳐서 결정이 전파.
+
+## 자율 모드의 경계 — 다중 세션 버전
+
+*자율 모드*가 활성화된 환경에서 *내가 자율로 처리해서는 안 되는 것*:
+
+| 영역 | 자율 처리 | 사유 |
+|---|---|---|
+| 내 세션의 작업 (ai-study 박제) | ✅ | 단일 세션 영역 |
+| 분석, 사고 진단, 패턴 박제 | ✅ | 코드 변경 0 |
+| 다른 세션이 만지는 프로젝트 코드 | ❌ | 동시 충돌 위험 |
+| 다른 세션이 만든 commit의 cherry-pick 충돌 해결 | ❌ | 코드 의도 결정 |
+| 다른 세션이 멈춰 있는 PR의 대안 정리 | ❌ | 다른 세션이 재개하면 충돌 |
+| 보호 파일 (.env, tiers.ts 등) | ❌ | 모든 세션 공유 룰 |
+
+이번 세션이 *PR #93을 직접 cherry-pick으로 해결하지 않은 이유*가 정확히 위 표의 *다른 세션 영역*. cherry-pick 시도 → 충돌 4 파일 → abort → 사용자에게 보고.
+
+## 양쪽 프로젝트 적용 가이드
+
+다중 세션 운영 중인 환경이라면 다음을 *오늘* 적용:
+
+### 1. CLAUDE.md에 *세션 책임 영역* 명시
+
+```markdown
+## 세션 책임
+
+(이 프로젝트는 단일 세션 / 다중 세션 / 인간 + AI 혼합 — 명시)
+
+### 다중 세션인 경우
+
+- 어느 세션이 main 직접 만짐?
+- 다른 세션은 worktree에서만 작업?
+- 보호 파일은? (모든 세션 공유)
+- 세션 간 통신 채널은? (사용자 brokering / 공유 문서 / 둘 다)
+```
+
+### 2. `.claude/commands/wt-branch.md` 이식 (모든 프로젝트)
+
+[Journal 004](/wiki/harness-engineering/harness-journal-004-wt-branch-command)의 슬래시 커맨드 — 새 작업을 worktree로 시작. 단일 세션에서도 가치 있지만 *다중 세션*에서 *필수*.
+
+### 3. 매 세션 시작 시 *fetch + status* 자동화
+
+`.claude/settings.json`의 SessionStart 훅 (있다면) 또는 CLAUDE.md에 *세션 시작 매뉴얼* 박기.
+
+### 4. 박제와 코드 세션 *물리적 분리*
+
+- 코드 작업은 mino-moneyflow / mino-tarosaju
+- 박제는 ai-study (또는 별도 docs 저장소)
+- 두 디렉터리가 *별도 git 저장소*면 충돌 0
+
+## 자기 점검
+
+1. 내 환경은 *단일 세션*인가 *다중 세션*인가? 다중이면 *몇 개*인가?
+2. 다중 세션이라면 *세션 책임 영역*이 명시되어 있는가, 아니면 *암묵적*인가?
+3. 다른 세션이 *멈춰 있을 때* 내가 그 영역을 만진 적 있는가? 그 결과는?
+4. *자율 모드의 경계*를 *다중 세션 위험까지* 인식하는가? 아니면 *내가 만질 수 있는 모든 것*을 만지는가?
+5. (열린 질문) 다중 세션 환경에서 *완전 자동화*는 가능한가? 아니면 사용자 brokering이 *영원히 필요*한가?
+
+### 실습 과제
+
+자신의 환경이 *다중 세션*이라면:
+
+1. *지금 활성화된 세션 수*를 세어 보기
+2. 각 세션의 *책임 영역*을 종이에 적기 (또는 메모리에 박기)
+3. 가장 자주 충돌이 발생하는 *공통 영역*을 식별
+4. 그 공통 영역에 *세션 1개를 책임자*로 정하기
+5. 다른 세션은 *worktree로 분기*해서 그 영역 직접 안 만지기
+
+이 5단계가 끝나면 *다중 세션 함정 50%*가 자동 차단.
+
+## 출처
+
+이 가이드는 *내 직접 라이브 경험*에 기반. 외부 인용 없음.
+
+- 라이브 사고 #1: [Harness Journal 002](/wiki/harness-engineering/harness-journal-002-inline-test-gate)의 PR #91 (같은 세션 내)
+- 라이브 사고 #2: [Harness Journal 003](/wiki/harness-engineering/harness-journal-003-squash-merge-trap-pattern)의 PR #93 (다른 세션)
+- 회피 패턴 1 (worktree 슬래시 커맨드): [Harness Journal 004](/wiki/harness-engineering/harness-journal-004-wt-branch-command)
+- 자율 모드 경계 인식: [Journal 003 핵심 통찰](/wiki/harness-engineering/harness-journal-003-squash-merge-trap-pattern)
+
+### 검증 메모
+
+- 5가지 함정과 5가지 회피 패턴은 *내 두 사고 표본*에 기반. 더 큰 표본이 모이면 갱신 필요
+- "한 세션이 main 책임자" 패턴은 *제안*이며, 더 복잡한 환경에서는 다른 패턴이 적합할 수 있음
+- 사용자 brokering(패턴 5)이 *영원히 필요한지*는 quiz 5번 열린 질문으로 박음 — 단정하지 않음
+- 이번 세션이 *직접 cherry-pick으로 해결하지 않은* 결정은 다른 세션과의 *물리적 충돌 회피*가 이유였으며, 권한 문제가 아님을 명시
