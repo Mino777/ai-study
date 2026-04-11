@@ -46,6 +46,38 @@ export function KnowledgeGraph({ nodes, edges }: KnowledgeGraphProps) {
     highlightedRef.current = highlightedNodes;
   }, [highlightedNodes]);
 
+  // Register collision force (d3-force is bundled by react-force-graph-2d)
+  // Run once after the graph instance mounts.
+  useEffect(() => {
+    let cancelled = false;
+    // Wait for ForceGraph2D ref to be ready
+    const timer = setTimeout(() => {
+      if (cancelled) return;
+      const graph = graphRef.current as
+        | { d3Force?: (name: string, force?: unknown) => unknown; d3ReheatSimulation?: () => void }
+        | null;
+      if (!graph || typeof graph.d3Force !== "function") return;
+
+      import("d3-force")
+        .then(({ forceCollide, forceX, forceY }) => {
+          if (cancelled) return;
+          // Collision: prevent node overlap (radius = max node size + label padding)
+          graph.d3Force?.("collide", forceCollide(22).strength(0.9));
+          // Centering: gentle pull toward center to keep cluster compact
+          graph.d3Force?.("x", forceX(0).strength(0.04));
+          graph.d3Force?.("y", forceY(0).strength(0.04));
+          graph.d3ReheatSimulation?.();
+        })
+        .catch(() => {
+          // d3-force not available — fall back to default forces only
+        });
+    }, 100);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, []);
+
   useEffect(() => {
     function updateSize() {
       if (containerRef.current) {
@@ -88,32 +120,35 @@ export function KnowledgeGraph({ nodes, edges }: KnowledgeGraphProps) {
   }, []);
 
   const nodeCanvasObject = useCallback(
-    (node: GraphNode & { x: number; y: number }, ctx: CanvasRenderingContext2D) => {
+    (node: GraphNode & { x: number; y: number }, ctx: CanvasRenderingContext2D, globalScale: number) => {
       const color = CATEGORY_COLORS[node.category] || "#6b6b80";
       const hovered = hoveredNodeRef.current;
       const isHovered = hovered?.id === node.id;
       const isHighlighted = highlightedRef.current.size > 0 && highlightedRef.current.has(node.id);
       const isDimmed = highlightedRef.current.size > 0 && !isHighlighted && !isHovered;
       const isDangling = node.confidence === 0;
-      const baseSize = isDangling ? 4 : 6 + node.confidence * 1.5;
-      const size = isHovered || isHighlighted ? baseSize * 1.4 : baseSize;
+      const baseSize = isDangling ? 3 : 4 + node.confidence * 1.2;
+      const size = isHovered || isHighlighted ? baseSize * 1.5 : baseSize;
 
-      const opacity = isDimmed ? 0.2 : 1;
+      const opacity = isDimmed ? 0.15 : 1;
 
       ctx.globalAlpha = opacity;
 
       // Glow effect
       if (!isDangling) {
+        const grad = ctx.createRadialGradient(node.x, node.y, 0, node.x, node.y, size + 6);
+        grad.addColorStop(0, `${color}${isHovered || isHighlighted ? "80" : "30"}`);
+        grad.addColorStop(1, `${color}00`);
         ctx.beginPath();
-        ctx.arc(node.x, node.y, size + 4, 0, Math.PI * 2);
-        ctx.fillStyle = `${color}${isHovered || isHighlighted ? "50" : "20"}`;
+        ctx.arc(node.x, node.y, size + 6, 0, Math.PI * 2);
+        ctx.fillStyle = grad;
         ctx.fill();
       }
 
       // Highlight ring
       if (isHighlighted && !isDangling) {
         ctx.beginPath();
-        ctx.arc(node.x, node.y, size + 6, 0, Math.PI * 2);
+        ctx.arc(node.x, node.y, size + 4, 0, Math.PI * 2);
         ctx.strokeStyle = color;
         ctx.lineWidth = 1.5;
         ctx.stroke();
@@ -124,6 +159,7 @@ export function KnowledgeGraph({ nodes, edges }: KnowledgeGraphProps) {
       ctx.arc(node.x, node.y, size, 0, Math.PI * 2);
       if (isDangling) {
         ctx.strokeStyle = "#6b6b80";
+        ctx.lineWidth = 1;
         ctx.setLineDash([2, 2]);
         ctx.stroke();
         ctx.setLineDash([]);
@@ -132,14 +168,48 @@ export function KnowledgeGraph({ nodes, edges }: KnowledgeGraphProps) {
         ctx.fill();
       }
 
-      // Label — 항상 표시 (dangling은 작게)
-      if (!isDangling || isHovered) {
-        const fontSize = isHovered || isHighlighted ? 12 : isDangling ? 9 : 11;
-        ctx.font = `${isHovered || isHighlighted ? "bold " : ""}${fontSize}px Pretendard Variable, sans-serif`;
+      // Label — 줌 레벨 + 호버/하이라이트 기반으로만 표시
+      // - 줌 인 (globalScale ≥ 1.8): 모든 라벨 표시
+      // - 줌 아웃 (< 1.8): 호버 / 하이라이트 / 큰 노드(confidence ≥ 4) 만 표시
+      // - dangling은 호버 시만
+      const isImportant = !isDangling && node.confidence >= 4;
+      const showLabel =
+        isHovered ||
+        isHighlighted ||
+        (globalScale >= 1.8 && !isDangling) ||
+        (globalScale >= 1.2 && isImportant);
+
+      if (showLabel) {
+        const fontSize = (isHovered || isHighlighted ? 13 : 11) / Math.max(globalScale, 1);
+        ctx.font = `${isHovered || isHighlighted ? "bold " : ""}${fontSize * globalScale}px Pretendard Variable, sans-serif`;
         ctx.textAlign = "center";
         ctx.textBaseline = "top";
-        ctx.fillStyle = isDimmed ? "rgba(232,232,237,0.3)" : isDangling ? "rgba(232,232,237,0.5)" : "#e8e8ed";
-        ctx.fillText(node.label, node.x, node.y + size + 6);
+
+        // Truncate long labels (한국어 24자 기준)
+        const maxLen = isHovered || isHighlighted ? 60 : 24;
+        const labelText =
+          node.label.length > maxLen ? node.label.slice(0, maxLen - 1) + "…" : node.label;
+
+        // Subtle background for legibility (호버/하이라이트 시만)
+        if (isHovered || isHighlighted) {
+          const metrics = ctx.measureText(labelText);
+          const padX = 6;
+          const padY = 3;
+          ctx.fillStyle = "rgba(10, 10, 15, 0.85)";
+          ctx.fillRect(
+            node.x - metrics.width / 2 - padX,
+            node.y + size + 4,
+            metrics.width + padX * 2,
+            fontSize * globalScale + padY * 2
+          );
+        }
+
+        ctx.fillStyle = isDimmed
+          ? "rgba(232,232,237,0.25)"
+          : isHovered || isHighlighted
+          ? "#ffffff"
+          : "rgba(232,232,237,0.75)";
+        ctx.fillText(labelText, node.x, node.y + size + 6);
       }
 
       ctx.globalAlpha = 1;
@@ -150,9 +220,9 @@ export function KnowledgeGraph({ nodes, edges }: KnowledgeGraphProps) {
   const nodePointerAreaPaint = useCallback(
     (node: { x: number; y: number; confidence?: number }, color: string, ctx: CanvasRenderingContext2D) => {
       const confidence = (node as GraphNode).confidence ?? 0;
-      const size = confidence === 0 ? 4 : 6 + confidence * 1.5;
+      const size = confidence === 0 ? 3 : 4 + confidence * 1.2;
       ctx.beginPath();
-      ctx.arc(node.x, node.y, size + 4, 0, Math.PI * 2);
+      ctx.arc(node.x, node.y, size + 6, 0, Math.PI * 2);
       ctx.fillStyle = color;
       ctx.fill();
     },
@@ -180,17 +250,20 @@ export function KnowledgeGraph({ nodes, edges }: KnowledgeGraphProps) {
         backgroundColor="#0a0a0f"
         nodeCanvasObject={nodeCanvasObject as never}
         nodePointerAreaPaint={nodePointerAreaPaint as never}
-        linkColor={() => "rgba(107, 107, 128, 0.3)"}
-        linkWidth={1}
+        linkColor={() => "rgba(107, 107, 128, 0.25)"}
+        linkWidth={0.8}
         // @ts-expect-error -- linkDistance not in types but works at runtime
-        linkDistance={180}
+        linkDistance={90}
         d3Force="charge"
-        d3ForceStrength={-500}
+        d3ForceStrength={-1200}
         onNodeClick={handleNodeClick as never}
         onNodeHover={handleNodeHover as never}
-        cooldownTicks={100}
-        d3AlphaDecay={0.02}
-        d3VelocityDecay={0.3}
+        cooldownTicks={150}
+        d3AlphaDecay={0.015}
+        d3VelocityDecay={0.35}
+        warmupTicks={50}
+        minZoom={0.3}
+        maxZoom={6}
       />
 
       {/* Hover tooltip */}
