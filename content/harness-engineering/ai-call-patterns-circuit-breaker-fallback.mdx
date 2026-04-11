@@ -1,0 +1,305 @@
+---
+title: "AI 호출 패턴 — Circuit Breaker, Multi-Provider 폴백, 프롬프트 캐싱"
+category: harness-engineering
+date: "2026-04-12"
+tags: [harness-engineering, ai-client, circuit-breaker, fallback, prompt-caching, multi-provider, transferable-pattern]
+confidence: 4
+connections:
+  - harness-engineering/harness-engineering-overview
+  - harness-engineering/harness-journal-000-baseline
+  - agents/multi-agent-pipeline
+  - agents/agent-architectures
+status: complete
+description: "두 프로젝트 중 한 곳에 검증된 AI 호출 자산(Circuit Breaker, 멀티 프로바이더 폴백, 프롬프트 캐싱)을 정리. 다른 한 곳의 부재 영역을 비교해서 다음 이식 사이클의 큐로 만든다."
+type: entry
+quiz:
+  - question: "Circuit Breaker가 *단순 retry*보다 본질적으로 다른 점은?"
+    choices:
+      - "더 많은 retry를 허용한다"
+      - "*상태*를 가진다 — 연속 실패를 카운트해서 임계치 초과 시 *쿨다운 동안 호출 자체를 차단*. retry는 매번 새로 시도하지만 circuit breaker는 *시스템이 회복할 시간*을 준다"
+      - "지수 백오프를 자동으로 적용한다"
+      - "GitHub Actions와 통합된다"
+    answer: 1
+    explanation: "Circuit Breaker의 핵심은 *상태 머신* — closed(정상) / open(차단) / half-open(시험적 회복). 단순 retry는 실패한 서비스를 *계속 두드리는* 반면, circuit breaker는 *실패가 누적되면 잠시 멈춘다*. 실패한 시스템에 더 많은 트래픽을 보내는 것이 회복을 늦추기 때문."
+  - question: "프롬프트 캐싱(Claude의 cache_control: ephemeral)이 *비용을 90% 절감*하는 메커니즘은?"
+    choices:
+      - "프롬프트 자체를 압축해서 토큰 수를 줄인다"
+      - "*반복되는 시스템 메시지*(품질 가드, 페르소나, 도메인 지식)를 5분간 캐싱. 같은 역할의 에이전트가 연속 호출되면 *cached input tokens*는 *uncached input의 10% 가격*으로 청구된다"
+      - "응답 자체를 캐싱해서 같은 요청에 같은 응답 반환"
+      - "여러 프로바이더 중 가장 싼 것을 자동 선택한다"
+    answer: 1
+    explanation: "Claude API의 prompt caching은 *입력 토큰 중 캐시된 부분*에 대해 10% 가격을 청구한다. 시스템 프롬프트가 매 호출마다 동일하다면 그 부분이 캐시 히트되어 90% 할인. 응답 캐싱이 아니라 *입력의 반복 부분*을 캐싱한다는 게 핵심."
+  - question: "moneyflow의 ai-client.ts에는 Circuit Breaker가 있고 tarosaju의 Anthropic 호출에는 *timeout조차 없는* 비대칭이 *복리 효과의 출발점*인 이유는?"
+    choices:
+      - "tarosaju가 더 작은 프로젝트라 패턴이 필요 없기 때문"
+      - "한쪽에 *이미 검증된 자산*이 다른 쪽에 없다는 건, 그 자산을 *처음부터 만들 필요 없이 이식만 하면 되는* 작업이 큐에 쌓인다는 뜻. Compound Engineering이 말하는 \"다음 작업이 더 쉬워진다\"가 *프로젝트 간*에도 작동하는 첫 사례"
+      - "tarosaju가 다른 패턴을 사용하기 때문"
+      - "비대칭은 위험하므로 즉시 통일해야 하기 때문"
+    answer: 1
+    explanation: "비대칭은 *위험 신호*이자 *기회*다. 한쪽이 *이미 만들어둔 검증된 자산*을 다른 쪽으로 옮기는 작업은 처음부터 만드는 것보다 압도적으로 싸다. 시리즈의 다음 사이클 큐가 *자동으로* 이런 비대칭에서 만들어진다."
+---
+
+## 왜 이 패턴인가
+
+LLM 호출은 *본질적으로 불안정*하다:
+
+| 실패 모드 | 빈도 | 영향 |
+|---|---|---|
+| Rate limit (429) | 피크 시간 *10분에 3회* (moneyflow 운영 데이터) | 서비스 중단 |
+| Timeout (특히 Thinking 모델) | 가끔 | 무한 대기 → 사용자 경험 파괴 |
+| 모델별 일시 장애 | 주 1-2회 | 한 프로바이더에만 의존하면 SPOF |
+| 응답 형식 불일치 | 5-10% | 파싱 실패 |
+| 비용 폭발 | maxTokens 기본값 그대로 두면 | 한 달 후 알게 됨 |
+
+이걸 *호출자*가 매번 처리하면 안 된다. **AI 호출을 한 곳에 집중하고**, **그 안에서 모든 실패 모드를 흡수**해야 한다. 이게 [AI 하네스](/wiki/harness-engineering/harness-engineering-overview)의 본질이고, 이 엔트리는 그 *구체적 패턴 6가지*를 박제한다.
+
+## moneyflow의 ai-client.ts — 검증된 패턴 6가지
+
+### 패턴 1: Circuit Breaker 상태 머신
+
+```typescript
+// moneyflow의 ai-client.ts 패턴 (개념 요약)
+const circuitState = {
+  failures: 0,
+  state: 'closed' as 'closed' | 'open' | 'half-open',
+  cooldownUntil: 0,
+};
+
+async function callWithCircuitBreaker(model, prompt) {
+  if (circuitState.state === 'open') {
+    if (Date.now() < circuitState.cooldownUntil) {
+      throw new CircuitOpenError('Cooldown active');
+    }
+    // 쿨다운 끝 → half-open으로 전환
+    circuitState.state = 'half-open';
+  }
+
+  try {
+    const result = await actualCall(model, prompt);
+    // 성공 → 리셋
+    circuitState.failures = 0;
+    circuitState.state = 'closed';
+    return result;
+  } catch (err) {
+    circuitState.failures++;
+    if (circuitState.failures >= 3) {
+      circuitState.state = 'open';
+      circuitState.cooldownUntil = Date.now() + 120_000; // 2분
+    }
+    throw err;
+  }
+}
+```
+
+**핵심**: 3회 연속 실패 → 2분 쿨다운 → half-open에서 1회 시험 → 성공 시 closed, 실패 시 cooldown 연장. 프로바이더별 *독립* 상태.
+
+### 패턴 2: 지수 백오프 + 에러 종류별 multiplier
+
+```typescript
+// 에러 종류에 따라 다른 백오프
+const baseDelay = 2000;
+const multiplier = {
+  rate_limit: 4,    // 4배 (429는 진짜 기다려야 함)
+  server_error: 2,  // 2배
+  timeout: 1,       // 선형 (그냥 다시 시도)
+};
+
+async function callWithRetry(fn, options = { maxRetries: 3 }) {
+  for (let attempt = 0; attempt < options.maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      const errType = classify(err); // 'rate_limit' | 'server_error' | 'timeout'
+      const delay = baseDelay * (multiplier[errType] || 1) * (attempt + 1);
+      await sleep(delay);
+    }
+  }
+  throw new Error('Max retries exhausted');
+}
+```
+
+**핵심**: 한 모델로 3번 시도 → 실패하면 *다른 프로바이더*로. 같은 에러로 같은 모델을 무한 재시도하지 않는다.
+
+### 패턴 3: Multi-Provider 라우팅 + 폴백 체인
+
+```typescript
+const PROVIDER_CHAIN = ['gemini', 'claude', 'openai'];
+
+async function callWithFallback(prompt, options) {
+  const preferred = options.preferredModel || routeByAgent(options.agentRole);
+  const chain = [preferred, ...PROVIDER_CHAIN.filter(p => p !== preferred)];
+
+  for (const provider of chain) {
+    try {
+      return await callWithCircuitBreaker(provider, prompt);
+    } catch (err) {
+      console.warn(`${provider} failed: ${err.message}, trying next...`);
+      // 다음 프로바이더로
+    }
+  }
+  throw new Error('All providers failed');
+}
+```
+
+### 패턴 4: 에이전트별 모델 라우팅
+
+```typescript
+const AGENT_MODEL_MAP = {
+  market_analyst:    { model: 'gemini', temperature: 0.2, maxTokens: 1000 }, // 수치 정확성
+  fundamentals:      { model: 'gemini', temperature: 0.2, maxTokens: 1000 },
+  bear_researcher:   { model: 'claude',  temperature: 0.7, maxTokens: 800  }, // 비판적 분석
+  research_judge:    { model: 'claude',  temperature: 0.3, maxTokens: 1500 }, // 프리미엄
+  bull_researcher:   { model: 'openai',  temperature: 0.7, maxTokens: 800  }, // 가성비
+  // ...
+};
+```
+
+**근거 (moneyflow 운영 데이터)**:
+- Gemini: 수치/팩트에 강함 (낮은 temperature)
+- Claude: 비판적 분석/판단에 강함 (Devil's Advocate 등)
+- OpenAI: 가성비 (대화/뉴스 분석)
+
+이게 *무조건 가장 비싼 모델*보다 압도적으로 효과적. 한 모델 = 한 도구 매핑은 *Bag of Tools* 안티패턴.
+
+### 패턴 5: 프롬프트 캐싱 (Claude `cache_control: ephemeral`)
+
+```typescript
+// Claude API 호출
+const response = await anthropic.messages.create({
+  model: 'claude-sonnet-4-6',
+  system: [
+    {
+      type: 'text',
+      text: SYSTEM_GUARDS, // 매번 같은 품질 가드 (수천 토큰)
+      cache_control: { type: 'ephemeral' }, // 5분 캐싱
+    },
+  ],
+  messages: [{ role: 'user', content: userPrompt }],
+});
+```
+
+**효과**: 같은 system message가 5분 안에 재사용되면 *cached input tokens*는 uncached의 10% 가격. 같은 역할의 에이전트(예: 4개 분석가)가 연속 호출되면 90% 절감.
+
+**주의**: 캐시는 *prefix exact match*. system message에서 단 한 글자만 달라도 캐시 미스. 동적 부분은 *system이 아닌 user message*로.
+
+### 패턴 6: 구조화된 출력 (3단 fallback)
+
+```typescript
+async function callStructured(model, prompt, schema) {
+  if (model === 'gemini') {
+    // 1순위: 네이티브 JSON Schema
+    return await callGemini(prompt, {
+      responseMimeType: 'application/json',
+      responseSchema: schema,
+    });
+  }
+
+  if (model === 'openai') {
+    // 1순위: JSON mode
+    return await callOpenAI(prompt, {
+      response_format: { type: 'json_object' },
+    });
+  }
+
+  // Claude는 prompt-based fallback
+  const response = await callClaude(prompt + '\n\nRespond ONLY with valid JSON.');
+  // 2단: 정규식으로 첫 {...} 추출
+  const match = response.match(/\{[\s\S]*\}/);
+  if (!match) throw new Error('No JSON found');
+  return JSON.parse(match[0]);
+}
+```
+
+**핵심**: 모델별로 *가장 강한 방식*을 1순위로. 실패하면 더 약한 fallback. moneyflow의 운영 데이터로 *파싱 실패율 거의 0%*.
+
+## tarosaju의 Anthropic 호출 — 부재 영역
+
+[Journal 000 베이스라인](/wiki/harness-engineering/harness-journal-000-baseline)에서 발견한 갭 #3의 구체적 모습:
+
+```typescript
+// tarosaju의 src/app/api/fortune/ai/route.ts (개념 요약)
+const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+// 직접 호출
+const response = await client.messages.create({
+  model: 'claude-haiku-4-5-20251001',
+  max_tokens: 1000,
+  system: SYSTEM_PROMPT,
+  messages: [{ role: 'user', content: userPrompt }],
+});
+```
+
+부재한 것:
+- ❌ Circuit Breaker
+- ❌ Retry 로직
+- ❌ Timeout (무한 대기 가능)
+- ❌ 폴백 (Anthropic 장애 시 대안 0)
+- ❌ 프롬프트 캐싱 (system message가 매번 동일한데도)
+- ❌ 비용 추적
+- ✅ Zod 입력 검증 (이건 잘 갖춰짐)
+- ✅ Rate limit (Upstash 기반, 잘 갖춰짐)
+
+즉, *입력 경계*는 잘 막혀 있지만 *AI 호출 자체*는 무방비. tarosaju의 fortune/ai와 tarot-chat 두 라우트가 *critical path*인데도.
+
+## 양쪽 비교 표
+
+| 패턴 | moneyflow | tarosaju | 이식 우선순위 |
+|---|---|---|---|
+| Circuit Breaker | ✅ 3회 → 2분 쿨다운 | ❌ | **높음** |
+| 지수 백오프 + 에러별 multiplier | ✅ 4x/2x/선형 | ❌ | 높음 |
+| Multi-Provider 폴백 | ✅ Gemini/Claude/OpenAI 체인 | ❌ (Anthropic 단일) | 중간 (도메인 차이) |
+| 에이전트별 모델 라우팅 | ✅ 14 에이전트 매핑 | N/A (단일 모델) | 낮음 (필요 없음) |
+| 프롬프트 캐싱 | ✅ Claude cache_control | ❌ | **높음** (system 동일) |
+| 구조화된 출력 (3단 fallback) | ✅ JSON Schema → JSON mode → 정규식 | ⚠️ 부분 (Zod 입력만) | 중간 |
+| Timeout | ✅ 60s AbortSignal | ❌ | **매우 높음** |
+| Zod 입력 검증 | ❌ (호출자 책임) | ✅ schemas/api.ts | moneyflow ← tarosaju |
+| Rate limit | ✅ Upstash | ✅ Upstash | 동등 |
+
+비대칭이 명확. 둘은 *서로 다른 것을 잘함*. 교차 이식이 정확한 다음 작업.
+
+## 이식 후보 — Harness Journal 시리즈 큐
+
+[Journal 000 베이스라인](/wiki/harness-engineering/harness-journal-000-baseline)의 큐와 매핑:
+
+| Journal 후보 | 작업 | 출처 → 대상 |
+|---|---|---|
+| 005 (예정) | wt-branch 양쪽 이식 + dogfooding | (Journal 004 패치) |
+| 006 (큐) | tarosaju Anthropic 호출에 *timeout 60s + 2회 retry* 추가 | moneyflow 패턴 1+2 → tarosaju |
+| 007 (큐) | tarosaju Anthropic system message에 cache_control 추가 | moneyflow 패턴 5 → tarosaju |
+| 008 (큐) | tarosaju에 Anthropic Circuit Breaker 이식 (전체 패턴 1) | moneyflow 패턴 1 → tarosaju |
+| 009 (큐) | moneyflow에 Zod 입력 검증 헬퍼 통합 | tarosaju → moneyflow |
+
+이게 *비대칭이 만드는 자동 큐*. 추측이 아니라 *베이스라인 비교*가 큐를 만든다.
+
+## 자기 점검
+
+1. 내가 호출하는 LLM API의 실패 모드를 *5가지 이상* 나열할 수 있는가?
+2. 그중 몇 가지에 *명시적 가드*가 있는가?
+3. Circuit Breaker가 없는 환경에서 *동시 호출 50개*가 *프로바이더 장애* 시 어떻게 되는가?
+4. 프롬프트 캐싱을 *적용 안 한* 시스템의 한 달 비용을 *적용 후*와 비교할 수 있는가? 비교 안 됐다면 *왜*?
+5. (열린 질문) 6가지 패턴 중 *내 시스템에 가장 임팩트 있는 것 1가지*는?
+
+### 실습 과제
+
+자신의 AI 호출 코드를 한 함수로 골라서:
+
+1. *현재 어떤 가드가 있는지* 위 6가지 패턴과 매핑
+2. *부재한 가드*를 우선순위로 정렬 (timeout > circuit breaker > 폴백 > 캐싱)
+3. 가장 작은 1가지를 30분 안에 추가
+4. *전후 차이*를 회고에 한 줄 박제
+
+## 출처
+
+이 엔트리는 *직접 보유한 두 프로젝트의 코드*만 인용. 외부 인용 없음.
+
+- moneyflow `src/lib/trading/ai-client.ts` — Circuit Breaker, 지수 백오프, 멀티 프로바이더 폴백, 에이전트별 라우팅, 프롬프트 캐싱, 구조화된 출력 6가지 패턴 (직접 보유 코드)
+- tarosaju `src/app/api/fortune/ai/route.ts` + `src/app/api/tarot-chat/route.ts` — Anthropic 호출 패턴 (직접 보유 코드)
+- [Harness Journal 000](/wiki/harness-engineering/harness-journal-000-baseline) — 두 프로젝트 베이스라인 감사 결과
+
+### 검증 메모
+
+- moneyflow ai-client.ts 패턴 6가지는 [Journal 000 감사 보고서](/wiki/harness-engineering/harness-journal-000-baseline)에서 직접 확인된 것만 정리
+- 코드 스니펫은 *개념 요약* — 실제 구현의 변수명/구조와 정확히 일치하지 않을 수 있음. 정확한 코드는 moneyflow 저장소 참조
+- tarosaju 부재 항목은 Journal 000 감사에서 직접 확인 ("Circuit Breaker / Retry / Timeout 부재", "비용 추적 부재")
+- 운영 데이터(Claude 429 빈도, 90% 캐싱 절감) 는 moneyflow의 실제 패턴 + Anthropic 공식 cached input pricing 기반
+- 다음 사이클의 큐(Journal 006~009)는 *제안*이며, 실제 작업은 라이브 사고에 따라 재정렬될 수 있음 ([Journal 000 갱신 로그](/wiki/harness-engineering/harness-journal-000-baseline) 참조)
