@@ -1,0 +1,190 @@
+---
+title: "Harness Journal 007+008 — AI API 비용 추적 인프라 양쪽 이식"
+category: harness-engineering
+date: "2026-04-12"
+tags: [harness-journal, harness-engineering, ai-cost, observability, anthropic, gemini, openai, cross-project-port]
+confidence: 4
+connections:
+  - harness-engineering/ai-api-cost-tracking-pattern
+  - harness-engineering/harness-journal-006-tarosaju-anthropic-hardening
+  - harness-engineering/harness-journal-000-baseline
+status: complete
+description: "Journal 000 갭 #4(비용 가시성 0) 양쪽 해소. tarosaju(007) + moneyflow(008) 두 사이클을 한 엔트리에 묶어서 박제. 로깅 인프라만 (DB/대시보드는 다음 사이클). 3-provider 단가 표 + fire-and-forget 로깅."
+type: entry
+quiz:
+  - question: "이 두 사이클이 *한 엔트리에 묶인* 이유는?"
+    choices:
+      - "분량 줄이기"
+      - "같은 패턴을 양쪽 프로젝트에 *연속 이식*한 작업 — 한 메시지(*비용 가시성 확보*)로 묶이고, 이식 순서가 거의 기계적(tarosaju 단순 → moneyflow 3-provider). 분할하면 *같은 메시지*를 두 번 박제하는 중복"
+      - "PR 번호가 연속이라"
+      - "빌드를 한 번만 돌리기 위해"
+    answer: 1
+    explanation: "사이클 분할 원칙은 *메시지 단위*. 같은 메시지의 양쪽 이식은 한 엔트리로 묶는 게 중복 방지 + 비교 표 유지. [Journal 006](/wiki/harness-engineering/harness-journal-006-tarosaju-anthropic-hardening)이 006+007을 묶은 것과 같은 원칙."
+  - question: "*로깅 인프라만* 먼저 도입하고 DB/대시보드를 미룬 이유는?"
+    choices:
+      - "DB 마이그레이션이 복잡해서"
+      - "*측정 자체*가 가장 큰 단일 이득. 로깅만으로 하루 청구서 예측 가능해짐. DB/대시보드는 *2차 가치*(장기 트렌드, 리포트). 2차 가치에 시간 쓰기 전에 *1차 가치(가시성)*부터 확보"
+      - "Supabase가 별도 프로젝트라"
+      - "권한 부족"
+    answer: 1
+    explanation: "가장 큰 단일 이득은 *\"얼마 쓰는지 실제로 보이는 것\"*. 이걸 위해 DB/대시보드/집계가 *필요하지 않음*. console 출력만으로도 하루 몇 건 호출했는지 / 어느 모델이 비싼지 / 에러율이 얼마인지 모두 실시간으로 보임. 다음 사이클에 DB 저장하면 장기 트렌드가 추가되지만 *오늘 당장의 결정*은 console만으로 가능."
+  - question: "세 프로바이더(Gemini/Claude/OpenAI)의 *usage response 구조가 모두 다름*을 어떻게 다뤘는가?"
+    choices:
+      - "하나의 통일 response 타입 강제"
+      - "*프로바이더별로 각기 다른 파싱 경로*를 각 함수(callGemini/callClaude/callOpenAI) 내부에 둠. 공통 `TokenUsage` 타입으로 정규화한 뒤 공통 `logApiCall()` 호출. 추상화는 *출력 쪽*(로그 형식)에만, 입력 쪽은 *각자의 형식 존중*"
+      - "모든 프로바이더가 OpenAI 형식을 따르도록 요청"
+      - "Claude만 지원"
+    answer: 1
+    explanation: "각 프로바이더는 자기 API 형식이 있고 이걸 우리가 통일할 수 없음. 파싱은 *프로바이더별*, 출력은 *공통*. 이게 adapter 패턴의 실전 적용."
+---
+
+## 갭 (Before)
+
+[Journal 000 공통 갭 #4](/wiki/harness-engineering/harness-journal-000-baseline):
+
+> AI API 비용 추적 0 — 양쪽 모두 호출 로깅·일/월 리포트 부재. *"이번 달 얼마 썼는지 모름"* 상태. 수익화 직전 단계라 더 시급.
+
+두 프로젝트의 AI 호출이 매일 일어나는데 *얼마를 쓰는지 모르는* 상태. `maxTokens` 기본값이나 실수로 비용 폭발할 가능성. 측정 없는 곳에 통제 없음.
+
+## 만든 환경 (After) — 양쪽 프로젝트 공통 패턴
+
+### tarosaju — Journal 007 (PR #4)
+
+파일: `src/lib/ai-cost-tracker.ts` + `src/lib/anthropic-client.ts` 수정
+
+- **단가 표**: Claude haiku/sonnet/opus (단일 프로바이더)
+- **비용 계산**: `estimateAnthropicCost(model, usage)` — cache read 토큰 90% 할인 반영
+- **로깅 훅**: [Journal 006의 `callAnthropic()` wrapper](/wiki/harness-engineering/harness-journal-006-tarosaju-anthropic-hardening) 성공/에러 양쪽에서 `void logApiCall(...)`
+- **출력 형식**: `[ai-cost] fortune/ai claude-haiku $0.001234 (in=450 cached=0 out=180 2341ms)`
+
+### moneyflow — Journal 008 (PR #95)
+
+파일: `src/lib/trading/ai-cost-tracker.ts` + `src/lib/trading/ai-client.ts` 수정
+
+- **단가 표**: 3-provider (Claude 3 모델 + Gemini 2 모델 + OpenAI 3 모델)
+- **프로바이더별 usage 파싱** — 각기 다른 response 구조:
+
+| 프로바이더 | 토큰 경로 | Cache 경로 |
+|---|---|---|
+| Gemini | `data.usageMetadata.promptTokenCount / candidatesTokenCount` | (없음) |
+| Claude | `data.usage.input_tokens / output_tokens` | `data.usage.cache_read_input_tokens` |
+| OpenAI | `data.usage.prompt_tokens / completion_tokens` | `data.usage.prompt_tokens_details.cached_tokens` |
+
+- **공통 출력**: 각 함수 내부에서 `TokenUsage` 정규화 후 `logApiCall(...)` 호출 (adapter 패턴)
+
+### 양쪽 공통 구조
+
+```typescript
+// ai-cost-tracker.ts (양쪽 모두)
+export function estimateCost(model: string, usage: TokenUsage): number { ... }
+export function logApiCall(log: ApiCallLog): void {
+  console.log(`[ai-cost] ${route} ${provider}:${model} $${cost} (...)`);
+}
+```
+
+호출 측은 항상:
+```typescript
+void logApiCall({ route, provider, model, usage, costUsd: estimateCost(model, usage), latencyMs });
+```
+
+## 운영 데이터
+
+| 항목 | 값 |
+|---|---|
+| tarosaju PR #4 | MERGED 2026-04-11T17:52Z (test.yml 5 jobs + auto-merge) |
+| moneyflow PR #95 | MERGED 2026-04-11T18:11Z (ai-review.yml inline test gate + auto-merge) |
+| 두 사이클 총 소요 | ~50분 (worktree 분기 → push → 머지까지) |
+| 양쪽 PR 모두 | 로컬 브라우저 QA 없이 자동 게이트로 검증 완료 |
+| sleep/pkill 필요 | 없음 (Journal 002의 inline test gate + Journal 005의 자동 머지가 모두 작동) |
+
+### 실제 로그 예시 (양쪽)
+
+tarosaju:
+```
+[ai-cost] fortune/ai claude-haiku-4-5 $0.000892 (in=520 cached=0 out=145 2102ms)
+[ai-cost] tarot-chat claude-haiku-4-5 $0.001734 (in=890 cached=0 out=275 3450ms)
+```
+
+moneyflow:
+```
+[ai-cost] claude claude-sonnet-4-6 $0.012300 (in=1200 cached=400 out=600 4210ms)
+[ai-cost] gemini gemini-2.5-flash $0.000145 (in=800 cached=0 out=200 1890ms)
+[ai-cost] openai gpt-4o-mini $0.000078 (in=450 cached=0 out=80 1250ms)
+```
+
+## 배운 것 / 다음 후보
+
+### 핵심 통찰 1 — 같은 메시지의 양쪽 이식은 *한 엔트리*로
+
+Journal 007(tarosaju)과 008(moneyflow)을 분리하지 않고 묶은 이유: *메시지가 동일*(비용 가시성 확보)하고 *패턴이 동일*(프로바이더별 파싱 + 공통 로깅). 분리하면 같은 메시지를 두 번 박제하는 중복.
+
+[Journal 006](/wiki/harness-engineering/harness-journal-006-tarosaju-anthropic-hardening)이 006+007(원래 계획)을 묶은 것과 같은 판단. **사이클 분할의 경계는 기능이 아니라 메시지**.
+
+### 핵심 통찰 2 — *로깅만*이 가장 큰 단일 이득
+
+DB 저장도 대시보드도 없이 *console 출력*만으로 하루 청구서 예측 가능. 2차 가치(장기 트렌드, 집계 리포트)에 시간 쓰기 전에 *1차 가치(측정 자체)*를 먼저 확보.
+
+이게 [AI Ops 진단 체크리스트](/wiki/harness-engineering/ai-ops-environment-diagnosis-checklist)의 영역 9(비용/관측)에서 *"console.log로 토큰 수만 출력 (DB 없이)"*을 첫 단계로 권장한 이유.
+
+### 핵심 통찰 3 — 프로바이더별 adapter 패턴
+
+*추상화는 출력 쪽에만*. 입력 쪽(response 파싱)은 프로바이더별로 다른 길을 인정. 억지로 통일하려고 하면 모든 프로바이더의 *최소공배수*만 남게 되어 *cache token 같은 프로바이더 특화 정보*가 사라진다.
+
+### 다음 후보 (Journal 009~)
+
+| Journal | 작업 | 작업량 |
+|---|---|---|
+| **009** | tarosaju에 Zod 출력 검증 layer 1+2 적용 (fortune/ai 우선) | 중간 |
+| 010 | Journal 000 베이스라인 *세 번째 갱신* + 시리즈 메타 (갱신 로그 2회 기반) | 작음 |
+| (이후) | AI 비용 추적 DB 저장 + `/cost-check` 슬래시 커맨드 | 중간 |
+| (이후) | 양쪽 비용 대시보드 (Supabase view) | 큼 |
+
+### 회고 한 줄
+
+> *"*측정 안 하는 곳에 통제 없다*는 원칙이 비용 영역에서 라이브로 작동하는 순간. 같은 사이클에서 양쪽 프로젝트가 *첫 비용 관측 지점*을 갖게 됨."*
+
+## For AI Agents
+
+**Trigger**: 새 프로젝트에서 AI 호출을 추가했거나 *비용 가시성이 0인 상태*에서 AI API를 계속 쓰고 있을 때
+
+**Prerequisites**:
+- [AI 호출 패턴 — Circuit Breaker / 폴백 / 캐싱](/wiki/harness-engineering/ai-call-patterns-circuit-breaker-fallback)
+- [AI API 비용 추적 패턴](/wiki/harness-engineering/ai-api-cost-tracking-pattern)
+
+**Actionable Steps (30분 내 적용)**:
+1. `src/lib/ai-cost-tracker.ts` (또는 적절한 경로) 신설
+2. 사용하는 프로바이더의 단가 표 작성 (공식 페이지에서 확인, 날짜 명시)
+3. `estimateCost(model, usage)` 함수 — 토큰 → USD
+4. `logApiCall(log)` 함수 — console.log fire-and-forget
+5. AI 호출 함수 각각의 *성공 return 직전*에 `void logApiCall(...)` 추가
+6. 에러 시에도 `{ usage: {0,0,0}, error: kind }`로 logApiCall
+7. 프로덕션 배포 후 *하루 모니터링* — 어느 모델/라우트가 비싼지 확인
+
+**Anti-patterns**:
+- ❌ 로깅을 *호출자*에 퍼뜨리기 (wrapper 없이는 일관성 없음)
+- ❌ `await logApiCall()` (응답 latency 증가) — 반드시 `void` 또는 fire-and-forget
+- ❌ 프로바이더별 usage 구조를 *억지로 통일* (cache token 정보 소실)
+- ❌ 단가 표 없이 `console.log(tokens)` (비용 계산 없으면 측정 가치 반감)
+- ❌ 분기마다 단가 표 재검증 안 하기 (프로바이더 가격 변동)
+
+## 자기 점검
+
+1. 내가 호출하는 AI API의 *지난 7일 비용*을 답할 수 있는가?
+2. 답할 수 없다면 — console.log로만이라도 로깅이 있는가?
+3. 가장 비싼 *호출 경로*는 무엇인가? (fortune/ai vs tarot-chat? trading/analyze?)
+4. Cache hit rate를 *모델별*로 측정하고 있는가?
+5. (열린 질문) 로깅 인프라 다음 단계 — DB? 대시보드? `/cost-check`? 무엇이 가장 큰 가치를 만드는가?
+
+## 출처
+
+- [Mino777/mino-tarosaju#4](https://github.com/Mino777/mino-tarosaju/pull/4) — tarosaju 이식 (머지 완료)
+- [Mino777/mino-moneyflow#95](https://github.com/Mino777/mino-moneyflow/pull/95) — moneyflow 이식 (머지 완료)
+- [AI API 비용 추적 패턴](/wiki/harness-engineering/ai-api-cost-tracking-pattern) — 원 제안 엔트리
+- [Journal 006](/wiki/harness-engineering/harness-journal-006-tarosaju-anthropic-hardening) — 같은 사이클 분할 원칙 (006+007 묶음)
+
+### 검증 메모
+
+- 양쪽 PR의 mergedAt 타임스탬프는 `gh pr list --json mergedAt` 결과 직접 인용
+- 단가 표는 *2026-04-12 공식 페이지 기준 추정값*. 실제 청구와 정확히 일치하지 않을 수 있음 (약정 할인, 지역 할인 등)
+- 실제 로그 예시는 *패턴 샘플*이며, 실제 프로덕션 호출 수치는 *측정 시작 후* 나옴
+- "하루 ~ 예측 가능"이라는 표현은 일반 추정. 실제 효과는 일주일 측정 후 Journal N에 박제 예정
