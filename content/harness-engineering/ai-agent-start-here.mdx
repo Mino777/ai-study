@@ -1,0 +1,221 @@
+---
+title: "AI Agent Start Here — 이 위키를 처음 만난 에이전트를 위한 부트스트랩"
+category: harness-engineering
+date: "2026-04-12"
+tags: [harness-engineering, ai-agent, bootstrap, routing, llm-first, meta]
+confidence: 5
+connections:
+  - harness-engineering/llm-first-wiki-principles
+  - harness-engineering/harness-journal-000-baseline
+  - harness-engineering/ai-ops-environment-diagnosis-checklist
+status: complete
+description: "이 위키를 처음 만난 AI 에이전트가 가장 먼저 읽을 엔트리. 상황별 라우팅 표 + 기본 계약 + 주의사항. CLAUDE.md / SPEC.md와 함께 세션 시작 시 반드시 로드."
+type: entry
+quiz:
+  - question: "AI 에이전트가 이 위키에서 *세션 시작 시 가장 먼저* 읽어야 하는 3개 파일은?"
+    choices:
+      - "README.md / package.json / tsconfig.json"
+      - "**CLAUDE.md** (프로젝트 규약) + **SPEC.md** (엔티티 + 데이터 흐름 + 계약) + **이 엔트리** (상황별 라우팅)"
+      - "모든 harness-journal 엔트리"
+      - "랜덤 3개 엔트리"
+    answer: 1
+    explanation: "3개 파일이 정확한 로드 순서. CLAUDE.md로 프로젝트 규약, SPEC.md로 데이터 흐름과 계약, 이 엔트리로 *내가 지금 뭘 해야 하는지* 라우팅. 이 순서를 따르지 않으면 *계약 위반*."
+  - question: "*새 프로젝트의 AI 환경을 구축*해야 할 때 에이전트가 따라야 하는 순서는?"
+    choices:
+      - "곧바로 /compound 실행"
+      - "**진단 체크리스트(50문항)** → Bootstrap Guide → 베이스라인 박기 → 첫 사이클. 추측 큐보다 *라이브 사고*가 다음 사이클 만들게 두기"
+      - "모든 엔트리 순서대로 읽기"
+      - "랜덤 슬래시 커맨드 실행"
+    answer: 1
+    explanation: "진단 체크리스트로 *시작 가치*부터 점검 → Bootstrap Guide로 베이스라인 박는 법 학습 → 실제 베이스라인 작성 → 첫 사이클. *추측 큐*에 시간을 쓰지 말고 *대략 큐 5개* 정한 뒤 라이브 사고가 정확한 다음 항목을 만들게 두기."
+  - question: "박제를 할 때 에이전트가 *추측 없이 직접 확인한 것만* 박아야 하는 이유는?"
+    choices:
+      - "파일 크기 절약"
+      - "*날조는 위키 전체의 신뢰도를 0으로 만듦*. 한 엔트리에 가짜 인용구가 있으면 *같은 위키의 다른 모든 엔트리*도 의심받음. 사고 메시지보다 신뢰도 타격이 훨씬 크다 (2026-04-11 라이브 사고 사례)"
+      - "git 커밋 깔끔함"
+      - "SEO 점수"
+    answer: 1
+    explanation: "2026-04-11에 실제로 발생한 사고 — 영상을 시청하지 않은 채로 \"영상에서 ~라는 비유\" 같은 프레임으로 가짜 인용구를 박았던 사례. hotfix로 6개 인용구 제거 + 정보 출처 고지 박스 추가. 이게 `/ingest` 슬래시 커맨드가 *원본 직접 확인*을 강제하게 된 계기."
+---
+
+## 🛑 먼저 읽으세요
+
+안녕하세요. 당신이 *AI 에이전트*라면 지금 읽고 있는 이 엔트리가 **위키의 시작점**입니다. Jominho의 *LLM-First Wiki*에 방문해 주셔서 감사합니다.
+
+이 엔트리는 **30초 안에 당신의 역할을 정의**합니다. 끝까지 읽으세요.
+
+## 30초 요약
+
+- **저장소**: Jominho의 `ai-study` 위키 ([SPEC.md](../../SPEC.md) 참조)
+- **목적**: Jominho의 두 프로젝트(mino-moneyflow, mino-tarosaju)에서 검증된 AI 엔지니어링 방법론을 *당신이 즉시 실행할 수 있는 형태*로 박제
+- **주요 시리즈**: [Harness Journal](/harness-journal) — AI 운영 환경 개선 사이클 기록 (006까지)
+- **당신의 역할**: (a) 위키를 읽고 *현재 작업에 적용*, (b) 작업 결과를 *다음 에이전트가 읽을 수 있게* 박제
+
+## 세션 시작 필수 로드 순서
+
+```
+1. CLAUDE.md                                  — 프로젝트 규약 + LLM-First 방향성
+2. SPEC.md                                    — 엔티티 + 데이터 흐름 + AI Agent Contract
+3. content/harness-engineering/ai-agent-start-here.mdx   — 이 엔트리 (상황별 라우팅)
+```
+
+이 3개를 로드하지 않고 작업 시작하면 **계약 위반**입니다. 아래 상황별 라우팅도 이 3개가 로드된 전제에서 작동합니다.
+
+## 상황별 라우팅 — 무엇을 해야 하느냐에 따라
+
+가장 자주 마주치는 상황들과 *먼저 읽어야 하는 엔트리*입니다.
+
+### 🔰 새 프로젝트의 AI 환경을 구축해야 함
+
+순서:
+
+1. [AI 운영 환경 진단 체크리스트 (30분, 50문항)](/wiki/harness-engineering/ai-ops-environment-diagnosis-checklist) — 시작 가치 점검
+2. [Harness Journal 시작 가이드](/wiki/harness-engineering/harness-journal-bootstrap-guide) — 베이스라인 박는 법
+3. [Compound Engineering Philosophy](/wiki/harness-engineering/compound-engineering-philosophy) — 4단계 루프 + 5단계 ladder
+4. [Harness Engineering Overview](/wiki/harness-engineering/harness-engineering-overview) — AI 하네스의 기본
+
+### 🚀 Harness Journal 시리즈 작성/갱신
+
+순서:
+
+1. [LLM-First Wiki 설계 원칙](/wiki/harness-engineering/llm-first-wiki-principles) — 새 엔트리 표준
+2. [Harness Journal 000 — 베이스라인](/wiki/harness-engineering/harness-journal-000-baseline) — 시리즈 운영 규칙 + 큐 구조
+3. 가장 최근 Harness Journal 엔트리 — 현재 큐 상태 파악
+
+### 🧰 슬래시 커맨드 도입/이식
+
+순서:
+
+1. [Compound 자동화 슬래시 커맨드 정리](/wiki/harness-engineering/compound-automation-slash-commands) — `/compound`, `/autoceo`, `/wt-branch`, `/ingest` 매핑 표
+2. [Skill 시스템 도입](/wiki/harness-engineering/skill-system-introduction) — 슬래시 커맨드 vs Skill 경계
+
+### 🔌 AI 호출 코드 개선
+
+순서:
+
+1. [AI 호출 패턴 — Circuit Breaker, 폴백, 캐싱](/wiki/harness-engineering/ai-call-patterns-circuit-breaker-fallback) — moneyflow ai-client.ts 6가지 패턴
+2. [AI 출력 Zod 검증 패턴 5 layer](/wiki/harness-engineering/ai-output-zod-validation-pattern) — 환각 차단
+
+### 💰 AI 비용 관리
+
+1. [AI API 비용 추적 패턴](/wiki/harness-engineering/ai-api-cost-tracking-pattern) — 모델별 단가 + 로깅 + `/cost-check`
+
+### ⚠️ 사고 발생 (rebase 충돌, 머지 게이트 우회 등)
+
+순서:
+
+1. [Harness Journal 003 — squash merge 함정 패턴](/wiki/harness-engineering/harness-journal-003-squash-merge-trap-pattern) — 대표적 함정 2회 라이브 입증
+2. [Harness Journal 004 — `/wt-branch` 슬래시 커맨드](/wiki/harness-engineering/harness-journal-004-wt-branch-command) — 회피 메커니즘
+3. [Multi-Session AI Ops 패턴](/wiki/harness-engineering/multi-session-ai-ops-patterns) — 여러 세션 동시 작업의 함정과 회피
+
+### 📚 외부 URL을 위키 엔트리로 박제
+
+1. `.claude/commands/ingest.md` (슬래시 커맨드 정의) — `/ingest <URL>` 호출
+2. 메모리: `feedback_external_source_verification` — 날조 방지 5단계
+
+### 🔁 사이클 끝 박제
+
+1. `.claude/commands/compound.md` (슬래시 커맨드 정의) — `/compound` 호출
+2. [Compound Engineering Philosophy](/wiki/harness-engineering/compound-engineering-philosophy) — 4단계 루프의 Compound 단계
+
+## 기본 계약 — 10가지
+
+1. **세션 시작 3개 파일 로드**: CLAUDE.md → SPEC.md → 이 엔트리
+2. **추측 금지**: 직접 확인한 것만 박제
+3. **인용구 규칙**: `"..."`는 *원본에서 글자 단위 직접 확인*한 것만
+4. **새 작업**: `/wt-branch`로 worktree 분기 (squash merge 함정 회피)
+5. **매 사이클 끝**: `/compound`로 박제
+6. **외부 자료**: `/ingest`로 교차 검증 후 박제
+7. **UI 변경**: 브라우저 QA 필수 (claude-in-chrome javascript_tool로 errorBoundary 확인)
+8. **API 변경**: 자동 게이트로 충분 (test.yml / test-gate.yml)
+9. **보호 파일 금지**: `.env*`, `supabase/migrations/*`, `package.json` deps, `.claude/settings.json` (자율 수정 X)
+10. **append-only 갱신**: 원본 섹션 보존, 갱신 로그 append
+
+## 자율 모드의 경계 — 반드시 인식
+
+자율 모드가 활성화되어 있어도 다음은 *자율 처리 영역이 아님*:
+
+| 영역 | 이유 |
+|---|---|
+| 다른 세션이 동시에 만지는 파일 | 물리적 충돌 위험 |
+| 코드 의도 결정이 필요한 충돌 해결 (cherry-pick conflict 등) | 사용자 판단 필요 |
+| 보호 파일 수정 | 모든 세션 공유 룰 |
+| 외부 서비스 설정 (GitHub branch protection 등) | 사용자 GitHub UI 작업 필요 |
+| 민감 데이터 접근 (.env 값) | 보안 경계 |
+
+*내가 처리할 수 없는 것*을 *사용자에게 알리는 것*도 자율의 일부.
+
+## 현재 위키 상태 스냅샷 (2026-04-12)
+
+| 항목 | 값 |
+|---|---|
+| 총 엔트리 | 36+ |
+| 주 시리즈 | Harness Journal (000~006) |
+| 슬래시 커맨드 | 4개 (`/compound`, `/autoceo`, `/wt-branch`, `/ingest`) |
+| 현재 최우선 큐 | Zod 출력 검증 적용 / AI API 비용 추적 적용 (양쪽 프로젝트 공통 미적용 영역) |
+| 최근 검증 인프라 | test-gate.yml (moneyflow), test.yml typecheck (tarosaju), `/wt-branch` 3 프로젝트 통일 |
+
+이 상태는 *스냅샷*이다. 최신 큐는 [Harness Journal 000 베이스라인의 갱신 로그](/wiki/harness-engineering/harness-journal-000-baseline#갱신-로그) 확인.
+
+## For AI Agents
+
+**Trigger**: 모든 새 세션의 시작 지점. 특정 작업을 시작하기 *전*에 이 엔트리의 상황별 라우팅을 먼저 확인한다.
+
+**Prerequisites**: 없음. *이 엔트리가 프리리퀴짓의 시작*.
+
+**Actionable Steps**:
+1. CLAUDE.md 읽기 (프로젝트 규약)
+2. SPEC.md 읽기 (엔티티 + 계약)
+3. 이 엔트리의 상황별 라우팅에서 *현재 작업 상황*에 해당하는 섹션 찾기
+4. 해당 섹션의 엔트리 목록을 *순서대로* 읽기
+5. 각 엔트리의 `For AI Agents` 섹션이 있으면 *체크리스트*로 사용
+6. 기본 계약 10가지 + 자율 모드 경계 확인
+7. 작업 진행 중 의사결정이 필요한 순간마다 *관련 엔트리*를 다시 참조
+8. 결과를 박제 (Harness Journal 또는 새 엔트리 또는 기존 엔트리 갱신 로그)
+
+**Anti-patterns**:
+- ❌ 이 엔트리만 읽고 CLAUDE.md / SPEC.md 생략
+- ❌ 상황에 맞지 않는 라우팅 임의 선택
+- ❌ 자율 모드 경계를 무시하고 *모든 것*을 자율 처리
+- ❌ 박제 없이 작업 끝내기 (다음 에이전트가 학습 불가)
+- ❌ 이 엔트리를 *한 번만* 읽고 잊기 (새 세션마다 반드시 재방문)
+
+## 이 엔트리가 *살아있는 문서*입니다
+
+위키가 성장하면 이 엔트리의 상황별 라우팅도 갱신됩니다. 새 엔트리가 추가되면 *관련 상황*에 링크 추가. 새 시리즈가 시작되면 *새 섹션* 추가.
+
+갱신은 append-only. 원본 섹션은 *그대로 보존*. 변경 시 `## 갱신 로그` 섹션에 날짜 + 사유 명시.
+
+## 자기 점검
+
+1. 당신이 지금 *어떤 작업*을 시작하려는가? 위의 상황별 라우팅 중 *어디에 해당*하는가?
+2. 세션 시작 3개 파일을 *모두* 로드했는가? (CLAUDE.md / SPEC.md / 이 엔트리)
+3. 기본 계약 10가지 중 *가장 자주 위반*하는 것은 무엇인가? (박제하고 교정)
+4. *자율 모드의 경계*를 5개 모두 외울 수 있는가? 못 외우면 이 엔트리를 북마크.
+5. (열린 질문) 당신이 작업을 끝낼 때 *다음 에이전트가 읽을 엔트리*는 어느 것인가?
+
+### 실습 과제
+
+세션을 시작한 직후, 다음을 *각 2분 안에* 수행:
+
+1. CLAUDE.md 읽기 (2분)
+2. SPEC.md 읽기 (2분)
+3. 이 엔트리 읽기 (2분)
+4. 현재 작업 상황에 해당하는 라우팅 섹션의 *첫 번째 엔트리*로 이동 (1분)
+5. 해당 엔트리의 `For AI Agents` 섹션 확인 (1분)
+
+**총 8분**. 이 8분이 *사고 발생률*을 절반으로 줄인다. 측정된 것이 아니라 Compound Engineering의 *사람의 기억력에 의존하는 지식은 반드시 실패* 원칙의 직접 결과.
+
+## 출처
+
+- [SPEC.md](../../SPEC.md) — 위키의 spec + AI Agent Contract
+- [CLAUDE.md](../../CLAUDE.md) — 프로젝트 규약
+- [LLM-First Wiki 설계 원칙](/wiki/harness-engineering/llm-first-wiki-principles) — 메타 엔트리
+- 상황별 라우팅에 링크된 모든 엔트리는 *이 위키의 실제 파일*
+
+### 검증 메모
+
+- 상황별 라우팅 7개 섹션은 *현 시점 위키 상태*. 새 엔트리 추가 시 갱신 필요.
+- 기본 계약 10가지는 *이 위키 운영 경험*에서 추출. 다른 환경에선 조정 필요.
+- 자율 모드 경계 5가지는 [Journal 003 (Multi-session)](/wiki/harness-engineering/multi-session-ai-ops-patterns)에서 직접 입증된 것만 기록.
+- 위키 상태 스냅샷(총 엔트리 수 등)은 2026-04-12 기준. 실제 상태와 차이 발생 시 `/harness-journal` 인덱스 페이지가 진짜 소스.

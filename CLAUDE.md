@@ -1,4 +1,17 @@
-# AI Study Wiki
+# Mino's AI Study Wiki — LLM-First Knowledge Base
+
+> **이 위키는 사람 + AI 에이전트가 함께 읽는 지식 저장소**다.
+> 단순 기록이 아니라 *AI 에이전트가 즉시 실행 가능한* 형태로 AI 엔지니어링 방법론을 박제한다.
+> 자세한 spec과 AI Agent Contract: **[SPEC.md](./SPEC.md)**
+
+AI 에이전트가 이 저장소에서 작업할 때 **반드시** 먼저 로드:
+1. **CLAUDE.md** (이 파일) — 프로젝트 규약 + 기술 스택
+2. **SPEC.md** — 엔티티 + 데이터 흐름 + AI Agent Contract
+3. **[AI Agent Start Here](content/harness-engineering/ai-agent-start-here.mdx)** — 상황별 라우팅
+
+이 3개를 로드하지 않고 작업 시작하면 *계약 위반*.
+
+---
 
 AI 하네스 엔지니어링 학습 위키 + 포트폴리오. Next.js 15 App Router + MDX + Tailwind.
 

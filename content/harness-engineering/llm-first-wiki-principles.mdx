@@ -1,0 +1,191 @@
+---
+title: "LLM-First Wiki 설계 원칙 — AI 에이전트를 위한 지식 저장소"
+category: harness-engineering
+date: "2026-04-12"
+tags: [harness-engineering, llm-first, knowledge-base, zettelkasten, ai-agent, transferable-pattern, meta]
+confidence: 5
+connections:
+  - harness-engineering/ai-agent-start-here
+  - harness-engineering/compound-engineering-philosophy
+  - harness-engineering/harness-journal-000-baseline
+status: complete
+description: "사람 블로그가 아니라 AI 에이전트가 읽고 실행할 수 있는 형태로 설계된 지식 저장소의 5가지 원칙. 이 위키 자체가 LLM-First Wiki의 메타 엔트리."
+type: entry
+quiz:
+  - question: "LLM-First Wiki가 *일반 기술 블로그*와 본질적으로 다른 점은?"
+    choices:
+      - "글이 더 길다"
+      - "*AI 에이전트가 1차 독자*. 사람의 이해를 위한 설명이 아니라 *에이전트가 즉시 실행 가능한 형태*의 지식으로 박제. Agent Directive 섹션이 핵심"
+      - "코드 예제가 더 많다"
+      - "MDX를 사용한다"
+    answer: 1
+    explanation: "블로그는 *사람의 이해*가 목적. LLM-First Wiki는 *에이전트의 실행*이 목적. 같은 내용이라도 구조가 다르다 — Trigger(언제), Prerequisites(먼저), Actionable Steps(어떻게), Anti-patterns(피할 것)로 *에이전트가 체크리스트로 쓸 수 있게*."
+  - question: "Zettelkasten의 *atomicity* 원칙이 AI 에이전트에게 왜 결정적인가?"
+    choices:
+      - "디스크 공간 절약"
+      - "같은 개념이 여러 엔트리에 흩어지면 에이전트가 *어디를 읽어야 하는지* 모름. 하나의 개념 = 하나의 엔트리여야 *정확한 라우팅*이 가능"
+      - "SEO 최적화"
+      - "렌더링 속도"
+    answer: 1
+    explanation: "사람은 여러 곳을 *대충 훑어서* 종합할 수 있지만, 에이전트는 *정확한 위치*를 찾아야 한다. atomicity는 에이전트의 *검색 성공률*을 결정. 중복은 에이전트에겐 *혼란 증폭기*."
+  - question: "'살아있는 문서' 원칙이 *append-only*인 이유는?"
+    choices:
+      - "git 커밋 수 늘리기"
+      - "원본을 덮어쓰면 *이전 가설*이 사라져서 *왜 그렇게 결정했는지* 맥락 소실. 베이스라인 + 갱신 로그 구조로 *시간 함수*로 지식이 진화한 흔적을 보존"
+      - "롤백 쉽게 하기"
+      - "파일 크기 관리"
+    answer: 1
+    explanation: "덮어쓰기는 *결과만 남기고 과정은 지움*. 갱신 로그는 *가설이 어떻게 틀렸고 어떻게 교정됐는지*를 보존. 다음 에이전트가 *같은 실수를 피할* 근거."
+---
+
+## 왜 LLM-First Wiki인가
+
+안드레 카파시(Andrej Karpathy)가 제안한 **LLM Wiki** 개념: AI 에이전트가 읽고 실행할 수 있는 지식 저장소. 사람의 블로그와 본질적으로 다른 형식.
+
+### 블로그 vs LLM-First Wiki
+
+| 차원 | 블로그 | LLM-First Wiki |
+|---|---|---|
+| **1차 독자** | 사람 | AI 에이전트 |
+| **목적** | 이해/설명 | 실행 가능한 지식 |
+| **구조** | 자유 형식 | 표준 섹션 (Agent Directive) |
+| **연결** | 카테고리 | Zettelkasten (atomic + deep linking) |
+| **갱신** | 필요 시 | 살아있는 문서 (append-only) |
+| **검증** | 없음 | 빌드 시 dangling connection 감지 |
+| **실행** | 독자가 따라함 | *에이전트가 직접 체크리스트로 사용* |
+
+이 위키는 *이 조건을 모두 만족*하도록 설계됐다.
+
+## 핵심 원칙 5가지
+
+### 1. Atomicity — 하나의 개념 = 하나의 엔트리
+
+Zettelkasten의 본질. 한 엔트리는 *하나의 명확한 주제*만 다룬다. 중복 금지.
+
+**왜**: 같은 개념이 여러 엔트리에 흩어지면 AI 에이전트가 *어디를 읽어야 하는지* 모른다. 사람은 대충 훑어서 종합할 수 있지만 에이전트는 *정확한 위치*를 찾아야 한다.
+
+**실천**: 새 엔트리를 작성하기 전 `grep`으로 *이미 그 주제를 다루는 엔트리가 있는지* 확인. 있으면 새로 만들지 말고 기존 엔트리 갱신.
+
+### 2. Agent Directive — 에이전트 직접 참조 가능 섹션
+
+모든 엔트리는 *가능한 경우* 다음 섹션을 포함:
+
+```markdown
+## For AI Agents
+
+**Trigger**: 이 엔트리를 언제 참조하는가
+**Prerequisites**: 먼저 읽어야 할 다른 엔트리 (slug 리스트)
+**Actionable Steps**:
+  1. ...
+  2. ...
+**Anti-patterns**:
+  - ...
+  - ...
+```
+
+**왜**: 에이전트가 엔트리 *전체*를 읽지 않아도 이 섹션만으로 *언제 어떻게 사용할지* 판단 가능. 컨텍스트 토큰 절약 + 라우팅 정확도.
+
+**실천**: 본문의 핵심 패턴을 *체크리스트로 압축*. 산문이 아니라 *에이전트가 따라할 수 있는 순서*로.
+
+### 3. 살아있는 문서 — Append-only 갱신
+
+베이스라인 + 갱신 로그 누적. 원본 보존, 덮어쓰기 X.
+
+**왜**: 원본을 덮어쓰면 *이전 가설*이 사라져서 *왜 그렇게 결정했는지* 맥락 소실. 다음 에이전트가 *같은 실수를 피할* 근거가 사라진다.
+
+**실천**: [Harness Journal 000 베이스라인](/wiki/harness-engineering/harness-journal-000-baseline)처럼 원본 섹션은 *그대로 보존*, 새 섹션으로 *갱신 로그* append. 날짜 헤더로 구분.
+
+### 4. 전이성 — 변경 0으로 이식 가능
+
+다른 프로젝트로 옮길 때 *경로 하드코딩* 없이 바로 작동해야 진짜 자산.
+
+**왜**: 이식 시 매번 수정이 필요하면 *이식 비용 > 재작성 비용*이 되어 복리 효과가 사라진다.
+
+**실천**: 구체 사례 — [`/wt-branch` 슬래시 커맨드](/wiki/harness-engineering/harness-journal-004-wt-branch-command)가 `git rev-parse --show-toplevel`로 프로젝트 루트를 *자동 감지*. 같은 파일이 ai-study / mino-moneyflow / mino-tarosaju 어디에 복사되든 *변경 0*으로 작동.
+
+### 5. 자기 검증 구조 — 도구가 자기 자신에 적용되어야
+
+패턴이 *자기 자신*에 적용될 수 있어야 진짜 검증됐다고 할 수 있다.
+
+**왜**: *실전에서 사용되지 않는 도구*는 도구가 아니다. 자기 자신에 적용 가능하지 않으면 *사용자의 실전에서도 일관되게 적용되지 않을 가능성*.
+
+**실천 사례**:
+- [Journal 002](/wiki/harness-engineering/harness-journal-002-inline-test-gate) — `ai-review.yml` inline test gate가 *자기 자신의 변경*을 검증
+- [Journal 005](/wiki/harness-engineering/harness-journal-005-wt-branch-dogfooding-and-transfer) — `/wt-branch`가 *wt-branch 자체의 이식*에 사용됨
+
+## For AI Agents
+
+**Trigger**: 새 엔트리 작성 / 기존 엔트리 갱신 / 위키 구조 이해 필요 시
+
+**Prerequisites**:
+- [SPEC.md](../../SPEC.md) — 위키의 전체 엔티티와 데이터 흐름
+- [AI Agent Start Here](/wiki/harness-engineering/ai-agent-start-here) — 상황별 라우팅
+- [Compound Engineering Philosophy](/wiki/harness-engineering/compound-engineering-philosophy) — 복리 원칙
+
+**Actionable Steps (새 엔트리 작성 시)**:
+1. `grep`으로 같은 주제 엔트리 있는지 확인 — 있으면 갱신, 없으면 신규
+2. 슬러그 규약: `<category>/<short-slug>.mdx`. 시리즈면 `<series-NNN>-...`
+3. Frontmatter 표준 필드 모두 작성 (title, category, date, tags, confidence, connections, status, description, quiz)
+4. 본문 구조: 갭/맥락 → 핵심 개념 → **AI Agent Directive** → 운영 데이터 → 자기 점검 → 출처/검증 메모
+5. `connections`는 의미적으로 연결된 엔트리 2-4개 (*모두 실존하는 slug*)
+6. `npm run build`로 dangling connection / MDX 문법 검증
+7. 추측으로 본문 채우지 않음. 직접 확인한 것만. 인용구 `"..."`는 원본 직접 확인한 것만.
+
+**Actionable Steps (기존 엔트리 갱신 시)**:
+1. 원본 섹션은 *절대 수정하지 않음*
+2. 갱신 로그 섹션을 *append*. 없으면 `## 갱신 로그` 섹션 신설
+3. 날짜 헤더 + 변경 사유 명시
+4. 구버전과의 관계(대체/보강/회피) 명시
+
+**Anti-patterns**:
+- ❌ 같은 개념을 여러 엔트리에 흩뿌리기 (atomicity 위반)
+- ❌ `AI Agent Directive` 섹션 생략 (에이전트 라우팅 불가)
+- ❌ 원본 덮어쓰기 (맥락 소실)
+- ❌ 추측으로 본문 채우기
+- ❌ 직접 확인 못한 인용구를 `"..."`로 박기 (날조)
+- ❌ `connections`에 존재하지 않는 slug (dangling)
+
+## 이 위키가 LLM-First인 증거
+
+| 원칙 | 구현 |
+|---|---|
+| Atomicity | 36개 엔트리, *한 개념 = 한 엔트리* 유지 |
+| Agent Directive | 신규 엔트리부터 `For AI Agents` 섹션 표준 |
+| 살아있는 문서 | [Harness Journal 000](/wiki/harness-engineering/harness-journal-000-baseline)에 갱신 로그 2회 누적 |
+| 전이성 | [`/wt-branch`](/wiki/harness-engineering/harness-journal-004-wt-branch-command)가 3 프로젝트에 *변경 0*으로 이식됨 |
+| 자기 검증 | Journal 002 + 005에서 *자기 자신에 적용*한 사례 2번 |
+
+지금 이 엔트리도 LLM-First 원칙을 *자기 자신에 적용*한 메타 엔트리. "For AI Agents" 섹션이 있고, append-only로 갱신될 예정이고, 다른 엔트리와 atomic하게 연결됨.
+
+## 자기 점검
+
+1. 내가 읽고 있는 이 엔트리가 *사람을 위한 블로그*인가 *에이전트가 실행 가능한 지침서*인가?
+2. 내 위키의 최근 엔트리에 `AI Agent Directive` 섹션이 있는가? 없다면 왜?
+3. 내 엔트리 중 *같은 개념을 여러 곳에 흩뿌린* 것이 있는가? (atomicity 위반)
+4. 살아있는 문서 원칙을 따르는 엔트리는 몇 개인가?
+5. (열린 질문) 내 도구/패턴 중 *자기 자신에 적용 가능*한 것은 몇 개인가? 불가능한 것은 *왜*?
+
+### 실습 과제
+
+자신의 기존 블로그/위키 엔트리 하나를 골라서:
+
+1. `AI Agent Directive` 섹션을 추가
+2. Trigger / Prerequisites / Actionable Steps / Anti-patterns 4개 항목 모두 채움
+3. *추가한 섹션만으로* 에이전트가 실행 가능한지 자문
+4. 부족하면 본문을 *체크리스트로 압축*
+
+이 한 번의 연습으로 *LLM-First 전환*의 감각이 온다.
+
+## 출처
+
+이 엔트리는 직접 작성한 메타 글. 외부 인용 없음.
+
+- **개념 원천**: Andrej Karpathy의 *LLM Wiki* 제안 (사용자 메시지를 통해 전달받음, 사용자가 원 출처)
+- **이 위키의 구현**: [SPEC.md](../../SPEC.md), [CLAUDE.md](../../CLAUDE.md)
+- **관련 엔트리**: [ai-agent-start-here](/wiki/harness-engineering/ai-agent-start-here), [Harness Journal 시리즈](/harness-journal)
+
+### 검증 메모
+
+- "안드레 카파시" 인용은 사용자 메시지 내 언급에 기반. 원문 직접 확인 X — 개념의 *정확한 인용*이 아닌 *방향성 참조*로만 사용.
+- 이 위키가 LLM-First 원칙을 만족한다는 증거 표는 *실제 엔트리를 가리키는 링크*로 검증 가능.
+- 5가지 원칙은 이 위키 운영 경험 + 카파시 개념의 *내 재해석*. 공식 정의 아님.
