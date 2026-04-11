@@ -1,0 +1,206 @@
+---
+title: "Harness Journal 000 — 두 프로젝트 AI 운영 인프라 베이스라인"
+category: harness-engineering
+date: "2026-04-12"
+tags: [harness-journal, harness-engineering, ai-ops, baseline, audit, compound-engineering]
+confidence: 4
+connections:
+  - harness-engineering/harness-engineering-overview
+  - harness-engineering/five-levers-of-harness-engineering
+  - harness-engineering/compound-engineering-philosophy
+status: complete
+description: "Harness Journal 시리즈의 출발점. mino-moneyflow와 mino-tarosaju 두 프로젝트의 AI 운영 인프라를 병렬 감사로 전수 조사하고, 공통 갭 8개와 첫 5 사이클 큐를 정의."
+type: entry
+quiz:
+  - question: "Harness Journal 시리즈의 0번 엔트리(베이스라인)가 왜 *코드 변경 전*에 작성되어야 하는가?"
+    choices:
+      - "코드 변경이 빠르고 베이스라인 작성은 느리기 때문에 분리 처리"
+      - "다음 에피소드들이 가리킬 명확한 출발점이 없으면 개선 효과를 측정할 수 없고, 첫 갭 식별 자체가 가짜가 될 수 있기 때문"
+      - "GitHub Actions 워크플로가 베이스라인 파일을 요구하기 때문"
+      - "사용자가 명시적으로 요청한 형식 규약이기 때문"
+    answer: 1
+    explanation: "베이스라인은 \"무엇이 있고 무엇이 없는지\"를 *추측 없이* 박제하는 작업이다. 추측으로 시작하면 첫 갭 식별부터 가짜가 되고, 효과 측정의 비교 기준점이 사라진다. 시리즈 전체가 베이스라인에 의존한다."
+  - question: "두 프로젝트의 AI 운영 인프라 감사에서 가장 자주 등장한 *공통* 갭은?"
+    choices:
+      - "테스트 커버리지가 50% 미만"
+      - "AI 출력을 Zod 같은 스키마로 검증하는 게이트가 부재 (입력 검증은 있지만 출력 검증 없음)"
+      - "TypeScript strict 모드가 꺼져 있음"
+      - "GitHub Actions 워크플로 자체가 없음"
+    answer: 1
+    explanation: "양쪽 모두 입력 검증(Zod, parseJsonBody)은 잘 갖췄지만, *LLM 응답 자체*를 schema.parse로 거르지 않는다. moneyflow의 13 에이전트 출력, tarosaju의 fortune/tarot-chat 모두 동일. 환각이 그대로 사용자에게 반환될 수 있는 구조."
+  - question: "두 프로젝트가 \"비대칭\"이라는 게 왜 *복리 효과의 출발점*인가?"
+    choices:
+      - "프로젝트가 다르면 코드도 다르므로 호환이 안 돼서 별도 작업이 필요"
+      - "한쪽에 이미 검증된 자산(예: moneyflow의 Circuit Breaker, tarosaju의 RLS 정적 감사)이 다른 쪽에는 없다는 뜻이고, 그 이식 작업이 곧바로 다음 사이클의 큐가 되기 때문"
+      - "비대칭 자체가 위험 신호이므로 즉시 통일해야 함"
+      - "비대칭이 있는 쪽이 항상 품질이 낮으므로 개선 우선순위가 명확해짐"
+    answer: 1
+    explanation: "한쪽이 이미 만들어둔 패턴은 *증명된 자산*이다. 다른 쪽으로 이식하는 작업은 처음부터 만드는 것보다 훨씬 싸다. Compound Engineering이 말하는 \"다음 작업이 더 쉬워진다\"가 *프로젝트 간*에도 작동한다는 첫 사례."
+---
+
+## 시리즈를 시작하며
+
+이 위키의 [Compound Engineering 엔트리](/wiki/harness-engineering/compound-engineering-philosophy)에서 가장 중요한 한 줄은 *"each unit of engineering work should make subsequent units easier—not harder"* 였다. 그 원칙을 *내 두 프로젝트(mino-moneyflow, mino-tarosaju)에 어떻게 적용할 것인가*가 이 시리즈의 출발점이다.
+
+**Harness Journal**은 두 프로젝트의 AI 운영 환경을 한 사이클에 *한 가지씩* 개선하고, 그 과정과 운영 데이터를 박제하는 콘텐츠 시리즈다. 사람이 코드를 직접 치는 비중이 거의 0인 상황에서, 대부분의 시간이 들어가는 곳은 **에이전트가 안전하게 달릴 환경의 조정**이다. 그 조정 과정을 *시리즈로* 기록하면, 두 프로젝트뿐 아니라 다음 프로젝트, 그 다음 프로젝트로 자산이 이식될 수 있다.
+
+이 0번 엔트리는 시리즈의 **베이스라인 정의서**다. 다음 에피소드들이 가리킬 출발점이 없으면 개선 효과를 측정할 수 없고, 첫 갭 식별부터 가짜가 된다.
+
+## 조사 방법
+
+Claude Code의 두 Explore 서브에이전트를 *동시에* 두 프로젝트에 띄워서, 각각 다음 항목을 *추측 없이 실제 파일에서만* 보고하게 했다:
+
+1. Hook 시스템 (`.claude/settings.json`)
+2. 슬래시 커맨드 (`.claude/commands/`)
+3. Skill 시스템 (`.claude/skills/`)
+4. CLAUDE.md, AI-AGENT-GUIDE.md, ENGINEERING.md
+5. AI 호출 코드 패턴 (Circuit Breaker, 폴백, 캐싱, 검증)
+6. `scripts/` 자동화
+7. `docs/retros/` 와 `docs/solutions/`
+8. 테스트 / CI / 자동 검증 게이트
+9. 메모리 시스템
+10. 각 프로젝트의 고유 인프라
+
+코드/문서를 *수정하지 않고* 현황과 갭만 보고하게 한 다음, 두 보고서를 종합해서 공통 패턴과 비대칭을 추출했다.
+
+## 두 프로젝트 공통 강점 (이미 잘 깔린 토대)
+
+| # | 항목 | 어떻게 작동하는가 |
+|---|---|---|
+| 1 | **Pre-commit QA 게이트** | `.claude/settings.json`의 PreToolUse 훅이 git commit 직전 `vitest run + next build`를 자동 실행. 실패 시 커밋 자체가 차단됨. |
+| 2 | **Post-push `/compound` 리마인더** | git push 직후 PostToolUse 훅이 회고 명령 실행을 강제. 사람의 기억력 대신 훅이 다음 단계를 강제. |
+| 3 | **`/compound` + `/autoceo` 슬래시 커맨드** | 회고·솔루션·메모리 동기화가 한 명령에 자동화. `/autoceo`는 N라운드 자율 사이클까지 포함. |
+| 4 | **AI-AGENT-GUIDE 6+7원칙** | Context Engineering 6원칙 + Harness Engineering 7원칙이 `.md` 파일로 박제. 매 세션 자동 로드. |
+| 5 | **회고 → 솔루션 → 큐** 루프 | `docs/retros/`의 마지막 섹션 *"다음에 적용할 것"* 이 다음 사이클의 입력으로 작동. moneyflow에서 v0.9.10 → v0.9.11에서 ROI 한 사이클 만에 검증됨. |
+
+이 5가지가 *베이스라인*이다. 두 프로젝트가 모두 이 토대 위에 서 있다.
+
+## 두 프로젝트 공통 갭
+
+조사 결과 양쪽 모두에서 발견된 갭. 우선순위는 *AI가 더 자율적이면서도 더 안전하게 달릴 수 있는가*를 기준으로 매겼다.
+
+| # | 갭 | 어떻게 보이는가 | 임팩트 |
+|---|---|---|---|
+| 1 | **CI/CD 머지 전 자동 게이트** | pre-commit 훅은 있지만 GitHub Actions에 머지 전 vitest+build+lint+typecheck 자동 검증 없음. 훅 우회 가능, main branch protection 미설정. moneyflow의 `ai-review.yml`은 *검증 없이* 즉시 squash merge. | **매우 높음** — AI 자율 머지의 가장 큰 차단점 |
+| 2 | **AI 출력 Zod 검증** | 입력은 검증하지만 LLM 응답을 schema.parse로 거르지 않음. 환각이 그대로 사용자에게 반환될 수 있음. | 높음 |
+| 3 | **Circuit Breaker / Retry / Timeout 비대칭** | moneyflow `ai-client.ts`에 잘 구현. tarosaju의 Anthropic 호출에는 *timeout 없음 + 폴백 없음*. | 높음 |
+| 4 | **AI API 비용 추적 0** | 양쪽 모두 호출 로깅·일/월 리포트 부재. *"이번 달 얼마 썼는지 모름"* 상태. 수익화 단계가 가까워서 더 시급. | 높음 |
+| 5 | **메모리 시스템 신뢰도 낮음** | moneyflow 회고에 *"메모리에 적힌 이슈는 항상 코드로 재검증, 메모리는 가설로 취급"* 명시. 메모리가 outdated될 수 있음을 인식하지만 동기화 자동화 없음. | 중간 |
+| 6 | **`/autoceo` Step 3 Gate 4 수동 모드** | 브라우저 런타임 검증이 자동화 안 돼서 사람 응답 대기. Playwright 통합 가능. | 중간~높음 |
+| 7 | **`npm audit` CI 미통합** | 로컬에만. R23(eslint upgrade) 같은 사고가 CI에서 못 잡힘. 작업량 작아서 가성비 좋음. | 중간 |
+| 8 | **`.claude/skills/` 미활용** | 양쪽 모두 슬래시 커맨드 2개(`/compound`, `/autoceo`)만. *작은 재사용 단위*인 skill 형식 미사용. | 낮음~중간 |
+
+## 비대칭 — 서로의 강점 = 다음 사이클의 큐
+
+두 프로젝트가 서로 다른 길을 가면서 만든 *고유 자산*이 있다. 이걸 교차 이식하는 것만으로도 4-5개 사이클이 나온다. *증명된 패턴을 옮기는* 것이 *처음부터 만드는* 것보다 훨씬 싸다는 게 핵심.
+
+### moneyflow → tarosaju 이식 후보
+
+| 자산 | tarosaju에 부재 | 이식 후 효과 |
+|---|---|---|
+| `lib/trading/ai-client.ts` Circuit Breaker | Anthropic 호출에 timeout/폴백 없음 | API 장애 시 사용자 경험 보호 |
+| 에이전트별 모델 라우팅 | 단일 모델 (Claude Haiku) | 작업 복잡도에 따른 비용 최적화 |
+| 프롬프트 캐싱 (Claude `cache_control: ephemeral`) | 미사용 | 90% 비용 절감 |
+| 13 에이전트 적대적 토론 패턴 | 단일 에이전트 응답 | 환각 감소 (다른 도메인에도 응용 가능) |
+
+### tarosaju → moneyflow 이식 후보
+
+| 자산 | moneyflow에 부재 | 이식 후 효과 |
+|---|---|---|
+| RLS 정적 감사 + 회귀 테스트 | RLS 자동 검증 없음 | 권한 상향 취약점 자동 차단 |
+| Sentry + Web Vitals + Lighthouse 3중 관측 | Sentry는 있지만 통합도 낮음 | 변화 감지 자동화 |
+| Playwright E2E + GitHub Actions 통합 | E2E 0개 | UI 회귀 자동 감지 |
+| `docs/maintenance/deferred-upgrades.md` 트래킹 | 없음 | *실패도 영구 자산화* (R23 패턴) |
+
+## 첫 5 사이클 큐 (Harness Journal 001~005)
+
+베이스라인과 갭/비대칭을 종합한 결과, 첫 5 사이클의 우선순위는 다음과 같다. 각 사이클이 *다음 사이클을 더 쉽게 만들도록* 의존성 순서로 정렬.
+
+| Journal | 작업 | 양쪽 적용 | 작업량 |
+|---|---|---|---|
+| **001** | CI 머지 전 자동 게이트 (test-gate.yml + tarosaju typecheck) | 양쪽 동시 PR | 중간 |
+| 002 | Journal 001의 lint/typecheck 위반 0건 만들기 + strict 승격 | 양쪽 | 중간 |
+| 003 | tarosaju에 Anthropic Circuit Breaker + Retry + Timeout 이식 (moneyflow `ai-client.ts` 패턴) | tarosaju 우선 | 중간 |
+| 004 | AI API 비용 추적 (`api_calls_log` 테이블 + `/cost-check` 슬래시 커맨드) | 양쪽 | 중간~큼 |
+| 005 | AI 출력 Zod 스키마 검증 레이어 (모든 LLM 응답을 `safeParse` 통과시키기) | moneyflow 우선 (13 에이전트) | 큼 |
+
+큐는 살아있는 문서다. 매 사이클의 회고에서 *다음 후보*를 갱신해서 다음 Journal의 입력이 된다.
+
+## Harness Journal 시리즈 운영 규칙
+
+다음 에피소드들이 일관성을 가지도록 시리즈 자체의 운영 규칙을 박제한다.
+
+### 엔트리 구조 (모든 Journal에 공통)
+
+1. **갭 (Before)** — 무엇이 부족했는가, 어떤 사고/마찰이 보였는가
+2. **만든 환경 (After)** — 정확히 어떤 파일·훅·게이트를 추가했는가 (코드 인용 OK, 단 *직접 만든 것만*)
+3. **운영 데이터** — 적용 후 어떤 지표가 변했는가 (또는 첫 측정값). 데이터 없으면 *데이터 없음*이라고 명시.
+4. **배운 것 / 다음 후보** — 다음 Journal로 이어지는 큐
+5. **출처** — 어느 프로젝트의 어느 retro/solution/PR과 연결되는가 (cross-link)
+
+### 시리즈 규약
+
+- **슬러그**: `harness-journal-NNN-...` (3자리 zero-padded)
+- **태그**: `harness-journal` 필수 (위키에서 시리즈로 묶기 위함)
+- **카테고리**: `harness-engineering`
+- **퀴즈 3문항**: 각 엔트리의 핵심 통찰을 측정. 단순 암기 X.
+- **금지 사항** ([feedback_external_source_verification](#) 메모리 준수):
+  - 직접 인용 `"..."`은 *원본에서 글자 단위로 직접 확인된 것*만
+  - 본인이 직접 만들지 않은 것을 만든 것처럼 쓰지 않기
+  - 운영 데이터가 없으면 *없다고* 명시 (가짜 수치 만들지 않기)
+
+### 관계도
+
+```mermaid
+flowchart LR
+  subgraph projects ["두 프로젝트"]
+    MF["mino-moneyflow"]
+    TS["mino-tarosaju"]
+  end
+
+  subgraph wiki ["ai-study 위키"]
+    J0["Journal 000<br/>베이스라인"]
+    J1["Journal 001<br/>CI 머지 게이트"]
+    J2["Journal 002<br/>..."]
+    JN["Journal N..."]
+  end
+
+  MF -- "감사 보고" --> J0
+  TS -- "감사 보고" --> J0
+  J0 -- "큐 정의" --> J1
+  J1 -- "PR + 회고" --> MF
+  J1 -- "PR + 회고" --> TS
+  J1 -- "다음 후보" --> J2
+  J2 -- "..." --> JN
+  JN -. "큐 갱신" .-> J0
+```
+
+J0의 큐는 *살아있다*. 새 사이클이 끝날 때마다 큐가 갱신되고, 다음 Journal이 그 큐의 첫 항목을 받는다.
+
+## 자기 점검
+
+1. 내가 두 프로젝트를 동시에 운영하는데, *공통 토대*에 깔린 자산은 정확히 무엇인가? (위 5가지 강점을 외울 수 있는가)
+2. 두 프로젝트의 *비대칭* 중 가장 임팩트 큰 이식 후보는? 그 자산을 옮기는 작업의 첫 단계는 무엇인가?
+3. 내가 *자유롭게 달리는* 환경을 만들고 싶은데, 가장 큰 차단점은 어디인가? — 검증 게이트의 부재인가, 폴백의 부재인가, 비용 가시성의 부재인가?
+4. *베이스라인 없이* 개선 작업을 시작하면 무엇이 가짜가 되는가? (이 엔트리의 존재 이유)
+5. (열린 질문) Harness Journal 시리즈가 1년 후 50번째 엔트리에 도달했을 때, 0번 베이스라인은 어떻게 갱신되어야 할까?
+
+### 실습 과제
+
+- 자신이 운영하는 *어떤 시스템*이든 한 가지를 골라서, 위 8개 갭 항목을 같은 형식으로 자기 시스템에 매핑해보기. 어느 갭이 *내 시스템에도* 있는가?
+- 만약 갭이 0개라면 — 정말로 0개인지, 아니면 *측정하지 않아서* 안 보이는 것인지 자문하기.
+
+## 출처
+
+이 엔트리는 직접 보유한 자산만 인용. 외부 인용 없음.
+
+- 감사 대상 1: `mino-moneyflow` (v0.9.13 시점) — 직접 보유 프로젝트
+- 감사 대상 2: `mino-tarosaju` (R25 시점) — 직접 보유 프로젝트
+- 감사 방법: Claude Code Explore 서브에이전트 2개 병렬 (코드 수정 금지, 실제 파일에서 본 것만 보고)
+- 종합: 본 엔트리에서 두 보고서를 합쳐 공통 갭/비대칭/큐 도출
+
+### 검증 메모
+
+- 두 프로젝트의 모든 인용(파일 경로, 워크플로 이름, 솔루션 카테고리, 회고 인용구)은 직접 파일을 읽어서 확인
+- "v0.9.10 → v0.9.11에서 ROI 한 사이클 만에 검증" 같은 구체 사례는 `mino-moneyflow/docs/retros/2026-04-11-v0911-compound-loop.md`에서 직접 인용
+- 양쪽 보고서의 *추측* 항목(Top 5 개선 후보의 예상 작업 규모 등)은 본 엔트리의 *큐 정의*에 *작은/중간/큰* 형식으로만 반영. 정량 수치는 박제하지 않음 (실제 작업 후 Journal 001~005에서 확정)

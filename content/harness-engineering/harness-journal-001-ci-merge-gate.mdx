@@ -1,0 +1,218 @@
+---
+title: "Harness Journal 001 — CI 머지 게이트, 그리고 게이트가 머지를 막지 못한 라이브 증거"
+category: harness-engineering
+date: "2026-04-12"
+tags: [harness-journal, harness-engineering, ci-cd, github-actions, branch-protection, ai-ops]
+confidence: 4
+connections:
+  - harness-engineering/harness-journal-000-baseline
+  - harness-engineering/compound-engineering-philosophy
+  - harness-engineering/harness-engineering-overview
+status: complete
+description: "두 프로젝트에 머지 전 자동 검증 게이트(vitest + build + lint + typecheck)를 동시 PR로 추가. 그러나 첫 머지에서 게이트가 머지를 막지 못한다는 라이브 사고를 만나고, 그것이 다음 사이클의 정확한 입력이 됨."
+type: entry
+quiz:
+  - question: "moneyflow PR #90이 머지된 직후 발견된 *라이브 사고*는 무엇인가?"
+    choices:
+      - "Test Gate 워크플로의 yaml 문법 오류로 워크플로 자체가 실행되지 않음"
+      - "Test Gate가 *아직 진행 중인 동안* ai-review.yml이 squash merge를 완료해서, 게이트의 통과/실패 결과조차 나오기 전에 머지가 끝남"
+      - "Test Gate의 vitest 단계에서 기존 테스트가 실패해서 머지가 차단됨"
+      - "Test Gate가 main 브랜치 push에는 트리거되지 않아 게이트가 영원히 작동 안 함"
+    answer: 1
+    explanation: "워크플로 파일을 추가하기만 하면 게이트가 작동할 거라는 가정이 *첫 머지에서 즉시 깨졌다*. ai-review.yml의 자동 머지 동작이 status check 대기를 하지 않으므로, 게이트 결과가 나오기 전에 squash merge가 끝나버린다. 이게 Journal 002의 정확한 입력 — 게이트는 *PR check로 존재*하는 것만으로는 부족하고, 머지 로직이 그 check를 *기다려야* 한다."
+  - question: "Journal 001에서 lint와 typecheck를 처음부터 strict로 박지 않고 `continue-on-error: true`로 시작한 이유는?"
+    choices:
+      - "GitHub Actions가 strict 모드를 지원하지 않기 때문"
+      - "위반 항목을 모르는 상태에서 strict로 박으면 첫 PR이 차단되어 게이트 자체의 점진적 도입이 불가능하기 때문. 첫 사이클은 *가시화*만, Journal 002에서 위반 0건 만든 뒤 strict로 승격"
+      - "테스트와 빌드만 strict면 충분하기 때문"
+      - "tarosaju의 lighthouse.yml과 패턴을 맞추기 위해"
+    answer: 1
+    explanation: "*점진적 도입*이 핵심이다. 위반 카운트를 모르는 상태에서 strict로 박으면 첫 사이클이 통째로 차단되어 게이트 도입 자체가 무산된다. 한 단계씩 — 가시화 → 위반 0건 → strict 승격."
+  - question: "moneyflow와 tarosaju에 *비대칭 작업*을 한 이유는?"
+    choices:
+      - "두 프로젝트의 머지 흐름이 다르므로 같은 워크플로 파일을 복사할 수 없기 때문"
+      - "moneyflow는 머지 전 게이트 0개라 4 jobs를 통째로 추가하고, tarosaju는 이미 4 jobs(unit/lint/build/e2e)가 있어서 typecheck 1 job만 추가하면 되기 때문 — 베이스라인이 다르면 작업도 비대칭이어야 같은 *수렴점*에 도달"
+      - "tarosaju가 더 작은 프로젝트이므로 작은 변경만 적용"
+      - "한 PR에서 양쪽을 한 번에 작업할 수 없는 GitHub 제약 때문"
+    answer: 1
+    explanation: "Journal 000의 큐 정의대로 \"두 프로젝트 모두 *4-게이트 표준*을 갖게 만든다\"는 *수렴점*은 같지만, 출발점이 다르므로 작업은 비대칭이다. 같은 워크플로 파일을 복사하는 것은 빠르지만 잘못된 방향 — 베이스라인을 무시한 이식은 사고를 만든다."
+---
+
+## 갭 (Before)
+
+[Journal 000](/wiki/harness-engineering/harness-journal-000-baseline)의 8개 공통 갭 중 *#1순위*인 **CI 머지 전 자동 게이트 부재**를 첫 사이클로 잡았다. 베이스라인은 이렇다:
+
+| 프로젝트 | pre-commit 훅 | GitHub Actions PR check | 자동 머지 흐름 |
+|---|---|---|---|
+| **moneyflow** | ✅ vitest + build (실패 시 차단) | ❌ *없음* | `ai-review.yml`이 push to non-main → PR 생성 → *즉시* squash merge |
+| **tarosaju** | ✅ vitest + build (실패 시 차단) | ✅ `test.yml` 4 jobs (unit/lint/build/e2e) | 수동 머지 |
+
+핵심 문제 두 가지:
+
+1. **moneyflow는 머지 전 검증 게이트가 0개**. pre-commit 훅은 로컬에서 우회 가능하고, CI에는 머지 전 검증이 없어서 *깨진 코드가 main에 들어갈 가능성*이 100% 살아있다. ai-review.yml은 *검증 없이* 곧장 squash merge한다.
+2. **tarosaju는 4 jobs가 있지만 typecheck가 빠짐**. `next build`가 type check를 포함하지만, `tsconfig.exclude`에 들어 있는 파일(playwright.config.ts, e2e/, test 파일)이나 빌드 그래프에 포함되지 않는 파일들은 strict 위반이 있어도 통과된다.
+
+### 왜 이게 가장 임팩트 큰 갭인가
+
+AI가 자율적으로 머지하려면 *어느 한 단계*가 반드시 자동 게이트여야 한다. 그 게이트가 없으면 *사람의 시선*이 마지막 안전망이 되는데, 사람 검토는 [Journal 000](/wiki/harness-engineering/harness-journal-000-baseline)의 핵심 메시지처럼 *기댈 수 있는 게 아니다*. AI ops 환경의 모든 다른 개선이 이 게이트 위에 쌓이므로, 첫 사이클로 이걸 잡는 게 의존성 순서상 옳다.
+
+## 만든 환경 (After)
+
+두 프로젝트의 *베이스라인이 다르므로 작업도 비대칭*이다. 같은 수렴점(4-게이트 표준)에 도달하지만, 출발점이 다르면 옮기는 거리도 다르다.
+
+### moneyflow — `test-gate.yml` 신설 (4 jobs 통째로 추가)
+
+새 파일: `.github/workflows/test-gate.yml`
+
+```yaml
+name: 🔒 Test Gate
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches-ignore: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit:        # vitest run                — strict
+  build:       # next build (placeholder env) — strict
+  lint:        # eslint                    — continue-on-error: true
+  typecheck:   # tsc --noEmit              — continue-on-error: true
+```
+
+(전체 워크플로는 PR [Mino777/mino-moneyflow#90](https://github.com/Mino777/mino-moneyflow/pull/90)에서 확인.)
+
+### tarosaju — `test.yml`에 `typecheck` job 추가 (1 job만 보강)
+
+```yaml
+typecheck:
+  name: Typecheck (tsc --noEmit)
+  runs-on: ubuntu-latest
+  timeout-minutes: 5
+  continue-on-error: true   # 첫 사이클 — 경고만
+  steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: "20"
+        cache: "npm"
+    - run: npm ci
+    - run: npx tsc --noEmit
+```
+
+PR: [Mino777/mino-tarosaju#1](https://github.com/Mino777/mino-tarosaju/pull/1).
+
+### 왜 lint/typecheck는 `continue-on-error: true`인가
+
+위반 카운트를 모르는 상태에서 strict로 박으면 첫 사이클이 통째로 차단된다. 이건 *게이트 도입 자체*를 못 하게 만든다. 그래서:
+
+1. 첫 사이클: `continue-on-error: true`로 *위반 항목 가시화만* — 통과/실패 결과는 표시되지만 PR check는 차단되지 않음
+2. Journal 002 (다음 사이클): 위반 카운트를 보고, 0건으로 만들고, `continue-on-error: false`로 strict 승격
+
+[tarosaju의 lighthouse.yml](https://github.com/Mino777/mino-tarosaju/blob/main/.github/workflows/lighthouse.yml)이 같은 패턴(warn-only로 시작)으로 도입됐던 것을 따랐다. 이미 검증된 점진적 도입 패턴.
+
+## 운영 데이터 — 그리고 *첫 머지에서 발견된 라이브 사고*
+
+PR을 두 개 생성한 직후 라이브 결과는 다음과 같았다.
+
+### moneyflow PR #90 — *게이트가 머지를 막지 못함*
+
+```
+PR #90 머지 시각:    2026-04-11T15:01:07Z
+Test Gate 상태:     [time] (== 진행 중)
+Auto Merge 상태:    [ok] (== 성공)
+```
+
+`gh run list --branch harness-journal-001-test-gate`의 결과:
+```
+[ok]   🚀 Auto Merge to main      24285090864
+[time] 🔒 Test Gate                24285090865
+```
+
+**Auto Merge가 성공으로 끝났을 때 Test Gate는 *아직 진행 중*이었다.** 즉, 게이트의 통과/실패 *결과조차 나오기 전에* squash merge가 완료됐다. ai-review.yml의 자동 머지 로직이 *PR check를 기다리지 않기* 때문이다.
+
+이 한 줄이 Journal 001의 *진짜 메시지*다:
+
+> 워크플로 파일을 추가하는 것만으로는 게이트가 작동하지 않는다. 게이트는 *머지 로직이 그것을 기다릴 때*만 작동한다.
+
+### tarosaju PR #1 — 정상 흐름
+
+tarosaju는 ai-review.yml 같은 자동 머지가 없고 수동 머지이므로, PR #1을 만들면 `test.yml`의 5 jobs(unit, lint, build, typecheck, e2e)이 자동으로 돌고 결과를 PR check로 표시한다. 사람이 그걸 보고 머지 결정. 이건 의도대로 작동.
+
+### 정량 데이터 (있는 것만)
+
+- moneyflow PR #90: **머지됨** (라이브 사고 발생, *게이트 효과 0*)
+- tarosaju PR #1: **open** (test.yml + typecheck job 검증 진행)
+- 양쪽 PR 동시 생성 시간: 약 5분
+- 발견된 위반 카운트: *Journal 002에서 측정* (현 시점 데이터 없음)
+
+## 배운 것 / 다음 후보
+
+### 핵심 통찰
+
+**워크플로 파일 추가 ≠ 게이트 작동.** 게이트가 *PR check로 존재*하는 것만으로는 부족하고, *머지 로직이 그 check를 기다려야* 한다. 가능한 해결책 3가지:
+
+| 옵션 | 어떻게 작동 | 비용 |
+|---|---|---|
+| **A. GitHub Branch Protection rule** | main에 *Require status checks to pass before merging* 활성화 → ai-review.yml의 squash merge가 status check 미통과 시 자동 거절 | GitHub UI 설정 1회 (사용자 수동) |
+| **B. ai-review.yml polling 추가** | github-script로 PR check 상태를 polling하다가 Test Gate 통과 후에만 squash merge 진행 | 워크플로 코드 수정 필요, edge case 처리 |
+| **C. workflow_run 트리거** | 새 워크플로를 만들어서 `workflow_run: workflows: ['Test Gate'], types: [completed]`로 트리거 → 성공 시에만 머지 | 머지 로직 분리, 더 큰 리팩터링 |
+
+이 사고가 정확히 **Journal 002의 입력**이 된다.
+
+### 비대칭 작업의 효과
+
+- 같은 *수렴점(4-게이트 표준)* 에 도달했지만 *출발점이 달라서 작업도 달랐다*
+- moneyflow: 워크플로 파일 1개 신설 (81 lines)
+- tarosaju: 기존 워크플로 1개에 17 lines 추가
+- 같은 워크플로 파일을 복사했다면 *베이스라인을 무시한 이식*이 되어 사고를 만들었을 것
+
+이게 [Journal 000](/wiki/harness-engineering/harness-journal-000-baseline)의 비대칭 정의가 *작업 단위*에서도 작동한다는 첫 검증.
+
+### 다음 후보 (Journal 002 큐)
+
+1. **moneyflow의 머지 게이트 *실효화*** — 위 옵션 A/B/C 중 선택. 가장 가벼운 시작은 옵션 A(branch protection rule). 사용자가 GitHub UI에서 한 번 활성화하면 다음 PR부터 정상 작동.
+2. **lint/typecheck 위반 카운트 측정** — 두 프로젝트 모두에서 첫 PR이 끝난 뒤 위반 항목 추출
+3. **위반 0건 만들기 + strict 승격** — `continue-on-error: false`로 전환
+4. **양쪽 동일 패턴(4-게이트 표준)으로 수렴** — moneyflow의 test-gate.yml과 tarosaju의 test.yml이 같은 jobs 구조를 갖도록 정리
+
+### 회고 한 줄
+
+> *"게이트는 만드는 것만큼이나 게이트가 *기다려지는 구조*를 만드는 것이 중요하다. 첫 머지에서 라이브 사고를 만난 게 오히려 다행 — 추측으로 끝났으면 Journal 002의 입력이 가짜가 됐을 것이다."*
+
+## 자기 점검
+
+1. 내가 GitHub Actions에 워크플로를 추가했을 때, 그 워크플로가 *PR check로 표시*되는 것과 *머지를 차단*하는 것은 같은 것인가?
+2. 점진적 도입(`continue-on-error: true`로 시작)이 *왜* 필요한가? 한 번에 strict로 박으면 어떤 일이 벌어지는가?
+3. 두 프로젝트에 비대칭 작업을 한 이유를 다른 사람에게 한 문장으로 설명할 수 있는가?
+4. 첫 사이클에서 라이브 사고가 났을 때, 그게 *실패*인가 *다음 사이클의 입력*인가? — 이 차이가 Compound Engineering의 본질이다.
+5. (열린 질문) 다음 사이클(Journal 002)에서 옵션 A/B/C 중 무엇을 고르는 것이 *시리즈 전체*에 가장 큰 복리 효과를 만드는가?
+
+### 실습 과제
+
+자신이 운영하는 GitHub 저장소가 있다면:
+
+1. main 브랜치에 branch protection rule이 있는지 확인
+2. 없다면 — 가장 가벼운 status check(예: `npm test`만) 하나를 *required*로 활성화
+3. 다음 PR에서 그 check가 *머지를 실제로 차단*하는지 확인
+4. 차단되면 → 게이트가 작동하는 것
+5. 차단 안 되면 → workflow check가 *required*로 등록되지 않은 것 (이름 매칭 확인)
+
+## 출처
+
+- 양쪽 작업 PR
+  - moneyflow: [Mino777/mino-moneyflow#90](https://github.com/Mino777/mino-moneyflow/pull/90) (2026-04-11 머지 — 라이브 사고 발생)
+  - tarosaju: [Mino777/mino-tarosaju#1](https://github.com/Mino777/mino-tarosaju/pull/1) (open)
+- 입력 큐: [Harness Journal 000 — 두 프로젝트 AI 운영 인프라 베이스라인](/wiki/harness-engineering/harness-journal-000-baseline)
+- 점진적 도입 패턴 참고: tarosaju `lighthouse.yml`의 `continue-on-error: true` 구조
+
+### 검증 메모
+
+- "Test Gate가 진행 중인 동안 머지됨"은 `gh run list --branch harness-journal-001-test-gate` 결과의 `[time]` vs `[ok]` 상태를 직접 확인
+- 머지 시각 `2026-04-11T15:01:07Z`는 `gh pr list --state merged --json mergedAt` 결과에서 직접 확인
+- 워크플로 yaml 코드는 *직접 작성한 것*이라 인용 가능. 외부에서 가져온 코드 없음.
+- 운영 데이터의 정량 수치는 *측정된 것만* 박제. 위반 카운트는 *데이터 없음* 명시.
