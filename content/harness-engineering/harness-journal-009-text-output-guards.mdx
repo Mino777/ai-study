@@ -1,0 +1,207 @@
+---
+title: "Harness Journal 009 — Text Output Guards (Zod가 맞지 않을 때의 대안)"
+category: harness-engineering
+date: "2026-04-12"
+tags: [harness-journal, harness-engineering, output-validation, text-guards, anthropic, tarosaju]
+confidence: 4
+connections:
+  - harness-engineering/ai-output-zod-validation-pattern
+  - harness-engineering/harness-journal-006-tarosaju-anthropic-hardening
+  - harness-engineering/harness-journal-000-baseline
+status: complete
+description: "Zod 출력 검증이 *JSON 구조화 응답*에 맞지만 tarosaju의 자연어 응답(fortune/tarot-chat)에는 부적합. 대신 text-level 검증(길이 + 금지 용어 + 위기 re-check) 도입. *도구가 맞지 않으면 다른 도구를 만든다*는 라이브 판단."
+type: entry
+quiz:
+  - question: "이 사이클이 *Zod 출력 검증을 tarosaju에 적용하려다 포기*한 이유는?"
+    choices:
+      - "Zod 라이브러리 버전 충돌"
+      - "*응답 형태가 다름* — Zod는 JSON 객체 검증인데 tarosaju의 fortune/ai와 tarot-chat은 *자연어 텍스트* 응답. 도구가 데이터 형식에 맞지 않으면 *다른 도구*를 만드는 것이 정답"
+      - "TypeScript 타입 추론 문제"
+      - "Anthropic API가 Zod를 지원하지 않아서"
+    answer: 1
+    explanation: "원래 Journal 009 큐는 'tarosaju Zod 출력 검증'이었지만, 실제 코드 구조를 보니 *응답이 JSON이 아닌 자연어*라는 것을 발견. 계획된 도구를 억지로 끼워맞추는 대신 *text-level 검증*이라는 다른 도구를 만드는 것이 올바른 판단. 계획이 현실과 맞지 않으면 *계획을 바꾼다*."
+  - question: "Text output guard의 *3가지 검증 축*은?"
+    choices:
+      - "문법 / 철자 / 어휘"
+      - "**길이 범위** (너무 짧거나 긴 응답 차단) + **금지 용어** (의학/법률/단정 표현) + **위기 제안 re-check** (AI가 위기 단어 트리거하지 않도록)"
+      - "감정 / 톤 / 스타일"
+      - "속도 / 토큰 / 비용"
+    answer: 1
+    explanation: "길이는 합리성, 금지 용어는 *도메인 적합성*, 위기 re-check는 *입력 crisis-detector와 별개로 출력에 대한 검증*. 3가지가 중첩되어 환각이 사용자에게 도달하지 못하도록."
+  - question: "가드 실패 시 *throw가 아닌 SAFE_FALLBACK 반환*을 택한 이유는?"
+    choices:
+      - "throw가 TypeScript에서 작동하지 않음"
+      - "*콘텐츠 도메인*은 거래/결제와 달리 *무응답*보다 *안전한 대체 응답*이 사용자 경험에 더 낫기 때문. 점술 앱에서 '오류'를 보여주는 것보다 '평온한 하루'라는 기본 메시지가 더 적합. throw는 거래 도메인에 적합"
+      - "fallback이 더 빠름"
+      - "에러 로그를 줄이기 위함"
+    answer: 1
+    explanation: "도메인별 fail 전략이 다름. 거래 시스템은 *잘못된 결과보다 명확한 실패*가 안전(throw). 콘텐츠/점술은 *무응답보다 부드러운 대체*가 사용자 경험 유지(fallback). 둘 다 환각 노출은 금지."
+---
+
+## 갭 (Before)
+
+[Journal 000 공통 갭 #2](/wiki/harness-engineering/harness-journal-000-baseline):
+
+> AI 출력 Zod 검증 부재 — 입력은 검증하지만 LLM 응답을 schema.parse로 거르지 않음. 환각이 그대로 통과.
+
+tarosaju에서 첫 적용을 하려고 했으나 *라이브에서* 한 가지를 발견:
+
+> **tarosaju의 fortune/ai와 tarot-chat 응답은 *자연어 텍스트*이지 JSON 객체가 아니다.**
+
+Zod의 `schema.parse`는 *구조화된 객체*에 적합. 자연어 문자열에 *Zod schema*를 억지로 씌우는 것은 가치 없음. 도구가 데이터 형식에 맞지 않으면 *다른 도구*가 필요.
+
+## 만든 환경 (After) — Text Output Guards
+
+### 추가: `src/lib/ai-output-guards.ts`
+
+자연어 응답에 대한 *3가지 검증 축*:
+
+1. **길이 범위** — `checkLength(min, max)`
+   - 너무 짧으면 의미 없음 (응답 실패 가능)
+   - 너무 길면 토큰 낭비 + 사용자 피로
+
+2. **금지 용어 contains** — `checkForbiddenTerms(terms)`
+   - Fortune: `"병원", "진료", "약을", "처방", "우울증", "불안장애"` 등 (의학/진료 용어)
+   - Tarot-chat: `"우울증", "정신과", "변호사", "소송"` (의학/법률 조언)
+   - 공통: `"죽어", "자해", "극단적"` (위기 제안)
+
+3. **위기 제안 re-check**
+   - 입력 `crisis-detector`와 별개
+   - *출력에* 위기 단어가 나오면 AI가 사용자에게 *트리거 유발* 가능성
+
+### 통합 함수
+
+```typescript
+export function guardFortuneOutput(text: string): GuardResult {
+  const lengthCheck = checkLength(text, 30, 1000);
+  if (!lengthCheck.safe) return lengthCheck;
+
+  const forbiddenCheck = checkForbiddenTerms(text, FORTUNE_FORBIDDEN_TERMS);
+  if (!forbiddenCheck.safe) return forbiddenCheck;
+
+  const crisisCheck = checkForbiddenTerms(text, CRISIS_SUGGESTION_TERMS);
+  if (!crisisCheck.safe) return crisisCheck;
+
+  return { safe: true };
+}
+
+export function guardTarotChatOutput(text: string, isFirstTurn: boolean): GuardResult {
+  const maxLen = isFirstTurn ? 500 : 1500;  // 첫 턴은 엄격
+  // ... 동일 패턴
+}
+```
+
+### 라우트 통합
+
+```typescript
+// fortune/ai/route.ts
+const { text: fortune } = await callAnthropic({ ... });
+
+const guardResult = guardFortuneOutput(fortune);
+if (!guardResult.safe) {
+  logger.warn("[fortune/ai] output guard failed", {
+    reason: guardResult.reason,
+    matched: "matched" in guardResult ? guardResult.matched : undefined,
+  });
+  // 환각을 사용자에게 노출하지 X — 안전 기본값
+  return Response.json({ fortune: SAFE_FALLBACK.fortune, cached: false, guarded: true });
+}
+
+// 가드 통과한 응답만 캐시 저장
+await supabase.from("ai_fortune_cache").upsert({ ... });
+```
+
+핵심:
+- **가드 실패를 숨기지 않음** — `logger.warn`으로 가시화
+- **SAFE_FALLBACK 반환** — *throw가 아님*. 콘텐츠 도메인은 *부드러운 대체*가 더 안전
+- **클라이언트 플래그** — `{ guarded: true }`로 알림
+- **캐시 저장 skip** — 가드 실패한 응답은 캐시하지 않음 (미래 재발 방지)
+
+## 운영 데이터
+
+| 항목 | 값 |
+|---|---|
+| tarosaju PR #5 | 자동 머지 설정 완료 (test.yml 5 jobs 통과 후 자동) |
+| 적용 라우트 | `fortune/ai`, `tarot-chat` 2개 |
+| 가드 축 | 3개 (길이 + 금지 용어 + 위기 re-check) |
+| 금지 용어 리스트 | fortune 6개 + tarot-chat 6개 + 위기 4개 |
+| 프로덕션 가드 발동률 | *측정 시작* (Journal N에서 박제) |
+
+## 배운 것 / 다음 후보
+
+### 핵심 통찰 1 — 계획 도구가 데이터에 맞지 않으면 *도구를 바꾼다*
+
+Journal 000 큐에 "tarosaju Zod 출력 검증"이 있었지만 라이브에서 *응답이 자연어*라는 것을 발견. 계획을 *억지로 이행*하는 대신 *다른 도구*(text guards)를 만드는 것이 옳은 판단. 
+
+이건 *큐는 살아있는 가설*이라는 [Journal 000 갱신 로그](/wiki/harness-engineering/harness-journal-000-baseline#갱신-로그) 원칙의 구체적 사례. 추측 큐가 라이브로 재정렬되는 *네 번째* 사례.
+
+### 핵심 통찰 2 — 도메인별 fail 전략
+
+| 도메인 | 가드 실패 시 | 이유 |
+|---|---|---|
+| 거래 / 결제 | **throw** | 잘못된 결과가 *더 큰 손해* |
+| 콘텐츠 / 점술 / 상담 | **SAFE_FALLBACK** | 무응답보다 *부드러운 대체*가 사용자 경험 유지 |
+| 내부 시스템 호출 | **재시도 + 최종 throw** | 시스템은 에러 처리 가능 |
+
+*공통*: 환각 응답을 *그대로 노출하지 X*. 전략은 달라도 *환각 노출 금지*는 동일.
+
+### 핵심 통찰 3 — 가드 실패도 *측정*
+
+`logger.warn` + `{ guarded: true }` 플래그로 가드 발동 시 가시화. *얼마나 자주* 발동하는지가 *LLM 품질 측정*의 한 축. 측정 없는 가드는 *sanity check*도 못 함.
+
+### 다음 후보 (Journal 010~)
+
+| Journal | 작업 | 크기 |
+|---|---|---|
+| **010** | Journal 000 베이스라인 *세 번째 갱신* + 007~009 요약 + 다음 큐 재정의 | 작음 |
+| (이후) | moneyflow에 Zod JSON 출력 검증 (13 에이전트 schema) | 큼 |
+| (이후) | 비용 추적 DB 저장 + `/cost-check` 슬래시 커맨드 | 중간 |
+| (이후) | 가드 발동률 측정 리포트 (text guard 효과 검증) | 작음 |
+
+### 회고 한 줄
+
+> *"계획한 도구(Zod)가 데이터 형식(자연어)에 맞지 않는 것을 *라이브에서 발견*하고 즉시 다른 도구를 만든 사이클. Compound Engineering의 *큐는 가설이다* 원칙이 또 한 번 실전 검증됨."*
+
+## For AI Agents
+
+**Trigger**: 자연어 텍스트를 반환하는 AI 엔드포인트 / JSON 응답이 아닌 LLM 출력 검증이 필요할 때
+
+**Prerequisites**:
+- [AI 출력 Zod 검증 5 layer](/wiki/harness-engineering/ai-output-zod-validation-pattern) — *JSON 응답*에 적합한 패턴 (이 엔트리는 *text 응답* 대안)
+
+**Actionable Steps**:
+1. 응답 형식 확인: *JSON 객체*면 Zod, *자연어 텍스트*면 이 엔트리의 text guards
+2. 금지 용어 리스트 작성 — system prompt의 "금지 사항" 섹션과 일치
+3. 길이 범위 정의 — 너무 짧으면 실패 감지, 너무 길면 토큰 낭비
+4. 위기/트리거 단어 re-check (도메인에 따라)
+5. 가드 실패 시 전략 결정: throw (거래) vs SAFE_FALLBACK (콘텐츠) vs 재시도 (내부 시스템)
+6. `logger.warn`으로 가시화 + 클라이언트 플래그 (`{ guarded: true }`)
+7. 프로덕션 배포 후 *가드 발동률 모니터링*
+
+**Anti-patterns**:
+- ❌ Zod를 *자연어 응답*에 억지로 씌우기 (형식 불일치)
+- ❌ 가드 실패를 *silent*하게 숨김 (측정 불가)
+- ❌ 모든 도메인에 *같은 fail 전략* (throw vs fallback은 도메인별)
+- ❌ 환각 응답을 *그대로 노출* (어떤 fail 전략이든 환각 노출 금지는 공통)
+- ❌ 금지 용어 리스트를 *system prompt*와 분리 (일관성 없음)
+
+## 자기 점검
+
+1. 내 AI 엔드포인트의 응답 형식은 *JSON* 인가 *자연어 텍스트* 인가?
+2. 자연어 응답에 *길이 + 금지 용어 + 위기 재검증* 중 몇 개가 적용돼 있는가?
+3. 가드 실패 시 *어떤 전략* (throw / fallback / retry)을 쓰는가? 도메인에 적합한가?
+4. 가드 발동률을 *측정*하고 있는가? 실제로 얼마나 자주 발동하는가?
+5. (열린 질문) *system prompt의 금지 사항*과 *코드의 가드 리스트*를 *단일 source*에서 유지할 방법이 있는가?
+
+## 출처
+
+- [Mino777/mino-tarosaju#5](https://github.com/Mino777/mino-tarosaju/pull/5) — 이 사이클 PR
+- [AI 출력 Zod 검증 5 Layer](/wiki/harness-engineering/ai-output-zod-validation-pattern) — JSON 응답용 원 패턴
+- [Journal 006](/wiki/harness-engineering/harness-journal-006-tarosaju-anthropic-hardening) — tarosaju Anthropic wrapper 이식 (callAnthropic 이 엔트리의 호출 지점)
+
+### 검증 메모
+
+- "응답이 자연어이므로 Zod 부적합"이라는 판단은 fortune/ai/route.ts와 tarot-chat/route.ts를 직접 읽은 결과
+- 금지 용어 리스트는 system prompt의 "금지 사항" 섹션에서 직접 인용한 키워드 기반. 완전 일치는 아니며 *대표 키워드*만
+- 가드 발동률은 *측정 시작 시점*. 초기 데이터는 없음.
+- `SAFE_FALLBACK.fortune`과 `SAFE_FALLBACK.tarotChat` 문구는 *직접 작성*. 도메인 톤에 맞게 조정 가능.
