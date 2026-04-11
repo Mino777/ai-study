@@ -193,6 +193,35 @@ async function tracedCall(fn: Function, metadata: TraceMetadata) {
 5. 관측: GitHub Actions 로그 + PR 생성
 ```
 
+## For AI Agents
+
+**Trigger**: AI 호출 코드를 새로 작성하거나 기존 코드가 *단순 API 호출*에 머물러 있을 때
+
+**Prerequisites**:
+- [AI Agent Start Here](/wiki/harness-engineering/ai-agent-start-here)
+
+**Actionable Steps (5 계층 하네스 구축)**:
+1. **입력 계층** — Zod 스키마로 입력 검증 + 프롬프트 인젝션 감지 + 의도 분류 라우팅
+2. **컨텍스트 조립** — vectorSearch + chat history + domain rules 병렬 수집 후 `buildPrompt()`
+3. **LLM 호출 계층** — timeout (60s) + retry (2회 지수 백오프) + 폴백 모델 (AI 호출 패턴 엔트리 참조)
+4. **출력 계층** — `safeJsonParse` → Zod schema.parse → 범위 검증 → 콘텐츠 필터 (5 layer, Zod 엔트리 참조)
+5. **관측 계층** — tracer.startSpan + 토큰 수 + latency + 에러 기록
+
+각 계층은 *독립 함수*로 분리해서 테스트 가능하게. 한 계층의 실패가 다른 계층에 전파되지 않게.
+
+**Anti-patterns**:
+- ❌ LLM API를 *직접 호출* (wrapper 없이). timeout 없으면 무한 대기, 폴백 없으면 SPOF
+- ❌ 입력 검증만 있고 *출력 검증* 없음 (환각이 그대로 통과)
+- ❌ Circuit Breaker 없이 retry만 — 실패한 서비스에 더 많은 트래픽
+- ❌ 관측 계층 생략 — 에러가 *어디서* 발생하는지 모름
+- ❌ maxTokens 기본값 4096 그대로 두기 (비용 낭비)
+
+**관련 실전 엔트리**:
+- [AI 호출 패턴 — Circuit Breaker / 폴백 / 캐싱](/wiki/harness-engineering/ai-call-patterns-circuit-breaker-fallback)
+- [AI 출력 Zod 검증 5 Layer](/wiki/harness-engineering/ai-output-zod-validation-pattern)
+
+---
+
 ## 자기 점검
 
 1. 내 AI 프로젝트에서 LLM 호출 실패 시 사용자에게 어떤 경험을 제공하는가?
