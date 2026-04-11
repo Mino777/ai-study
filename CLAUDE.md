@@ -145,6 +145,7 @@ Key routing rules:
 - 작업 완료, 스프린트 정리, 회고 → invoke compound
 - 자동 스프린트, 풀 자동 개발 루프 → invoke autoceo
 - 외부 URL(유튜브/블로그/논문/스레드) 정리, 학습 엔트리로 가공 → invoke ingest
+- 새 작업 시작, 안전한 브랜치 분기 (squash merge 함정 회피) → invoke wt-branch
 
 <!-- rtk-instructions v2 -->
 # RTK (Rust Token Killer) - Token-Optimized Commands
