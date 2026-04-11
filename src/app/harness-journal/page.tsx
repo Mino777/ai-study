@@ -4,7 +4,7 @@ import { getManifest } from "@/lib/content";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Harness Journal — Mino's AI Study Wiki",
+  title: "Harness Journal",
   description:
     "두 프로젝트의 AI 운영 환경을 한 사이클씩 개선하고 박제하는 콘텐츠 시리즈. AI가 안전하게 날뛸 수 있는 환경을 만드는 일지.",
 };

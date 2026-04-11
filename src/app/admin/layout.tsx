@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Admin — Mino's AI Study Wiki",
+  title: "Admin",
   robots: "noindex, nofollow",
 };
 

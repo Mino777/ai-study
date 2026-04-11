@@ -4,7 +4,7 @@ import { CATEGORIES, CATEGORY_LABELS, CATEGORY_COLORS } from "@/lib/schema";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Wiki — Mino's AI Study Wiki",
+  title: "Wiki",
   description: "AI 하네스 엔지니어링 위키 엔트리 전체 목록",
 };
 

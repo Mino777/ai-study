@@ -121,13 +121,19 @@ export function KnowledgeGraph({ nodes, edges }: KnowledgeGraphProps) {
 
   const nodeCanvasObject = useCallback(
     (node: GraphNode & { x: number; y: number }, ctx: CanvasRenderingContext2D, globalScale: number) => {
+      // Guard: force simulation의 초기 tick에서 x/y가 NaN일 수 있음.
+      // createRadialGradient는 non-finite 값에 명시적으로 throw하므로 early return 필수.
+      // (단순 ctx.arc는 NaN을 조용히 무시하지만 gradient는 아님)
+      if (!Number.isFinite(node.x) || !Number.isFinite(node.y)) return;
+
       const color = CATEGORY_COLORS[node.category] || "#6b6b80";
       const hovered = hoveredNodeRef.current;
       const isHovered = hovered?.id === node.id;
       const isHighlighted = highlightedRef.current.size > 0 && highlightedRef.current.has(node.id);
       const isDimmed = highlightedRef.current.size > 0 && !isHighlighted && !isHovered;
       const isDangling = node.confidence === 0;
-      const baseSize = isDangling ? 3 : 4 + node.confidence * 1.2;
+      const rawBase = isDangling ? 3 : 4 + (node.confidence || 0) * 1.2;
+      const baseSize = Number.isFinite(rawBase) && rawBase > 0 ? rawBase : 4;
       const size = isHovered || isHighlighted ? baseSize * 1.5 : baseSize;
 
       const opacity = isDimmed ? 0.15 : 1;
@@ -219,6 +225,7 @@ export function KnowledgeGraph({ nodes, edges }: KnowledgeGraphProps) {
 
   const nodePointerAreaPaint = useCallback(
     (node: { x: number; y: number; confidence?: number }, color: string, ctx: CanvasRenderingContext2D) => {
+      if (!Number.isFinite(node.x) || !Number.isFinite(node.y)) return;
       const confidence = (node as GraphNode).confidence ?? 0;
       const size = confidence === 0 ? 3 : 4 + confidence * 1.2;
       ctx.beginPath();
