@@ -1,0 +1,204 @@
+---
+title: "Skill 시스템 도입 — 슬래시 커맨드 vs Skill, 어느 것을 언제 쓰는가"
+category: harness-engineering
+date: "2026-04-12"
+tags: [harness-engineering, claude-code, slash-command, skills, ai-ops, transferable-pattern]
+confidence: 3
+connections:
+  - harness-engineering/harness-journal-000-baseline
+  - harness-engineering/harness-journal-004-wt-branch-command
+  - harness-engineering/compound-engineering-philosophy
+status: complete
+description: "Claude Code의 .claude/skills/ 디렉터리는 양쪽 프로젝트 모두 미활용. 슬래시 커맨드와 Skill의 차이, 어떤 작업이 어느 것에 적합한지, 도입 가이드. Journal 000 갭 #8의 회피 메커니즘 정의."
+type: entry
+quiz:
+  - question: "Claude Code에서 *슬래시 커맨드*와 *Skill*의 본질적 차이는?"
+    choices:
+      - "슬래시 커맨드는 사용자가 호출, Skill은 자동으로 실행"
+      - "슬래시 커맨드는 *명시적 호출이 필요한 워크플로*(사용자/AI가 의도를 가진 작업), Skill은 *AI가 작업 맥락에 따라 자동 매칭하는 작은 능력 단위*. 슬래시 커맨드가 *동사*라면 Skill은 *조사할 수 있는 명사*"
+      - "슬래시 커맨드는 markdown, Skill은 JSON"
+      - "슬래시 커맨드는 프로젝트별, Skill은 전역"
+    answer: 1
+    explanation: "슬래시 커맨드는 *호출 의도*가 명확한 단위 — `/compound`, `/wt-branch`, `/cost-check` 같은 워크플로. Skill은 더 작은 단위로, AI가 *작업 종류에 따라 자동으로 가져다 쓰는* 능력. 예: \"테스트 실패 분석\" 작업 시 적절한 Skill이 자동 매칭. 슬래시 커맨드 = 사용자가 부르는 도구함, Skill = AI가 사용하는 손."
+  - question: "양쪽 프로젝트(mino-moneyflow, mino-tarosaju)에 *.claude/skills/ 디렉터리가 없는* 것이 *우연이 아닌* 이유는?"
+    choices:
+      - "Claude Code가 Skill을 지원하지 않기 때문"
+      - "두 프로젝트가 작아서 Skill이 필요 없기 때문"
+      - "*슬래시 커맨드 2개(/compound, /autoceo)*로 시작해서 점점 그 안에 모든 워크플로를 박는 패턴이 굳어졌기 때문. 작은 단위를 *분리*할 필요를 느끼기 전에 *통합 워크플로*에 익숙해짐. 이게 미활용의 경로 의존성"
+      - "Skill은 GPT 전용 기능이기 때문"
+    answer: 2
+    explanation: "초기에 슬래시 커맨드로 시작하면 *모든 자동화를 슬래시 커맨드에 박는* 습관이 생긴다. /compound에 회고+솔루션+CHANGELOG+메모리 4가지가 다 들어간 게 그 예. 작은 재사용 단위로 분리하는 *비용*이 통합된 워크플로의 *익숙함*보다 커 보인다. 이게 *경로 의존성* — 시작점이 그 후 모든 결정을 좁힌다."
+  - question: "Skill 도입의 *첫 한 가지*로 가장 좋은 후보는?"
+    choices:
+      - "/compound을 쪼개서 4개 Skill로 만들기"
+      - "*다른 워크플로에서 자주 재사용되는 작은 단위* — 예: \"git status 깨끗 확인\", \"TypeScript 에러 분류\", \"PR 코멘트 작성\" 같은 것. 슬래시 커맨드를 쪼개기보다 *새 작은 능력*을 추가하는 것이 진입 비용이 낮음"
+      - "모든 슬래시 커맨드를 Skill로 변환"
+      - "tarosaju 전용 도메인 Skill (사주/타로 분석)"
+    answer: 1
+    explanation: "기존 슬래시 커맨드를 쪼개는 건 *작동하는 것을 깨는* 작업이라 위험. 새 작은 능력을 *0에서* 추가하는 게 진입 비용 압도적으로 낮음. \"git status 깨끗 확인\" 같은 게 첫 후보 — 모든 워크플로의 시작에서 재사용되는 단위."
+---
+
+## 갭 (현시점)
+
+[Journal 000 베이스라인](/wiki/harness-engineering/harness-journal-000-baseline)에서 발견된 **공통 갭 #8**:
+
+> `.claude/skills/` 디렉터리 미활용 — 양쪽 모두 슬래시 커맨드 2개(`/compound`, `/autoceo`)만. *작은 재사용 단위*인 skill 형식 미사용.
+
+이 글은 양쪽 미적용 상태에서 *제안 + 도입 가이드*. Skill은 슬래시 커맨드보다 진입 비용이 낮은 *작은 능력 단위*인데, 양쪽 프로젝트 모두 *경로 의존성*으로 미사용 상태.
+
+## 슬래시 커맨드 vs Skill — 본질적 차이
+
+| 속성 | 슬래시 커맨드 | Skill |
+|---|---|---|
+| **호출 방식** | 사용자/AI가 *명시적*으로 호출 (`/compound`) | AI가 *작업 맥락*에 자동 매칭 |
+| **단위 크기** | 큰 워크플로 (다단계, 여러 도구) | 작은 능력 (한 가지 작업) |
+| **비유** | *동사* — "이 작업 해줘" | *조사할 수 있는 명사* — "이 능력이 있다" |
+| **재사용** | 다른 슬래시 커맨드 안에서 호출 *어려움* | 다른 작업의 *부품*으로 자연스럽게 |
+| **AI 의도성** | 사용자가 *의도*를 가지고 호출 | AI가 *맥락*에서 자동 발견 |
+| **파일** | `.claude/commands/<name>.md` | `.claude/skills/<name>/SKILL.md` |
+| **메타데이터** | 가벼움 (제목 + 본문) | 풍부함 (description, allowed-tools, examples) |
+
+### 한 줄로 정리
+
+> 슬래시 커맨드 = *사용자가 부르는 도구함*, Skill = *AI가 사용하는 손*
+
+`/compound`처럼 *사용자가 의도해서 호출하는 것*은 슬래시 커맨드. *AI가 작업하다가 자동으로 가져다 쓰는 능력*은 Skill.
+
+## 두 시스템의 적합한 작업 매핑
+
+| 작업 종류 | 어디에 적합 | 이유 |
+|---|---|---|
+| 매 스프린트 후 회고 박제 (`/compound`) | 슬래시 커맨드 | 사용자가 의도, 큰 워크플로 |
+| 새 작업 시 worktree 분기 (`/wt-branch`) | 슬래시 커맨드 | 사용자가 *명시적으로* 부름 |
+| 외부 URL 학습 정리 (`/ingest`) | 슬래시 커맨드 | 사용자가 의도 + 다단계 |
+| 자동 스프린트 (`/autoceo`) | 슬래시 커맨드 | 사용자가 부름, 매우 큰 워크플로 |
+| **git status 깨끗 확인** | **Skill** | AI가 *모든 작업 시작 시* 자동 호출 |
+| **TypeScript 에러 분류** | **Skill** | 빌드 fail 시 AI가 자동 호출 |
+| **PR 코멘트 작성** | **Skill** | PR 작업 중 AI가 자동 |
+| **rate limit 헤더 파싱** | **Skill** | API 응답 처리 중 AI가 자동 |
+| **MDX 문법 검증** | **Skill** | 콘텐츠 작성 중 AI가 자동 |
+
+좋은 휴리스틱: *사용자가 매번 의도해서 호출하는가, AI가 작업 맥락에서 자연스럽게 가져다 쓰는가*. 후자라면 Skill.
+
+## 양쪽 프로젝트 도입 가이드 — 첫 한 가지
+
+### Skill: `git-status-clean-check`
+
+**왜 이게 첫 후보인가**:
+- 모든 작업의 *맨 처음 단계*에 필요
+- *여러 슬래시 커맨드*에서 재사용 (`/compound`, `/wt-branch`, 새 작업 시작 등)
+- 단순 동작 (한 가지 작업)
+- 양쪽 프로젝트에 *동일하게* 적용 가능
+
+### 디렉터리 + 파일
+
+```
+.claude/skills/git-status-clean-check/
+└── SKILL.md
+```
+
+### `SKILL.md` 형식
+
+```markdown
+---
+name: git-status-clean-check
+description: Verify git working tree is clean before starting new work. Returns the status, blocks the workflow if there are uncommitted changes that aren't from the current task.
+allowed-tools: Bash
+---
+
+# Git Status Clean Check
+
+Use this skill at the start of any new git-touching task.
+
+## When to invoke
+
+- Before creating a new branch
+- Before running /wt-branch
+- Before /compound (user expects clean state)
+- Before any rebase or force-push
+
+## Steps
+
+1. Run `git status --short` to check working tree state
+2. Classify the result:
+   - **Clean** (no output): proceed
+   - **Stale changes** (modified files unrelated to current task): warn user, ask if proceed
+   - **Untracked files** (might be from another session): list them, ask if include
+3. Return one of: `clean`, `stale`, `untracked`, `mixed`
+
+## Output format
+
+\`\`\`
+✅ git working tree clean — safe to proceed
+\`\`\`
+
+or
+
+\`\`\`
+⚠️ git working tree has changes:
+  M src/lib/foo.ts
+  ?? src/lib/bar.ts
+Are these from the current task? (y/n)
+\`\`\`
+
+## Why this exists
+
+Single-developer + AI auto-merge environments often leave stale changes in working tree (worktrees from other sessions, uncommitted work). Touching them by accident creates unrelated commits or loses work. This skill makes "clean state confirmation" a habit, not a memory.
+```
+
+### 적용 step (양쪽 프로젝트 동일)
+
+1. 양쪽 프로젝트에 `.claude/skills/git-status-clean-check/SKILL.md` 신설
+2. `AI-AGENT-GUIDE.md`에 *"새 작업 시작 시 항상 이 skill을 호출"* 한 줄 추가
+3. 다음 새 작업에서 *AI가 자동으로 호출하는지* 확인 (dogfooding)
+4. 결과를 다음 Harness Journal 사이클에 박제
+
+## 다음 후보 Skill (도입 큐)
+
+`git-status-clean-check` 다음에 만들 만한 작은 능력들. 각각 *작은 단위*이고 *여러 슬래시 커맨드에서 재사용*되는 것:
+
+| Skill 후보 | 무엇을 하는가 | 어디서 호출 |
+|---|---|---|
+| `typescript-error-classify` | tsc 출력을 파싱해서 에러를 카테고리(missing import, type mismatch, etc)로 분류 | 빌드 fail 시 |
+| `mdx-frontmatter-validate` | MDX frontmatter가 zod 스키마에 맞는지 확인 | `/ingest`, `/compound` 솔루션 작성 시 |
+| `pr-description-template` | 변경 파일 목록 + 커밋 메시지로 PR 본문 자동 생성 | PR 생성 시 |
+| `vercel-deploy-status` | Vercel 최근 배포 상태 + URL 확인 | `/compound` 끝, 배포 검증 |
+| `rate-limit-header-parse` | Anthropic/Gemini/OpenAI rate limit 헤더 파싱 + 다음 호출 가능 시간 계산 | 429 에러 처리 |
+| `docs-solution-find` | docs/solutions/에서 키워드로 기존 솔루션 검색 | 새 사고 발생 시 |
+
+## 부작용 검토
+
+- **Skill 발견 비용**: AI가 매 작업 시작 시 *어떤 skill이 있는지* 알아야 함. 너무 많아지면 발견 비용 증가
+- **유지보수**: skill이 늘어날수록 *의미 중복*이나 *오래된 skill* 정리 필요
+- **테스트**: skill은 markdown이라 unit test 어려움. 동작은 *호출 후 결과*로만 검증
+
+## 자기 점검
+
+1. 내가 *AI에게 매 세션 반복적으로 시키는 작은 작업*은 무엇인가? (이게 첫 Skill 후보)
+2. *슬래시 커맨드 안에 박혀 있는 단계 중* 다른 워크플로에서도 재사용되는 것은? (분리 후보)
+3. Skill을 도입한 후 *몇 주 후* 얼마나 자주 자동 매칭되는가? (사용 빈도 측정)
+4. (열린 질문) Skill과 슬래시 커맨드의 경계가 *애매한 작업*은? (예: `/cost-check`은 어느 쪽인가?)
+
+### 실습 과제
+
+자신의 .claude/ 디렉터리에:
+
+1. `.claude/skills/git-status-clean-check/SKILL.md` 신설 (위 형식 그대로)
+2. AI-AGENT-GUIDE.md에 *"새 작업 시작 시 호출"* 한 줄 추가
+3. 다음 새 작업 시 AI가 *자동으로* 이 skill을 가져다 쓰는지 관찰
+4. 작동하면 *다음 작은 능력*을 추가 (위 큐 참조)
+
+## 출처
+
+이 엔트리는 *제안* — 양쪽 프로젝트 모두 미적용 상태. 다음 사이클의 입력.
+
+- Claude Code Skill 시스템 공식 형식 (`.claude/skills/<name>/SKILL.md` + frontmatter)
+- 양쪽 프로젝트 audit ([Harness Journal 000](/wiki/harness-engineering/harness-journal-000-baseline)) 에서 *.claude/skills/ 디렉터리 부재* 직접 확인
+- 슬래시 커맨드 vs Skill의 비교는 *내가 양쪽을 운영해본 경험*에 기반한 분석
+
+### 검증 메모
+
+- 양쪽 프로젝트의 `.claude/skills/` 부재는 [Journal 000 audit 보고서](/wiki/harness-engineering/harness-journal-000-baseline)에서 직접 확인된 사실
+- SKILL.md 형식은 Claude Code의 표준 frontmatter 패턴 (name, description, allowed-tools)
+- 다음 후보 Skill 6가지는 *제안*이며, 실제 작동 여부는 도입 후 측정
+- "Skill = AI가 사용하는 손" 같은 비유는 *내 해석*이며 공식 정의가 아님
