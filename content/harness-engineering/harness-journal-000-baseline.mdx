@@ -177,6 +177,60 @@ flowchart LR
 
 J0의 큐는 *살아있다*. 새 사이클이 끝날 때마다 큐가 갱신되고, 다음 Journal이 그 큐의 첫 항목을 받는다.
 
+## 갱신 로그
+
+베이스라인은 *살아있는 문서*다. 시리즈가 진행되며 발견된 새 갭과 회피 메커니즘 도입 상황을 여기에 누적한다. 원본 갭 8개와 큐 정의는 *위에 그대로 보존*하고, 새 발견은 이 섹션에 시간순으로 박는다.
+
+### 2026-04-12 — Journal 001~004 진행 후 갱신
+
+**새 갭 (Journal 003에서 라이브 입증)**
+
+| # | 갭 | 어떻게 보였는가 | 임팩트 |
+|---|---|---|---|
+| 9 | **세션 간 git 상태 동기화 부재** | AI 자동 squash merge 후 *로컬 git 상태와 origin이 갈라짐*. 같은 사고가 한 사이클 안에 두 번 발생([Journal 002 PR #91](/wiki/harness-engineering/harness-journal-002-inline-test-gate), [Journal 003 PR #93](/wiki/harness-engineering/harness-journal-003-squash-merge-trap-pattern)) — 우연이 아닌 시스템 결함 | **매우 높음** — 다중 세션 운영의 가장 큰 차단점 |
+
+이 갭은 *원본 8개 갭 어디에도 들어가지 않는* 새로운 카테고리다. *세션 간 상태 동기화*는 단일 세션 운영에서는 보이지 않다가 *다중 세션 + AI 자동 머지* 환경에서 즉시 드러나는 함정.
+
+**회피 메커니즘 도입 진행 상황**
+
+| 갭 | 회피 메커니즘 | 진행 상황 |
+|---|---|---|
+| #1 CI 머지 전 자동 게이트 | test-gate.yml + ai-review.yml inline test gate | ✅ moneyflow 머지 완료 (Journal 001/002) |
+| #1 CI 머지 전 자동 게이트 | test.yml typecheck job 추가 | 🚧 tarosaju PR #1 머지 대기 (다른 세션 처리 중) |
+| #9 세션 간 git 상태 동기화 | `/wt-branch` 슬래시 커맨드 (행동에 박는 가드) | ⏳ ai-study 정의 완료 (Journal 004), 양쪽 프로젝트 이식 대기 |
+| #2 AI 출력 Zod 검증 | (미시작) | ⏳ Journal 006 이상 |
+| #3 Circuit Breaker 비대칭 | (미시작) | ⏳ moneyflow → tarosaju 이식 후보 |
+| #4 AI API 비용 추적 | (미시작) | ⏳ Journal 007 이상 |
+
+**완료된 사이클 큐**
+
+- Journal 001 — CI 머지 게이트 (라이브 사고 #1: 게이트가 머지를 막지 못함)
+- Journal 002 — inline test gate + dogfooding 성공 (라이브 사고 #2: squash merge 함정)
+- Journal 003 — squash merge 함정의 두 번째 라이브 입증 + 회피 메커니즘 4가지 제안
+- Journal 004 — `/wt-branch` 슬래시 커맨드 정의 + 양쪽 이식 패치 박제
+
+**갱신된 다음 큐** (원본 큐 정의 대비)
+
+| Journal | 원본 정의 | 실제 진행 |
+|---|---|---|
+| 001 | CI 머지 전 자동 게이트 | ✅ 완료 (예상대로) |
+| 002 | strict 승격 | 🔄 *변경* — Journal 001의 라이브 사고로 inline test gate 작업이 *우선*이 됨 |
+| 003 | Anthropic Circuit Breaker tarosaju 이식 | 🔄 *변경* — Journal 002의 부수 사고가 다시 사고를 만들어 squash merge 함정 분석이 *우선* |
+| 004 | AI API 비용 추적 | 🔄 *변경* — Journal 003의 회피 메커니즘 정의가 *우선* |
+| 005 (예정) | AI 출력 Zod 검증 | 🔄 *변경* — 양쪽 프로젝트 wt-branch 이식 + 첫 dogfooding으로 *우선* |
+
+**큐 변경 사실 자체가 메타 메시지**: *추측으로 정의한 큐는 라이브 사고가 매번 다시 정렬한다*. Journal 000의 큐 정의가 *예언*이 아니라 *살아있는 가설*이라는 것을 시리즈가 증명. 베이스라인이 살아있는 문서여야 하는 이유.
+
+**원본 큐의 미진행 항목**
+
+- Anthropic Circuit Breaker tarosaju 이식 (원래 003 후보) — 005 이후로 미뤄짐
+- AI API 비용 추적 (원래 004 후보) — 005 이후로 미뤄짐
+- AI 출력 Zod 검증 (원래 005 후보) — 시점 미정
+
+이 항목들은 *우선순위가 떨어진 것*이 아니라 *라이브 사고가 더 시급한 것을 드러낸 결과*. 큐는 sequential이 아니라 *priority queue*.
+
+---
+
 ## 자기 점검
 
 1. 내가 두 프로젝트를 동시에 운영하는데, *공통 토대*에 깔린 자산은 정확히 무엇인가? (위 5가지 강점을 외울 수 있는가)

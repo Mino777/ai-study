@@ -143,6 +143,34 @@ flowchart LR
 - [ ] **Stage 3에서 머물고 있는지 점검.** 5단계 ladder 기준으로 지금 내 위치는 명확히 Stage 3이다. Stage 4(idea → PR 자동화)로 가려면 무엇이 막혀 있는지 — 환경, 권한, 신뢰, 둘 중 어디인지 — 한 번 자문해 볼 것. autoceo 스킬이 그 다리.
 - [ ] **Compound 단계가 흘려보내는 4곳을 모두 채웠는지 점검.** `docs/solutions/` ✓, `docs/retros/` ✓, CLAUDE.md ✓ — 그러나 "새 에이전트/스킬"은 자동 생성이 아니라 사람이 가끔 만든다. 회고 단계에서 *"이 패턴은 새 스킬로 만들 가치가 있는가?"* 를 체크리스트화할 것.
 
+## 라이브 사이클 — Harness Journal 시리즈로 직접 검증
+
+이 글을 위키에 박은 직후, 위 4단계 루프와 5단계 ladder를 *내 두 프로젝트(mino-moneyflow, mino-tarosaju)에 어떻게 적용할 것인가*를 묻는 [Harness Journal](/harness-journal) 시리즈를 시작했다. 시리즈는 매 사이클 한 가지 명확한 변화 + 한 가지 명확한 메시지로 운영되며, 매 사이클의 사고가 *다음 사이클의 정확한 입력*이 된다는 Compound Engineering의 핵심 메시지를 라이브로 검증한다.
+
+### 시리즈가 입증한 4가지
+
+1. ***"다음 작업이 더 쉬워진다"*의 라이브 증거** — [Journal 001](/wiki/harness-engineering/harness-journal-001-ci-merge-gate)에서 라이브로 발견한 사고("게이트가 머지를 막지 못함")가 [Journal 002](/wiki/harness-engineering/harness-journal-002-inline-test-gate)의 정확한 입력이 됨. 추측으로 큐를 잡지 않고, *사고가 큐를 만든다*.
+2. **각 사이클의 사고가 다음 사이클의 입력이 되는 *체인*** — 002의 부수 사고(squash merge 함정)가 [Journal 003](/wiki/harness-engineering/harness-journal-003-squash-merge-trap-pattern)으로 이어지고, 003의 분석이 [Journal 004](/wiki/harness-engineering/harness-journal-004-wt-branch-command)의 회피 메커니즘 정의로 이어짐. 추측 0, 라이브 100%.
+3. **양쪽 프로젝트가 같은 자산을 *0 변경*으로 이식 가능하면 진짜 복리** — Journal 004의 `/wt-branch` 슬래시 커맨드는 `git rev-parse --show-toplevel`로 project-root를 자동 감지해서, *변경 없이* 양쪽 프로젝트로 이식 가능. 이게 Kieran Klaassen이 말하는 *"다음 작업이 더 쉬워진다"*가 *프로젝트 간*에도 작동한다는 첫 사례.
+4. **베이스라인은 살아있는 문서** — [Journal 000](/wiki/harness-engineering/harness-journal-000-baseline)에서 정의한 큐가 라이브 사고들로 *세 번 재정렬*됨. 큐 정의가 *예언*이 아니라 *살아있는 가설*이라는 것을 시리즈가 증명.
+
+### 4단계 루프가 라이브에서 *비대칭*으로 작동하는 패턴
+
+원문은 4단계가 *균등하게* 작동하는 것처럼 보인다. 그러나 라이브에서는:
+
+- **Plan**: 가벼움 — Journal 시리즈에서 큐는 *직전 회고*가 만든다. plan 문서를 별도로 길게 쓰지 않음.
+- **Work**: 중간 — 한 사이클에 *한 가지 작업*만. inline test gate(60줄), wt-branch 슬래시 커맨드(120줄) 같은 작은 변화.
+- **Review**: 라이브 사고가 대신 — 사람의 review가 아니라 *작업이 만든 사고*가 다음 사이클을 정의. PR #91 충돌, PR #93 충돌이 *살아있는 review*.
+- **Compound**: *가장 큰 비중* — 매 사이클 끝에 ai-study에 Journal 엔트리를 박는 작업이 작업 자체보다 더 길다. 박제가 곧 자산.
+
+이게 [원문이 말하는 4단계](#4단계-루프)의 *내 운영 환경에 맞춘 비대칭 적용*. 원칙은 그대로지만 *비중이 다르다*.
+
+### 살아있는 큐 운영
+
+[Harness Journal 인덱스](/harness-journal)에 모든 에피소드가 *episode 번호 순*으로 노출된다. 새 에피소드는 `harness-journal-NNN-...` slug prefix만 맞으면 자동 인식 — 별도 페이지 수정 없음. 시리즈 자체가 *행동에 박는 가드*다.
+
+---
+
 ## 자기 점검
 
 1. 내가 지난주에 짠 코드 중, "다음에 비슷한 작업을 할 사람을 위한 학습"으로 시스템에 흘려보낸 것은 몇 개인가?
