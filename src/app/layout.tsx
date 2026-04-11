@@ -7,7 +7,7 @@ import "./globals.css";
 const SITE_URL = "https://ai-study-wheat.vercel.app";
 
 export const metadata: Metadata = {
-  title: { default: "AI Study Wiki", template: "%s — AI Study Wiki" },
+  title: { default: "Mino's AI Study Wiki", template: "%s — Mino's AI Study Wiki" },
   description:
     "AI 하네스 엔지니어링 학습 위키 — 프롬프트 엔지니어링, RAG, 에이전트, 파인튜닝",
   metadataBase: new URL(SITE_URL),
@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "ko_KR",
-    siteName: "AI Study Wiki",
+    siteName: "Mino's AI Study Wiki",
     images: [{ url: "/api/og", width: 1200, height: 630 }],
   },
   twitter: { card: "summary_large_image" },
@@ -36,7 +36,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         {/* RSS */}
-        <link rel="alternate" type="application/rss+xml" title="AI Study Wiki" href="/feed.xml" />
+        <link rel="alternate" type="application/rss+xml" title="Mino's AI Study Wiki" href="/feed.xml" />
         {/* Satoshi — display font */}
         <link
           href="https://api.fontshare.com/v2/css?f[]=satoshi@700,900&display=swap"

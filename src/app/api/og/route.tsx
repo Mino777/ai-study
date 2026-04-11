@@ -31,7 +31,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const title = searchParams.get("title") || "AI Study Wiki";
+  const title = searchParams.get("title") || "Mino's AI Study Wiki";
   const category = searchParams.get("category") || "";
   const accentColor = CATEGORY_COLORS[category] || "#3b82f6";
   const categoryLabel = CATEGORY_LABELS[category] || "";
@@ -128,7 +128,7 @@ export async function GET(req: NextRequest) {
           }}
         >
           <div style={{ color: "#6b6b80", fontSize: "22px", fontWeight: 700 }}>
-            AI Study Wiki
+            Mino's AI Study Wiki
           </div>
           <div style={{ color: "#6b6b80", fontSize: "18px" }}>
             ai-study-wheat.vercel.app

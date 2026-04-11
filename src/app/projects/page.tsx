@@ -2,7 +2,7 @@ import { Header } from "@/components/header";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Vibe Coding — AI Study Wiki",
+  title: "Vibe Coding — Mino's AI Study Wiki",
   description: "AI가 자유롭게 달릴 수 있는 환경을 만든다. 코드가 아니라 코드를 만드는 시스템 — Compound / Context / Harness Engineering으로 운영한 두 프로젝트.",
 };
 

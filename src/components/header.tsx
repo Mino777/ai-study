@@ -26,7 +26,7 @@ export function Header({ fixed = false }: { fixed?: boolean }) {
           href="/"
           className="font-display text-lg font-bold tracking-tight text-text hover:text-accent transition-colors"
         >
-          AI Study Wiki
+          Mino&apos;s AI Study Wiki
         </Link>
         <nav aria-label="메인 네비게이션" className="flex items-center gap-1 sm:gap-3">
           {NAV_ITEMS.map((item) => {

@@ -26,7 +26,7 @@ export async function GET() {
   const rss = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>AI Study Wiki</title>
+    <title>Mino&apos;s AI Study Wiki</title>
     <link>${BASE_URL}</link>
     <description>AI 하네스 엔지니어링 학습 위키</description>
     <language>ko</language>

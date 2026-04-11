@@ -169,7 +169,7 @@ export default async function WikiEntryPage({
     description: entry.frontmatter.description,
     datePublished: entry.frontmatter.date,
     author: { "@type": "Person", name: "Jominho" },
-    publisher: { "@type": "Organization", name: "AI Study Wiki" },
+    publisher: { "@type": "Organization", name: "Mino's AI Study Wiki" },
     url: `https://ai-study-wheat.vercel.app/wiki/${slug}`,
     keywords: entry.frontmatter.tags.join(", "),
   };

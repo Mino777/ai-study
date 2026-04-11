@@ -8,7 +8,7 @@ import { SearchDialog } from "@/components/search-dialog";
 
 export const metadata: Metadata = {
   title: "학습 타임라인",
-  description: "날짜별 학습 기록 — 시간순으로 정리된 AI Study Wiki 엔트리",
+  description: "날짜별 학습 기록 — 시간순으로 정리된 Mino's AI Study Wiki 엔트리",
   alternates: { canonical: "/timeline" },
 };
 
