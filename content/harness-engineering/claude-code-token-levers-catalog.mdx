@@ -1,0 +1,426 @@
+---
+title: "Claude Code 토큰 절감 레버 카탈로그 — RTK 이후 다음 15개"
+category: harness-engineering
+date: "2026-04-12"
+tags: [claude-code, token-optimization, cost-reduction, prompt-caching, mcp, subagents, harness-engineering, rtk]
+confidence: 4
+connections:
+  - harness-engineering/ai-api-cost-tracking-pattern
+  - harness-engineering/ai-ops-environment-diagnosis-checklist
+  - harness-engineering/dev-setup-tips-log
+  - harness-engineering/harness-engineering-overview
+status: complete
+description: "RTK가 이미 bash output 레이어(~60-90%)를 덮고 있는 상태에서, 그 위에 곱해서 쌓을 수 있는 15개 토큰 레버를 A(prefix) / B(cache) / C(output) / D(모델 라우팅) / E(thinking) 5개 카테고리로 정리. 공식 문서 + 커뮤니티 실측 + RTK 사용자 관점 우선순위 + 안티패턴 5개."
+type: entry
+quiz:
+  - question: "Claude Code의 *prompt caching*에서 cache write는 base input의 1.25x, cache read는 0.1x다. 이 숫자로 계산한 *breakeven 턴 수*와, 그것이 의미하는 바는?"
+    choices:
+      - "10턴 이상 써야 이득"
+      - "약 0.28턴 — 즉 딱 1번만 hit해도 이득이다. 짧은 세션도 자동 캐시의 혜택을 *항상* 받고 있다는 뜻"
+      - "3턴"
+      - "breakeven 없음 (항상 손해)"
+    answer: 1
+    explanation: "(1.25 - 1) / (1 - 0.1) = 0.278. write 오버헤드가 0.25배이고 read 절감이 0.9배이므로, 1번 미만의 재사용만으로도 이득이 난다. 이 수학이 'cache warmth를 깨지 말라'는 모든 레버의 근거."
+  - question: "`/fast` (Fast mode)로 세션을 돌리면 토큰 비용은?"
+    choices:
+      - "40% 절감"
+      - "20% 절감"
+      - "동일"
+      - "*비쌈* — Opus 4.6 Fast는 일반 Opus보다 단가가 높다. Fast mode는 *속도*를 사는 것이지 *비용*을 줄이는 것이 아니다. 토큰 절약 목적으로 켜면 정반대 효과"
+    answer: 3
+    explanation: "공식 fast-mode 문서에 pricing 표가 명시돼 있다. 이름만 보고 '빠른 = 싼'으로 착각하기 쉬운 전형적 안티패턴. '속도'와 '비용'은 다른 축이다."
+  - question: "MCP 서버 10개 이상을 쓰는 사용자에게 *Tool Search*(deferred tools)가 중요한 이유는?"
+    choices:
+      - "응답 속도 개선"
+      - "각 MCP 툴 정의가 400~800 토큰이고, 이것들이 *매 턴 prefix에 상시 로드*된다 — 50개 툴이면 20~40K 토큰이 대화와 무관하게 상시 점유. Tool Search는 이름만 남기고 스키마는 on-demand fetch로 이 점유를 제거"
+      - "보안 격리"
+      - "모델 선택권 확장"
+    answer: 1
+    explanation: "MCP는 '쓸 때만 비용' 같지만 *툴 정의*는 항상 prefix에 있다. Anthropic이 인용한 수치로 51K → 8.5K (46.9% 감소) 사례가 있다 (issue #13717). MCP 많이 쓰는 사용자에게 가장 큰 단일 레버 중 하나."
+---
+
+## For AI Agents
+
+이 엔트리를 로드한 에이전트는 *사용자의 Claude Code 세션 비용*을 줄이는 방법을 찾고 있다. 3초 요약:
+
+1. **토큰 소비는 3 덩어리 — A(매 턴 반복 prefix) + B(tool output) + C(thinking/응답)**. RTK는 B의 bash 레이어만 덮는다.
+2. **Claude Code는 prompt caching을 *자동*으로 켠다** (cache read = 0.1x, cache write = 1.25x, TTL 5분). 이게 모든 최적화 멘탈 모델의 베이스.
+3. **추가 레버는 15개**, 5 카테고리(A~E)로 분류. RTK 사용자 기준 우선순위는 §6 표 참조.
+4. **안티패턴 5개**(§5)는 *절감인 척*하는 것들 — 특히 `/fast`와 aggressive auto-compact는 역효과.
+5. 먼저 `/cost`, `/context`, `npx ccusage@latest`로 **본인 세션의 어느 덩어리가 가장 큰지** 측정하고 거기부터 공략. 계측 없는 최적화는 신호 없이 쏘는 것.
+
+이 엔트리는 *카탈로그*형이지 *서사*형이 아니다. Harness Journal처럼 1 사이클 narrative를 찾는다면 [비용 추적 Journal 007+008](/wiki/harness-engineering/harness-journal-007-008-ai-cost-tracking)을 먼저 읽어라.
+
+## 문제 재정의 — 토큰 절감은 *예산 배분* 문제
+
+"토큰을 적게 쓰자"는 나이브한 프레임이다. 한 세션에서 소비되는 토큰은 세 덩어리로 쪼개진다:
+
+| 덩어리 | 정체 | RTK 커버? |
+|---|---|---|
+| **A. Prefix (매 턴 반복)** | 시스템 프롬프트 + CLAUDE.md + MCP 툴 정의 + skill 1줄 설명 | ❌ |
+| **B. Tool output** | Bash / Read / Grep / MCP 결과 | ⭕ (bash만) |
+| **C. Thinking + assistant output** | extended thinking + 응답 텍스트 | ❌ |
+
+RTK의 강점은 B의 bash 서브 카테고리에 *정확히 꽂힌* 곱셈 레버라는 점이다. 하지만 RTK만 쓰면 **A, C, 그리고 B의 비-bash 부분은 손을 안 댄 상태**다. 여기가 남은 절감 여지.
+
+### 베이스 라인: 자동 prompt caching을 반드시 이해
+
+Claude Code는 prompt caching을 사용자가 켤 필요 없이 *기본값*으로 적용한다. 핵심 숫자:
+
+- **cache read = base input의 0.1x (90% 할인)**
+- **cache write = base input의 1.25x**
+- **TTL = 5분** (ephemeral)
+- 네이티브 클라이언트에서 **90~96% cache hit rate** 보고
+
+이 숫자의 의미:
+
+- **Breakeven 턴 수 = (1.25 - 1) / (1 - 0.1) ≈ 0.28** — 딱 1번만 hit해도 이득. 짧은 세션도 자동으로 캐시 혜택을 *항상* 받고 있다.
+- 반대로 **prefix가 변하면 캐시 전체 무효화** → 그 턴은 풀 가격 + 1.25x write. 즉 CLAUDE.md를 *활성 세션 중*에 수정하면 손해.
+- **5분 TTL은 체감보다 짧다** — 점심 먹고 돌아오면 prefix 재캐시.
+
+이것이 모든 레버의 우선순위를 결정한다: **prefix를 작게 유지하고, 한 번 세팅한 prefix를 깨지 않는 것**이 첫 번째 목표.
+
+---
+
+## 1. 레버 카탈로그 (15개)
+
+### A. Prefix 다이어트
+
+매 턴 반복되는 덩어리를 줄인다. 캐시 덕분에 한 번만 내면 되지만, *작은 prefix*는 그 한 번도 싸다.
+
+#### A1. CLAUDE.md ≤ 200줄 + skill/rules/@imports 분할
+
+- 공식 권고: [memory docs](https://code.claude.com/docs/en/memory) — "target under 200 lines"
+- 커뮤니티가 관찰한 CLI 런타임 경고는 *40k 문자* 기준이지만 공식 수치는 아님 (issue #2766에서 관찰됨).
+- **분할 전략**:
+  - 워크플로별 상세 지시문(PR 리뷰, DB 마이그레이션 등) → `.claude/skills/`
+  - 파일타입별 지시문 → `.claude/rules/*.md`의 `paths:` frontmatter 스코프
+  - 대형 참조 문서 → `@docs/foo.md` import로 빼내기
+- ⚠️ **극단 다이어트는 역효과** — 핵심 가드레일까지 지우면 Claude가 매 세션 재탐색 → 오히려 토큰 증가. *"삭제"가 아니라 "로딩 시점 분리"*가 정답.
+- **실전 사례**: [Dev Setup Tips 로그](/wiki/harness-engineering/dev-setup-tips-log)의 `mino-moneyflow` 케이스 — 73.9KB → 27.7KB (−62%). 기능 상세를 `docs/FEATURES.md`로 추출.
+
+#### A2. MCP Tool Search (deferred tools)
+
+- **문제**: MCP 툴이 많으면 각 툴 정의(개당 400~800 토큰)가 매 턴 prefix에 상시 로드. **50개 툴 = 20~40K 토큰**이 대화와 무관하게 점유.
+- **해결**: Tool Search는 이름만 컨텍스트에 넣고 스키마는 Claude가 호출할 때 fetch (이 세션에서도 `ToolSearch`로 deferred tool을 로드하는 구조).
+- **공식 수치**: Anthropic 인용 **51K → 8.5K (46.9% 감소)** (issue #13717).
+- **기본값**: Claude Code 네이티브에선 자동 ON. `ANTHROPIC_BASE_URL`이 프록시면 꺼지므로 `ENABLE_TOOL_SEARCH=true` 또는 `auto:5` 명시.
+- ⚠️ **Haiku는 `tool_reference` 블록 미지원** — Haiku 서브에이전트는 이 경로 못 씀. D2/D3과 조합할 때 주의.
+- 출처: [mcp — scale with tool search](https://code.claude.com/docs/en/mcp#scale-with-mcp-tool-search)
+
+#### A3. CLI > MCP 선호 + `/mcp`로 안 쓰는 서버 disable
+
+- `gh`, `aws`, `gcloud`, `sentry-cli` 같은 CLI는 툴 디스크립션 **0 토큰** (Bash 툴로 그냥 실행).
+- 극단 사례: GitHub MCP 하나 켜면 34K → 80K로 튐 (github-mcp-server#1286).
+- 규칙: MCP는 *CLI로 대체 불가능할 때만* (Playwright, 복잡한 브라우저 자동화 등). 나머진 CLI 우선.
+- 출처: [costs — reduce MCP server overhead](https://code.claude.com/docs/en/costs)
+
+#### A4. `includeGitInstructions: false`
+
+- `settings.json`에 `"includeGitInstructions": false` 또는 env `CLAUDE_CODE_DISABLE_GIT_INSTRUCTIONS=1`.
+- 시스템 프롬프트에 내장된 git 커밋/PR 워크플로 지시문 제거. 자체 git skill 있을 때만.
+- 절감 폭 low (수백 토큰) 하지만 *매 턴 반복*이라 누적.
+- 출처: [settings docs](https://code.claude.com/docs/en/settings)
+
+#### A5. `.claudeignore`
+
+- `.gitignore` 문법으로 `node_modules/`, `dist/`, `*.lock`, 벤더 디렉터리 차단.
+- Claude가 탐색 시 *아예 안 읽음* → RTK가 output side를 덮는다면 이건 **input 탐색을 차단**하는 상보 레버.
+- 베이스라인 중 베이스라인. 안 해놨다면 지금 바로.
+
+---
+
+### B. Cache warmth 유지
+
+자동 캐시를 *깨지 않는* 것만으로 90% 할인을 받는다.
+
+#### B1. 5분 TTL 존중: 리듬 관리
+
+- 5분 이상 쉴 거면 `/clear`로 유지하는 것보다 **세션을 닫고 나중에 새로 열기**가 유리할 때가 있다 (write는 이미 만료).
+- 반대로 연속 작업 중엔 *5분 안에 다음 턴*을 때리는 리듬이 최적.
+- 점심/회의 전엔 세션을 명시적으로 종료하고, 재개 시 새 세션 시작.
+
+#### B2. 활성 세션 중 CLAUDE.md·툴 정의 수정 금지
+
+- Prefix가 변하면 캐시 *전부* 무효화 + 1.25x write 오버헤드.
+- 고쳐야 하면: 수정 → `/clear` 또는 세션 종료 → 새 세션에서 캐시 재수립.
+- MCP 서버 add/remove도 동일 규칙. 세션 시작 *전*에 정돈.
+
+#### B3. ccusage로 cache read/write 비율 관측
+
+```bash
+npx ccusage@latest
+```
+
+- 일/월/세션/모델별 토큰 + **cache read를 분리 표시**.
+- RTK `gain`(명령별 절감)과 역할 다름 — 둘 다 돌릴 가치.
+- MCP 서버 모드도 있어서 Claude Code에서 직접 조회 가능.
+- 출처: [ryoppippi/ccusage](https://github.com/ryoppippi/ccusage)
+
+---
+
+### C. Output pipeline 필터 — RTK의 빈틈 메우기
+
+RTK가 bash를 덮으니, 남은 Read/MCP/대형 파일 쪽을 공략.
+
+#### C1. PreToolUse 훅을 Read/MCP로 확장
+
+- RTK 패턴의 *공식 문서화 버전*이 존재: [costs — offload to hooks](https://code.claude.com/docs/en/costs).
+- PreToolUse 훅은 v2.0.10부터 **tool input 수정**까지 가능 → Bash 명령을 투명하게 `cmd | head -200`으로 재작성.
+- **확장 여지**: RTK가 이미 bash를 덮으니, 훅은
+  - **Read 큰 파일 → 자동 청크/요약**
+  - **MCP 출력 → 후처리 필터**
+  쪽으로 방향을 잡는다.
+- 출처: [hooks docs](https://code.claude.com/docs/en/hooks), [disler/claude-code-hooks-mastery](https://github.com/disler/claude-code-hooks-mastery)
+
+#### C2. `MAX_MCP_OUTPUT_TOKENS=5000`
+
+- 공식 env var. 기본값 25000, 10K 초과 시 경고만 뜨고 실제 절단은 이 값 기준.
+- 5K로 낮추면 MCP 서버가 verbose dump를 할 때도 자동 절단.
+- 트레이드오프: Claude가 잘린 중간 부분을 다시 요청할 수 있음 → 너무 낮추면 재호출 비용이 오히려 증가. 5K가 대략적 스위트스팟.
+
+#### C3. Read/Grep 내장 옵션 활용
+
+Read 툴과 Grep 툴 자체가 token-aware 옵션을 갖고 있다. Claude에게 CLAUDE.md에서 명시:
+
+```markdown
+## Token hygiene
+
+- 큰 파일은 `Read`의 `offset`/`limit`으로 청크 단위로 읽는다.
+- `Grep`은 일단 `output_mode: "files_with_matches"`(디폴트)로 범위 좁히고, 필요할 때만 `content` 모드로 전환.
+- `head_limit`을 적극 사용. `glob`/`type` 사전 필터로 검색 범위를 좁힌다.
+```
+
+트레이드오프 없음. 공식 권장 사용법인데 *안 쓰는 사람*이 많음.
+
+---
+
+### D. 모델 라우팅 — 싼 모델에 싼 일 주기
+
+싼 모델은 토큰 단가가 완전히 다르다. Haiku는 Opus 대비 약 **15x 저렴**하다.
+
+#### D1. `/model haiku` + Plan 모드 트릭 (Boris Cherny 공유)
+
+- `/model haiku` → `Shift+Tab Shift+Tab` (Plan 모드 진입).
+- Claude Code가 **planning은 Sonnet, execution은 Haiku**로 자동 라우팅.
+- Anthropic 직원(Boris Cherny)이 Threads에서 직접 공유한 **undocumented 패턴**.
+- Haiku 4.5는 **SWE-bench Verified 73.3%** (Sonnet 4 수준).
+- ⚠️ 복잡한 리팩토링/아키텍처 결정에선 품질↓ — *routine edit/반복 작업*에만.
+- 출처: [Boris Cherny on Threads](https://www.threads.com/@boris_cherny/post/DP4Jk2HkUUP/), [Anthropic Haiku 4.5 announcement](https://www.anthropic.com/news/claude-haiku-4-5)
+
+#### D2. 서브에이전트 frontmatter `model: haiku`
+
+```markdown
+---
+name: log-scanner
+description: 로그 파일에서 에러 패턴 추출
+model: haiku
+---
+```
+
+- `~/.claude/agents/*.md`에 `model: haiku` 명시 → 해당 서브에이전트 호출 전부 Haiku로.
+- 적합한 작업: 로그 파싱, 테스트 실행, 단순 grep류, 파일 리스팅.
+- 관련: `CLAUDE_CODE_SUBAGENT_MODEL=haiku`로 기본 모델 강제 가능.
+- 출처: [sub-agents — choose a model](https://code.claude.com/docs/en/sub-agents#choose-a-model)
+
+#### D3. Explore subagent로 탐색 격리
+
+- 빌트인 Explore는 **Haiku + read-only + fresh context**로 실행.
+- 탐색 결과 수만 토큰이 **메인 컨텍스트에 안 쌓임** → 요약만 반환.
+- **토큰 수학**: subagent는 새 컨텍스트라 CLAUDE.md·tool 정의를 *재로드*(초기 비용 있음). 하지만 탐색 결과가 크면 **3~4 파일 이상 탐색부터 이득**. 짧은 탐색은 직접이 더 쌈.
+- Plan 모드에서는 자동으로 Explore를 스폰하는 경우가 많음.
+
+#### D4. 환경 변수 모델 고정
+
+```bash
+# ⚠️ 과거 이름 (deprecated)
+# export ANTHROPIC_SMALL_FAST_MODEL=...
+
+# ✅ 현재 이름
+export ANTHROPIC_DEFAULT_HAIKU_MODEL=claude-haiku-4-5-20251001
+
+# 서브에이전트 기본 모델
+export CLAUDE_CODE_SUBAGENT_MODEL=haiku
+```
+
+- **주의**: `ANTHROPIC_SMALL_FAST_MODEL`은 deprecated. 새 이름으로 교체 필수 (issue #27665).
+- 관련 env var: `DISABLE_NON_ESSENTIAL_MODEL_CALLS=1`로 suggestion/tip 같은 백그라운드 모델 호출 차단.
+
+---
+
+### E. Thinking / 컨텍스트 관리
+
+#### E1. Extended thinking 예산 제어
+
+```bash
+export MAX_THINKING_TOKENS=8000
+```
+
+- 또는 `/effort low` (Sonnet 4.6 / Opus 4.6), `/config`에서 토글.
+- thinking은 **output 토큰으로 과금**. 기본값은 수만 토큰까지 허용.
+- ⚠️ **어려운 문제에서 thinking 끄면 재시도 루프 → 결국 더 씀**. 아키텍처 결정엔 high 유지, 반복 작업에만 낮춰라.
+- 출처: [costs — adjust extended thinking](https://code.claude.com/docs/en/costs)
+
+#### E2. `/compact <지시문>` 타겟 압축
+
+- 그냥 `/compact`가 아니라 지시문을 주어라:
+
+```
+/compact Focus on API changes only
+/compact Keep only the decision log, discard exploration
+```
+
+- 요약 품질이 *훨씬* 좋아진다. 70K → 4K (94% 압축) 사례 보고.
+- `Esc Esc` (`/rewind`)로 특정 메시지 지점부터 요약 가능.
+- ⚠️ compact 자체가 LLM 호출 → 너무 자주는 역효과.
+
+#### E3. 무관한 작업 전환 = `/clear` (not `/compact`)
+
+- Prefix는 캐시 덕분에 재로드가 *싸다*. 메시지 히스토리만 버리면 됨.
+- `/compact`는 같은 작업을 계속 이어갈 때.
+- `/clear`는 완전히 다른 작업으로 전환할 때.
+- 관련: `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=50`으로 auto-compact를 일찍 발동시킬 수 있지만, **공격적 설정은 품질 저하** — 권장 안 함.
+
+---
+
+## 2. 안티패턴 — "절감인 척"하는 5가지
+
+### 1) Fast mode (`/fast`)로 절약
+
+- Opus 4.6 Fast는 **$30 / $150 per MTok**로 일반 Opus보다 **비쌈**.
+- Fast mode는 *속도*를 사는 것이지 *비용*을 줄이는 게 아니다.
+- 토큰 절약 목적으로 켜면 정반대 효과.
+- 출처: [fast-mode 문서](https://code.claude.com/docs/en/fast-mode)
+
+### 2) Extended thinking 완전 차단
+
+- 어려운 문제에서 틀린 답 → 재시도 → 결국 더 소비.
+- 특히 Opus 라우팅된 task에서 역효과.
+- 정답: 반복 작업에만 낮추고, 복잡 작업은 high 유지.
+
+### 3) Caveman 모드 (말투 원시인)
+
+- Reddit에서 바이럴한 "원시인 말투" 스킬.
+- 벤치에서 output 61% 감소 보고 — 하지만 **output 토큰은 세션 전체의 5% 미만** (892K in / 12K out 사례).
+- Input이 진짜 문제. Caveman 모드는 코딩에선 설명 부족으로 디버깅 품질까지 하락 → 재시도 → 손해.
+
+### 4) Custom subagent 남용
+
+- "PythonTests" 같은 걸 만들면 main agent가 테스트 컨텍스트를 *잃어*버려 holistic reasoning 불가 → 재진입 반복.
+- Shrivu Shankar (ex-Anthropic): **Task tool의 general-purpose 복제("master-clone")**가 대부분 경우 더 낫다. custom subagent의 context gatekeeping 문제 없이 격리 이득만 취함.
+- 출처: [Shrivu Shankar — How I Use Every Claude Code Feature](https://blog.sshh.io/p/how-i-use-every-claude-code-feature)
+
+### 5) Agent Teams 실험 플래그
+
+- `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` — plan 모드에서 **표준 세션 대비 ~7배** 토큰.
+- subagent(단일 세션 내 격리) ≠ agent team(병렬 세션). 이름이 비슷해서 혼동 주의.
+- 출처: [costs — manage agent team costs](https://code.claude.com/docs/en/costs)
+
+---
+
+## 3. 놀라운 발견
+
+- **Claude.ai 웹계정 스킬 무음 주입** (issue #39686): 로컬 CLI 세션에 `claude.ai`/Cowork 스킬이 몰래 주입되어 **세션당 ~6K 토큰 낭비**. opt-out 방법 현재 없음. 사각지대.
+- **Opus Max 유저의 실제 모델 분포** (issue #27665): 17일 실사용 데이터에서 **Opus 93.8%, Haiku 5.2%**. "지능형 자동 라우팅"이 실사용에서는 거의 작동 안 함 → 수동 `/model` 전환이 유일한 실효 수단.
+- **Task tool "master-clone" 패턴이 custom subagent보다 낫다** — 가장 저평가된 기법 중 하나 (Shrivu Shankar).
+- **Cache write 1.25x → 1 hit breakeven**: 짧은 세션도 자동 캐시는 무조건 이득. "긴 세션에만 의미 있다"는 오해 뒤집기.
+
+---
+
+## 4. 계측 — 먼저 재고, 그 다음 공략
+
+계측 없는 최적화는 *신호 없이 쏘는 것*이다. 위 15개 중 어느 것부터 할지는 **본인 세션의 어느 덩어리가 제일 큰지**에 달려 있다.
+
+### 스냅샷 3종
+
+```bash
+# 1. 전체 토큰 breakdown
+npx ccusage@latest               # 세션/일/월/모델별
+rtk gain                          # RTK가 잡은 명령별 절감량
+rtk gain --history                # 명령 히스토리
+
+# 2. 세션 내 실시간
+/cost                             # 현 세션 누적 비용
+/context                          # prefix 점유량 (MCP/skill 분해)
+
+# 3. 레버 적용 전후 비교
+# → CLAUDE.md 다이어트 전후로 첫 턴 input 토큰 체크
+# → MCP Tool Search 켠 직후 /context 비교
+```
+
+### 해석 공식
+
+- **`/context`의 prefix가 크다** → A 카테고리 (A1 CLAUDE.md, A2 MCP Tool Search 우선)
+- **`ccusage`에서 cache read 비율이 낮다** → B 카테고리 (세션 운영 리듬 재검토)
+- **RTK `gain`이 이미 큰데 세션 비용이 여전히 크다** → C·D·E 공략 (훅 확장, 모델 라우팅, thinking 예산)
+
+---
+
+## 5. RTK 사용자 우선순위 (곱셈식)
+
+RTK가 Output side를 이미 잡고 있으므로 **직교하는 레버**를 쌓아야 곱해진다:
+
+| # | 레버 | 즉효성 | 절감 폭 | 카테고리 |
+|---|---|---|---|---|
+| 1 | **A1** CLAUDE.md 다이어트 + skill 분할 | 당장 | mid~high | Prefix |
+| 2 | **A2** MCP Tool Search (MCP 있으면) | 당장 | high | Prefix |
+| 3 | **B1+B2** cache 5분 TTL 의식 + 세션 중 CLAUDE.md 수정 금지 | 당장 | high | Cache |
+| 4 | **D1** `/model haiku` + Plan 모드 (Boris 트릭) | 당장 | high | 모델 |
+| 5 | **D3** Explore subagent로 탐색 격리 | 탐색 많을 때 | mid~high | 모델 |
+| 6 | **C1+C2** 훅을 Read/MCP로 확장 + `MAX_MCP_OUTPUT_TOKENS=5000` | 훅 작성 필요 | mid | Output |
+| 7 | **B3** ccusage 계측 도입 | 당장 | 간접 (관측점 확보) | Cache |
+| 8 | **E2** `/compact <지시>` 습관화 | 당장 | mid | Thinking |
+| ❌ | Fast mode / Caveman / Agent teams | — | **역효과** | (안티) |
+
+1~5번까지만 해도 **30~50% 추가 절감**은 현실적으로 보임. 이 수치는 커뮤니티 체감 기준이지 공식 수치는 아니다 — 반드시 본인 환경에서 ccusage before/after로 검증할 것.
+
+---
+
+## 6. 신뢰 수준 표
+
+| 레버 | 신뢰 수준 |
+|---|---|
+| A1, A2, A3, A5, B2, C1, C2, C3, D2, D3, D4, E1, E2 | **verified** (공식 문서 명시) |
+| A4 (`includeGitInstructions`) | **documented** (settings docs) |
+| B1 (5분 TTL 존중 리듬) | **documented** (TTL은 공식, 리듬 전략은 추론) |
+| B3 (ccusage) | **community verified** (인기 툴) |
+| D1 (Haiku + Plan 모드 자동 라우팅) | **community tip** (Anthropic 직원 Threads 공유, undocumented) |
+| 안티 1·5 | **verified** (공식 pricing/경고) |
+| 안티 3 (Caveman) | **sus for coding** (output 토큰 비중 낮음) |
+| 40k char 경고 | **community observed** (공식 수치는 "200 lines") |
+| "30~50% 추가 절감" 수치 | **speculative** (체감 평균) |
+
+---
+
+## 7. 핵심 한 문장
+
+> **토큰 절감은 "적게 쓰기"가 아니라 "prefix 줄이기 × cache warmth 유지 × 싼 모델 라우팅 × output 필터"의 *곱셈* 문제.** RTK는 마지막 곱에서 이미 ~70%를 가져가고 있다. 나머지 셋을 각각 30~50% 더 긁으면 세션 비용은 원래의 1/3까지 내려갈 여지가 있다.
+
+네 축을 *동시*에 손대야 곱해진다. 한 축만 극단으로 밀면 안티패턴으로 빠진다 (CLAUDE.md 극단 다이어트 → 재탐색 증가, thinking 차단 → 재시도, caveman → 디버깅 품질 저하).
+
+---
+
+## 8. 주요 출처
+
+### Anthropic 공식 문서
+
+- [code.claude.com/docs/en/costs](https://code.claude.com/docs/en/costs) — 메인 레퍼런스
+- [code.claude.com/docs/en/memory](https://code.claude.com/docs/en/memory) — CLAUDE.md, rules, skills
+- [code.claude.com/docs/en/sub-agents](https://code.claude.com/docs/en/sub-agents) — 서브에이전트 + 모델 지정
+- [code.claude.com/docs/en/mcp](https://code.claude.com/docs/en/mcp) — Tool Search, output limits
+- [code.claude.com/docs/en/env-vars](https://code.claude.com/docs/en/env-vars) — env var 전체
+- [code.claude.com/docs/en/context-window](https://code.claude.com/docs/en/context-window) — compaction 동작
+- [code.claude.com/docs/en/hooks](https://code.claude.com/docs/en/hooks) — 훅 API
+- [code.claude.com/docs/en/fast-mode](https://code.claude.com/docs/en/fast-mode) — fast = 비쌈 경고
+
+### 커뮤니티 핵심 레퍼런스
+
+- [Boris Cherny (Anthropic) on Threads](https://www.threads.com/@boris_cherny/post/DP4Jk2HkUUP/) — `/model haiku` + Plan 모드 트릭
+- [Shrivu Shankar — How I Use Every Claude Code Feature](https://blog.sshh.io/p/how-i-use-every-claude-code-feature) — Task tool master-clone
+- [anthropics/claude-code#13717](https://github.com/anthropics/claude-code/issues/13717) — MCP Tool Search 46.9% 절감
+- [anthropics/claude-code#27665](https://github.com/anthropics/claude-code/issues/27665) — Opus 93.8%/Haiku 5.2% 실측
+- [anthropics/claude-code#39686](https://github.com/anthropics/claude-code/issues/39686) — claude.ai 스킬 무음 주입
+- [anthropics/claude-code#2766](https://github.com/anthropics/claude-code/issues/2766) — 40k char 경고 관찰
+- [ryoppippi/ccusage](https://github.com/ryoppippi/ccusage) — 토큰 계측
+- [yamadashy/repomix](https://github.com/yamadashy/repomix) — 코드베이스 압축 (tree-sitter 기반)
+- [disler/claude-code-hooks-mastery](https://github.com/disler/claude-code-hooks-mastery) — 훅 패턴 레퍼런스
