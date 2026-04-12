@@ -423,7 +423,7 @@ cd /Users/jominho/Develop/ai-study && rtk npm run build
 2. ~~**Journal 016**: investment_judge~~ ✅ 완료 (다른 세션 PR #106)
 3. ~~**Journal 017**: devils_advocate + research-debate + risk-debate + portfolio-manager~~ ✅ 완료 (이번 세션)
 
-4. **Journal 018**: Layer 3-4 (retry + instruction augmentation) — `callAI`에 `maxRetries`, validator issues를 instruction에 추가해서 LLM 재요청
+4. ~~**Journal 018**: Layer 3-4 (retry + instruction augmentation)~~ ✅ 완료 (PR #109 인프라 + PR #110 9 에이전트 전환)
 
 ### 🟡 우선순위 중간
 
@@ -455,6 +455,20 @@ cd /Users/jominho/Develop/ai-study && rtk npm run build
 **큐 재정렬**: 큐 1~3번 모두 완료. 다음 최우선: Journal 018 (Layer 3-4 retry + instruction augmentation).
 
 **사고 재발률**: **0회** (이번 세션).
+
+---
+
+### 2026-04-12 (새 세션 계속) — Journal 018 작성 + Layer 3-4 전체 완료
+
+**작업 산출**:
+- `retryWithValidation` + `callAIAndValidate` 인프라 (moneyflow PR #109 자동 머지)
+- 나머지 9 에이전트 `callAIAndValidate` 전환 (moneyflow PR #110 자동 머지 대기)
+- `harness-journal-018-layer3-retry-augmentation.mdx` 신규 + ai-study main push
+- vitest 8 신규 케이스 (retryWithValidation)
+- **5 Layer 중 Layer 1~4 실용적 완성**
+- 사이드바: Harness Journal 서브그룹 분리 (일반 글 먼저 표시)
+
+**큐 상태**: 큐 1~4번 모두 완료. 남은 큐는 중간/낮음 우선순위.
 
 ---
 
