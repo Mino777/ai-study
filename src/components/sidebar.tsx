@@ -32,6 +32,109 @@ function ConfidenceDots({ level }: { level: number }) {
   );
 }
 
+function EntryLink({ entry, pathname }: { entry: SidebarEntry; pathname: string }) {
+  const href = `/wiki/${entry.slug}`;
+  const isActive = pathname === href;
+  return (
+    <li>
+      <Link
+        href={href}
+        className={`flex items-center gap-2 rounded-[var(--radius-sm)] px-2 py-1 text-xs transition-colors ${
+          isActive
+            ? "bg-surface text-text"
+            : "text-muted hover:text-text hover:bg-surface-hover"
+        }`}
+      >
+        <span className="truncate flex-1">{entry.title}</span>
+        <ConfidenceDots level={entry.confidence} />
+      </Link>
+    </li>
+  );
+}
+
+function EntryList({
+  entries,
+  category,
+  pathname,
+}: {
+  entries: SidebarEntry[];
+  category: string;
+  pathname: string;
+}) {
+  // harness-engineering: journal 엔트리를 별도 접이식 서브그룹으로 분리
+  if (category === "harness-engineering") {
+    const journals = entries.filter((e) =>
+      e.slug.includes("harness-journal-")
+    );
+    const others = entries.filter(
+      (e) => !e.slug.includes("harness-journal-")
+    );
+
+    if (journals.length > 0) {
+      return (
+        <div className="ml-3.5 mt-0.5 mb-1">
+          {others.length > 0 && (
+            <ul className="space-y-0.5 mb-1">
+              {others.map((entry) => (
+                <EntryLink key={entry.slug} entry={entry} pathname={pathname} />
+              ))}
+            </ul>
+          )}
+          <JournalSubGroup journals={journals} pathname={pathname} />
+        </div>
+      );
+    }
+  }
+
+  return (
+    <ul className="ml-3.5 mt-0.5 mb-1 space-y-0.5">
+      {entries.map((entry) => (
+        <EntryLink key={entry.slug} entry={entry} pathname={pathname} />
+      ))}
+    </ul>
+  );
+}
+
+function JournalSubGroup({
+  journals,
+  pathname,
+}: {
+  journals: SidebarEntry[];
+  pathname: string;
+}) {
+  const [open, setOpen] = useState(false);
+  // 현재 보고 있는 페이지가 journal이면 자동 펼침
+  const hasActive = journals.some((e) => pathname === `/wiki/${e.slug}`);
+  const isOpen = open || hasActive;
+
+  return (
+    <div>
+      <button
+        onClick={() => setOpen((prev) => !prev)}
+        className="flex w-full items-center gap-2 py-1 text-xs font-medium text-muted hover:text-text transition-colors"
+      >
+        <span className="text-[10px]">📓</span>
+        <span className="flex-1 text-left">Harness Journal</span>
+        <span className="text-[10px] text-muted/70">{journals.length}</span>
+        <svg
+          className={`h-2.5 w-2.5 transition-transform ${isOpen ? "rotate-90" : ""}`}
+          viewBox="0 0 16 16"
+          fill="currentColor"
+        >
+          <path d="M6.22 4.22a.75.75 0 011.06 0l3.25 3.25a.75.75 0 010 1.06l-3.25 3.25a.75.75 0 01-1.06-1.06L8.94 8 6.22 5.28a.75.75 0 010-1.06z" />
+        </svg>
+      </button>
+      {isOpen && (
+        <ul className="ml-3 mt-0.5 space-y-0.5 border-l border-border/40 pl-2">
+          {journals.map((entry) => (
+            <EntryLink key={entry.slug} entry={entry} pathname={pathname} />
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 export function Sidebar({ data }: SidebarProps) {
   const pathname = usePathname();
 
@@ -124,28 +227,11 @@ export function Sidebar({ data }: SidebarProps) {
                         </button>
 
                         {isCatOpen && entries.length > 0 && (
-                          <ul className="ml-3.5 mt-0.5 mb-1 space-y-0.5">
-                            {entries.map((entry) => {
-                              const href = `/wiki/${entry.slug}`;
-                              const isActive = pathname === href;
-
-                              return (
-                                <li key={entry.slug}>
-                                  <Link
-                                    href={href}
-                                    className={`flex items-center gap-2 rounded-[var(--radius-sm)] px-2 py-1 text-xs transition-colors ${
-                                      isActive
-                                        ? "bg-surface text-text"
-                                        : "text-muted hover:text-text hover:bg-surface-hover"
-                                    }`}
-                                  >
-                                    <span className="truncate flex-1">{entry.title}</span>
-                                    <ConfidenceDots level={entry.confidence} />
-                                  </Link>
-                                </li>
-                              );
-                            })}
-                          </ul>
+                          <EntryList
+                            entries={entries}
+                            category={category}
+                            pathname={pathname}
+                          />
                         )}
 
                         {isCatOpen && entries.length === 0 && (
