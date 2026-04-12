@@ -2,6 +2,25 @@
 
 모든 주목할 만한 변경사항을 이 파일에 기록합니다.
 
+## [2026-04-12 wave 3] — Journal 017 + 사이드바 서브그룹 + 10/10 에이전트 완료
+
+### Added
+- **Journal 017** — 10/10 에이전트 런타임 검증 완료. devils_advocate(raw output 패턴) + research-debate + risk-debate + portfolio-manager. Zod 3차 재평가 → type guard 최종 확정 (#f568be7)
+- **사이드바 Harness Journal 서브그룹** — harness-engineering 카테고리 내 Journal 17개를 접이식 서브그룹으로 분리. 일반 글 14개가 먼저 보이도록. Journal 페이지에서 자동 펼침 (#52e051f)
+
+### Changed
+- **Journal 트리거 문구 정리** — J012, J015, J017에서 "쭉쭉 진행해줘" 같은 범용 진행 지시 제거. 구체적 요청만 인용하는 기준 확립
+- **NEXT.md 큐 재정렬** — 큐 1~3번(Vercel Pro + J016 + J017) 모두 완료 표시. 다음 최우선: Layer 3-4 retry
+
+### Metrics
+- moneyflow PR: #107 자동 머지 (devils_advocate), #108 자동 머지 (remaining 3 validators)
+- vitest 신규: 40 케이스 (15 + 25), 시리즈 누적 92
+- 에이전트 validator: 5/10 → **10/10** (custom_prompt 제외)
+- 메모리 신규: `feedback_journal_trigger.md`
+- 사이드바 rebase 충돌 1회 해결 (devils_advocate PR → remaining PR 순서 충돌)
+
+---
+
 ## [2026-04-12 wave 2] — UI 개선 + Tokenomics 신설 + Node 24 + Journal 015 + 세션 마무리
 
 ### Added
