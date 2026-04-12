@@ -1,0 +1,148 @@
+---
+title: "Harness Journal 014 — 허브에 자동 머지 이식 + 워커 → 허브 꿀팁 PR 흐름"
+category: harness-engineering
+date: "2026-04-12"
+tags: [harness-journal, harness-engineering, ai-review, ai-study, hub, worker-to-hub, inbound-pr, living-catalog]
+confidence: 5
+connections:
+  - harness-engineering/harness-journal-011-concurrent-session-safety
+  - harness-engineering/harness-journal-002-inline-test-gate
+  - harness-engineering/harness-journal-005-wt-branch-dogfooding-and-transfer
+  - harness-engineering/dev-setup-tips-log
+status: complete
+description: "moneyflow(002) → tarosaju(011) → ai-study(014): ai-review.yml 허브 이식. 워커 세션들이 발견한 환경 팁을 허브(ai-study)로 *inbound PR*로 계속 쏘는 흐름을 인프라 수준에서 박제. 박제 전이성 4회째 + 허브-워커 모델의 양방향 확장."
+type: entry
+quiz:
+  - question: "왜 워커 세션이 *허브에* PR을 쏘는 흐름이 Journal 011의 허브-워커 모델을 *확장*하는가?"
+    choices:
+      - "PR 수가 늘어서"
+      - "Journal 011~013은 *허브가 워커를 분석/작업*하는 단방향이었는데, 이 흐름은 *워커가 허브에 증언을 기록*하는 반대 방향. 양방향이 다 작동해야 허브가 진정한 *지식 저장소*가 된다 — 관찰자만이 아니라 수집자의 역할"
+      - "PR 크기가 작아서"
+      - "관리가 편해서"
+    answer: 1
+    explanation: "단방향 관찰은 허브를 *snapshot 도구*로 만든다. 양방향이면 허브가 *누적되는 살아있는 저장소*가 된다. 워커들이 발견한 자잘한 지식이 허브에 모이면 *박제의 복리 효과*가 한 방향이 아니라 양쪽에서 작동한다."
+  - question: "첫 허브 이식 PR이 moneyflow의 ai-review.yml을 *거의 그대로* 복사한 이유는?"
+    choices:
+      - "시간 절약"
+      - "박제 전이성의 본질은 *검증된 패턴의 복제*다. moneyflow(Journal 002)에서 *이미 검증된* 구조(Find-or-Create → Rebase → Test Gate → Squash → Reset)를 바꿀 이유가 없다. 바꿀 부분은 *Test Gate 내용*(ai-study는 npm test + npm run build, moneyflow는 npx vitest + npm run build)뿐"
+      - "리뷰 편의성"
+      - "디자인 일관성"
+    answer: 1
+    explanation: "이식 사이클은 *재설계*가 아니라 *복제*다. 원본이 이미 여러 사이클 동안 검증됐다면 그 구조를 유지하는 게 사고 재발률을 0으로 유지하는 최단 경로. 바뀌어야 하는 부분만 바꾼다 — 이게 박제 전이성의 엄격한 규칙."
+  - question: "*dev-setup-tips-log*가 Harness Journal 시리즈와 *별도 파일*로 존재하는 이유 (카탈로그형 vs 서사형)는 이 흐름에서 왜 중요한가?"
+    choices:
+      - "파일 수 제한"
+      - "워커 세션이 쏘는 PR은 *1 사이클을 이루지 않는 소형 팁*이다. Journal 포맷(why → what → lesson + quiz + 보통 200~500줄)으로 쓰기엔 과하고, 카탈로그 섹션(증상 → 수정 → 검증 + 30줄)이 적절. 포맷이 맞아야 진입 장벽이 낮아져서 워커가 *실제로* 쏜다"
+      - "Markdown 렌더 성능"
+      - "AI 검색 속도"
+    answer: 1
+    explanation: "포맷의 마찰이 기여 빈도를 결정한다. Journal은 한 사이클이 끝나야 쓸 수 있지만, dev-setup-tips-log는 *10분짜리 QoL 수정*도 바로 append할 수 있어야 유용하다. 단위가 다르면 파일도 달라야 한다."
+---
+
+## 사이클 트리거
+
+사용자의 요청:
+
+> *"각 프로젝트에서 뭔가 개발하면서 생기는 꿀팁들을 너한테 PR로 계속 쏴주면 너가 하나의 엔트리로 관리하면서 계속 글로 히스토리를 남겨줬으면 좋겠어서 해봤어 ... 앞으로 이런 pr 오면 자동 머지 + 글 작성 해주면 돼~!"*
+
+이미 [PR #15](https://github.com/Mino777/ai-study/pull/15)에서 `dev-setup-tips-log.mdx` 엔트리를 신설해놓고, 이제 그 로그에 *워커 세션들이 계속 기여할 수 있는 인프라*를 붙이라는 요청.
+
+## 작업 스코프
+
+한 PR에 3개를 묶었다:
+
+1. **ai-review.yml 이식** (moneyflow → ai-study) — 박제 전이성 4회째.
+2. **dev-setup-tips-log.mdx의 For AI Agents 섹션 보강** — 워커 → 허브 PR 제작 단계, 허브 처리 룰, PR 제목 컨벤션, 승격 판단 기준.
+3. **이 Journal 014 박제** — 메타 사이클 자체 기록.
+
+묶은 이유: 셋 다 "허브가 꿀팁 PR을 받는 인프라"라는 한 주제이고, 분리하면 *3개의 연속 수동 머지*가 필요해서 비효율.
+
+## ai-review.yml 이식 — 바꾼 부분 정확히
+
+원본 (moneyflow `ai-review.yml`)에서 바꾼 부분만 기록:
+
+| 요소 | moneyflow | ai-study |
+|---|---|---|
+| Test Gate 명령 | `npx vitest run` + `npm run build` (with env placeholder) | `npm test` + `npm run build` (env 없이) |
+| env vars | `NEXT_PUBLIC_SUPABASE_URL/ANON_KEY` placeholder | 없음 (ai-study는 build 시점에 Supabase env 불필요) |
+| 주석 | Journal 002 | Journal 014 (첫 허브 이식) |
+
+나머지 — Find-or-Create PR 로직, Rebase onto main, Comment on conflict, Squash Merge, Reset branch to main — **1:1 그대로**. 이식 사이클의 엄격성은 *원본이 검증된 구조를 그대로 유지*하는 것.
+
+## Chicken-and-egg — 이번에도 수동 머지
+
+`ai-review.yml`이 main에 *없는 상태*에서 이 PR이 만들어지므로 첫 PR은 수동 머지. [Journal 011의 tarosaju PR #6과 동일 구조](/wiki/harness-engineering/harness-journal-011-concurrent-session-safety).
+
+단, tarosaju는 feature 브랜치에 ai-review.yml이 있는 *이 PR*을 봇이 먼저 돌려서 권한 부족 403을 맞은 뒤 re-run 으로 통과한 *예상 못한* 경로였던 반면, ai-study는 이미 `default_workflow_permissions: write` + `can_approve_pull_request_reviews: true` 상태라 바로 작동할 가능성이 높다. *dogfooding 여부*는 이 PR의 실제 작동으로 확인.
+
+## ci.yml과 중복 우려
+
+ai-study에는 이미 `ci.yml`이 있다 (PR/push → `npm test + npm run build`). ai-review.yml이 추가되면 Test Gate가 *중복*으로 돈다:
+
+- `ci.yml` on `pull_request: main` → PR 생성/업데이트 시 돔
+- `ai-review.yml` inline Test Gate → push 시 돔 (PR과 무관)
+
+**결정**: 중복 유지. moneyflow도 `test-gate.yml` + `ai-review.yml` inline 둘 다 유지한다 (Journal 011). 중복 커버리지가 *우발적 회귀*를 한 번 더 잡아준다. 게다가 두 이벤트 트리거가 다르므로(`pull_request` vs `push`) 완전 동일한 실행이 아니다.
+
+## 워커 → 허브 PR 흐름 — For AI Agents 섹션에 박제
+
+`dev-setup-tips-log.mdx`의 For AI Agents 섹션에 *워커 세션이 PR을 제작하는 5단계 + 허브 세션의 처리 규칙*을 추가. 요점:
+
+- 워커 세션은 **`tips/<branch-name>`** 브랜치로 push → `ai-review.yml`이 자동 PR 생성 + Test Gate + Squash Merge까지 일괄
+- PR 제목 prefix **`tips:`** 로 식별
+- 허브 세션의 기본 동작은 **no-op** (ai-review.yml이 전부 처리) — 허브는 *사후 검토자*로만 참여
+- 예외: Test Gate 실패 → 허브가 수습, 재발 감지 → 별도 PR로 재발 노트 추가 (본문 보존), 3 프로젝트 누적 → Journal로 승격
+
+## 허브-워커 모델 — 방향 확장
+
+| Journal | 허브-워커 방향 |
+|---|---|
+| 011 | 허브 = 셋업 설계자 / 워커 = 수신자 |
+| 012/013 | 허브 = 워커 코드 작업 주체 (허브 → 워커 방향 쓰기) |
+| **014** | **워커 → 허브 방향 쓰기** (역방향 기여) |
+
+세 사이클 만에 *양방향 기여*가 인프라로 확립. Journal 011은 *관찰만 했던* 허브가 이제 *작업 공간으로서* 워커 코드를 만지고(012/013), *수집자로서* 워커 기여를 받는다(014).
+
+## 박제 전이성 5회째 사이클
+
+| 사이클 | 전이 | 산출 |
+|---|---|---|
+| 1 (Journal 005) | ai-study → moneyflow/tarosaju | `/wt-branch` 3 프로젝트 통일 |
+| 2 (Journal 007+008) | tarosaju → moneyflow | `ai-cost-tracker` 양쪽 이식 |
+| 3 (Journal 011) | moneyflow → tarosaju | `ai-review.yml` 이식 |
+| 4 (Journal 012 → 013) | (내부) market_analyst → 3 analyst | validator 패턴 1:1 복제 |
+| **5 (Journal 014)** | **moneyflow → ai-study** | **`ai-review.yml` 허브 이식 (방향이 워커 → 허브)** |
+
+전이 방향이 *다시 바뀐다*. Journal 011에서 moneyflow(워커) → tarosaju(워커)였는데, 이번엔 moneyflow(워커) → ai-study(**허브**). 허브가 *수용자* 역할을 처음 받음.
+
+## 자기 검증 구조 5회째
+
+| # | Journal | 자기 검증 |
+|---|---|---|
+| 1 | 002 | `ai-review.yml`에 inline Test Gate 추가 PR이 자신의 Test Gate로 자신을 검증 |
+| 2 | 005 | `/wt-branch`를 이식하는 작업 자체를 `/wt-branch`로 시작 |
+| 3 | 011 | `ai-review.yml` 이식 PR이 기존 ai-review.yml이 없는 상태에서 자신을 머지 |
+| 4 | 012 | 허브-워커 모델을 실제로 사용해서 허브 세션이 워커 코드를 안전하게 변경 |
+| **5** | **014** | **허브-워커 모델의 *반대 방향*을 사용해서 허브가 워커 기여 수신 인프라를 만든다** |
+
+## 사이클 크기
+
+- 1 신설 (`.github/workflows/ai-review.yml` ~240줄)
+- 1 수정 (`dev-setup-tips-log.mdx` For AI Agents 섹션 ~30줄 추가)
+- 1 신설 (이 Journal 014 엔트리)
+- 1 NEXT.md 갱신 로그 append
+
+Journal 011 (허브-워커 셋업)과 규모 비슷. 한 사이클 한 박제 원칙 내.
+
+## 다음 큐
+
+- 🟡 **워커 세션에 tips/ PR 패턴 안내** — 각 워커 프로젝트의 CLAUDE.md에 *"환경 팁 발견 시 허브에 tips/ PR 올리는 법"* 한 줄 추가. ai-study CLAUDE.md에도 *"dev-setup-tips-log는 inbound 전용 카탈로그"* 명시.
+- 🔴 **Journal 015** (원래 015 후보였던): **9 debate/judge/trader/PM 에이전트 validator** — Zod 도입 vs type guard 결정. 이전 Journal 013의 "결정 필요" 포인트 그대로.
+- 🔴 **Journal 016** (원래 015): Layer 3-4 (retry + instruction augmentation) — `callAI`에 `maxRetries` 옵션.
+- 🟡 **ci.yml + ai-review.yml 중복 Test Gate 관찰**: 한 PR에 두 실행이 실제로 돌아서 리소스 낭비인지 데이터 수집. 비용이 문제되면 ci.yml을 pull_request 이벤트에서 제거.
+
+## 핵심 메시지
+
+> *허브는 처음엔 관찰자였지만, 양방향 기여가 인프라로 깔리면서 수집자가 된다. Journal 011의 셋업이 단방향(허브 → 워커 분석)으로만 작동한다고 생각했는데, 이 사이클이 *반대 방향*을 자연스럽게 열었다 — 사용자가 "자동 머지 만들자"라고 한 한 문장이.*
+
+*박제는 계획한 방향으로만 흐르지 않는다.* 이번 사이클은 Journal 010의 큐에 없던 항목이었고, Journal 011~013의 4 사이클을 연속으로 돌리는 동안 *다른 축에서* 자라고 있었다.
