@@ -8,8 +8,10 @@ AI 에이전트가 이 저장소에서 작업할 때 **반드시** 먼저 로드
 1. **CLAUDE.md** (이 파일) — 프로젝트 규약 + 기술 스택
 2. **SPEC.md** — 엔티티 + 데이터 흐름 + AI Agent Contract
 3. **[AI Agent Start Here](content/harness-engineering/ai-agent-start-here.mdx)** — 상황별 라우팅
+4. **[NEXT.md](./NEXT.md)** — 다음 세션 계획 (현재 상태 + 다음 큐 + 체크리스트)
 
-이 3개를 로드하지 않고 작업 시작하면 *계약 위반*.
+이 4개를 로드하지 않고 작업 시작하면 *계약 위반*.
+새 세션은 NEXT.md의 "다음 세션 시작 체크리스트" 5 Phase(총 18분)를 따른다.
 
 ---
 
