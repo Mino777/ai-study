@@ -12,7 +12,7 @@ description: "카카오톡 인앱 브라우저에서 React 앱이 흰 화면이 
 type: entry
 quiz:
   - question: "React error boundary에 Canvas나 Framer Motion을 사용하면 안 되는 이유는?"
-    options:
+    choices:
       - "번들 사이즈가 커진다"
       - "error boundary 자체가 crash하면 React가 렌더할 곳이 없어서 흰 화면이 된다"
       - "SEO에 불리하다"
@@ -20,7 +20,7 @@ quiz:
     answer: 1
     explanation: "Error boundary는 앱의 *마지막 방어선*. 여기에 실패 가능한 코드(Canvas, animation lib, dynamic import)를 넣으면 에러 시 cascading crash가 발생하고 사용자는 빈 화면만 보게 됨."
   - question: "인앱 WebView에서 Service Worker 등록이 위험한 이유는?"
-    options:
+    choices:
       - "SW가 캐시를 너무 많이 써서 메모리 부족"
       - "보안 정책 위반"
       - "WebView가 SW를 불완전하게 지원해서 등록이 hang되거나 page load를 block할 수 있음"

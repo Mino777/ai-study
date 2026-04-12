@@ -14,7 +14,7 @@ description: "AI 자동 squash merge 환경에서 feature branch를 재사용하
 type: entry
 quiz:
   - question: "AI 자동 squash merge 후 같은 feature branch에서 새 작업을 push하면 100% 충돌이 발생하는 이유는?"
-    options:
+    choices:
       - "GitHub Actions에 race condition이 있어서"
       - "squash merge는 feature branch의 N개 commit을 1개로 합친 *새로운 commit*을 main에 만들므로, 로컬 branch의 원본 commit들과 main의 squash commit이 *같은 변경의 다른 SHA*로 존재하여 rebase 시 충돌"
       - "git이 squash merge를 지원하지 않아서"
@@ -22,7 +22,7 @@ quiz:
     answer: 1
     explanation: "Squash merge의 본질: commit A+B+C를 D(=A+B+C)로 합쳐서 main에 넣음. 로컬 branch에는 여전히 A, B, C가 있음. 다음 push에서 rebase하면 git이 A, B, C를 다시 main 위에 올리려 시도 → D와 A의 diff가 동일한 영역을 건드림 → 충돌."
   - question: "/wt-branch가 다른 회피 방법(PR 코멘트 안내, AI-AGENT-GUIDE 문서화, post-merge hook)보다 압도적으로 효과적인 이유는?"
-    options:
+    choices:
       - "기술적으로 더 복잡해서"
       - "행동 자체가 안전한 패턴이라 사람의 기억력 의존이 0이기 때문. 안내/문서/코멘트는 사람이 읽고 기억해야 작동하지만, /wt-branch는 실행하는 것 자체가 origin/main에서 깨끗하게 분기하는 행동"
       - "worktree가 git의 최신 기능이라서"

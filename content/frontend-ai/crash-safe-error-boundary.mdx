@@ -12,7 +12,7 @@ description: "React error boundary는 앱의 마지막 방어선. 여기에 Canv
 type: entry
 quiz:
   - question: "Error boundary의 fallback UI에 Canvas 파티클 효과를 넣으면 안 되는 근본적 이유는?"
-    options:
+    choices:
       - "Canvas가 느려서 에러 복구 시간이 길어진다"
       - "Error boundary는 React의 마지막 렌더 시도이므로, fallback이 throw하면 React가 더 이상 렌더할 곳이 없어 unrecoverable 흰 화면이 된다"
       - "Canvas는 SSR에서 작동하지 않아 hydration mismatch가 발생한다"
@@ -20,7 +20,7 @@ quiz:
     answer: 1
     explanation: "React의 error boundary lifecycle: componentDidCatch → getDerivedStateFromError → render(fallback). 이 render에서 다시 throw가 발생하면 상위 boundary로 전파되고, root error boundary에서도 crash하면 React 전체가 unmount됨. 인앱 WebView에서 Canvas.getContext('2d')가 null이거나 crash하면 이 시나리오가 현실이 됨."
   - question: "Next.js의 error.tsx에서 Tailwind CSS를 사용하지 않는 이유는?"
-    options:
+    choices:
       - "error.tsx는 서버 컴포넌트여서 Tailwind가 적용 안 된다"
       - "Tailwind는 빌드 단계에서 처리되므로, CSS 빌드 자체가 실패한 상황이라면 Tailwind 클래스가 스타일로 변환되지 않아 레이아웃이 깨진다"
       - "error.tsx에서는 className을 사용할 수 없다"
