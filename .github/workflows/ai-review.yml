@@ -1,0 +1,249 @@
+name: 🚀 Auto Merge to main
+
+# Harness Journal 014 — 박제 전이성 4회째 사이클.
+# moneyflow(Journal 002) → tarosaju(Journal 011) → ai-study(이번, 첫 허브 이식).
+#
+# 왜 허브에도 자동 머지가 필요한가: 각 워커 프로젝트 세션들이 *꿀팁 PR*을
+# 허브(ai-study)에 계속 쏴주는 흐름을 만들려면, 허브에 들어온 PR이 자동으로
+# 머지되어야 라운드트립 지연이 0이 된다. 허브가 병목이 되지 않기 위함.
+#
+# Test Gate는 ci.yml과 동일한 npm test + npm run build로 유지해서
+# dev-setup-tips-log append나 Harness Journal 신설 같은 content 변경이 빠르게
+# 통과하도록 한다 (prebuild의 frontmatter zod 검증 + content manifest 생성이
+# npm run build 안에서 자동으로 돌아간다).
+
+on:
+  push:
+    branches-ignore:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    name: Auto Merge
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.ref_name }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Find or Create PR
+        id: pr
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const branch = context.ref.replace('refs/heads/', '');
+
+            const { data: existing } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              head: `${context.repo.owner}:${branch}`,
+              base: 'main',
+              state: 'open',
+            });
+
+            if (existing.length > 0) {
+              const pr = existing[0];
+              core.setOutput('number', String(pr.number));
+              core.setOutput('title', pr.title);
+              return;
+            }
+
+            let commits = [];
+            try {
+              const { data: compare } = await github.rest.repos.compareCommits({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                base: 'main',
+                head: branch,
+              });
+              commits = compare.commits.slice().reverse();
+            } catch (e) {
+              console.warn('커밋 비교 실패:', e.message);
+            }
+
+            const latestMsg = commits[0]?.commit?.message ?? branch;
+            const titleRaw  = latestMsg.split('\n')[0];
+            const title     = titleRaw.length > 72 ? titleRaw.slice(0, 69) + '...' : titleRaw;
+
+            const commitList = commits.length > 0
+              ? commits.slice(0, 10).map(c =>
+                  `- \`${c.sha.slice(0, 7)}\` ${c.commit.message.split('\n')[0]}`
+                ).join('\n')
+              : `- ${branch} 브랜치 작업`;
+
+            const body = [
+              '## 📝 작업 내역',
+              '',
+              commitList,
+              '',
+              '---',
+              '> 🤖 자동 생성된 PR — Test Gate(vitest + build) 통과 시 main에 squash merge됩니다.',
+              '> Harness Journal 014 — moneyflow/tarosaju에서 이식한 inline test gate 패턴 (첫 허브 이식).',
+            ].join('\n');
+
+            const { data: pr } = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body,
+              head: branch,
+              base: 'main',
+            });
+
+            core.setOutput('number', String(pr.number));
+            core.setOutput('title', pr.title);
+
+      - name: Rebase onto main
+        id: sync
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+
+          if git merge-base --is-ancestor origin/main HEAD; then
+            echo "✅ Already up to date"
+            echo "status=ok" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "⚙️ Rebasing onto origin/main..."
+          if git rebase origin/main; then
+            git push origin HEAD:${{ github.ref_name }} --force-with-lease
+            echo "status=ok" >> $GITHUB_OUTPUT
+          else
+            git rebase --abort
+            echo "status=conflict" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Comment on conflict
+        if: steps.sync.outputs.status == 'conflict'
+        uses: actions/github-script@v7
+        env:
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: parseInt(process.env.PR_NUMBER),
+              body: [
+                '## ⚠️ Rebase 실패 — 충돌 수동 해결 필요',
+                '',
+                '```bash',
+                'git fetch origin',
+                'git rebase origin/main',
+                '# 충돌 파일 수정 후',
+                'git add .',
+                'git rebase --continue',
+                'git push origin HEAD --force-with-lease',
+                '```',
+              ].join('\n')
+            });
+            core.setFailed('충돌 — 수동 해결 필요');
+
+      # ─────────────────────────────────────────────────────────────
+      # Inline Test Gate — 허브(ai-study) 전용
+      # npm run build가 prebuild(validate-content + generate-content-manifest)를
+      # 자동으로 실행하므로 frontmatter zod 검증 + 매니페스트 생성이 안에서 돈다.
+      # content 변경(Harness Journal, dev-setup-tips-log append 등)도 여기서 걸러진다.
+      # ─────────────────────────────────────────────────────────────
+
+      - name: Install dependencies
+        if: steps.sync.outputs.status != 'conflict'
+        run: npm ci
+
+      - name: 🔒 Test Gate (vitest + build)
+        id: test_gate
+        if: steps.sync.outputs.status != 'conflict'
+        run: |
+          echo "::group::vitest"
+          npm test
+          echo "::endgroup::"
+          echo "::group::build (prebuild + next build)"
+          npm run build
+          echo "::endgroup::"
+
+      - name: Notify on Test Gate failure
+        if: failure() && steps.test_gate.outcome == 'failure'
+        uses: actions/github-script@v7
+        env:
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            if (!process.env.PR_NUMBER) return;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: parseInt(process.env.PR_NUMBER),
+              body: [
+                '## ❌ Test Gate 실패 — 자동 머지 차단',
+                '',
+                '`npm test` 또는 `npm run build`(prebuild 포함)가 실패했습니다.',
+                '워크플로 로그를 확인하고 수정 후 다시 push해주세요.',
+                '',
+                '---',
+                '> Harness Journal 014 — ai-study 허브에 inline Test Gate 도입.',
+                '> content(MDX frontmatter zod 검증 + manifest 생성)도 npm run build 안에서 검증됩니다.',
+              ].join('\n'),
+            });
+
+      - name: Squash Merge
+        if: steps.sync.outputs.status != 'conflict'
+        id: merge
+        uses: actions/github-script@v7
+        env:
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+          PR_TITLE: ${{ steps.pr.outputs.title }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const prNumber = parseInt(process.env.PR_NUMBER);
+            const prTitle  = process.env.PR_TITLE;
+
+            try {
+              await github.rest.pulls.merge({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: prNumber,
+                commit_title: `${prTitle} (#${prNumber})`,
+                merge_method: 'squash',
+              });
+              console.log('✅ Squash Merge 완료');
+              core.setOutput('merged', 'true');
+            } catch (err) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body: `⚠️ 자동 머지 실패 — 수동으로 머지해주세요.\n\`\`\`\n${err.message}\n\`\`\``,
+              });
+              core.setFailed(err.message);
+            }
+
+      # ── 머지 후 feature 브랜치를 main으로 리셋 ──
+      # squash merge 후 feature 브랜치가 main과 diverge하는 문제 해결
+      - name: Reset branch to main
+        if: steps.merge.outputs.merged == 'true'
+        run: |
+          git fetch origin main
+          git checkout ${{ github.ref_name }}
+          git reset --hard origin/main
+          git push origin ${{ github.ref_name }} --force-with-lease
+          echo "✅ feature 브랜치를 main으로 리셋 완료 — 다음 push 시 충돌 없음"

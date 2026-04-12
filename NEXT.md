@@ -327,3 +327,44 @@ cd /Users/jominho/Develop/ai-study && rtk npm run build
 **사고 재발률**: **0회 / 10 사이클** (013까지 누적).
 
 ---
+
+### 2026-04-12 (later-latest session) — Journal 014 작성 + 사용자 트리거
+
+**사용자 트리거**: *"각 프로젝트에서 뭔가 개발하면서 생기는 꿀팁들을 너한테 PR로 계속 쏴주면 너가 하나의 엔트리로 관리하면서 계속 글로 히스토리를 남겨줬으면 좋겠어서 해봤어 ... 앞으로 이런 pr 오면 자동 머지 + 글 작성 해주면 돼~!"*
+
+**직전 세션에서 사용자가 PR #15 생성**: `content/harness-engineering/dev-setup-tips-log.mdx` 신규. 살아있는 카탈로그 — Journal(1 사이클 서사)과 분리된 *단발성 QoL 수정 박제*용. append-only.
+
+**Journal 014 — ai-study 허브에 ai-review.yml 이식 + 인바운드 팁 PR 흐름**:
+- PR #15 수동 머지 ✅ (CI 이미 통과 상태)
+- 🔴 `harness-journal-014-hub-auto-merge-inbound-tips.mdx` 신규
+- ai-study `ai-ops/hub-auto-merge` 브랜치 → `.github/workflows/ai-review.yml` 이식(moneyflow → ai-study 첫 허브 이식) + `dev-setup-tips-log.mdx`의 For AI Agents 섹션 보강(워커 → 허브 PR 흐름 5단계 + 허브 처리 규칙) + Journal 014 박제 + 이 NEXT.md 갱신 → **수동 머지** (chicken-and-egg, 다음 PR부터 자동)
+
+**변경점 (moneyflow → ai-study)**:
+- Test Gate: `npx vitest + npm run build` → **`npm test + npm run build`** (ai-study는 `npm test`가 vitest alias, prebuild가 npm run build 안에서 자동으로 frontmatter zod + content manifest 검증)
+- env: Supabase placeholder 제거 (ai-study는 build 시점에 필요 없음)
+- 나머지 1:1 복제 (Find-or-Create PR → Rebase → Test Gate → Squash Merge → Reset branch)
+
+**ci.yml과의 중복**:
+- ai-study에는 이미 `ci.yml`(PR 이벤트)과 `ai-review.yml`(push 이벤트)가 중복 Test Gate를 돌림
+- 결정: 중복 유지 (moneyflow의 test-gate.yml + ai-review.yml 패턴과 동일, 우발 회귀 커버리지)
+
+**박제 전이성 5회째 / 자기 검증 구조 5회째**:
+- 전이 방향: moneyflow(워커) → ai-study(**허브**) — 허브가 *수용자* 역할을 처음 받음
+- 자기 검증: 허브-워커 모델의 *반대 방향*(워커 → 허브 쓰기)을 사용하여 허브가 워커 기여 수신 인프라를 만든다
+
+**허브-워커 모델 양방향 확장**:
+- Journal 011: 허브가 셋업 설계자 / 워커가 수신자
+- Journal 012/013: 허브가 워커 코드 작업 주체 (허브 → 워커 쓰기)
+- Journal 014: **워커 → 허브 쓰기**(역방향 기여)
+- 3 사이클 만에 양방향 기여가 인프라로 확립
+
+**다음 큐 재정렬**:
+- 🟡 **워커 세션 CLAUDE.md에 tips/ PR 패턴 안내** — moneyflow/tarosaju CLAUDE.md에 "환경 팁 발견 시 허브에 tips/ PR 올리는 법" 한 줄 추가. 한 사이클로 묶음.
+- 🔴 **Journal 015 (이전 014 스코프)**: 9 debate/judge/trader/PM 에이전트 validator — Zod 도입 vs type guard 결정.
+- 🔴 **Journal 016 (이전 015 스코프)**: Layer 3-4 (retry + instruction augmentation) — `callAI`에 `maxRetries`.
+- 🟡 **ci.yml + ai-review.yml 중복 관찰**: 실제로 두 실행이 돌아서 리소스 낭비인지 데이터 수집.
+- 🟡 **tarosaju text guards 발동률**: 여전히 데이터 대기.
+
+**사고 재발률**: **0회 / 11 사이클** (014까지 누적).
+
+---
