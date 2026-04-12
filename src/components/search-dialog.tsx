@@ -210,14 +210,15 @@ export function SearchTrigger() {
           new KeyboardEvent("keydown", { key: "k", metaKey: true })
         );
       }}
-      className="flex items-center gap-2 rounded-[var(--radius-sm)] border border-border bg-surface px-3 py-1.5 text-sm text-muted transition-colors hover:border-accent hover:text-text"
+      aria-label="검색 (Cmd+K)"
+      className="flex w-full items-center gap-2 rounded-[var(--radius-sm)] border border-border bg-surface px-3 py-1.5 text-sm text-muted transition-colors hover:border-accent hover:text-text"
     >
-      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" className="shrink-0">
         <circle cx="7" cy="7" r="5" strokeWidth="1.5" />
         <path d="M11 11l3 3" strokeWidth="1.5" strokeLinecap="round" />
       </svg>
-      <span className="hidden sm:inline">검색</span>
-      <kbd className="rounded border border-border px-1 py-0.5 text-xs">⌘K</kbd>
+      <span className="flex-1 text-left truncate">검색...</span>
+      <kbd className="hidden sm:inline-block rounded border border-border px-1 py-0.5 text-xs shrink-0">⌘K</kbd>
     </button>
   );
 }

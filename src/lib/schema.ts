@@ -41,6 +41,35 @@ export const CATEGORY_COLORS: Record<string, string> = {
   "frontend-ai": "#a855f7",
 };
 
+// 사이드바용 카테고리 그룹. 엔트리 수가 늘어나면서 10 카테고리가 한꺼번에 펼쳐지면
+// 시각적으로 힘들어서 상위 그룹(서브메뉴)으로 묶는다. 그룹 자체도 접이식.
+export const CATEGORY_GROUPS: Array<{
+  key: string;
+  label: string;
+  categories: Category[];
+}> = [
+  {
+    key: "methodology",
+    label: "AI 엔지니어링 방법론",
+    categories: ["prompt-engineering", "context-engineering", "harness-engineering"],
+  },
+  {
+    key: "system",
+    label: "시스템 설계",
+    categories: ["rag", "agents", "fine-tuning"],
+  },
+  {
+    key: "ops",
+    label: "평가 & 인프라",
+    categories: ["evaluation", "infrastructure"],
+  },
+  {
+    key: "applications",
+    label: "응용",
+    categories: ["ios-ai", "frontend-ai"],
+  },
+];
+
 export const quizQuestionSchema = z.object({
   question: z.string(),
   choices: z.array(z.string()).min(2),
