@@ -2,6 +2,19 @@
 
 모든 주목할 만한 변경사항을 이 파일에 기록합니다.
 
+## [2026-04-12 wave 4] — Journal 018 + Layer 1-4 실용적 완성
+
+### Added
+- **Journal 018** — Layer 3-4 retry + instruction augmentation. `retryWithValidation` 순수 함수 + `callAIAndValidate` 래퍼. validator 실패 시 issues를 prompt에 추가해서 LLM 재요청. market_analyst 첫 적용 후 나머지 9 에이전트 일괄 전환
+- **5 Layer 중 Layer 1-4 실용적 완성** — JSON 파싱 / runtime validation / retry / instruction augmentation. Layer 5(schema evolution)는 구조 변경 시 필요
+
+### Metrics
+- moneyflow PR: #109 (인프라 + market_analyst), #110 (9 에이전트 전환) 자동 머지
+- vitest: +8 (retryWithValidation), 기존 1096 전체 통과
+- 에이전트: 10/10 Layer 3-4 적용 (custom_prompt 제외)
+
+---
+
 ## [2026-04-12 wave 3] — Journal 017 + 사이드바 서브그룹 + 10/10 에이전트 완료
 
 ### Added
