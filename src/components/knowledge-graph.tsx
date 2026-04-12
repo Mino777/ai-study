@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useGraphSearch } from "@/contexts/graph-search-context";
 import { CATEGORY_COLORS } from "@/lib/schema";
+import { trackEvent } from "@/lib/analytics";
 
 const ForceGraph2D = dynamic(() => import("react-force-graph-2d"), {
   ssr: false,
@@ -104,6 +105,7 @@ export function KnowledgeGraph({ nodes, edges }: KnowledgeGraphProps) {
   const handleNodeClick = useCallback(
     (node: GraphNode) => {
       if (node.confidence === 0) return;
+      trackEvent("graph_node_click", { nodeId: node.id, category: node.category });
       selectNode(node.id);
       router.push(`/wiki/${node.id}`);
     },

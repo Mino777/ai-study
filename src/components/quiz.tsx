@@ -8,6 +8,7 @@ import {
   recordQuizAttempt,
   type QuizState,
 } from "@/lib/quiz-storage";
+import { trackEvent } from "@/lib/analytics";
 
 interface QuizProps {
   slug: string;
@@ -58,6 +59,12 @@ export function Quiz({ slug, category, questions }: QuizProps) {
     let correct = 0;
     questions.forEach((q, i) => {
       if (selections[i] === q.answer) correct += 1;
+    });
+    trackEvent("quiz_answer", {
+      slug,
+      score: correct,
+      total: questions.length,
+      percent: Math.round((correct / questions.length) * 100),
     });
     const state: QuizState = {
       selections,

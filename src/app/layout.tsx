@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ThemeProvider } from "next-themes";
 import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { MobileNav } from "@/components/mobile-nav";
 import { MagneticMode } from "@/components/magnetic-mode";
 import { SearchDialog } from "@/components/search-dialog";
@@ -82,6 +83,7 @@ export default function RootLayout({
           </GraphSearchProvider>
         </ThemeProvider>
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

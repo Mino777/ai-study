@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useGraphSearch } from "@/contexts/graph-search-context";
 import { CATEGORY_COLORS } from "@/lib/schema";
+import { trackEvent } from "@/lib/analytics";
 
 interface SearchEntry {
   slug: string;
@@ -85,11 +86,17 @@ export function SearchDialog({ entries }: SearchDialogProps) {
 
   const navigate = useCallback(
     (slug: string) => {
+      const entry = results.find((r) => r.slug === slug);
+      trackEvent("search_select", {
+        query: query.trim(),
+        slug,
+        category: entry?.category ?? "unknown",
+      });
       setOpen(false);
       clearHighlights();
       router.push(`/wiki/${slug}`);
     },
-    [router, clearHighlights]
+    [router, clearHighlights, results, query]
   );
 
   function handleKeyDown(e: React.KeyboardEvent) {
