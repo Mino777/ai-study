@@ -1,10 +1,7 @@
 import { Suspense } from "react";
-import Link from "next/link";
 import { getManifest } from "@/lib/content";
 import { KnowledgeGraph } from "@/components/knowledge-graph";
 import { MobileCategories } from "@/components/mobile-categories";
-import { SearchDialog, SearchTrigger } from "@/components/search-dialog";
-import { GraphSearchProvider } from "@/contexts/graph-search-context";
 import { Header } from "@/components/header";
 
 function GraphSkeleton() {
@@ -39,16 +36,8 @@ export default function Home() {
         ).toFixed(1)
       : "0";
   const categories = new Set(manifest.entries.map((e) => e.frontmatter.category));
-  const searchEntries = manifest.entries.map((e) => ({
-    slug: e.slug,
-    title: e.frontmatter.title,
-    category: e.frontmatter.category,
-    description: e.frontmatter.description,
-    tags: e.frontmatter.tags,
-  }));
 
   return (
-    <GraphSearchProvider>
     <div className="min-h-screen bg-bg">
       <Header fixed />
 
@@ -101,10 +90,6 @@ export default function Home() {
           </div>
         </div>
       </div>
-
-      {/* Search overlay */}
-      <SearchDialog entries={searchEntries} />
     </div>
-    </GraphSearchProvider>
   );
 }
