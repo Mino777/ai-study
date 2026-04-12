@@ -10,10 +10,14 @@ const OUTPUT_FILE = path.join(
   "content-manifest.json"
 );
 
+// NOTE: src/lib/schema.ts의 CATEGORIES와 동기화 유지 필요.
+// 이 파일은 .mjs라 .ts에서 import 불가 → 수동 동기화.
+// 카테고리 추가 시 schema.ts + CATEGORY_LABELS(아래) 3곳 모두 업데이트.
 const CATEGORIES = [
   "prompt-engineering",
   "context-engineering",
   "harness-engineering",
+  "tokenomics",
   "rag",
   "agents",
   "fine-tuning",
@@ -170,6 +174,7 @@ function main() {
     "prompt-engineering": "Prompt Engineering",
     "context-engineering": "Context Engineering",
     "harness-engineering": "Harness Engineering",
+    tokenomics: "Tokenomics",
     rag: "RAG",
     agents: "Agents",
     "fine-tuning": "Fine-tuning",
