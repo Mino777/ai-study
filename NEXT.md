@@ -415,28 +415,31 @@ cd /Users/jominho/Develop/ai-study && rtk npm run build
 
 ---
 
-## 🎯 다음 세션 최종 큐 (이 세션 마지막 기준)
+## 🎯 다음 세션 큐 (2026-04-12 세션 마지막 기준)
 
-### 🔴 우선순위 높음
+### 🔴 우선순위 높음 — 모두 완료
 
-1. ~~**Vercel Pro Analytics 커스텀 이벤트 + Speed Insights**~~ ✅ 완료 (PR #29)
-2. ~~**Journal 016**: investment_judge~~ ✅ 완료 (다른 세션 PR #106)
-3. ~~**Journal 017**: devils_advocate + research-debate + risk-debate + portfolio-manager~~ ✅ 완료 (이번 세션)
+1. ~~Vercel Pro Analytics~~ ✅
+2. ~~Journal 016 (investment_judge)~~ ✅
+3. ~~Journal 017 (Layer 1-2 완료)~~ ✅
+4. ~~Journal 018 (Layer 3-4 완료)~~ ✅
+5. ~~LLM-as-a-Judge 3 프로젝트~~ ✅
+6. ~~Vibe Coding 쇼케이스 ai-study 추가~~ ✅
 
-4. ~~**Journal 018**: Layer 3-4 (retry + instruction augmentation)~~ ✅ 완료 (PR #109 인프라 + PR #110 9 에이전트 전환)
+### 🟡 다음 세션 후보 (트리거 대기)
 
-### 🟡 우선순위 중간
+1. **LLM-as-a-Judge 품질 데이터 분석** — 며칠간 quality_score 데이터 축적 후, 평균/분포/시계열 추이 확인. 프롬프트 A/B 테스트 근거 마련
+2. **Tokenomics 새 레버 탐색** — ccusage 베이스라인 확보됨. Anthropic/Claude Code 업데이트에서 새 토큰 최적화 기능 발견 시 적용
+3. **RAG 파이프라인 (tarosaju)** — 명리학/타로 전문 문서 벡터 DB 구축. LLM-as-a-Judge의 domain_accuracy 점수가 낮으면 트리거
+4. **프롬프트 A/B 테스트 인프라** — quality_score 데이터 기반. 프롬프트 버전 관리 + before/after 비교
+5. **validate-content.mjs MDX JSX 사전 탐지** — `<숫자` + `{...}` 패턴 경고
+6. **`/wt-branch` 자동 checkout main** — 체크아웃 함정 3회째 재발 시 승격
 
-5. **`/wt-branch`에 자동 `checkout main`**: 체크아웃 함정 3회째 재발 시 승격
-6. **`validate-content.mjs`에 MDX JSX 사전 탐지**: `<숫자` + `{...}` 패턴을 MDX compile 전에 경고
-7. **moneyflow worktree 잔여물 cleanup 제안**: prunable 4개 정리 권고 (다른 세션 스코프)
-8. **validator 통합 테스트**: 실제 LLM 응답 로그에서 validator 통과율 측정
+### 🟢 대기
 
-### 🟢 우선순위 낮음
-
-9. **비용 추적 DB 저장 + `/cost-check`**: Supabase migration 승인 필요 (자율 금지)
-10. **text guards 발동률 측정**: tarosaju 프로덕션 데이터 대기
-11. **prompt caching 재검토**: tarosaju Haiku minimum 확인
+7. **비용 추적 DB (Supabase)** — migration 승인 필요
+8. **text guards 발동률** — 프로덕션 데이터 대기
+9. **moneyflow worktree cleanup** — 다른 세션 스코프
 
 ---
 
@@ -469,6 +472,28 @@ cd /Users/jominho/Develop/ai-study && rtk npm run build
 - 사이드바: Harness Journal 서브그룹 분리 (일반 글 먼저 표시)
 
 **큐 상태**: 큐 1~4번 모두 완료. 남은 큐는 중간/낮음 우선순위.
+
+---
+
+### 2026-04-12 (세션 후반) — LLM-as-a-Judge + Tokenomics 실측 + Vibe Coding 업데이트
+
+**작업 산출**:
+- **LLM-as-a-Judge 3 프로젝트 적용**: moneyflow `validateQualityScore` + `quality_score` select 추가 (PR #111, #112). tarosaju `quality-judge.ts` 신설 + fortune/tarot-chat 라우트 연결 (PR #16). ai-study `evaluation/llm-as-judge-pattern.mdx` 첫 실전 엔트리
+- **Tokenomics 실측**: `.claudeignore` ~194K tokens 배제 (~50% context 축소). RTK 47.4M tokens 절감 (99.5%). ccusage 베이스라인 기록 (일평균 ~360M/$211, cache read 98%+)
+- **Vibe Coding 쇼케이스**: ai-study를 3번째 프로젝트로 추가. 변천사 4단계 (AI 과외 선생님 → 허브-워커 관제 → LLM-First Wiki → 품질 관제 센터). moneyflow/tarosaju 메트릭 최신화
+- **README**: 발전 히스토리 타임라인, 기술 스택 업데이트, 11 카테고리 반영
+- **validate-content.mjs**: quiz `options`→`choices` 자동 교정 + 다른 세션 엔트리 confidence 범위 수정 4건
+- **PR #30 빌드 에러 수정**: `<br>` → `<br />` MDX 자기 닫힘 태그
+
+**이번 세션 전체 누적 (2026-04-12)**:
+- Journal: 017, 018
+- moneyflow PR: #107~#112 (6개 자동 머지)
+- tarosaju PR: #16 자동 머지
+- ai-study 커밋: 13+
+- vitest 신규: 48
+- 에이전트 Layer 1-4: 10/10 완성
+- LLM-as-a-Judge: 3 프로젝트 적용
+- 메모리 저장: 1 (`feedback_journal_trigger.md`)
 
 ---
 
