@@ -1,0 +1,197 @@
+---
+title: "Harness Journal 015 — Trader 런타임 검증 (debate 9 에이전트 중 첫 1개, Zod 재평가)"
+category: harness-engineering
+date: "2026-04-12"
+tags: [harness-journal, harness-engineering, moneyflow, runtime-validation, trader, debate-agents, zod-decision]
+confidence: 5
+connections:
+  - harness-engineering/harness-journal-012-market-analyst-runtime-validation
+  - harness-engineering/harness-journal-013-three-analysts-runtime-validation
+  - harness-engineering/ai-output-zod-validation-pattern
+status: complete
+description: "13 에이전트 validator 진행 5/13 (market + news + sentiment + fundamentals + trader). Journal 013 이후 처음으로 debate 9 에이전트 스코프 진입. Zod 도입 vs type guard 결정 지점에서 /projects-sync 결과 + 4 analyst 패턴 일관성을 근거로 type guard 유지. 가장 단순한 TraderProposal(평면 구조) 먼저 적용."
+type: entry
+quiz:
+  - question: "Journal 013 → 015 사이에 Zod 도입 결정을 *다시* 한 이유는?"
+    choices:
+      - "4 analyst를 끝냈으니 새 패턴 시도"
+      - "debate 9 에이전트는 중첩 구조를 포함해서(ResearchDebate의 rounds 배열, RiskDebate의 messages 배열 + var_result 중첩, PortfolioManager의 price_targets 중첩) type guard가 길어질 가능성이 있다. *이 복잡도 증가*가 Zod 도입 가치를 재평가할 만한 트리거"
+      - "요구사항 변경"
+      - "성능 개선"
+    answer: 1
+    explanation: "결정의 *재평가 타이밍*은 복잡도가 *임계점*을 넘을 때. 4 analyst는 평면 구조라 type guard로 충분했지만, debate 에이전트는 중첩 구조가 있어서 Zod의 선언적 표현력이 *진짜로* 가치를 만든다. Journal 015는 이 결정을 *선제적으로* 재평가하는 사이클 — 실제 결정은 이번엔 type guard 유지지만, 다음(Journal 016) 중첩 구조에서 재평가 예정."
+  - question: "이번 사이클에서 type guard를 *유지*하기로 한 3 근거는?"
+    choices:
+      - "속도, 메모리, 보안"
+      - "(a) /projects-sync 결과 moneyflow 상태가 Journal 012 시점과 거의 동일 (7 active worktree + Conductor la-paz), lock file 편집 위험 지속, (b) 기존 4 analyst와 동일 패턴 유지로 인지 부하 일관성, (c) TraderProposal이 평면 구조라 type guard로 충분 — 재평가는 *다음 중첩 구조 에이전트*에서"
+      - "TypeScript 호환성"
+      - "테스트 용이성"
+    answer: 1
+    explanation: "3 근거가 모두 *맥락 기반*. 제약(동시 세션), 일관성(기존 패턴), 구조(TraderProposal 평면)가 각각 독립적으로 Zod 도입을 보류할 이유를 준다. 이게 `/projects-sync`가 만든 실시간 제약 기반 결정의 두 번째 사례."
+  - question: "Trader가 debate 9 중 *첫 1개*로 선정된 기준은?"
+    choices:
+      - "알파벳 순서"
+      - "AgentReport 확장이 없는 가장 단순한 평면 구조 + types.ts에 interface가 명확히 정의돼 있어서 validator 작성이 직선적. 중첩 배열/객체 없이 enum 2개(action, time_horizon) + number 범위(position_size_pct) + 문자열 3개만 체크하면 됨"
+      - "사용 빈도"
+      - "우선순위 요청"
+    answer: 1
+    explanation: "첫 1개는 *가장 단순한 것*을 고른다. 그래야 *패턴 구현 자체에 집중*하고 나중에 중첩 구조는 별도 사이클에서 깊이 다룰 수 있다. Journal 012의 market_analyst 선정 기준과 동일 원칙."
+---
+
+## 사이클 트리거
+
+Journal 013 이후 정지 지점에서 사용자의 "자율 쭉쭉" 트리거. NEXT.md 큐 1번: 9 debate/judge/trader/PM 에이전트 validator + Zod 도입 결정 포인트.
+
+## Zod 도입 결정 재평가 (두 번째)
+
+Journal 012 시점에 내린 결정을 *다시* 검토:
+
+### 재평가 입력 3개
+
+1. **`/projects-sync` 결과** (2026-04-12 후반 세션):
+   ```
+   mino-moneyflow worktree list:
+     ~/Develop/mino-moneyflow 0698dfc [main]
+     ~/conductor/workspaces/mino-moneyflow/la-paz 46709c2 [Mino777/la-paz]  ← 다른 세션
+     .claude/worktrees/agent-a0f1bf94  active
+     .claude/worktrees/agent-a1533eb5  active
+     .claude/worktrees/agent-a85824cc  active
+     ... 4 more prunable
+   ```
+   Journal 012 시점과 **거의 동일** — Conductor la-paz 브랜치 + 3 active agent worktree. 다른 세션이 여전히 매우 활발.
+
+2. **debate 9 에이전트 응답 구조 복잡도** (types.ts 조사):
+   - 중첩 배열: `ResearchDebateResult.rounds[]`, `RiskDebateResult.messages[]`
+   - 중첩 객체: `PortfolioManagerDecision.price_targets{bull_case, base_case, bear_case}`, `RiskDebateResult.var_result?`
+   - 독립 평면: `TraderProposal` (가장 단순)
+   - 이 복잡도는 Journal 012/013 (4 analyst 평면 구조)보다 한 단계 높다
+
+3. **기존 4 analyst validator 패턴**:
+   - 모두 type guard 기반
+   - `checkAgentReportBase` 공유로 base 검증 일관성 유지
+   - 새 패턴 도입 시 *두 패턴 공존* 기간이 발생 (Zod + type guard 혼재)
+
+### 결정 매트릭스
+
+| 입력 | Zod 쪽 | Type guard 쪽 |
+|---|---|---|
+| `/projects-sync` (7 worktree 지속) | ❌ lock file 충돌 위험 | ✅ 외부 dep 0 |
+| 4 analyst 기존 패턴 | ❌ 패턴 이중화 | ✅ 일관성 |
+| Trader 구조 (평면) | △ 오버킬 | ✅ 충분 |
+| **중첩 구조 (res/risk/PM)** | ✅ 선언적 표현 유리 | △ 코드 길어짐 |
+
+**결론**: 이번 사이클(Trader 1개)은 **type guard 유지**. 이유:
+- 3/4 입력이 type guard를 지지
+- 중첩 구조는 *이번 스코프 밖* — 다음 사이클에서 다시 재평가
+
+**다음 재평가 지점**: Journal 016 착수 전. 만약 다른 세션 worktree 수가 <3으로 내려오면 Zod 도입 가능성 ↑. 만약 여전히 7+이면 type guard로 중첩 구조도 도전.
+
+## Trader 선정 근거
+
+13 에이전트 중 *첫 1개*는 *가장 단순한 것*:
+
+| 에이전트 | 구조 | 복잡도 |
+|---|---|---|
+| **Trader** | 평면 (enum 2 + number 범위 1 + string 3) | **낮음** ← 선정 |
+| InvestmentJudge | 평면, 필드 많음 | 중간 |
+| DevilsAdvocate | 평면 | 중간 |
+| CustomPrompt | user-defined shape | 스코프 제외 가능 |
+| ResearchDebate | 중첩 배열 + judge_decision | 높음 |
+| RiskDebate | 중첩 배열 + optional 중첩 객체 (var_result) | 높음 |
+| PortfolioManager | 중첩 객체 (price_targets) + 배열 2개 | 높음 |
+| bull_researcher / bear_researcher | ResearchDebate에 속함 | (research-debate.ts 안에) |
+
+Trader를 먼저 하면 **패턴 구현 자체에만 집중**할 수 있다. 중첩 구조는 별도 사이클에서 *패턴 확장* 결정과 함께.
+
+## 구현 — 기존 `analyst-schemas.ts`에 누적
+
+파일 rename(`analyst-schemas.ts` → `agent-schemas.ts`)을 하지 *않았다*. 이유:
+
+- rename은 `import`하는 5+ 파일 수정 필요 → 스코프 확장
+- "최소 침습" 원칙 위반 (한 사이클 한 패턴)
+- 대신 파일 상단 주석을 *"4 analyst + 기타 agent"* 로 확장해서 명시
+
+```typescript
+/**
+ * Runtime validators for agent reports.
+ *
+ * Journal 012: validateMarketAnalystReport 도입.
+ * Journal 013: News/Sentiment/Fundamentals 3 analyst 확장.
+ * Journal 015: debate/judge/trader/PM 9 에이전트 확장 시작. 첫 1개로 Trader 선정
+ *              (평면 구조, AgentReport 확장 안 함 → base check 재사용 불가, 독립 체크).
+ *              Zod 도입 재평가 결과 여전히 type guard 유지.
+ */
+```
+
+## TraderProposal validator 설계
+
+```typescript
+export function validateTraderProposal(value: unknown): ValidationResult<TraderProposal> {
+  if (!isRecord(value)) return { ok: false, issues: ['root: object required'] };
+
+  const issues: string[] = [];
+
+  if (typeof value.action !== 'string' || !SIGNAL_VALUES.includes(value.action as ...)) {
+    issues.push(`action: must be one of ${SIGNAL_VALUES.join('|')}`);
+  }
+  if (typeof value.position_size_pct !== 'number' || value.position_size_pct < 0 || value.position_size_pct > 100) {
+    issues.push('position_size_pct: number 0-100 required');
+  }
+  if (typeof value.entry_strategy !== 'string' || value.entry_strategy.length === 0) issues.push(...);
+  if (typeof value.exit_strategy !== 'string' || value.exit_strategy.length === 0) issues.push(...);
+  if (typeof value.time_horizon !== 'string' || !['단기', '중기', '장기'].includes(value.time_horizon)) {
+    issues.push('time_horizon: must be 단기|중기|장기');
+  }
+  if (typeof value.reasoning !== 'string' || value.reasoning.length === 0) issues.push(...);
+
+  if (issues.length > 0) return { ok: false, issues };
+  return { ok: true, value: value as unknown as TraderProposal };
+}
+```
+
+**AgentReport 확장 안 함** → `checkAgentReportBase` 재사용 불가 → 독립 체크. 이게 debate 에이전트의 *공통 특성*일지, 아니면 Trader만의 특이점일지 Journal 016에서 확인.
+
+## Test Suite
+
+`src/__tests__/trader-validator.test.ts` vitest **14 케이스**:
+- 직접 호출 10: valid, action enum, position_size 범위 (>100 / 음수), time_horizon enum (잘못 + 3 correct), entry 빈 문자열, reasoning 누락, null root, array root, position_size_pct string
+- parseJSON 통합 4: valid raw, 검증 실패 시 fallback, 코드블록 감싼 JSON, 파싱 실패 시 fallback
+
+## 진행률
+
+| # | 에이전트 | Layer 1+2 적용 |
+|---|---|---|
+| 1 | market_analyst | ✅ Journal 012 |
+| 2 | news_analyst | ✅ Journal 013 |
+| 3 | sentiment_analyst | ✅ Journal 013 |
+| 4 | fundamentals_analyst | ✅ Journal 013 |
+| **5** | **trader** | **✅ Journal 015** |
+| 6 | investment_judge | ⏳ Journal 016 (평면, 다음 후보) |
+| 7 | devils_advocate | ⏳ Journal 016 (평면) |
+| 8 | bull_researcher / bear_researcher / research_debate | ⏳ Journal 017 (중첩 배열) |
+| 9 | risk_debate (3 perspectives) | ⏳ Journal 017 (중첩 배열 + optional var_result) |
+| 10 | portfolio_manager | ⏳ Journal 017 (중첩 객체 price_targets) |
+| 11 | custom_prompt | 스코프 제외 (user-defined shape) |
+
+**5 / 13 = 38%**
+
+## 큐 재정렬
+
+- 🔴 **Journal 016** (중복도 중): investment_judge + devils_advocate 2개 평면 에이전트. 한 사이클로 묶음 (Journal 013 패턴).
+- 🔴 **Journal 017** (중복도 높음): 중첩 구조 4개 (research-debate, risk-debate, portfolio-manager + investment-judge가 평면이면 017에서 제외). Zod 도입 결정 3차 재평가 지점.
+- 🟡 **Layer 3-4 (retry + instruction augmentation)**: `callAI`에 `maxRetries` 옵션. 모든 에이전트 validator 완료 후 (Journal 018+).
+
+## 허브-워커 모델 — 5번째 자기 사용
+
+Journal 011 셋업이 Journal 012, 013, 014(반대 방향), **015** 네 번째 self-use.
+- `/projects-sync`로 moneyflow 상태 재확인 → Zod 결정 재평가의 입력
+- `/wt-branch`로 origin/main에서 깨끗한 분기 → 시작점 충돌 0
+- `ai-review.yml`의 Rebase onto main → 다른 세션 선행 머지 자동 흡수
+- inline Test Gate → vitest 14 테스트 포함 통과 → 자동 머지
+- **사고 재발률 여전히 0** / 12+ 사이클 누적
+
+## 핵심 메시지
+
+> *같은 결정을 매 사이클 다시 묻는다. 지난 사이클의 답이 이번에도 맞을 거라 가정하지 않는다. `/projects-sync` 결과가 안 바뀌었다면 답도 안 바꾸지만, *묻는 행위 자체*가 제약이 바뀌었을 때 포착할 유일한 방법이다.*
+
+4 analyst 패턴이 debate 에이전트로 *연장되는 것*이 아니라 *재평가되는 것*. 이게 박제 전이성의 *진짜* 엄격성.
