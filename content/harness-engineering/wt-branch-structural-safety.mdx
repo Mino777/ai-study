@@ -1,0 +1,239 @@
+---
+title: "wt-branch — AI 자동 squash merge 함정의 구조적 해결"
+category: harness-engineering
+date: "2026-04-12"
+tags: [harness-engineering, git, worktree, squash-merge, ai-ops, wt-branch]
+confidence: 10
+connections:
+  - harness-engineering/harness-journal-003-squash-merge-trap-pattern
+  - harness-engineering/harness-journal-004-wt-branch-command
+  - harness-engineering/harness-journal-005-wt-branch-dogfooding-and-transfer
+  - harness-engineering/compound-engineering-philosophy
+status: complete
+description: "AI 자동 squash merge 환경에서 feature branch를 재사용하면 100% rebase conflict가 발생하는 구조적 함정. /wt-branch 패턴이 origin/main에서 항상 깨끗하게 분기하여 이 함정을 원천 차단. 4연속 스프린트(7/8/9/10차) zero conflict로 검증 완료."
+type: entry
+quiz:
+  - question: "AI 자동 squash merge 후 같은 feature branch에서 새 작업을 push하면 100% 충돌이 발생하는 이유는?"
+    options:
+      - "GitHub Actions에 race condition이 있어서"
+      - "squash merge는 feature branch의 N개 commit을 1개로 합친 *새로운 commit*을 main에 만들므로, 로컬 branch의 원본 commit들과 main의 squash commit이 *같은 변경의 다른 SHA*로 존재하여 rebase 시 충돌"
+      - "git이 squash merge를 지원하지 않아서"
+      - "feature branch가 삭제됐기 때문"
+    answer: 1
+    explanation: "Squash merge의 본질: commit A+B+C를 D(=A+B+C)로 합쳐서 main에 넣음. 로컬 branch에는 여전히 A, B, C가 있음. 다음 push에서 rebase하면 git이 A, B, C를 다시 main 위에 올리려 시도 → D와 A의 diff가 동일한 영역을 건드림 → 충돌."
+  - question: "/wt-branch가 다른 회피 방법(PR 코멘트 안내, AI-AGENT-GUIDE 문서화, post-merge hook)보다 압도적으로 효과적인 이유는?"
+    options:
+      - "기술적으로 더 복잡해서"
+      - "행동 자체가 안전한 패턴이라 사람의 기억력 의존이 0이기 때문. 안내/문서/코멘트는 사람이 읽고 기억해야 작동하지만, /wt-branch는 실행하는 것 자체가 origin/main에서 깨끗하게 분기하는 행동"
+      - "worktree가 git의 최신 기능이라서"
+      - "다른 방법보다 빠르게 실행되어서"
+    answer: 1
+    explanation: "Compound Engineering의 일관된 원칙: '사람의 기억력에 의존하는 가드는 100% 실패한다'. PR 코멘트를 안 읽을 수 있고, 문서를 잊을 수 있고, hook 메시지를 무시할 수 있다. /wt-branch는 '새 작업 시작 = worktree 생성'이라는 행동 자체에 안전이 박혀 있어서 사고 발생 구조가 없다."
+---
+
+## 함정의 구조 — 왜 100% 충돌이 발생하는가
+
+AI 자동 squash merge(예: GitHub Actions의 `ai-review.yml`)를 사용하는 환경에서 반복적으로 발생하는 함정의 정확한 메커니즘.
+
+### Squash Merge의 본질
+
+```
+Feature branch:  A --- B --- C    (3개의 개별 commit)
+                  ↓ squash merge
+Main branch:     ... --- D        (A+B+C를 합친 새 commit, SHA가 다름)
+```
+
+D의 *내용*은 A+B+C와 같지만 *SHA*는 완전히 다르다. Git은 SHA로 commit을 식별하므로, git이 보기에 A, B, C와 D는 **서로 다른 commit**이다.
+
+### 함정 발동 조건
+
+```
+[T+0] Session A: feature branch에서 작업 완료, push
+[T+1] ai-review.yml: PR 생성 → squash merge to main → origin/main에 commit D 추가
+[T+2] ai-review.yml: feature branch를 main으로 force reset
+[T+3] Session B (또는 같은 Session A): 로컬 git fetch를 안 함
+      → 로컬에는 여전히 A, B, C가 있는 feature branch
+      → 새 작업 E를 같은 branch 위에 commit
+[T+4] push → rebase 시도 → A를 main(D 포함) 위에 올림 → 충돌!
+```
+
+**핵심**: squash merge 후 feature branch를 재사용하면, 이미 main에 들어간 commit들이 *다른 형태로* 다시 rebase되면서 충돌.
+
+### 사람의 기억력 의존 = 100% 실패
+
+이 함정을 피하려면 매번 새 작업 전에:
+
+```bash
+git fetch origin
+git checkout main
+git reset --hard origin/main
+git checkout -b new-feature
+```
+
+를 실행해야 한다. 문제는 **사람이 이걸 매번 기억하느냐**다.
+
+## 두 번의 라이브 사고 — Journal 002, 003
+
+### 첫 번째 사고 (Journal 002)
+
+moneyflow 프로젝트의 PR #91. `ai-review.yml`의 inline test gate를 추가하는 PR이 squash merge된 후, 같은 branch에서 다음 작업을 push. 이미 main에 들어간 commit이 원본 형태로 다시 rebase되면서 충돌.
+
+### 두 번째 사고 (Journal 003)
+
+**같은 사이클**, **다른 세션**에서 동일한 사고 재현. PR #93이 같은 메커니즘으로 Auto Merge FAIL.
+
+```bash
+$ gh run list --branch harness-journal-002-merge-gate-inline
+[FAIL] Auto Merge to main      24285480424   ← 두 번째 사고
+[FAIL] Auto Merge to main      24285305742   ← 첫 번째 사고
+```
+
+같은 branch, 같은 workflow, 같은 fail 단계. **두 번 발생하면 우연이 아니라 패턴**이다.
+
+이 사고가 *다른 세션*에서도 발생했다는 것이 결정적이다. 한 사람의 실수가 아니라 **환경 구조에 박힌 결함**이라는 증거.
+
+## 회피 메커니즘 비교 — 왜 /wt-branch인가
+
+Journal 003에서 4가지 회피 메커니즘을 비교 분석했다:
+
+| 후보 | 방법 | 사람 행동 의존 | 임팩트 |
+|------|------|---------------|--------|
+| A | ai-review 머지 후 PR 코멘트에 안내 | **있음** (PR을 봐야 함) | 중간 |
+| B | AI-AGENT-GUIDE.md에 패턴 문서화 | **있음** (AI가 읽고 따라야 함) | 중간 |
+| **C** | **/wt-branch 슬래시 커맨드** | **없음** | **매우 높음** |
+| D | post-merge git hook으로 안내 출력 | **있음** (메시지를 봐야 함) | 낮음 |
+
+A, B, D는 모두 **사람이 안내를 보고, 기억하고, 따라야** 작동한다. C는 **행동 자체가 안전한 패턴**이라 기억력 의존이 0.
+
+## /wt-branch의 동작
+
+```bash
+# 사용법
+/wt-branch stability-8-matrix-expansion
+
+# 내부 동작
+git rev-parse --show-toplevel       # 프로젝트 루트 자동 감지
+git fetch origin                     # 최신 origin 확보 (필수)
+git worktree add -b stability-8-matrix-expansion \
+  /tmp/mino-tarosaju-stability-8-matrix-expansion \
+  origin/main                        # origin/main에서 깨끗하게 분기
+```
+
+결과:
+- `/tmp/mino-tarosaju-stability-8-matrix-expansion/`에 깨끗한 origin/main 복사본
+- 새 branch `stability-8-matrix-expansion`이 origin/main에서 분기
+- 원본 working tree는 전혀 건드리지 않음
+- 이전 작업의 stale 상태와 완전히 격리
+
+### 왜 worktree인가
+
+일반 `git checkout -b`는 현재 working tree에서 branch를 만든다. 만약 현재 working tree가 stale이면(origin과 diverged) 새 branch도 stale 위에서 시작.
+
+`git worktree add ... origin/main`은:
+1. **별도 디렉터리**에 새 working tree를 만듦
+2. **origin/main**에서 직접 분기 (로컬 main 상태와 무관)
+3. 원본 working tree의 변경사항에 영향 0
+
+이 세 가지가 합쳐져서 "squash merge 후 stale branch 재사용" 함정이 **구조적으로 불가능**해진다.
+
+## 4연속 스프린트 검증 — zero conflict
+
+/wt-branch 도입 후 tarosaju 프로젝트의 연속 스프린트 기록:
+
+| 스프린트 | wt-branch 사용 | merge conflict | 비고 |
+|----------|---------------|----------------|------|
+| 7차 (R31~R35) | 첫 dogfooding | zero | Flow Safety 5 Layer |
+| 8차 (R36~R40) | 두 번째 | zero | Matrix Expansion |
+| 9차 (R41~R45) | 세 번째 | zero | Auth Coverage |
+| 10차 (R46~R50) | 네 번째 | zero | 후속 hardening |
+
+도입 전: 2 사이클 안에 2번 사고.
+도입 후: 4 사이클 연속 zero conflict.
+
+이건 우연이 아니다. 함정의 발동 조건 자체가 제거되었기 때문.
+
+## .env.local 복사 — 7차 retro에서 배운 교훈
+
+7차 스프린트(첫 dogfooding)에서 발견한 문제:
+
+```
+worktree 생성 → npm run build → FAIL
+원인: .env.local이 worktree에 없음 (gitignored)
+```
+
+`.env.local`은 gitignore 대상이라 worktree에 자동으로 복사되지 않는다. 해결:
+
+```bash
+# worktree 생성 직후
+cp /Users/jominho/Develop/mino-tarosaju/.env.local \
+   /tmp/mino-tarosaju-<branch>/.env.local
+```
+
+이 단계를 7차 retro에서 명시하고, 8차부터 wt-branch 실행 직후 첫 단계로 포함. 이후 누락 zero.
+
+## "squash merge 후 feature branch 재사용 금지" 규칙
+
+/wt-branch는 이 규칙의 **구현체**다.
+
+```
+규칙: squash merge 후 feature branch를 재사용하지 않는다.
+↓
+강제 방법: 매 작업을 새 worktree에서 시작한다.
+↓
+도구: /wt-branch 슬래시 커맨드
+```
+
+규칙을 문서에 적어두는 것(후보 B)과 규칙을 도구에 박는 것(후보 C)의 차이:
+
+- **문서**: "읽었는가?" → "기억하는가?" → "지금 따르는가?" — 3단계 사람 의존
+- **도구**: 실행 = 규칙 준수 — 0단계 사람 의존
+
+## 이식성 — 프로젝트 무관 설계
+
+/wt-branch 커맨드는 프로젝트 이름을 하드코딩하지 않는다:
+
+```bash
+PROJECT_ROOT=$(git rev-parse --show-toplevel)
+PROJECT_NAME=$(basename $PROJECT_ROOT)
+```
+
+`git rev-parse --show-toplevel`로 프로젝트 루트를 자동 감지하므로, **같은 파일을 어떤 프로젝트에 복사해도 수정 없이 작동**한다.
+
+실제로 ai-study에서 정의한 `/wt-branch.md` 파일이 moneyflow와 tarosaju 두 프로젝트에 **변경 0으로 이식**됐다 (Journal 005).
+
+tarosaju의 경우 *다른 세션*이 ai-study의 박제 패치를 별도 안내 없이 발견하여 이식 — 시리즈의 자체 동력이 처음으로 라이브 검증된 사례.
+
+## 금지 사항
+
+/wt-branch 사용 시 절대 하지 않을 것:
+
+1. **원본 working tree의 변경을 worktree로 옮기기** -- 다른 세션의 작업일 수 있음
+2. **worktree 작업 중 원본 working tree를 만지기** -- 두 곳 동시 작업은 새 함정
+3. **fetch(Phase 2) 생략** -- 회피 메커니즘 자체가 무력화
+4. **worktree를 사용자 승인 없이 자동 remove** -- 머지 완료 확인 후에만 정리
+
+## 핵심 교훈
+
+### 1. 두 번 발생하면 패턴이다
+
+같은 사고가 두 번 발생하면 "다음엔 조심하자"가 아니라 "구조를 바꿔야 한다"는 신호. Journal 002와 003은 같은 사이클, 다른 세션에서 발생 — 이건 사람의 실수가 아니라 환경의 결함.
+
+### 2. 행동에 박는 가드 > 기억에 의존하는 가드
+
+Compound Engineering의 일관된 원칙. 안내 문서, PR 코멘트, hook 메시지는 사람이 "읽고, 기억하고, 따라야" 작동한다. 이 체인의 어느 한 링크라도 끊어지면 사고. /wt-branch는 행동 자체가 안전이라 체인이 없다.
+
+### 3. 도구는 규칙의 구현체다
+
+"squash merge 후 branch 재사용 금지"라는 규칙은 문서에 적어두면 *규칙*이지만, /wt-branch로 만들면 *인프라*가 된다. 규칙은 어길 수 있고, 인프라는 어기기 어렵다.
+
+### 4. 이식 비용이 0인 도구가 복리 효과를 만든다
+
+프로젝트 루트를 `git rev-parse`로 자동 감지하는 설계 덕에 세 프로젝트에 변경 0으로 이식. 이식 비용이 0이면 "다른 프로젝트에도 적용할까?"의 답이 항상 "yes"가 된다.
+
+## 관련 자료
+
+- [Journal 003 — squash merge 함정의 두 번째 라이브 입증](/wiki/harness-engineering/harness-journal-003-squash-merge-trap-pattern)
+- [Journal 004 — /wt-branch 슬래시 커맨드 정의](/wiki/harness-engineering/harness-journal-004-wt-branch-command)
+- [Journal 005 — wt-branch 양쪽 이식, dogfooding 성공](/wiki/harness-engineering/harness-journal-005-wt-branch-dogfooding-and-transfer)
+- tarosaju `.claude/commands/wt-branch.md` — 커맨드 정의 파일
+- tarosaju `docs/retros/2026-04-12-stability-r31-r35.md` — .env.local 복사 교훈

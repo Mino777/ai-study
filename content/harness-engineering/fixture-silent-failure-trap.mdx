@@ -1,0 +1,262 @@
+---
+title: "R38 Silent Failure — fixture가 작동하는 '척'하는 함정"
+category: harness-engineering
+date: "2026-04-12"
+tags: [harness-engineering, e2e-testing, fixture, false-positive, playwright, supabase]
+confidence: 9
+connections:
+  - harness-engineering/harness-engineering-overview
+  - harness-engineering/ai-testing-strategies
+status: complete
+description: "Supabase 세션 fixture가 테스트를 통과시켰지만 실제로는 작동하지 않았던 사례. cookie name mismatch로 인한 silent failure와 false positive의 위험성, 그리고 production-safe testing hook(window.__E2E_AUTH__)으로 직접 검증하는 해결 패턴."
+type: entry
+quiz:
+  - question: "R38 fixture의 cookie name mismatch가 발생한 근본 원인은?"
+    options:
+      - "Playwright가 cookie를 제대로 주입하지 못해서"
+      - "SUPABASE_PROJECT_REF를 'placeholder'로 하드코딩했는데, 로컬 .env.local의 실제 Supabase URL과 달라서 cookie 이름이 불일치"
+      - "Supabase SDK 버전이 달라서"
+      - "base64 인코딩 형식이 잘못돼서"
+    answer: 1
+    explanation: "Supabase의 storageKey는 `sb-${hostname.split('.')[0]}-auth-token` 형식. fixture는 `sb-placeholder-auth-token`으로 cookie를 주입했지만, 실제 앱은 `sb-<실제projectRef>-auth-token`을 읽으므로 cookie를 찾지 못함. 테스트는 '페이지가 렌더됨'만 확인했기에 통과."
+  - question: "Fixture smoke test에서 '간접 검증'과 '직접 검증'의 차이는?"
+    options:
+      - "간접 검증은 느리고 직접 검증은 빠르다"
+      - "간접 검증은 'cookie가 존재함 + 페이지가 렌더됨'만 확인, 직접 검증은 'useAuth().user === MOCK_USER'처럼 실제 state 변화를 assert"
+      - "간접 검증은 CI에서만, 직접 검증은 로컬에서만 가능하다"
+      - "간접 검증은 unit test, 직접 검증은 E2E test"
+    answer: 1
+    explanation: "R38의 smoke test는 cookie set + 페이지 렌더만 확인(간접). 하지만 cookie 이름이 달라서 앱이 cookie를 무시해도 페이지는 정상 렌더됨(비로그인 상태로). R41에서 window.__E2E_AUTH__로 useAuth().user 값을 직접 assert해야 비로소 fixture의 진짜 효과를 검증."
+---
+
+## 배경 — 테스트가 통과했는데 아무것도 검증하지 않았다
+
+tarosaju 프로젝트의 E2E 테스트 인프라 구축 과정(8차 R36~R40 스프린트)에서 발생한 사건.
+
+R38에서 Supabase 세션 fixture를 만들었다. Playwright 테스트에서 "로그인 유저" 상태를 시뮬레이션하기 위해 cookie 주입 + `/auth/v1/**` 라우트 mock을 구현. 4개의 smoke test를 작성했고, **모두 통과**했다.
+
+R39에서 이 fixture를 사용해 Auth x Onboarding 매트릭스를 5 cell 확장(10 -> 15). auth=user 조합의 모든 cell이 **통과**했다.
+
+9차 스프린트(R41)에서 "fixture가 진짜 작동하는지 직접 검증"하는 layer를 추가했더니:
+
+```
+expect(auth?.user?.id).toBe(MOCK_USER.id);
+// Expected: "00000000-0000-0000-0000-000000000001"
+// Received: undefined   ← user가 null이었음
+```
+
+**R38 fixture는 한 번도 작동한 적이 없었다.** R39 매트릭스의 auth=user 5 cell은 전부 false positive.
+
+## Root Cause — Cookie Name Mismatch
+
+Supabase의 `createBrowserClient`는 내부적으로 storageKey를 URL에서 파생한다:
+
+```typescript
+// node_modules/@supabase/supabase-js/src/SupabaseClient.ts:294
+const storageKey = `sb-${baseUrl.hostname.split('.')[0]}-auth-token`;
+```
+
+R38 fixture의 초기 구현:
+
+```typescript
+// ❌ R38 초기 — 하드코딩
+export const SUPABASE_PROJECT_REF = "placeholder";
+export const SUPABASE_STORAGE_KEY = `sb-${SUPABASE_PROJECT_REF}-auth-token`;
+// → cookie name: "sb-placeholder-auth-token"
+```
+
+그런데 로컬 `.env.local`에는 실제 Supabase URL이 있었다:
+
+```
+NEXT_PUBLIC_SUPABASE_URL=https://abcdefgh.supabase.co
+```
+
+앱이 읽는 cookie name: `sb-abcdefgh-auth-token`
+fixture가 주입한 cookie name: `sb-placeholder-auth-token`
+
+**이름이 다르니 앱은 cookie를 찾지 못함** -> useAuth().user = null -> 비로그인 상태로 렌더.
+
+## 왜 테스트는 통과했나 — Assertion의 느슨함
+
+R38의 smoke test가 검증한 것:
+
+```typescript
+// R38 smoke test — 간접 검증만
+test("loginAs() — cookie와 route mock이 등록됨", async ({ page, context }) => {
+  await loginAs(context, page, MOCK_USER);
+  await page.goto("/");
+
+  // 1) cookie가 주입됐는지 → ✅ 주입은 됨 (이름이 틀릴 뿐)
+  const cookies = await context.cookies();
+  const supabaseCookie = cookies.find((c) => c.name === SUPABASE_STORAGE_KEY);
+  expect(supabaseCookie).toBeDefined();  // fixture의 key로 찾으니 당연히 있음
+
+  // 2) 페이지가 렌더됨 → ✅ 비로그인 상태에서도 렌더됨
+  await expect(page.locator("h1").first()).toBeVisible();
+});
+```
+
+문제점:
+- **Cookie 존재 여부**를 fixture 자신의 key로 확인 -> 당연히 존재
+- **페이지 렌더 여부**만 확인 -> 비로그인이든 로그인이든 페이지는 렌더됨
+- **실제 useAuth().user 값**은 한 번도 확인하지 않음
+
+R39 매트릭스도 마찬가지:
+
+```typescript
+// R39 매트릭스 — 느슨한 assertion
+{
+  finalUrlContains: "localhost",
+  finalUrlExcludes: ["/preview/landing"],
+}
+// 비로그인 상태에서도 이 조건은 통과함
+```
+
+## Fix — 3단계 수정
+
+### Fix 1: deriveProjectRef() 동적 파생
+
+```typescript
+// ✅ R41 수정 — 런타임에 env에서 파생
+function deriveProjectRef(): string {
+  const url =
+    process.env.NEXT_PUBLIC_SUPABASE_URL ?? "https://placeholder.supabase.co";
+  try {
+    const hostname = new URL(url).hostname;
+    return hostname.split(".")[0] ?? "placeholder";
+  } catch {
+    return "placeholder";
+  }
+}
+
+export const SUPABASE_PROJECT_REF = deriveProjectRef();
+export const SUPABASE_STORAGE_KEY = `sb-${SUPABASE_PROJECT_REF}-auth-token`;
+```
+
+이제 `.env.local`의 URL이 바뀌어도 cookie name이 자동으로 맞춰진다.
+
+### Fix 2: playwright.config에서 환경 강제
+
+```typescript
+// playwright.config.ts 최상단
+process.env.NEXT_PUBLIC_SUPABASE_URL =
+  process.env.NEXT_PUBLIC_SUPABASE_URL ?? "https://placeholder.supabase.co";
+
+// webServer.env에도 동일 값 전달
+webServer: {
+  env: {
+    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    NEXT_PUBLIC_E2E: "1",
+  },
+},
+```
+
+dev server와 test process가 **같은 URL**을 보도록 보장.
+
+### Fix 3: E2E Auth Bridge — 직접 검증 layer
+
+```tsx
+// src/components/E2EAuthBridge.tsx
+export default function E2EAuthBridge() {
+  const { user, loading } = useAuth();
+
+  useEffect(() => {
+    if (process.env.NEXT_PUBLIC_E2E !== "1") return;
+    (window as unknown as { __E2E_AUTH__: unknown }).__E2E_AUTH__ = {
+      user,
+      loading,
+      ready: !loading,
+    };
+  }, [user, loading]);
+
+  return null;
+}
+```
+
+이 컴포넌트는 `NEXT_PUBLIC_E2E=1`일 때만 활성화. Production 빌드에서는 Next.js가 env를 빌드 시 inline하므로 dead code elimination 대상.
+
+Playwright에서 직접 검증:
+
+```typescript
+// ✅ R41 — 직접 검증
+test("loginAs() → useAuth().user === MOCK_USER", async ({ page, context }) => {
+  await loginAs(context, page, MOCK_USER);
+  await page.goto("/saju");
+
+  await page.waitForFunction(() => {
+    const win = window as any;
+    return win.__E2E_AUTH__?.ready === true;
+  }, { timeout: 5000 });
+
+  const auth = await page.evaluate(() => (window as any).__E2E_AUTH__);
+  expect(auth?.user?.id).toBe(MOCK_USER.id);     // 직접 검증
+  expect(auth?.user?.email).toBe(MOCK_USER.email); // 직접 검증
+});
+```
+
+## 핵심 교훈
+
+### 1. Fixture smoke test는 DIRECT effect를 assert해야 한다
+
+```
+❌ "cookie가 존재함" (fixture 자신의 key로 찾으면 당연히 있음)
+❌ "페이지가 렌더됨" (비로그인에서도 렌더됨)
+✅ "useAuth().user.id === MOCK_USER.id" (진짜 효과)
+```
+
+Fixture의 *목적*이 "로그인 상태 시뮬레이션"이면, assertion도 "로그인 상태인가?"여야 한다.
+
+### 2. 느슨한 assertion은 false positive의 온상
+
+R39 매트릭스의 `finalUrlContains: "localhost"`는 사실상 모든 페이지에서 통과한다. 이런 assertion은 테스트가 *존재한다는 착각*만 줄 뿐 실제 검증 가치는 0.
+
+**테스트가 있는데 없는 것보다 위험한 경우**: false positive가 신뢰를 만들고, 그 신뢰 위에 더 많은 코드를 쌓게 된다.
+
+### 3. 하드코딩 vs 동적 파생
+
+```
+❌ SUPABASE_PROJECT_REF = "placeholder"  (env와 불일치 가능)
+✅ deriveProjectRef()  (env에서 자동 파생, 일치 보장)
+```
+
+외부 시스템(Supabase)의 내부 로직에 의존하는 값은 **같은 소스에서 파생**해야 한다. 하드코딩은 두 시스템이 갈라지는 순간 silent failure.
+
+### 4. Production-safe testing hook 패턴
+
+`window.__E2E_AUTH__`는 production에 영향 0이면서 E2E 테스트에서 직접 검증을 가능하게 한다:
+
+- `process.env.NEXT_PUBLIC_E2E !== "1"` -> effect 안 실행
+- Next.js가 빌드 시 env를 inline -> production에서 dead code
+- Vercel 배포 환경은 `NEXT_PUBLIC_E2E`를 설정하지 않음
+
+이 패턴은 useAuth 외에도 복잡한 client state(useUserProfile, useUiState 등)를 E2E에서 직접 assert할 때 확장 가능.
+
+## 타임라인 — 발견까지 걸린 시간
+
+```
+8차 R38: fixture 작성 + smoke test 4개 → 모두 통과 → "잘 됨" ✓
+8차 R39: 매트릭스 5 cell 추가 → 모두 통과 → "인프라 완성" ✓
+8차 retro: "fixture 검증이 weak" 언급 → 직접 검증 추가 *검토* 필요
+9차 R41: E2E Auth Bridge 추가 → user=null 발견 → "전부 false positive였음" ✗
+```
+
+8차 retro에 이미 "검증이 weak"이라고 적혀 있었다. 하지만 "false positive 가능성"까지는 명시하지 않았다. **"약하다"와 "작동 안 한다"는 다르다** — 후자를 의심하지 않으면 발견이 늦어진다.
+
+## 적용 범위
+
+이 패턴은 모든 E2E fixture에 해당:
+
+- **Auth fixture**: 로그인 상태 시뮬레이션 → user 값 직접 assert
+- **Feature flag fixture**: flag on/off 시뮬레이션 → flag 값 직접 assert
+- **A/B test fixture**: variant 할당 시뮬레이션 → variant 값 직접 assert
+- **Locale fixture**: 언어 설정 시뮬레이션 → 렌더된 텍스트 직접 assert
+
+**규칙**: Fixture의 smoke test는 *fixture가 만들어야 하는 상태 변화*를 **직접** assert해야 한다. "페이지가 렌더됨", "에러 없음" 같은 간접 증거는 부족하다.
+
+## 관련 자료
+
+- tarosaju `e2e/fixtures/supabase-auth.ts` — deriveProjectRef() 포함 최종 버전
+- tarosaju `src/components/E2EAuthBridge.tsx` — production-safe testing hook
+- tarosaju `e2e/auth-fixture.spec.ts` — R41 직접 검증 테스트 포함
+- tarosaju `docs/retros/2026-04-12-stability-r36-r40.md` — 8차 retro ("fixture 검증이 weak")
+- tarosaju `docs/retros/2026-04-12-stability-r41-r45.md` — 9차 retro (silent failure 발견 기록)

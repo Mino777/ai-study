@@ -1,0 +1,267 @@
+---
+title: "Error Boundary가 crash하면 React는 죽는다 — Crash-Safe Error Boundary 패턴"
+category: frontend-ai
+date: "2026-04-12"
+tags: [frontend-ai, react, error-boundary, crash-safe, next-js]
+confidence: 9
+connections:
+  - frontend-ai/frontend-ai-patterns
+  - frontend-ai/inapp-browser-white-screen-defense
+status: complete
+description: "React error boundary는 앱의 마지막 방어선. 여기에 Canvas, Framer Motion, dynamic import 같은 실패 가능한 코드를 넣으면 에러 발생 시 fallback 자체가 crash → React가 렌더할 곳이 없어 흰 화면. Error boundary는 앱에서 가장 단순한 컴포넌트여야 한다."
+type: entry
+quiz:
+  - question: "Error boundary의 fallback UI에 Canvas 파티클 효과를 넣으면 안 되는 근본적 이유는?"
+    options:
+      - "Canvas가 느려서 에러 복구 시간이 길어진다"
+      - "Error boundary는 React의 마지막 렌더 시도이므로, fallback이 throw하면 React가 더 이상 렌더할 곳이 없어 unrecoverable 흰 화면이 된다"
+      - "Canvas는 SSR에서 작동하지 않아 hydration mismatch가 발생한다"
+      - "Lighthouse 점수가 떨어진다"
+    answer: 1
+    explanation: "React의 error boundary lifecycle: componentDidCatch → getDerivedStateFromError → render(fallback). 이 render에서 다시 throw가 발생하면 상위 boundary로 전파되고, root error boundary에서도 crash하면 React 전체가 unmount됨. 인앱 WebView에서 Canvas.getContext('2d')가 null이거나 crash하면 이 시나리오가 현실이 됨."
+  - question: "Next.js의 error.tsx에서 Tailwind CSS를 사용하지 않는 이유는?"
+    options:
+      - "error.tsx는 서버 컴포넌트여서 Tailwind가 적용 안 된다"
+      - "Tailwind는 빌드 단계에서 처리되므로, CSS 빌드 자체가 실패한 상황이라면 Tailwind 클래스가 스타일로 변환되지 않아 레이아웃이 깨진다"
+      - "error.tsx에서는 className을 사용할 수 없다"
+      - "Tailwind CSS의 JIT 모드가 에러 상태에서 작동하지 않는다"
+    answer: 1
+    explanation: "Error boundary가 작동하는 상황은 '무언가 이미 잘못된 상태'. CSS 빌드 실패, CDN 장애, 번들 로딩 실패 등 어떤 상황에서도 스타일이 보장되려면 inline style만 사용해야 함. Tailwind는 빌드 의존적이라 보장 불가."
+---
+
+## 핵심 원리 — Error Boundary의 Lifecycle
+
+React의 error boundary는 `componentDidCatch`(class component) 또는 Next.js의 `error.tsx` convention으로 구현된다. 동작 순서:
+
+```
+자식 컴포넌트에서 throw 발생
+→ React가 가장 가까운 error boundary를 찾음
+→ getDerivedStateFromError(error) 호출
+→ error boundary의 render() 실행 (fallback UI)
+→ 사용자에게 fallback 화면 표시
+```
+
+여기서 **치명적 함정**:
+
+```
+fallback UI의 render() 자체가 throw
+→ 상위 error boundary로 전파
+→ 상위 error boundary가 없거나 그것도 crash
+→ React가 전체 컴포넌트 트리를 unmount
+→ 흰 화면 (unrecoverable)
+```
+
+**Error boundary는 React의 마지막 방어선이다.** 마지막 방어선이 무너지면 복구할 곳이 없다.
+
+## 실제 사례 — tarosaju 인앱 브라우저 흰 화면
+
+tarosaju 프로젝트에서 카카오톡 인앱 브라우저로 접속한 유저들이 "화면이 하얘진다"고 보고.
+
+### 사고 흐름
+
+```
+카카오톡에서 공유 링크 클릭
+→ 인앱 WebView에서 페이지 로드
+→ Canvas 파티클(Stars) 초기화 시도
+→ WebView가 Canvas.getContext('2d') 실패 또는 animation loop crash
+→ React error boundary 작동
+→ error.tsx가 렌더... 하지만
+→ error.tsx 자체에 Canvas(Stars) + motion/react(Framer Motion) 사용
+→ error.tsx도 crash
+→ React가 렌더할 곳이 없음
+→ 흰 화면
+```
+
+### 문제의 코드 (Before)
+
+```tsx
+// ❌ 위험한 error.tsx — 에러 페이지가 에러를 일으킴
+"use client";
+import Stars from "@/components/particles/Stars";  // Canvas 2D
+import { motion } from "motion/react";              // Framer Motion
+
+export default function ErrorPage({ error, reset }) {
+  return (
+    <div className="min-h-screen bg-[#0a0e27]">
+      <Stars />  {/* Canvas — WebView에서 crash 가능 */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+      >
+        <h1 className="text-white">에러가 발생했어요</h1>
+        <button onClick={reset}>다시 시도</button>
+      </motion.div>
+    </div>
+  );
+}
+```
+
+이 코드의 위험 요소:
+1. **Stars (Canvas)** — `getContext('2d')`가 null이면 crash
+2. **motion/react** — WASM 또는 JS 파싱 실패 시 crash
+3. **Tailwind CSS** — CSS 빌드 실패 시 스타일 없음
+4. **dynamic import 의존** — 번들 로딩 실패 시 crash
+
+## 해결 — Crash-Safe Error Boundary
+
+### 수정된 코드 (After)
+
+```tsx
+// ✅ crash-safe error.tsx — 순수 HTML + inline style만
+"use client";
+import { useEffect } from "react";
+import { logger } from "@/lib/logger";
+
+export default function ErrorPage({ error, reset }: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
+  useEffect(() => {
+    logger.error("[root] error boundary:", error.message, {
+      digest: error.digest,
+      stack: error.stack,
+    });
+  }, [error]);
+
+  return (
+    <div style={{
+      minHeight: "100vh",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: "20px",
+      background: "#0a0e27",
+      fontFamily: "system-ui, -apple-system, sans-serif",
+    }}>
+      <div style={{ width: "100%", maxWidth: "360px", textAlign: "center" }}>
+        <div style={{
+          fontSize: "48px",
+          marginBottom: "20px",
+          color: "rgba(184,197,232,0.8)",
+        }}>
+          ✦
+        </div>
+        <h1 style={{
+          fontSize: "20px",
+          fontWeight: 700,
+          marginBottom: "8px",
+          color: "rgba(184,197,232,0.95)",
+        }}>
+          앗, 문제가 발생했어요
+        </h1>
+        <button
+          onClick={reset}
+          style={{
+            width: "100%",
+            padding: "14px",
+            borderRadius: "12px",
+            fontWeight: 600,
+            fontSize: "14px",
+            color: "#fff",
+            border: "none",
+            cursor: "pointer",
+            background: "linear-gradient(135deg, rgba(184,197,232,0.9), rgba(128,144,160,0.9))",
+          }}
+        >
+          다시 시도
+        </button>
+        <a href="/" style={{
+          display: "block",
+          marginTop: "12px",
+          color: "rgba(184,197,232,0.7)",
+          textDecoration: "none",
+        }}>
+          홈으로
+        </a>
+      </div>
+    </div>
+  );
+}
+```
+
+### 허용 목록 vs 금지 목록
+
+| 허용 | 금지 |
+|------|------|
+| HTML 태그 (div, h1, p, button, a) | Canvas / WebGL |
+| inline `style` 속성 | motion/react (Framer Motion) |
+| `useEffect` (에러 로깅용) | dynamic import (`React.lazy`, `next/dynamic`) |
+| `console.error` / logger | Tailwind CSS 클래스 |
+| 유니코드 텍스트 (이모지, 심볼) | 이미지 (`<img>`, `next/image`) |
+| `<a href="/">` (HTML 네비게이션) | `next/link` (클라이언트 라우팅) |
+| 기본 이벤트 핸들러 (onClick) | 외부 폰트 (`@font-face`, Google Fonts) |
+
+**판단 기준**: "이 의존성이 실패하면 error boundary도 crash하는가?" Yes이면 금지.
+
+## Next.js error.tsx와의 관계
+
+Next.js App Router의 `error.tsx`는 React error boundary의 wrapper다:
+
+```
+layout.tsx
+  └── error.tsx  ← 이 안에서 crash하면?
+        └── page.tsx  ← 여기서 에러 발생
+```
+
+`error.tsx`가 crash하면 상위 layout의 error boundary로 전파된다. root `app/error.tsx`가 crash하면 Next.js의 최상위 error handler까지 올라가고, 거기서도 처리 못하면 **빈 HTML만 남는다**.
+
+### Next.js의 error.tsx 규칙
+
+1. `"use client"` 필수 (error boundary는 client component)
+2. `error`와 `reset` props를 받음
+3. **이 파일 안에서 throw하면 안 됨** — 가장 중요한 규칙
+
+### 존별 error boundary 전략
+
+tarosaju처럼 여러 테마 존이 있는 앱에서는 존별 error.tsx를 만들 수 있다. 단, **모든 존의 error.tsx가 동일한 crash-safe 패턴을 따라야** 한다:
+
+```
+app/
+  error.tsx          ← root: crash-safe (inline style)
+  tarot/
+    error.tsx        ← tarot 존: crash-safe (inline style, 금색 테마)
+  saju/
+    error.tsx        ← saju 존: crash-safe (inline style, 주홍 테마)
+```
+
+존별 배경색이나 메시지만 다르게 하되, **구현 방식은 동일**: inline style only.
+
+## 왜 이게 인앱 브라우저에서만 터졌나
+
+Chrome이나 Safari에서는 Canvas.getContext('2d')가 항상 성공한다. 따라서 error boundary의 Stars 컴포넌트도 정상 렌더.
+
+인앱 WebView(카카오톡, 네이버 등)는 다르다:
+
+- Canvas context 생성이 **null을 반환하거나 렌더 중 crash**
+- `navigator.vibrate()`가 **존재는 하지만 호출 시 throw**
+- `backdrop-filter`가 **렌더 엔진 불안정**을 유발
+
+Error boundary에 이런 API를 사용하면, **에러가 발생한 바로 그 환경에서 error boundary도 실패**하는 구조가 된다. 에러가 발생하지 않는 환경에서는 error boundary를 볼 일이 없고, 에러가 발생하는 환경에서는 error boundary가 crash. 양쪽 다 테스트로 잡기 어렵다.
+
+## Error Boundary Testing 체크리스트
+
+error.tsx를 작성한 후 확인할 것:
+
+- [ ] import 목록에 Canvas, motion, dynamic이 없는가
+- [ ] className 대신 inline style만 사용하는가
+- [ ] 이미지/폰트 외부 리소스 의존이 없는가
+- [ ] `<Link>`가 아니라 `<a href>`를 사용하는가
+- [ ] useEffect 안에서만 부수효과(로깅)를 수행하는가
+- [ ] reset 버튼과 홈으로 링크가 모두 있는가
+
+## 핵심 교훈
+
+1. **Error boundary는 앱에서 가장 단순한 컴포넌트여야 한다.** 에러 페이지가 예쁠 필요 없다. *작동해야* 한다.
+
+2. **"마지막 방어선"에는 실패 가능한 코드를 넣지 않는다.** 이건 error boundary뿐 아니라 모든 fallback 시스템에 적용되는 원칙. Database fallback이 database에 의존하면 안 되는 것과 같다.
+
+3. **에러가 발생하는 환경에서 error boundary도 실패하는 구조**가 가장 위험하다. 정상 환경에서는 error boundary를 볼 일이 없고, 비정상 환경에서 error boundary가 crash하면 아무도 발견 못 한다.
+
+4. **inline style은 못생겼지만 100% 보장된다.** CSS 빌드 실패, CDN 장애, 번들 로딩 실패 — 어떤 상황에서도 inline style은 렌더된다.
+
+## 관련 자료
+
+- tarosaju `src/app/error.tsx` — crash-safe 최종 버전
+- [인앱 브라우저 흰 화면 방어](/wiki/frontend-ai/inapp-browser-white-screen-defense) — 11건 방어 패턴 전체
+- React 공식 문서: [Error Boundaries](https://react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary)
+- Next.js 공식 문서: [error.js](https://nextjs.org/docs/app/api-reference/file-conventions/error)
