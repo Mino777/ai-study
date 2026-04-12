@@ -419,27 +419,42 @@ cd /Users/jominho/Develop/ai-study && rtk npm run build
 
 ### 🔴 우선순위 높음
 
-1. **Vercel Pro Analytics 커스텀 이벤트 + Speed Insights** (사용자 미완 요청)
-   - `@vercel/speed-insights` 설치 + layout 통합
-   - 주요 UX 포인트에 `track()` 커스텀 이벤트: 검색 / 카테고리 네비 / Quiz / Graph 노드 클릭 / Admin
-   - `.claudeignore` 적용 후 `/context` before/after 스냅샷 수집 (Tokenomics 적용 로그 갱신)
+1. ~~**Vercel Pro Analytics 커스텀 이벤트 + Speed Insights**~~ ✅ 완료 (PR #29)
+2. ~~**Journal 016**: investment_judge~~ ✅ 완료 (다른 세션 PR #106)
+3. ~~**Journal 017**: devils_advocate + research-debate + risk-debate + portfolio-manager~~ ✅ 완료 (이번 세션)
 
-2. **Journal 016**: investment_judge + devils_advocate 2개 평면 에이전트 validator (Journal 013 복제 패턴)
-
-3. **Journal 017**: research-debate + risk-debate + portfolio-manager 중첩 구조 3개 (Zod 3차 재평가 지점)
+4. **Journal 018**: Layer 3-4 (retry + instruction augmentation) — `callAI`에 `maxRetries`, validator issues를 instruction에 추가해서 LLM 재요청
 
 ### 🟡 우선순위 중간
 
-4. **Journal 018+**: Layer 3-4 (retry + instruction augmentation) — `callAI`에 `maxRetries`, 13 에이전트 전체 완료 후
 5. **`/wt-branch`에 자동 `checkout main`**: 체크아웃 함정 3회째 재발 시 승격
 6. **`validate-content.mjs`에 MDX JSX 사전 탐지**: `<숫자` + `{...}` 패턴을 MDX compile 전에 경고
 7. **moneyflow worktree 잔여물 cleanup 제안**: prunable 4개 정리 권고 (다른 세션 스코프)
+8. **validator 통합 테스트**: 실제 LLM 응답 로그에서 validator 통과율 측정
 
 ### 🟢 우선순위 낮음
 
-8. **비용 추적 DB 저장 + `/cost-check`**: Supabase migration 승인 필요 (자율 금지)
-9. **text guards 발동률 측정**: tarosaju 프로덕션 데이터 대기
-10. **prompt caching 재검토**: tarosaju Haiku minimum 확인
+9. **비용 추적 DB 저장 + `/cost-check`**: Supabase migration 승인 필요 (자율 금지)
+10. **text guards 발동률 측정**: tarosaju 프로덕션 데이터 대기
+11. **prompt caching 재검토**: tarosaju Haiku minimum 확인
+
+---
+
+### 2026-04-12 (새 세션) — Journal 017 작성 + 10/10 에이전트 Layer 1+2 완료
+
+**발견**: moneyflow origin/main에 다른 세션이 investment_judge validator PR #106을 이미 머지. NEXT.md 큐 2번(J016) 절반 완료 상태.
+
+**작업 산출**:
+- devils_advocate validator — moneyflow `ai-ops/devils-advocate-validator` 브랜치 push (ai-review.yml 자동 PR 예상)
+- research-debate + risk-debate + portfolio-manager validators — moneyflow `ai-ops/remaining-validators` 브랜치 push
+- `harness-journal-017-final-validators-all-agents.mdx` 신규 + ai-study main push
+- vitest 40 신규 케이스 (15 + 25)
+- **10/10 에이전트 Layer 1+2 완료** (custom_prompt 제외)
+- **Zod 3차 재평가 → type guard 최종 확정**
+
+**큐 재정렬**: 큐 1~3번 모두 완료. 다음 최우선: Journal 018 (Layer 3-4 retry + instruction augmentation).
+
+**사고 재발률**: **0회** (이번 세션).
 
 ---
 
