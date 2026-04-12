@@ -1,0 +1,173 @@
+---
+title: "Harness Journal 013 — 3 analyst 런타임 검증 확장 (news / sentiment / fundamentals)"
+category: harness-engineering
+date: "2026-04-12"
+tags: [harness-journal, harness-engineering, moneyflow, runtime-validation, pattern-replication, type-guard]
+confidence: 5
+connections:
+  - harness-engineering/harness-journal-012-market-analyst-runtime-validation
+  - harness-engineering/ai-output-zod-validation-pattern
+  - harness-engineering/harness-journal-011-concurrent-session-safety
+status: complete
+description: "Journal 012의 market_analyst validator 패턴을 3개 analyst 에이전트(news/sentiment/fundamentals)에 1:1 복제. 4 analyst validator 완성. 패턴 복제 작업을 한 사이클로 묶는 원칙의 두 번째 적용."
+type: entry
+quiz:
+  - question: "Journal 013이 *한 사이클에 3 에이전트*를 묶은 결정의 근거는?"
+    choices:
+      - "시간 절약"
+      - "*패턴 복제*는 *패턴 정의*와 다른 작업 단위. Journal 012가 정의한 validator 패턴을 1:1 복제하는 건 *한 패턴의 확장*이고, 스코프·리스크·리뷰 부담이 한 덩어리라 분할이 인위적이다. Journal 007+008 양쪽 이식 패턴과 동일"
+      - "사용자 요청"
+      - "CI 시간 제한"
+    answer: 1
+    explanation: "한 사이클 한 박제 원칙의 본질은 *한 번에 검토할 수 있는 인지 부하 단위*를 유지하는 것. 패턴 복제는 개별 검토가 필요한 *다른 결정*이 아니라 *같은 결정의 반복 적용*이라 한 덩어리가 자연스럽다."
+  - question: "`checkAgentReportBase` 함수를 *4 validator가 공유*하도록 설계한 이유는?"
+    choices:
+      - "파일 크기 절감"
+      - "*변경 단일 지점* 원칙. 기본 필드(signal, confidence, summary, key_points, reasoning) 검증 규칙이 바뀔 때 4곳을 모두 수정하는 게 아니라 1곳만 수정하면 된다. 또 4 validator가 *같은 base 규칙*을 따름을 *타입 수준*에서 보장"
+      - "성능 개선"
+      - "테스트 간소화"
+    answer: 1
+    explanation: "공유 base 체크가 중앙 집중화되면 규칙 일관성이 구조적으로 유지된다. Journal 014에서 debate/judge/trader 등 base 규칙이 다른 에이전트를 다룰 때 이 분리가 명확해진다."
+  - question: "AI 출력 Zod 검증 5 Layer 중 이 Journal들이 *아직 구현하지 않은 Layer*와 그 이유는?"
+    choices:
+      - "Layer 1-5 전부 구현"
+      - "*Layer 3(retry + instruction augmentation), Layer 4(format prompt guard)* 미구현. 이유: (a) 큐 분할 원칙 — 한 사이클에 너무 많은 변경은 리뷰 부담, (b) Layer 3는 callAI 시그니처 변경이 필요해 13 에이전트 전체에 영향, 범용화 시점에 맞추는 게 맞음, (c) 현재 Layer 1+2+5로도 AI 응답 대부분의 shape drift를 잡을 수 있음"
+      - "Layer 3만 구현"
+      - "Layer 1만 구현"
+    answer: 1
+    explanation: "레이어를 분할해서 단계적으로 도입하는 게 자동 머지 리듬에 더 잘 맞는다. 5 Layer를 한 번에 도입하면 한 PR이 너무 커서 Test Gate 실패 시 원인 파악이 어렵다. *작은 변화를 여러 사이클에 분산*하는 게 박제의 속도를 높인다."
+---
+
+## 사이클 트리거
+
+[Journal 012](/wiki/harness-engineering/harness-journal-012-market-analyst-runtime-validation)가 market_analyst에 런타임 validator 패턴을 정의했다. Journal 013은 *그 패턴을 news / sentiment / fundamentals 3 에이전트에 1:1 복제*한다.
+
+이게 별도 사이클이 아니라 한 사이클로 묶이는 이유는, *패턴 복제*가 *패턴 정의*와는 다른 인지 부하 단위이기 때문이다. 같은 결정을 3번 내리는 건 분할할 필요가 없다.
+
+## 작업 단위
+
+| 에이전트 | 파일 | 변경 |
+|---|---|---|
+| news_analyst | `agents/news-analyst.ts` | 1줄 (parseJSON에 validator 추가) |
+| sentiment_analyst | `agents/sentiment-analyst.ts` | 1줄 |
+| fundamentals_analyst | `agents/fundamentals-analyst.ts` | 1줄 |
+| 공통 | `schemas/analyst-schemas.ts` | validator 3개 추가 (checkAgentReportBase 재사용) |
+| 테스트 | `__tests__/analyst-validators.test.ts` | vitest 24 케이스 (6+6+6+6) |
+
+## validator 구현 — checkAgentReportBase 공유
+
+```typescript
+function checkAgentReportBase(v: Record<string, unknown>): string[] {
+  const issues: string[] = [];
+  if (typeof v.agent_name !== 'string' || v.agent_name.length === 0) issues.push('agent_name: string required');
+  if (typeof v.signal !== 'string' || !SIGNAL_VALUES.includes(v.signal as ...)) issues.push(...);
+  if (typeof v.confidence !== 'number' || v.confidence < 0 || v.confidence > 100) issues.push(...);
+  if (typeof v.summary !== 'string') issues.push('summary: string required');
+  if (!isStringArray(v.key_points)) issues.push('key_points: string[] required');
+  if (typeof v.reasoning !== 'string') issues.push('reasoning: string required');
+  return issues;
+}
+
+// 4 validator가 모두 이 함수를 호출 — 기본 필드 규칙 바뀌면 1곳만 수정
+export function validateNewsAnalystReport(value: unknown): ValidationResult<NewsAnalystReport> {
+  if (!isRecord(value)) return { ok: false, issues: ['root: object required'] };
+  const issues = checkAgentReportBase(value);
+
+  // news 특화 필드만 추가 체크
+  if (typeof value.news_sentiment !== 'number' || value.news_sentiment < -100 || value.news_sentiment > 100) {
+    issues.push('news_sentiment: number -100~100 required');
+  }
+  if (!isStringArray(value.key_events)) issues.push('key_events: string[] required');
+  if (!['HIGH', 'MEDIUM', 'LOW'].includes(value.impact_assessment as string)) {
+    issues.push('impact_assessment: must be HIGH|MEDIUM|LOW');
+  }
+
+  if (issues.length > 0) return { ok: false, issues };
+  return { ok: true, value: value as unknown as NewsAnalystReport };
+}
+```
+
+중앙집중식 base check는 *변경 단일 지점*을 보장한다. Journal 014에서 debate/judge 등 *다른 base 규칙*을 가진 에이전트를 다룰 때도 이 분리가 유지된다.
+
+## 테스트 전략 — `it.each`로 공통 케이스 일반화
+
+```typescript
+describe('3 analyst validator 공통 base 필드 체크', () => {
+  const validators = [
+    { name: 'news', fn: validateNewsAnalystReport, extra: { news_sentiment: 0, key_events: [], impact_assessment: 'LOW' } },
+    { name: 'sentiment', fn: validateSentimentAnalystReport, extra: { market_sentiment: 0, fear_greed_assessment: 'NEUTRAL', social_buzz: 'LOW' } },
+    { name: 'fundamentals', fn: validateFundamentalsAnalystReport, extra: { valuation_assessment: 'FAIR', financial_health: 'MODERATE', growth_outlook: 'NEUTRAL' } },
+  ] as const;
+
+  it.each(validators)('$name: key_points 배열 아님 → 실패', ({ fn, extra }) => {
+    const broken = { ...BASE, ...extra, key_points: 'single string' };
+    expect(fn(broken).ok).toBe(false);
+  });
+});
+```
+
+공통 규칙은 `it.each`로 3배 검증. 3 validator가 *같은 base 체크를 공유*한다는 것을 테스트 수준에서 명시적으로 박제.
+
+## 진행 상황 — 13 에이전트 중 4 완료
+
+| # | 에이전트 | Layer 1+2 적용 |
+|---|---|---|
+| 1 | market_analyst | ✅ Journal 012 |
+| 2 | news_analyst | ✅ Journal 013 |
+| 3 | sentiment_analyst | ✅ Journal 013 |
+| 4 | fundamentals_analyst | ✅ Journal 013 |
+| 5 | bull_researcher | ⏳ Journal 014 (research-debate.ts) |
+| 6 | bear_researcher | ⏳ Journal 014 |
+| 7 | research_judge | ⏳ Journal 014 (investment-judge.ts) |
+| 8 | risk_debate_* | ⏳ Journal 014 (risk-debate.ts, 3 perspectives) |
+| 9 | devils_advocate | ⏳ Journal 014 |
+| 10 | trader | ⏳ Journal 014 |
+| 11 | portfolio_manager | ⏳ Journal 014 |
+| 12 | custom_prompt | ⏳ Journal 014 (스코프 제외 가능 — user-defined shape) |
+| 13 | (equity_research_writer 등 기타) | ⏳ Journal 015+ |
+
+**진행률**: 4 / 13 = 31%
+
+## Layer 진행 상황
+
+| Layer | 의미 | 진행 |
+|---|---|---|
+| 1 | `safeJsonParse` (raw → object) | ✅ 기존 `parseJSON` 3단계 파싱 |
+| 2 | shape validation | ✅ 4 analyst에 validator 적용 |
+| 3 | 실패 시 instruction 추가 + retry | ⏳ Journal 015+ |
+| 4 | format prompt guard | ⏳ Journal 015+ |
+| 5 | Fallback + 메트릭 | ✅ DEFAULT_REPORT + `console.warn` |
+
+Layer 3-4는 `callAI` 시그니처를 바꿔야 하므로 *13 에이전트 범용화*와 같이 가는 게 자연스럽다. Journal 015+에서.
+
+## 허브-워커 모델 — 두 번째 자기 사용
+
+Journal 012가 첫 번째 실전이었고 013은 *같은 패턴의 반복*이다. 주목할 점:
+
+- 다시 `/projects-sync`로 moneyflow 상태 확인 → 다른 세션 worktree 여전히 active
+- `/wt-branch`로 origin/main 분기 → 시작점 충돌 0
+- 1분 36초 자동 머지 (Journal 012와 거의 동일 시간) — *반복 가능한 리듬* 확인
+
+동시 세션 충돌 0회 누적. Journal 011의 셋업이 *한 번 증명*이 아니라 *반복적으로* 작동함을 이 사이클이 확인.
+
+## 사이클 크기
+
+- 4 모디파이 (3 에이전트 + 1 schemas) + 1 신설 (테스트)
+- 1 PR (auto merge), 1m30s급
+- 24 테스트 추가
+- 279 insertions, 11 deletions
+
+Journal 012와 비슷하거나 살짝 큰 크기. *한 사이클 한 박제* 원칙 내.
+
+## 다음 큐
+
+- **🔴 Journal 014**: *9 debate/judge/trader/PM 에이전트 validator* — 응답 구조가 analyst와 완전히 다름 (bull/bear report, judge decision, trader proposal, PM decision 등). 
+  - **결정 필요**: 이 시점에 zod 도입 여부. analyst 4개는 type guard로 충분했지만 debate 9개는 구조 복잡도가 달라 zod가 표현력에서 유리할 수 있음. Journal 014 착수 전 한 번 측정.
+- **🔴 Journal 015**: *Layer 3-4 (retry + instruction augmentation)* — `callAI`에 `maxRetries` 옵션 추가. 13 에이전트 전체에 영향.
+- **🟡 text guards 발동률 측정** (tarosaju, 데이터 수집 대기)
+
+## 핵심 메시지
+
+> *패턴이 정의되면 복제는 기계적이다. 박제의 가치는 *패턴을 정의한 순간* 생기지 *복제하는 동안* 생기지 않는다. Journal 012가 만든 한 줄의 validator 패턴이 Journal 013에서 3번, Journal 014에서 9번 복제될 예정이다. 같은 결정의 반복은 같은 사이클에 묶는다.*
+
+반복은 *깊이가 아닌 폭*을 측정하는 작업이다. 깊이가 필요한 다음 결정은 Journal 014의 *zod 도입 여부*다.
