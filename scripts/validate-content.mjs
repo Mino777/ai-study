@@ -124,7 +124,18 @@ async function main() {
 
   for (const file of files) {
     const rel = path.relative(process.cwd(), file);
-    const raw = fs.readFileSync(file, "utf-8");
+    let raw = fs.readFileSync(file, "utf-8");
+
+    // 0. Quiz 필드명 자동 교정: options → choices (다른 세션 AI 생성물 호환)
+    if (raw.includes("\n    options:\n") && raw.includes("quiz:")) {
+      const fixed = raw.replace(/^    options:$/gm, "    choices:");
+      if (fixed !== raw) {
+        fs.writeFileSync(file, fixed, "utf-8");
+        raw = fixed;
+        console.log(`   🔧 ${rel}: quiz options → choices 자동 교정`);
+      }
+    }
+
     const { content } = matter(raw);
 
     // 1. MDX 컴파일 검증 (모든 파일)

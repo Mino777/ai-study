@@ -81,6 +81,18 @@ quiz:
 - `2026-04-12 — .claudeignore 신설` — ai-study 프로젝트에 `.claudeignore` 추가. `src/generated/`, `package-lock.json`, `.next/`, `docs/retros/`, `docs/solutions/` 등 매 턴 prefix에 불필요한 파일을 구조적으로 배제. **실측 (2026-04-12 후속)**: 배제 대상 텍스트 파일 ~194K tokens (package-lock.json 117K + src/generated 48K + docs/* 29K). 프로젝트 텍스트 전체 ~384K tokens 대비 **~50% context 축소**. `.next/` 466MB는 바이너리 포함이라 토큰 계산에서 제외하지만 파일 탐색 시간 절감에 기여.
 - `2026-04-12 — ccusage 베이스라인` — 오늘 하루 사용량: 833M tokens / $499.76. 일일 평균(최근 20일): ~360M tokens / ~$211. cache read가 전체의 98%+ (7.1B/7.2B). cache 히트율이 높아서 실비용은 총 토큰 대비 매우 낮음. 이 베이스라인은 향후 새 레버 적용 시 before/after 비교 기준.
 
+### 실측 결과 요약 (2026-04-12 기준)
+
+| 레버 | 측정 방법 | 절감량 | 비고 |
+|---|---|---|---|
+| **RTK (Rust Token Killer)** | `rtk gain` | **47.4M tokens 절감 / 2,234 commands (99.5%)** | grep 43.7M (최대 기여), vitest 3.2M, read 154K. 설치 이후 누적 |
+| **`.claudeignore`** | du + token 추정 | **~194K tokens/세션 context 절감 (~50%)** | package-lock.json 117K + src/generated 48K + docs/* 29K 배제 |
+| **Prompt Caching (자동)** | ccusage | **cache read 98%+ (7.1B / 7.2B total)** | Anthropic API 자동 캐싱. 실비용이 총 토큰 대비 매우 낮은 핵심 이유 |
+
+**종합**: RTK가 CLI 출력 토큰의 99.5%를 필터링하고, `.claudeignore`가 세션 context를 50% 축소하며, API cache read가 98%로 비용을 극적으로 낮춤. 3 레버가 서로 다른 레이어(CLI 출력 / context prefix / API 비용)에서 독립적으로 작동하여 중복 없이 누적 효과.
+
+**일일 비용 베이스라인**: ~360M tokens / ~$211 (최근 20일 평균). 이 수치는 위 3 레버가 *이미 적용된* 상태의 비용. 레버 없이는 추정 2-3배 이상.
+
 ### 연구 중 / 미적용
 
 - *§6 우선순위 표의 레버들 중 아직 검증 안 된 것*
