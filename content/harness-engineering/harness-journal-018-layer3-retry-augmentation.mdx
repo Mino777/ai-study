@@ -1,0 +1,140 @@
+---
+title: "Harness Journal 018 — Layer 3-4 retry + instruction augmentation (10/10 에이전트 전체 적용)"
+category: harness-engineering
+date: "2026-04-12"
+tags: [harness-journal, harness-engineering, moneyflow, runtime-validation, retry, instruction-augmentation, layer3, layer4]
+confidence: 5
+connections:
+  - harness-engineering/harness-journal-017-final-validators-all-agents
+  - harness-engineering/harness-journal-012-market-analyst-runtime-validation
+  - harness-engineering/ai-output-zod-validation-pattern
+status: complete
+description: "5 Layer 패턴의 Layer 3(retry) + Layer 4(instruction augmentation) 구현. retryWithValidation 순수 함수 + callAIAndValidate 래퍼로 validator 실패 시 issues를 prompt에 추가해서 LLM 재요청. market_analyst 첫 적용 후 나머지 9 에이전트 일괄 전환. 기존 1096 테스트 전체 통과."
+type: entry
+quiz:
+  - question: "retryWithValidation을 callAIAndValidate와 분리한 이유는?"
+    choices:
+      - "성능 최적화"
+      - "callAI가 같은 모듈 내 함수라 vitest의 모듈 mock이 내부 참조를 가로채지 못함. caller를 주입받는 순수 함수로 분리하면 vi.fn()으로 테스트 가능"
+      - "다른 언어 지원"
+      - "타입 호환성"
+    answer: 1
+    explanation: "ESM에서 같은 모듈 내 함수는 exports 객체가 아닌 직접 참조로 호출되어 모듈 mock이 안 먹는다. caller 주입 패턴으로 테스트 가능성을 확보하면서 callAIAndValidate는 callAI를 caller로 바인딩하는 편의 래퍼 역할."
+  - question: "instruction augmentation이 LLM에 전달하는 정보는?"
+    choices:
+      - "전체 스택 트레이스"
+      - "validator의 issues 배열 — '이전 응답에서 이런 필드가 잘못됐다'는 구체적 오류 목록을 프롬프트 끝에 추가해서 LLM이 어떤 필드를 어떻게 고쳐야 하는지 알게 함"
+      - "이전 응답 전체"
+      - "모델 설정 변경"
+    answer: 1
+    explanation: "issues 배열은 validator가 발견한 구체적 문제(예: 'confidence: number 0-100 required')를 담는다. LLM에 '이전 응답의 JSON 형식 오류' 섹션으로 추가하면 LLM이 어떤 필드를 어떻게 수정해야 하는지 정확히 안다."
+  - question: "maxRetries: 1의 의미와 선택 이유는?"
+    choices:
+      - "1초 딜레이"
+      - "최초 1회 + retry 1회 = 최대 2회 호출. API 비용 대비 효과가 가장 높은 지점 — 대부분의 LLM JSON 형식 오류는 1회 재시도에서 해결되며, 2회 이상은 비용 대비 한계 효용 급감"
+      - "1개 에이전트만 retry"
+      - "1분 타임아웃"
+    answer: 1
+    explanation: "retry 0회는 fallback, 1회는 대부분 복구, 2회 이상은 구조적 문제(프롬프트 자체가 불완전)일 가능성이 높아서 비용만 늘어남. 1회가 cost-effective sweet spot."
+---
+
+## 배경
+
+Journal 012~017에서 Layer 1(JSON 파싱) + Layer 2(runtime shape validation)를 10/10 에이전트에 적용 완료. Layer 2가 실패하면 fallback을 반환하는데, 이는 *안전*하지만 *정보 손실*이다. LLM이 거의 맞는 JSON을 반환했지만 필드 하나가 빠졌을 때, fallback 대신 *무엇이 잘못됐는지 알려주고 다시 시도*하는 게 더 나은 전략.
+
+## 설계
+
+### retryWithValidation (순수 함수)
+
+```typescript
+async function retryWithValidation<T>(
+  caller: (prompt: string) => Promise<string>,
+  prompt: string,
+  fallback: T,
+  validator: Validator<T>,
+  maxRetries: number = 1,
+): Promise<T>
+```
+
+`caller`를 주입받아 테스트 가능. `callAI` 같은 외부 의존성 없이 retry 로직만 담당.
+
+### callAIAndValidate (편의 래퍼)
+
+```typescript
+async function callAIAndValidate<T>(
+  prompt: string,
+  keys: AIKeys,
+  options: CallAIAndValidateOptions,
+  fallback: T,
+  validator: Validator<T>,
+): Promise<T>
+```
+
+`callAI`를 `caller`로 바인딩해서 `retryWithValidation`에 전달. 에이전트 코드에서는 이것만 호출.
+
+### Instruction Augmentation (retry 시 프롬프트 추가)
+
+```
+attempt 0: 원본 prompt 그대로
+attempt 1+: prompt + "\n\n⚠️ 이전 응답의 JSON 형식 오류:\n- issue1\n- issue2\n위 문제를 수정하여 올바른 JSON을 반환하세요."
+```
+
+validator의 `issues` 배열이 그대로 LLM에 전달되므로 "어떤 필드가 어떻게 잘못됐는지" 구체적.
+
+## 테스트 — caller 주입으로 mock 문제 해결
+
+같은 모듈 내 `callAI`를 `vi.mock()`으로 가로채려 했으나 ESM 내부 참조 문제로 실패. `retryWithValidation`을 순수 함수로 분리한 뒤 `vi.fn()`을 `caller`로 주입:
+
+```typescript
+const caller = vi.fn()
+  .mockResolvedValueOnce('{"name":"bad","value":-1}')  // 1차: 실패
+  .mockResolvedValueOnce('{"name":"fixed","value":10}'); // 2차: 성공
+
+const result = await retryWithValidation(caller, 'prompt', FALLBACK, validator, 1);
+expect(result).toEqual({ name: 'fixed', value: 10 });
+expect(caller).toHaveBeenCalledTimes(2);
+// 2번째 호출에 augmented prompt 확인
+expect(caller.mock.calls[1][0]).toContain('value: non-negative number required');
+```
+
+vitest 8 케이스: 첫 시도 성공, retry 성공, 전체 실패 fallback, maxRetries 0, 기본 1, JSON 파싱 실패 복구, 다중 issues augmentation, 코드블록 JSON.
+
+## 적용 — 2 사이클로 전체 완료
+
+### 사이클 1: 인프라 + market_analyst (PR #109)
+
+- `retryWithValidation` + `callAIAndValidate` 신설
+- `market_analyst`에 첫 적용 — `callAI` + `parseJSON` 2줄 → `callAIAndValidate` 1줄
+- vitest 8 테스트 추가
+
+### 사이클 2: 나머지 9 에이전트 (PR #110)
+
+| 에이전트 | 변경 | 특이사항 |
+|---|---|---|
+| news_analyst | 단순 교체 | responseSchema 유지 |
+| sentiment_analyst | 단순 교체 | responseSchema 유지 |
+| fundamentals_analyst | 단순 교체 | responseSchema 유지 |
+| trader | 단순 교체 | responseSchema 없음 |
+| investment_judge | 단순 교체 | thinking: 'deep' |
+| devils_advocate | callAI+parseJSON → callAIAndValidate + 후처리 유지 | activated/slice/clamp 그대로 |
+| research_debate (bull/bear) | 루프 내 2 호출 교체 | |
+| risk_debate | 루프 내 1 호출 교체 | |
+| portfolio_manager | callAI+parseJSON → callAIAndValidate + 후처리 유지 | confidence cap + signal 정합성 |
+
+9 파일, +19 -29 lines. 기존 **1096 테스트 전체 통과**.
+
+## 5 Layer 완료 현황
+
+| Layer | 내용 | 상태 |
+|---|---|---|
+| 1 | JSON 파싱 (3단계 regex fallback) | ✅ 기존 |
+| 2 | Runtime shape validation (type guard) | ✅ Journal 012~017 |
+| **3** | **Retry (maxRetries)** | **✅ Journal 018** |
+| **4** | **Instruction augmentation (issues → prompt)** | **✅ Journal 018** |
+| 5 | Schema evolution (버전 관리) | 미착수 |
+
+Layer 1~4 완료 = *실용적 완성*. Layer 5(schema evolution)는 에이전트 응답 구조가 실제로 변경될 때 필요.
+
+## 핵심 메시지
+
+> *fallback은 안전하지만 정보를 버린다. retry + augmentation은 "거의 맞는 답"을 "완전히 맞는 답"으로 고치는 마지막 기회를 준다. 비용은 최대 2x API 호출이지만, 실패율이 낮으면 평균 비용 증가는 미미하다.*
