@@ -239,3 +239,33 @@ cd /Users/jominho/Develop/ai-study && rtk npm run build
 > *"시리즈는 여기서 멈추는 게 아니라 *정지 지점*이다. 당신(다음 세션)이 이 문서를 읽고 Journal 011을 시작할 때, 이 문서의 '다음 Journal 큐' 항목 중 하나를 선택하면 된다. 추측 큐에 너무 많은 시간을 쓰지 말고, 가장 가벼운 첫 단계부터 시작하라. 라이브 사고가 큐를 재정렬할 것이다. 그게 시리즈의 정상적 작동이다."*
 >
 > — Journal 010 작성자, 2026-04-12
+
+---
+
+## 📜 갱신 로그 (append-only)
+
+### 2026-04-12 (late-later session) — Journal 011 작성
+
+**라이브 발견**: 사용자의 새 요청 *"허브(ai-study)가 양쪽 워커 분석 중에도 워커 세션 작업을 안 깨뜨리게 셋업"*. Journal 011 큐 1번(moneyflow JSON Zod)이 아닌 **큐에 없던 항목**(tarosaju 자동 PR 이식 + 허브-워커 셋업)이 우선순위로 올라옴 — *계획 vs 현실 라이브 교정* 5회째.
+
+**작업 산출**:
+- 🔴 Journal 011 — `harness-journal-011-concurrent-session-safety.mdx` 신규
+- ai-study `ai-ops/session-isolation-setup` 브랜치 → `/projects-sync` 슬래시 커맨드 + CLAUDE.md skill routing 추가 + Journal 011 + 이 NEXT.md 갱신 로그 (수동 머지 대기)
+- moneyflow **PR #96** (`ai-ops/concurrent-session-safety`) → CLAUDE.md "동시 세션 안전 규칙" + CI/CD stale rule 정리 + .gitignore 보강 (자동 PR + Test Gate → 머지 예상)
+- tarosaju **PR #6** (`ai-ops/auto-merge-flow-port`) → `.github/workflows/ai-review.yml` 이식 + CLAUDE.md + .gitignore (*수동 머지 필요* — chicken-and-egg)
+
+**⚠️ 사용자 확인 필요 (자율 금지 영역)**:
+- **tarosaju repo settings**: `Settings > Actions > General > Workflow permissions`을 **Read and write permissions**로 변경 + **Allow GitHub Actions to create and approve pull requests** 켜기. 현재 default `read`라 PR #6 머지 후 첫 자동 push가 403으로 실패할 수 있음.
+- 변경 방법: 웹 UI 또는 `gh api -X PUT repos/Mino777/mino-tarosaju/actions/permissions/workflow -f default_workflow_permissions=write -F can_approve_pull_request_reviews=true`
+
+**다음 큐 재정렬**:
+- 🔴 1번(moneyflow JSON Zod) → 여전히 유효, Journal 012 후보
+- 🔴 2번(비용 추적 DB 저장) → 여전히 유효 (Supabase 승인 대기)
+- 🟡 3번(text guards 발동률) → Journal 013+
+- 🟡 4번(prompt caching 재검토) → Journal 013+
+- **신규 🟡** — tarosaju PR #6 머지 후 *첫 자동 흐름 dogfooding 검증* (Journal 005 패턴과 유사): 머지 후 첫 push가 자동 PR 생성 → Test Gate 통과 → Squash Merge 까지 확인
+- **신규 🟡** — 허브-워커 셋업의 `/projects-sync` *실제 사용 관찰*: 실전에서 다른 세션 작업 흔적 감지 기능이 정말로 작동하는지 데이터 수집
+
+**사고 재발률**: 여전히 **0회 / 8 사이클** (011까지 누적).
+
+---
