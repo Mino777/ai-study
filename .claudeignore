@@ -1,0 +1,21 @@
+# Tokenomics 적용 로그 첫 엔트리 — .claudeignore로 불필요 context 배제
+# 4 조건 확인: 공식 문서(Claude Code docs) + /context로 실측 + 부작용 없음 + 파일 삭제만으로 롤백
+
+# Generated files (prebuild output, AI가 직접 읽을 필요 없음)
+src/generated/
+
+# Lock file (거대, context 가치 거의 없음 — dep 변경 시 직접 읽으면 됨)
+package-lock.json
+
+# Build output
+.next/
+
+# Compound 회고/솔루션 (compound 실행 시에만 필요, 일반 작업 시 불필요한 context)
+docs/retros/
+docs/solutions/
+
+# Test coverage
+coverage/
+
+# Vercel
+.vercel/
