@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ThemeProvider } from "next-themes";
+import { Analytics } from "@vercel/analytics/next";
 import { MobileNav } from "@/components/mobile-nav";
 import { MagneticMode } from "@/components/magnetic-mode";
 import "./globals.css";
@@ -63,6 +64,7 @@ export default function RootLayout({
           <MobileNav />
           <MagneticMode />
         </ThemeProvider>
+        <Analytics />
       </body>
     </html>
   );
