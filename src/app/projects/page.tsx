@@ -105,7 +105,7 @@ const FOUNDATION_HARNESS = [
   {
     code: "HE-7",
     title: "실패도 영구 자산화",
-    detail: "타로사주 R23의 eslint 9→10 업그레이드 실패는 docs/maintenance/deferred-upgrades.md로 박제됨. 다음 시도자가 같은 조사를 반복하지 않는다. *실패도 compound 자산*이라는 것이 핵심 통찰.",
+    detail: "타로사주 R23의 eslint 9→10 업그레이드 실패는 docs/maintenance/deferred-upgrades.md로 기록됨. 다음 시도자가 같은 조사를 반복하지 않는다. *실패도 compound 자산*이라는 것이 핵심 통찰.",
   },
 ];
 
@@ -169,7 +169,7 @@ const PROJECTS = [
       },
       {
         title: "안티패턴 발견 → 즉시 솔루션 → 다음 사이클 입력 (Compound Learning 실증)",
-        detail: "v0.9.9에서 \"DB 저장 + UI 미사용 필드\" 안티패턴 1건 발견 → docs/solutions/workflow/2026-04-11-db-stored-ui-unused-fields.md 작성 → 메모리에 박제 → v0.9.10에서 두 번째 사례를 *retro가 가이드한 대로* 즉시 발견 → v0.9.11에서 세 번째 케이스 청소(reflection+lessons_learned 가시화). retro→solution→memory→다음 사이클 입력 회로가 의도대로 작동한 첫 사례.",
+        detail: "v0.9.9에서 \"DB 저장 + UI 미사용 필드\" 안티패턴 1건 발견 → docs/solutions/workflow/2026-04-11-db-stored-ui-unused-fields.md 작성 → 메모리에 기록 → v0.9.10에서 두 번째 사례를 *retro가 가이드한 대로* 즉시 발견 → v0.9.11에서 세 번째 케이스 청소(reflection+lessons_learned 가시화). retro→solution→memory→다음 사이클 입력 회로가 의도대로 작동한 첫 사례.",
       },
       {
         title: "안전성 5라운드 × 여러 사이클 (currency, react-patterns, runtime-errors)",
@@ -217,7 +217,7 @@ const PROJECTS = [
       },
       {
         title: "Deferred Upgrades 트래킹 — 실패도 자산",
-        detail: "R23에서 eslint 9→10 업그레이드 시도 실패(upstream 블로커: eslint-plugin-react 호환 안 됨). 그 실패 자체를 docs/maintenance/deferred-upgrades.md에 박제. 다음 시도자가 같은 조사를 반복하지 않음. **실패도 compound 자산이라는 것**이 R23 한 라운드의 진짜 메시지.",
+        detail: "R23에서 eslint 9→10 업그레이드 시도 실패(upstream 블로커: eslint-plugin-react 호환 안 됨). 그 실패 자체를 docs/maintenance/deferred-upgrades.md에 기록. 다음 시도자가 같은 조사를 반복하지 않음. **실패도 compound 자산이라는 것**이 R23 한 라운드의 진짜 메시지.",
       },
       {
         title: "LLM-as-a-Judge 품질 자동 측정",
@@ -243,7 +243,7 @@ const PROJECTS = [
       },
       {
         title: "안전성 5차(R21-25) — Security + Maintenance",
-        detail: "RLS 16 테이블 정적 감사 + WITH CHECK fix 3건 + 회귀 테스트, framer-motion → motion/react migrate(191 files, sed 일괄 + 테스트가 회귀 감지), eslint 10 시도→실패→박제, @anthropic-ai/sdk 0.82→0.87. *수동 감사 + 자동 테스트 둘 다 필요한 이유*를 R21이 한 사례로 입증.",
+        detail: "RLS 16 테이블 정적 감사 + WITH CHECK fix 3건 + 회귀 테스트, framer-motion → motion/react migrate(191 files, sed 일괄 + 테스트가 회귀 감지), eslint 10 시도→실패→기록, @anthropic-ai/sdk 0.82→0.87. *수동 감사 + 자동 테스트 둘 다 필요한 이유*를 R21이 한 사례로 입증.",
       },
     ],
     retrospective:
@@ -253,9 +253,9 @@ const PROJECTS = [
     name: "AI Study Wiki",
     url: "https://ai-study-wheat.vercel.app/",
     color: "#f59e0b",
-    period: "2026.03 ~",
+    period: "2026.04 ~",
     version: "57 entries · 11 categories",
-    tagline: "두 워커 프로젝트(MoneyFlow, TaroSaju)를 관찰하고 기록하는 메타 허브 — AI 엔지니어링 방법론을 박제하고, 박제된 패턴이 다시 워커로 전이되는 복리 구조.",
+    tagline: "AI 과외 선생님 → 허브-워커 관제 모델 → LLM-First Wiki로 진화한 메타 프로젝트. 두 워커(MoneyFlow, TaroSaju)에서 검증한 AI 엔지니어링 방법론을 기록하고, 기록된 패턴이 다시 워커로 전이되는 복리 구조.",
     stack: ["Next.js 15", "TypeScript", "MDX", "Tailwind CSS 4", "Gemini 2.5 Flash", "Vercel"],
     metrics: {
       entries: 57,
@@ -273,8 +273,8 @@ const PROJECTS = [
         detail: "매일 09:00 KST GitHub Actions → 지식 그래프 분석 → 빈 카테고리/dangling connections/낮은 confidence 기반 3개 주제 추천 → 사용자 선택 → Gemini가 MDX 자동 생성 → PR → 사용자 수정 = 학습 기록.",
       },
       {
-        title: "박제 전이성 — 허브에서 워커로, 워커에서 허브로",
-        detail: "허브에 박제된 패턴이 별도 안내 없이 다른 세션에 의해 워커에 이식된 사례 5회+. 반대 방향(워커→허브)도 Journal 014에서 확립. 문서가 곧 전파 채널.",
+        title: "패턴 전이성 — 허브에서 워커로, 워커에서 허브로",
+        detail: "허브에 작성된 패턴이 별도 안내 없이 다른 세션에 의해 워커에 이식된 사례 5회+. 반대 방향(워커→허브)도 Journal 014에서 확립. 문서가 곧 전파 채널.",
       },
       {
         title: "Compound Engineering 자동화",
@@ -287,24 +287,24 @@ const PROJECTS = [
     ],
     cycles: [
       {
-        title: "Phase 1 — 위키 인프라 + AI 과외 선생님 (Journal 000-004)",
-        detail: "MDX + force-directed 그래프 + 대시보드 + 히트맵 + 퀴즈. Gemini 파이프라인으로 매일 자동 콘텐츠 생성. CI/CD 자동화(ci.yml + daily-lesson.yml).",
+        title: "🌱 Phase 1 — AI 과외 선생님 (학습 위키)",
+        detail: "시작은 단순한 학습 위키. MDX + force-directed 그래프 + 대시보드 + 퀴즈. Gemini 파이프라인이 매일 학습 주제를 추천하고 콘텐츠를 자동 생성. 이 시점의 역할은 '나의 AI 학습 기록장'.",
       },
       {
-        title: "Phase 2 — 허브-워커 모델 + 자동 머지 (Journal 011-014)",
-        detail: "/projects-sync + /wt-branch 슬래시 커맨드 신설. 3 프로젝트 ai-review.yml 통일. 인바운드 tips PR 흐름으로 워커→허브 역방향 기여 확립.",
+        title: "🔗 Phase 2 — 허브-워커 관제 모델 (Journal 011-014)",
+        detail: "전환점. 단순 위키에서 두 실무 프로젝트를 관찰·조율하는 허브로 진화. /projects-sync로 워커 상태 진단, /wt-branch로 안전한 코드 기여, ai-review.yml로 3 프로젝트 자동 머지 통일. 워커→허브 역방향 기여(인바운드 tips PR)까지 양방향 흐름 확립.",
       },
       {
-        title: "Phase 3 — Runtime Validation 시리즈 (Journal 012-018)",
-        detail: "moneyflow 10/10 에이전트 Layer 1-4 완료. type guard vs Zod 3차 재평가 → type guard 최종. retryWithValidation으로 validator 실패 시 LLM 재요청.",
+        title: "🛡️ Phase 3 — LLM-First Wiki (Journal 012-018)",
+        detail: "허브가 직접 워커 코드를 개선하기 시작. moneyflow 10/10 에이전트 Runtime Validation Layer 1-4 완료. 패턴을 기록만 하는 게 아니라, 기록한 패턴을 *직접 적용*하고 그 결과를 다시 기록하는 자기참조 루프.",
       },
       {
-        title: "Phase 4 — LLM-as-a-Judge + Tokenomics (현재)",
-        detail: "3 프로젝트 품질 자동 평가. RTK + .claudeignore + cache 실측. evaluation 카테고리 첫 실전 엔트리.",
+        title: "⚖️ Phase 4 — 품질 관제 센터 (현재)",
+        detail: "LLM-as-a-Judge로 3 프로젝트 AI 출력 품질 자동 평가. Tokenomics로 비용 실측. 기록 → 관찰 → 평가 → 최적화까지 한 프로젝트 안에서 완결되는 메타 구조.",
       },
     ],
     retrospective:
-      "이 프로젝트의 진짜 정체는 '위키'가 아니라 '관제 센터'다. MoneyFlow에서 만든 패턴을 박제하면, 다른 세션이 그 박제를 발견해서 TaroSaju에 이식한다. TaroSaju에서 발견한 환경 팁은 허브로 PR을 쏴서 다시 박제된다. 이 양방향 흐름이 인프라로 확립된 게 Journal 011-014의 핵심이다.\n\n가장 놀라운 발견은 '박제 전이성'이다. 내가 직접 이식하지 않아도, 다른 세션이 허브의 박제를 읽고 알아서 워커에 적용한다. wt-branch(Journal 004)가 tarosaju에 이식된 건 내가 시킨 게 아니라 다른 세션이 스스로 발견한 것이다. 문서가 곧 전파 채널이 된다는 건 Compound Engineering의 가장 강력한 증거다.\n\n18개 Journal이 기록한 건 '코드를 어떻게 짰나'가 아니라 '환경을 어떻게 조정했나'다. CI 게이트를 어떻게 잡았고, 동시 세션 충돌을 어떻게 방지했고, 도구 선택을 어떤 실시간 제약 기반으로 결정했는지. 이게 Harness Engineering의 실체 — 말(AI)에 하네스를 씌워서 원하는 방향으로 안전하게 달리게 하는 일의 기록.",
+      "이 프로젝트는 세 번 탈바꿈했다.\n\n처음엔 'AI 과외 선생님'이었다. Gemini가 매일 학습 콘텐츠를 만들어주고 내가 읽고 수정하는 학습 위키. 그런데 MoneyFlow와 TaroSaju를 만들면서 '학습 기록'보다 '실전 패턴 기록'이 더 가치 있다는 걸 깨달았다.\n\n두 번째는 '허브-워커 관제 모델'이다. 두 실무 프로젝트를 관찰하고, 거기서 발견한 패턴을 기록하고, 기록된 패턴이 다시 워커로 전이되는 구조. 놀라운 건 내가 직접 이식하지 않아도 다른 세션이 허브의 문서를 읽고 알아서 적용한다는 것이었다. 문서가 곧 전파 채널.\n\n세 번째(현재)는 'LLM-First Wiki + 품질 관제 센터'다. 패턴을 기록만 하는 게 아니라 직접 워커 코드를 개선하고(Runtime Validation 시리즈), AI 출력 품질을 자동 평가하고(LLM-as-a-Judge), 토큰 비용을 실측한다(Tokenomics). 기록 → 관찰 → 평가 → 최적화의 전체 루프가 한 프로젝트 안에서 돈다.\n\n18개 Journal이 기록한 건 '코드를 어떻게 짰나'가 아니라 '환경을 어떻게 조정했나'다. 이게 Harness Engineering의 실체 — AI가 안전하게 달릴 환경을 만드는 일의 기록.",
   },
 ];
 
