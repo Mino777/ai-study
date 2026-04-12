@@ -2,6 +2,66 @@
 
 모든 주목할 만한 변경사항을 이 파일에 기록합니다.
 
+## [2026-04-12] — 허브-워커 양방향 모델 + 허브 자동 머지 + validator Layer 1+2 (4/13)
+
+### Added
+
+- **`/projects-sync` 슬래시 커맨드** (`.claude/commands/projects-sync.md`) — 허브 세션이 moneyflow/tarosaju 워커 프로젝트의 git/PR/worktree 상태를 read-only로 한 번에 진단. fetch + status -sb + ahead/behind + worktree 잔여물 + 최근 PR + 다른 세션 작업 흔적 감지. Journal 012에서 **실시간 제약 기반 의사결정의 입력**으로 첫 실전 사용 (zod dep 추가 대신 type guard 결정).
+- **ai-study 허브에 `ai-review.yml` 이식** (`.github/workflows/ai-review.yml`) — moneyflow에서 1:1 복제, Test Gate만 `npm test` + `npm run build`로 조정 (prebuild가 frontmatter zod + content manifest 검증 자동 포함). Journal 014에서 **첫 시도에 chicken-and-egg 건너뜀** — 권한이 미리 설정돼 있어 PR #18 자기 자신 1m6s 자동 머지. 박제 전이성 5회째 (moneyflow → ai-study, 허브 첫 수용자).
+- **Vercel Analytics 연동** — `@vercel/analytics` ^2.0.1 + `src/app/layout.tsx`에 `<Analytics />`. PR #19는 **ai-study 첫 완전 자동 PR** (ai-review.yml 이후 첫 push 이벤트 → 1m5s 자동 머지).
+- **4 analyst 런타임 shape validator** (`src/lib/trading/schemas/analyst-schemas.ts`, moneyflow) — `validateMarketAnalystReport`, `validateNewsAnalystReport`, `validateSentimentAnalystReport`, `validateFundamentalsAnalystReport`. `checkAgentReportBase` 함수로 base 필드(signal/confidence/key_points/reasoning) 검증 공유. AI 출력 Zod 검증 5 Layer의 Layer 1+2 구현 (Layer 3-4 retry/instruction augmentation은 Journal 016+ 큐).
+- **`parseJSON` optional validator 매개변수** (moneyflow `ai-client.ts`) — backward compat. 기존 12개 호출 사이트 영향 없음, 4 analyst만 validator 사용.
+- **vitest 38 테스트 추가** (moneyflow) — market-analyst-schema 14 + analyst-validators 24 (news 6 + sentiment 6 + fundamentals 6 + 공통 base 6).
+- **5 신규 엔트리** (ai-study content):
+  - `harness-journal-011-concurrent-session-safety.mdx` (허브-워커 안전 셋업, 4 규칙)
+  - `harness-journal-012-market-analyst-runtime-validation.mdx` (Layer 1+2 첫 에이전트)
+  - `harness-journal-013-three-analysts-runtime-validation.mdx` (패턴 1:1 복제, 4/13 진행)
+  - `harness-journal-014-hub-auto-merge-inbound-tips.mdx` (허브 이식 + 양방향 기여)
+  - `dev-setup-tips-log.mdx` (사용자 PR #15로 생성, For AI Agents 섹션 Journal 014에서 보강)
+- **`dev-setup-tips-log.mdx`의 For AI Agents 섹션 — 워커 → 허브 tips PR 흐름 5단계** — worktree 분기, append, commit(`tips:` prefix), push, worktree 정리. 허브의 ai-review.yml이 자동으로 PR 생성 + Test Gate + Squash Merge 일괄 처리.
+- **3 프로젝트 CLAUDE.md 섹션**:
+  - moneyflow + tarosaju: "동시 세션 안전 규칙" (Journal 011 4 규칙) + "환경 팁은 허브로 쏜다" (Journal 014 tips/ PR 패턴)
+  - moneyflow + tarosaju: `.gitignore`에 `.claude/worktrees/` + `.claude/projects/` 추가
+
+### Changed
+
+- **moneyflow CLAUDE.md `## CI/CD` 섹션 재작성** — 옛 규칙 *"PR 날리지 말고 메인에 직접 머지"*가 `ai-review.yml` 도입 이후 사문화됨을 확인 (PR #91~#95가 전부 봇 PR로 머지된 증거). 새 규칙: 자동 PR + inline Test Gate + Squash Merge + feature 브랜치 reset + 새 작업은 `/wt-branch`로 시작.
+- **NEXT.md 갱신 로그 4회 append** — Journal 011, 012, 013, 014 각 사이클마다 스냅샷 + 다음 큐 재정렬 + 사고 재발률 업데이트. 원본 섹션은 보존.
+- **ai-study CLAUDE.md skill routing 추가** — `워커 프로젝트(moneyflow/tarosaju) 상태 확인, 다른 세션 작업 흔적 감지, 충돌 사전 탐지 → invoke projects-sync` 한 줄.
+
+### Fixed
+
+- **moneyflow stale rule** — CLAUDE.md의 "PR 날리지 말고" 규칙이 *실제 행동*(PR #91~#95 봇 PR 머지)과 모순 상태로 유지되고 있었음. Journal 011 PR #96에서 정리.
+- **ai-study checkout 상태 복구** — Journal 012 작업 중 local이 `docs/dev-setup-tips-log` 브랜치에 걸려 있어 `git pull --ff-only origin main` 실패. `checkout main` 후 fast-forward 성공.
+
+### Compound Assets
+
+- `content/harness-engineering/harness-journal-011-concurrent-session-safety.mdx`
+- `content/harness-engineering/harness-journal-012-market-analyst-runtime-validation.mdx`
+- `content/harness-engineering/harness-journal-013-three-analysts-runtime-validation.mdx`
+- `content/harness-engineering/harness-journal-014-hub-auto-merge-inbound-tips.mdx`
+- `content/harness-engineering/dev-setup-tips-log.mdx` + For AI Agents 섹션
+- `.claude/commands/projects-sync.md` (신규 슬래시 커맨드)
+- `.github/workflows/ai-review.yml` (허브 이식)
+- `docs/solutions/workflow/2026-04-12-hub-worker-concurrent-session-safety.md` (3층 방어 체크리스트)
+- `docs/solutions/github-actions/2026-04-12-ai-review-yml-hub-port.md` (이식 사이클 규칙)
+- `docs/solutions/ai-pipeline/2026-04-12-runtime-shape-validation-type-guard-vs-zod.md` (실시간 제약 기반 의사결정)
+- `docs/retros/2026-04-12.md` (이 사이클 회고)
+
+### Metrics
+
+- **Journal 박제**: 4개 (011, 012, 013, 014)
+- **머지된 PR**: 13개 (ai-study 6 + moneyflow 4 + tarosaju 3)
+- **자동 머지**: 10개 / 수동 머지: 3개 (ai-study PR #14, #16, #17만, 나머지 자동)
+- **평균 자동 머지 시간**: ~1m20s
+- **신규 테스트**: 38 (vitest, moneyflow)
+- **Runtime validator 적용**: 4 / 13 에이전트 (31%)
+- **박제 전이성 사이클**: 5회째 달성 (moneyflow → ai-study, 허브 첫 수용자)
+- **자기 검증 구조**: 5회째 달성 (허브-워커 모델 반대 방향 사용)
+- **사고 재발률**: **0 / 13 사이클** 누적 (wt-branch 도입 이후 연속 유지)
+
+---
+
 ## [2026-04-11 wave 2] — 인용구 사고 → /ingest 게이트 → 첫 dogfooding
 
 ### Added
