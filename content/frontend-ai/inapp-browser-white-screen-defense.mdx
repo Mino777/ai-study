@@ -1,0 +1,320 @@
+---
+title: "인앱 브라우저 흰 화면 방어 — 카카오톡/네이버 WebView에서 React 앱이 죽는 이유와 해결"
+category: frontend-ai
+date: "2026-04-12"
+tags: [frontend-ai, inapp-browser, kakaotalk, webview, error-boundary, react, next-js, crash-safe]
+confidence: 9
+connections:
+  - harness-engineering/harness-engineering-overview
+  - frontend-ai/frontend-ai-patterns
+status: complete
+description: "카카오톡 인앱 브라우저에서 React 앱이 흰 화면이 되는 현상의 root cause와 11건 방어 패턴. 핵심: error boundary가 crash하면 React가 렌더할 곳이 없다."
+type: entry
+quiz:
+  - question: "React error boundary에 Canvas나 Framer Motion을 사용하면 안 되는 이유는?"
+    options:
+      - "번들 사이즈가 커진다"
+      - "error boundary 자체가 crash하면 React가 렌더할 곳이 없어서 흰 화면이 된다"
+      - "SEO에 불리하다"
+      - "TypeScript 타입 에러가 난다"
+    answer: 1
+    explanation: "Error boundary는 앱의 *마지막 방어선*. 여기에 실패 가능한 코드(Canvas, animation lib, dynamic import)를 넣으면 에러 시 cascading crash가 발생하고 사용자는 빈 화면만 보게 됨."
+  - question: "인앱 WebView에서 Service Worker 등록이 위험한 이유는?"
+    options:
+      - "SW가 캐시를 너무 많이 써서 메모리 부족"
+      - "보안 정책 위반"
+      - "WebView가 SW를 불완전하게 지원해서 등록이 hang되거나 page load를 block할 수 있음"
+      - "SW가 push 알림을 보내서 사용자 불편"
+    answer: 2
+    explanation: "카카오톡/네이버 인앱 WebView는 Service Worker를 부분적으로만 지원. registration이 pending 상태로 hang되면 페이지 전체가 block됨."
+---
+
+## 배경 — 프로덕션에서 터진 이슈
+
+tarosaju 프로젝트에서 테스트 유저들이 보고:
+
+> "카카오톡에서 링크 열었는데 하다보면 화면이 하얘져요"
+
+스크린샷: 완전 흰 화면 + 카카오 인앱 브라우저 하단 네비게이션만 보이는 상태.
+새로고침해도 안 됨. Safari/Chrome에서 열면 정상.
+
+**영향 범위**: 한국 모바일 트래픽의 상당 부분이 카카오톡 공유 링크를 통해 유입됨.
+이 이슈는 "일부 유저의 불편함"이 아니라 **유입 퍼널의 완전 차단**.
+
+## Root Cause — Error Boundary의 Cascading Crash
+
+```
+사용자가 카카오톡에서 링크 클릭
+→ 인앱 WebView에서 페이지 로드
+→ Canvas (파티클 효과) 초기화 시도
+→ WebView가 getContext('2d') 실패 또는 animation loop crash
+→ React Error Boundary 작동 ... 하지만
+→ error.tsx 자체가 Canvas(Stars) + motion/react 사용
+→ Error Boundary도 crash
+→ React가 렌더할 곳이 없음
+→ 흰 화면 (unrecoverable)
+```
+
+**핵심 원리**: Error Boundary는 앱의 *마지막 방어선*이다.
+여기에 실패 가능한 코드를 넣으면 방어선이 무너지고 복구 불가능한 상태가 됨.
+
+## 인앱 WebView가 일반 브라우저와 다른 점
+
+카카오톡, 네이버, 인스타그램 등의 인앱 브라우저는 Chrome/Safari와 *같은 엔진*을 쓰지만 동작이 다름:
+
+| API | Chrome/Safari | 인앱 WebView |
+|-----|---------------|-------------|
+| `Canvas.getContext('2d')` | 항상 성공 | null 반환 또는 렌더 중 crash |
+| `navigator.vibrate()` | 정상 또는 미지원 | **존재는 하지만 호출 시 throw** |
+| Service Worker | 정상 | 등록이 hang되거나 page load block |
+| `backdrop-filter` CSS | 정상 | 렌더 엔진 불안정 |
+| `IntersectionObserver` | 정상 | 구형 WebView에서 미지원 |
+| `window.matchMedia` | 정상 | 일부 query 미지원 |
+
+가장 위험한 패턴: **API가 "존재는 하는데 동작은 다른" 경우**.
+`'vibrate' in navigator`는 true인데 실제 호출하면 throw.
+`Canvas.getContext('2d')`는 null을 반환하는 게 아니라 *일부* WebView에서 렌더 도중 crash.
+
+## 방어 패턴 — 11건 종합
+
+### Pattern 1: Crash-Safe Error Boundary (가장 중요)
+
+```tsx
+// ❌ 위험한 error boundary
+export default function ErrorPage({ error, reset }) {
+  return (
+    <div>
+      <Stars />  {/* Canvas 파티클 — WebView에서 crash 가능 */}
+      <motion.div animate={{ opacity: 1 }}>  {/* motion/react — crash 가능 */}
+        <h1>에러</h1>
+      </motion.div>
+    </div>
+  );
+}
+
+// ✅ crash-safe error boundary — 순수 HTML + inline style만
+export default function ErrorPage({ error, reset }) {
+  return (
+    <div style={{
+      minHeight: "100vh",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      background: "#0a0e27",
+      fontFamily: "system-ui, sans-serif",
+    }}>
+      <div style={{ textAlign: "center" }}>
+        <h1 style={{ color: "#fff" }}>문제가 발생했어요</h1>
+        <button onClick={reset} style={{ padding: "12px 24px" }}>다시 시도</button>
+        <a href="/" style={{ display: "block", marginTop: "12px" }}>홈으로</a>
+      </div>
+    </div>
+  );
+}
+```
+
+**규칙**: Error boundary에 허용되는 것:
+- HTML 태그 (div, h1, p, button, a)
+- inline `style` 속성
+- `useEffect` (에러 로깅용)
+- `logger.error` (서버 전송)
+
+**절대 금지**:
+- Canvas / WebGL
+- motion/react (Framer Motion)
+- dynamic import
+- Tailwind CSS (빌드 실패 시 스타일 없음)
+- 이미지 (CDN 장애 시 깨짐)
+- 외부 폰트
+
+### Pattern 2: 인앱 브라우저 감지 유틸리티
+
+```typescript
+// src/lib/inapp-detect.ts
+export function isInAppBrowser(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent.toLowerCase();
+  return /kakaotalk|naver|line|instagram|fbav|fban|twitter|threads/i.test(ua);
+}
+```
+
+이 함수를 **모든 browser API 가드에서 공유**. 새 인앱 브라우저 추가 시 이 파일만 수정.
+
+### Pattern 3: Service Worker 인앱 차단
+
+```tsx
+// ServiceWorkerRegister.tsx
+useEffect(() => {
+  if (isInAppBrowser()) return;  // 인앱에서 SW skip
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  }
+}, []);
+```
+
+**추가**: layout.tsx에 inline `<script>` + component 둘 다 SW 등록하는 이중 등록도 위험. 하나만 유지.
+
+### Pattern 4: Canvas 인앱 비활성화
+
+```tsx
+// ParticleCanvas.tsx
+useEffect(() => {
+  if (isInAppBrowser()) return;  // 인앱에서 Canvas skip
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  // ... animation loop
+}, []);
+```
+
+파티클, 배경 효과, 시각적 장식은 **없어도 기능에 지장 없음**. 인앱에서는 과감히 비활성화.
+
+### Pattern 5: Navigator API try/catch
+
+```typescript
+// ❌
+if ('vibrate' in navigator) navigator.vibrate(10);
+
+// ✅
+function safeVibrate(pattern: number | number[]): void {
+  try {
+    if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+      navigator.vibrate(pattern);
+    }
+  } catch {
+    // 인앱 WebView에서 vibrate 실패 — silent
+  }
+}
+```
+
+**원칙**: `'X' in navigator`가 true여도 호출이 throw할 수 있음. 반드시 try/catch.
+
+### Pattern 6: CSS @supports Fallback
+
+```css
+/* ❌ 인앱에서 투명하게 보이거나 렌더 crash */
+.glass-card {
+  background: rgba(20, 15, 40, 0.3);
+  backdrop-filter: blur(20px);
+}
+
+/* ✅ @supports로 분리 + opaque fallback */
+.glass-card {
+  background: rgba(20, 15, 40, 0.85);  /* fallback: 불투명 배경 */
+}
+@supports (backdrop-filter: blur(1px)) {
+  .glass-card {
+    background: rgba(20, 15, 40, 0.3);
+    backdrop-filter: blur(20px);
+  }
+}
+```
+
+### Pattern 7: Global Error Catcher
+
+```tsx
+// GlobalErrorCatcher.tsx — React Error Boundary 밖의 에러 포착
+"use client";
+import { useEffect } from "react";
+import { logger } from "@/lib/logger";
+import { isInAppBrowser } from "@/lib/inapp-detect";
+
+export default function GlobalErrorCatcher() {
+  useEffect(() => {
+    const context = isInAppBrowser() ? "inapp" : "browser";
+
+    const onError = (e: ErrorEvent) => {
+      logger.error(`[global-error][${context}]`, e.message, {
+        filename: e.filename,
+        lineno: e.lineno,
+      });
+    };
+
+    const onRejection = (e: PromiseRejectionEvent) => {
+      logger.error(`[unhandled-rejection][${context}]`, String(e.reason));
+    };
+
+    window.addEventListener("error", onError);
+    window.addEventListener("unhandledrejection", onRejection);
+    return () => {
+      window.removeEventListener("error", onError);
+      window.removeEventListener("unhandledrejection", onRejection);
+    };
+  }, []);
+
+  return null;
+}
+```
+
+`[inapp]` 태그로 Vercel logs에서 인앱 에러만 필터 가능.
+
+### Pattern 8: InAppBrowserGuide 전역 배치
+
+```tsx
+// layout.tsx — 특정 페이지가 아니라 root layout에 배치
+const InAppBrowserGuide = dynamic(() => import("@/components/InAppBrowserGuide"));
+
+// body 안에:
+<InAppBrowserGuide />
+```
+
+인앱 감지 시 "외부 브라우저로 열기" 안내를 **모든 페이지에서** 표시.
+
+### Pattern 9: Browser API Feature Detection
+
+```tsx
+// ❌
+const observer = new IntersectionObserver(callback);
+
+// ✅
+if (typeof IntersectionObserver === "undefined") return;
+const observer = new IntersectionObserver(callback);
+```
+
+### Pattern 10: Layout.tsx 안전 점검
+
+layout.tsx에서 확인할 것:
+- [ ] inline `<script>`에 fail 가능한 API 호출 없는지
+- [ ] dynamic import 컴포넌트들이 crash해도 layout은 살아남는지
+- [ ] Service Worker 등록이 1곳에서만 되는지
+
+### Pattern 11: 인앱 브라우저 배포 전 테스트
+
+배포 checklist에 추가:
+- [ ] 카카오톡에서 공유 링크 열기
+- [ ] 홈 → 사주 → 결과 전체 flow 확인
+- [ ] 타로 카드 뽑기 flow 확인
+- [ ] 에러 발생 시 error page가 뜨는지 (흰 화면이 아닌지)
+
+## 방어 체계 요약
+
+```
+Layer 1: 렌더 방어    → error.tsx / ZoneError.tsx (crash-safe HTML only)
+Layer 2: API 방어     → isInAppBrowser() + try/catch + typeof guard
+Layer 3: CSS 방어     → @supports fallback
+Layer 4: 글로벌 포착  → GlobalErrorCatcher (window.onerror)
+Layer 5: UX 안내      → InAppBrowserGuide 전역 배치
+```
+
+5 layer를 **모두 적용**해야 인앱 브라우저에서 안전.
+어느 하나만 빠져도 특정 WebView 버전에서 흰 화면이 재발할 수 있음.
+
+## 핵심 교훈
+
+1. **Error boundary는 앱에서 가장 단순한 컴포넌트여야 한다.** 에러 페이지가 예쁠 필요 없음. 작동해야 함.
+2. **`'X' in navigator` === true라고 `navigator.X()` 호출이 안전한 게 아니다.** 인앱 WebView의 API 동작은 예측 불가.
+3. **인앱 브라우저 테스트를 CI에 넣을 수 없다면, 최소한 배포 체크리스트에 넣어야 한다.** 한국 서비스에서 카카오톡 유입은 무시할 수 없는 비중.
+4. **"재미 요소" (파티클, 진동, blur)는 있으면 좋지만 없어도 서비스는 되어야 한다.** Progressive enhancement, not graceful degradation.
+
+## 적용 대상
+
+이 패턴은 **한국 시장 타겟 웹 서비스 전체**에 해당:
+- 카카오톡 공유 링크 유입이 많은 서비스
+- 네이버 블로그/카페 링크에서 유입되는 서비스
+- 인스타그램 프로필 링크 서비스
+- 모든 "바이럴/소셜 공유 기반" 웹 서비스
+
+## 관련 자료
+
+- tarosaju PR #14: 카카오톡 인앱 흰 화면 방어 6건
+- tarosaju PR #15: 추가 안정성 방어 5건
+- `docs/solutions/runtime-errors/2026-04-12-inapp-browser-white-screen.md` (tarosaju 프로젝트 내)
