@@ -269,3 +269,35 @@ cd /Users/jominho/Develop/ai-study && rtk npm run build
 **사고 재발률**: 여전히 **0회 / 8 사이클** (011까지 누적).
 
 ---
+
+### 2026-04-12 (late-latest session) — Journal 012 작성
+
+**완료 확인**: tarosaju repo settings(can_approve_pull_request_reviews 포함) 사용자 승인 후 완성 → PR #6 re-run으로 **dogfooding 자동 머지 성공** (1m25s). moneyflow PR #96 자동 머지 + ai-study PR #14 수동 머지. 3 PR 모두 landing.
+
+**Journal 012 — moneyflow market_analyst 런타임 검증 (Layer 1+2)**:
+- 🔴 `harness-journal-012-market-analyst-runtime-validation.mdx` 신규
+- moneyflow **PR #97** (`ai-ops/zod-market-analyst`) → `validateMarketAnalystReport` type guard + `parseJSON` optional validator 매개변수 + market-analyst.ts 호출 사이트 1줄 + vitest 14 테스트 → **1m36s 자동 머지** ✅
+
+**라이브 발견 + 도구 선택 교정**:
+- 큐 1번(Zod 검증)을 시작하자마자 발견: moneyflow에 **zod 의존성이 없음** (package.json 미존재)
+- `/projects-sync` 결과: moneyflow에 **다른 세션 7 active worktree + Conductor la-paz** 동시 작업 중
+- 두 맥락 결합 → *Zod dep 추가 대신 순수 TypeScript type guard*로 의사결정 교정 (package-lock.json 동시 편집 충돌 회피)
+- 이게 `/projects-sync`가 만든 *첫 실시간 제약 기반 의사결정* — Journal 011 셋업의 실전 가치 검증
+
+**허브-워커 모델 첫 자기 사용**:
+- Journal 011의 4개 층이 *동시에* 작동한 첫 실전
+- `/projects-sync` → `/wt-branch` → ai-review.yml Rebase → inline Test Gate
+- 동시 세션과의 충돌 0회
+
+**큐 재정렬**:
+- 🔴 1번(moneyflow JSON Zod) → **첫 1 에이전트 완료** (market_analyst). 나머지 12는 큐에 남음.
+- 🔴 **Journal 013 후보**: *3 analyst 확장* (news/sentiment/fundamentals) — 동일 파일에 validator 3개 추가 + 각 1줄 변경 + 테스트 3개. 빠른 사이클 예상.
+- 🔴 **Journal 014 후보**: *9 debate/judge/trader/PM 에이전트* — 응답 구조가 analyst와 다르므로 별도 설계 필요.
+- 🟡 **Zod 범용화 결정**: 9 debate 에이전트 복잡도 확인 후 zod 도입 여부 결정. 결정 시점은 Journal 014 착수 전.
+- 🟡 **Layer 3-4 (retry + instruction 추가)**: `callAI`에 maxRetries 옵션 → 실패 시 validator issues를 instruction에 추가해서 재요청. Journal 014+에서.
+
+**사이클 크기**: 1 워커 PR + 1 허브 PR + 14 테스트. 한 사이클 한 박제 준수.
+
+**사고 재발률**: **0회 / 9 사이클** (012까지 누적).
+
+---

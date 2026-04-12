@@ -1,0 +1,228 @@
+---
+title: "Harness Journal 012 — moneyflow market_analyst 런타임 검증 (Layer 1+2)"
+category: harness-engineering
+date: "2026-04-12"
+tags: [harness-journal, harness-engineering, moneyflow, runtime-validation, zod-pattern, type-guard, hub-worker]
+confidence: 5
+connections:
+  - harness-engineering/ai-output-zod-validation-pattern
+  - harness-engineering/harness-journal-011-concurrent-session-safety
+  - harness-engineering/harness-journal-000-baseline
+status: complete
+description: "NEXT.md 우선순위 1번(moneyflow JSON Zod 검증)을 첫 1 에이전트(market_analyst)로 시작. Zod 도입 대신 순수 TypeScript type guard로 Layer 1+2를 구현한 이유와 허브-워커 모델 dogfooding 1차 결과."
+type: entry
+quiz:
+  - question: "이 사이클에서 *Zod를 도입하지 않고* 순수 TypeScript type guard로 validator를 구현한 가장 중요한 이유는?"
+    choices:
+      - "Zod가 느려서"
+      - "*동시 세션 안전*과 *큐 분할* 원칙의 결합. 허브 세션이 /projects-sync로 moneyflow에 다른 세션 7 active worktree + Conductor la-paz 감지 → package-lock.json 편집이 다른 세션과 충돌 위험. *첫 1 에이전트 스코프*에는 type guard 1개로 충분. Zod 범용화는 13 에이전트 전체 적용 시점(Journal 013+)에 결정"
+      - "TypeScript가 Zod보다 강력해서"
+      - "라이선스 문제"
+    answer: 1
+    explanation: "*의사결정의 맥락*이 중요하다. 같은 과제(런타임 shape 검증)라도 *허브 세션이 관찰한 워커 상태*에 따라 도구 선택이 달라진다. /projects-sync가 실전 가치를 증명한 첫 사례 — 내가 dep을 추가할지 말지를 *실시간으로 검증된 제약*에 기반해 결정했다."
+  - question: "parseJSON 함수에 validator를 *optional 매개변수*로 추가한 이유는?"
+    choices:
+      - "함수 시그니처 단순화"
+      - "*backward compatibility*. 기존 12개 호출 사이트(news_analyst, sentiment, fundamentals 등)는 validator를 넘기지 않으므로 동작 변화 0. market_analyst 호출만 validator를 추가해서 *첫 1 에이전트 스코프*를 지킴 — 13 에이전트 동시 변경 X"
+      - "타입 추론 개선"
+      - "테스트 용이성"
+    answer: 1
+    explanation: "최소 침습의 본질. 새 기능을 기존 API *확장*으로 도입하면, 한 에이전트 적용 시점에 다른 12 에이전트는 전혀 영향받지 않는다. 이 패턴이 NEXT.md의 '사이클 분할 원칙'을 *함수 시그니처 수준*에서 구현한다."
+  - question: "허브 세션(ai-study)에서 moneyflow worker의 코드 작업을 한 이 사이클이 *Journal 011의 셋업을 실제로 검증*한 지점은?"
+    choices:
+      - "PR 번호가 증가했다"
+      - "(a) /projects-sync가 다른 세션 7 worktree + Conductor 감지 → 설계대로 작동, (b) /wt-branch로 origin/main 분기 → 시작점 충돌 0, (c) ai-review.yml의 Rebase onto main step이 머지 직전 재정렬 → 자동 흡수, (d) Test Gate가 머지 직전 14 테스트 통과 검증. *셋업의 4개 층이 동시에 작동*한 첫 사례"
+      - "머지 시간 단축"
+      - "테스트 커버리지 증가"
+    answer: 1
+    explanation: "Journal 011이 *박제한 셋업*을 Journal 012가 *실제로 사용*한다. 이게 박제 전이성의 *자기 검증 구조* 4회째 — Journal 002(ai-review self-check), Journal 005(wt-branch self-port), Journal 011(ai-review.yml self-port), Journal 012(허브-워커 모델 self-use)."
+---
+
+## 사이클 트리거
+
+[Journal 010의 다음 큐](/wiki/harness-engineering/harness-journal-010-baseline-third-update) 우선순위 1번: *moneyflow JSON Zod 출력 검증*. [Journal 011](/wiki/harness-engineering/harness-journal-011-concurrent-session-safety)에서 허브-워커 안전 셋업을 먼저 박아야 했기 때문에 잠시 미뤄졌고, 이 사이클에서 시작.
+
+사용자 트리거:
+
+> *"굿굿 쭉쭉 진행해줘. 자율로 쭉쭉 진행해줘~!"*
+
+## 스코프 결정 — 첫 1 에이전트
+
+NEXT.md의 원본 작업 단계:
+
+> *"13개 에이전트 호출 사이트 중 *가장 단순한 1개* 먼저 적용 (예: market_analyst)"*
+
+13 에이전트 전체는 *큰 작업*. 한 사이클 한 박제 원칙에 따라 **market_analyst 1개만**.
+
+## 예상치 못한 발견 — zod가 없다
+
+첫 탐색에서 발견:
+
+```bash
+$ grep '"zod"' /tmp/mino-moneyflow-zod-market-analyst/package.json
+# 0 matches
+```
+
+**moneyflow에 zod 의존성이 없다.** NEXT.md가 "Zod 검증"이라고 적었지만 실제 코드는 zod 없이 돌고 있었다. 기존 `schemas/analyst-schemas.ts`는 **JSON Schema**(Gemini/OpenAI API-level structured output)만 정의했다.
+
+## 도구 선택 — Zod vs Type Guard
+
+두 옵션:
+
+| 옵션 | 장점 | 단점 |
+|---|---|---|
+| **zod 도입** | 표현적, 미래 호환 | package.json 편집 → 다른 세션과 lock file 충돌 위험 |
+| **순수 type guard** | 외부 dep 0, 충돌 0 | 덜 표현적, 중복 코드 가능 |
+
+### 결정: 순수 type guard
+
+결정의 핵심은 *허브 세션이 보유한 맥락*이었다. 직전 사이클에서 만든 `/projects-sync`로 moneyflow 상태를 진단한 결과:
+
+```
+worktree list (moneyflow):
+  ~/Develop/mino-moneyflow                              f782587 [main]
+  ~/conductor/workspaces/mino-moneyflow/la-paz         46709c2 [Mino777/la-paz]  ← Conductor
+  ~/Develop/mino-moneyflow/.claude/worktrees/agent-a0f1bf94  active
+  ~/Develop/mino-moneyflow/.claude/worktrees/agent-a1533eb5  active
+  ~/Develop/mino-moneyflow/.claude/worktrees/agent-a85824cc  active
+  ... 4 more prunable
+```
+
+**다른 세션이 *매우 활발히* 작업 중**이었다. 이 상황에서 내가 `package.json` + `package-lock.json`을 편집하면:
+- 다른 세션이 동일 파일을 동시에 편집할 가능성 ≈ 낮지만 0 아님
+- lock file은 작은 변경도 diff가 크고, rebase 충돌 해결이 번거롭다
+- ai-review.yml의 `Rebase onto main` step이 자동 재정렬을 시도하지만 lock file 충돌은 보통 수동 해결이 필요
+
+따라서 이 사이클에서는 **외부 dep 추가를 피한다**. 순수 type guard로 Layer 1+2 달성 → 다음 사이클(13 에이전트 범용화)에서 zod 도입 결정.
+
+이게 `/projects-sync`가 만든 *실시간 제약 기반 의사결정*의 첫 사례다.
+
+## 구현 — 최소 침습 4개 변경
+
+### 1. `schemas/analyst-schemas.ts` — validator 추가 (기존 JSON Schema와 병존)
+
+```typescript
+export type ValidationResult<T> =
+  | { ok: true; value: T }
+  | { ok: false; issues: string[] };
+
+export function validateMarketAnalystReport(
+  value: unknown
+): ValidationResult<MarketAnalystReport> {
+  if (!isRecord(value)) return { ok: false, issues: ['root: object required'] };
+
+  const issues = checkAgentReportBase(value);
+
+  if (!isStringArray(value.indicators_used)) issues.push('indicators_used: string[] required');
+  if (!['BULLISH', 'BEARISH', 'NEUTRAL'].includes(value.trend_direction as string)) {
+    issues.push('trend_direction: must be BULLISH|BEARISH|NEUTRAL');
+  }
+  if (!isNumberArray(value.support_levels)) issues.push('support_levels: number[] required');
+  if (!isNumberArray(value.resistance_levels)) issues.push('resistance_levels: number[] required');
+
+  if (issues.length > 0) return { ok: false, issues };
+  return { ok: true, value: value as unknown as MarketAnalystReport };
+}
+```
+
+Discriminated union 반환으로 *파싱 성공/실패를 한 결과 값으로* 전달. 호출 쪽은 `result.ok` 분기만 하면 된다.
+
+### 2. `ai-client.ts` — `parseJSON`에 optional validator 추가
+
+```typescript
+export type Validator<T> = (value: unknown) =>
+  | { ok: true; value: T }
+  | { ok: false; issues: string[] };
+
+export function parseJSON<T>(text: string, fallback: T, validator?: Validator<T>): T {
+  // ... 기존 3단계 파싱 (직접/코드블록/첫 {})
+  // ... 기존 null 필드 보정 + signal 정규화
+
+  // Journal 012 — Layer 2: Runtime shape validation
+  if (validator) {
+    const check = validator(result);
+    if (!check.ok) {
+      console.warn('[parseJSON] 런타임 검증 실패:', check.issues.slice(0, 5));
+      return fallback;
+    }
+    return check.value;
+  }
+  return result as T;
+}
+```
+
+**Backward compat**: 기존 12개 호출 사이트(news_analyst, sentiment, fundamentals, devils_advocate 등)는 validator를 넘기지 않으므로 *동작 변화 0*. 오직 market_analyst만 validator를 추가.
+
+### 3. `market-analyst.ts` — 호출 사이트 1줄 변경
+
+```typescript
+import { MARKET_ANALYST_SCHEMA, validateMarketAnalystReport } from '../schemas/analyst-schemas';
+// ...
+const text = await callAI(prompt, keys, { ..., responseSchema: MARKET_ANALYST_SCHEMA });
+return parseJSON<MarketAnalystReport>(text, DEFAULT_REPORT, validateMarketAnalystReport);
+//                                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ 추가
+```
+
+### 4. `src/__tests__/market-analyst-schema.test.ts` — vitest 14 케이스
+
+- **validator 직접 호출 8**: 유효 객체, signal enum, confidence 범위, support_levels 타입, trend_direction enum, 필수 필드 누락, null root, 배열 root
+- **parseJSON 통합 6**: 유효 raw JSON, 코드블록 감싼 JSON, 검증 실패 시 fallback, 파싱 실패 시 fallback, validator 없이 backward compat, null 필드 → fallback 보정 후 통과
+
+## Layer 분석
+
+[AI 출력 Zod 검증 5 Layer](/wiki/harness-engineering/ai-output-zod-validation-pattern) 대비 진행:
+
+| Layer | 구현 여부 |
+|---|---|
+| 1. `safeJsonParse` (raw → object) | ✅ `parseJSON`의 3단계 파싱 (기존 코드) |
+| 2. `schema.parse` (shape 검증) | ✅ **이 사이클** — validator 조합 |
+| 3. 실패 시 instruction 추가 retry | ⏳ Journal 013+ |
+| 4. 포맷 강제 prompt guard | ⏳ Journal 013+ |
+| 5. Fallback + 메트릭 | ✅ **이 사이클** — DEFAULT_REPORT + `console.warn` |
+
+**이 사이클은 Layer 1+2+5만**. Layer 3-4의 retry/instruction은 다음 사이클에서 13 에이전트 범용화와 함께. 큐 분할 원칙 준수.
+
+## 허브-워커 모델 검증 — Journal 011 셋업의 첫 자기 사용
+
+Journal 011의 4개 층이 *동시에* 작동한 첫 실전:
+
+1. **`/projects-sync`가 다른 세션 흔적 감지** → 7 active worktree + Conductor la-paz → *zod 대신 type guard* 결정의 근거
+2. **`/wt-branch`로 origin/main 분기** → 시작점 충돌 0
+3. **`ai-review.yml`의 `Rebase onto main`** → 머지 직전 재정렬 (이 경우 변경 없음)
+4. **inline Test Gate (vitest + build)** → 14 테스트 포함 통과 → **1분 36초 자동 머지**
+
+**동시 세션과의 충돌 0회** — Journal 011이 박제한 셋업이 *실전에서 구조적으로 작동*함을 첫 번째로 증명.
+
+## 자기 검증 구조 4회째
+
+| Journal | 자기 검증 구조 |
+|---|---|
+| 002 | `ai-review.yml`에 inline Test Gate 추가 PR이 *그 Test Gate로 자신을* 검증 |
+| 005 | `/wt-branch`를 양쪽 워커에 이식하는 작업 자체를 `/wt-branch`로 시작 |
+| 011 | `ai-review.yml` 이식 PR이 *기존 ai-review.yml이 없는 상태*에서 자신을 머지 (moneyflow) / 수동 후 자동 전환 (tarosaju) |
+| **012** | **허브-워커 모델을 실제로 사용해서 허브 세션이 워커 코드를 안전하게 변경** |
+
+네 번째 자기 검증 구조. 이 패턴은 *설계할 수 없다* — 시리즈의 자연 발생 리듬이다.
+
+## 사이클 크기
+
+- 1 신설 파일 (테스트)
+- 3 수정 파일 (각 1-5줄 핵심 변경 + 문서 주석)
+- 1 허브 브랜치 (Journal 박제 + NEXT.md)
+- 1 워커 PR (자동 PR → 1m36s 자동 머지)
+- 14 테스트 케이스
+
+moneyflow 코드 변경은 *다른 세션 7 active worktree 환경에서* 충돌 0으로 머지. 한 사이클 한 박제 원칙 준수.
+
+## 다음 큐
+
+- **🔴 Journal 013**: *news_analyst, sentiment_analyst, fundamentals_analyst 3개 이식* (동일 파일 `analyst-schemas.ts`에 validator 3개 추가 + 각 호출 사이트 1줄씩 수정 + 테스트 3개) — 이미 정의된 JSON Schema를 type guard로 1:1 매핑하면 됨.
+- **🔴 Journal 014**: *나머지 9 에이전트 (debate agents, trader, portfolio_manager 등)* — 응답 구조가 analyst와 다름, 별도 설계 필요.
+- **🟡 Zod 범용화 결정**: 9 에이전트 중 복잡한 구조가 있으면 그때 zod 도입 검토.
+- **🟡 Layer 3-4 구현**: `callAI`에 `maxRetries` 옵션 추가, 실패 시 instruction에 issues 추가해서 재요청.
+
+## 핵심 메시지
+
+> *도구 선택은 *교과서 정답*이 아니라 *허브가 관찰한 워커의 실시간 상태*에 기반해야 한다. `/projects-sync`가 없었다면 나는 zod를 기계적으로 추가했을 것이고, 7 active worktree 환경에서 lock file 충돌로 사이클이 지연됐을 수 있다.*
+
+*박제가 복리 효과를 낸다* — Journal 011의 셋업이 Journal 012의 *도구 선택 근거*가 되었고, Journal 012의 경험이 Journal 013(Zod 범용화 결정)의 *데이터*가 된다.
