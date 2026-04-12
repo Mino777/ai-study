@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Vibe Coding",
-  description: "AI가 자유롭게 달릴 수 있는 환경을 만든다. 코드가 아니라 코드를 만드는 시스템 — Compound / Context / Harness Engineering으로 운영한 두 프로젝트.",
+  description: "AI가 자유롭게 달릴 수 있는 환경을 만든다. 코드가 아니라 코드를 만드는 시스템 — Compound / Context / Harness Engineering으로 운영한 세 프로젝트.",
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -119,14 +119,14 @@ const PROJECTS = [
     url: "https://mino-moneyflow.vercel.app/",
     color: "#10b981",
     period: "2026.04 ~",
-    version: "v0.9.11",
+    version: "v0.9.40+",
     tagline: "13개 AI 에이전트가 적대적 토론으로 투자 판단을 도출하는 SaaS — 그러나 진짜 작업은 에이전트들이 서로 견제하도록 만든 *환경 설계*에 있다.",
     stack: ["Next.js 16", "TypeScript", "Supabase", "Claude", "Gemini", "GPT", "Upstash Redis"],
     metrics: {
-      tests: 678,
-      agents: 14,
+      tests: 1096,
+      agents: 13,
       providers: 3,
-      compoundCycles: "13+ (PM v2 Phase 1~5 + 안전성 R1~R5 × 다회차)",
+      compoundCycles: "20+ (PM v2 + 안전성 + Harness Journal 012-018)",
     },
     environment: [
       {
@@ -153,6 +153,14 @@ const PROJECTS = [
         title: "Layered Quality Guards 프롬프트 조립",
         detail: "공통 가드(베이스레이트, 정량적 근거 필수) → 역할별 가드(PM에게만 프리모템, 펀더멘탈에게만 기대치 갭) → 상황별 가드(모멘텀 다이버전스). 3단 레이어로 시스템 프롬프트를 조립 + Claude cache_control: ephemeral로 90% 할인.",
       },
+      {
+        title: "Runtime Validation 5 Layer (Journal 012-018)",
+        detail: "10/10 에이전트에 Layer 1-4 적용 완료. JSON 파싱 → type guard 검증 → retry → instruction augmentation. validator 실패 시 구체적 오류를 프롬프트에 추가해서 LLM이 자기 출력을 교정. Zod 대신 순수 TypeScript type guard 선택 — 동시 세션 lock file 충돌 방지 + 기존 패턴 일관성.",
+      },
+      {
+        title: "LLM-as-a-Judge 품질 자동 측정",
+        detail: "분석 완료 후 Gemini Flash로 4차원 채점(data_accuracy, logic_consistency, risk_awareness, actionability). fire-and-forget으로 비차단 실행, DB에 quality_score 저장. 프롬프트 A/B 테스트의 정량적 근거.",
+      },
     ],
     cycles: [
       {
@@ -176,7 +184,7 @@ const PROJECTS = [
     url: "https://mino-tarosaju.vercel.app/",
     color: "#8b5cf6",
     period: "2026.04 ~",
-    version: "R25 (안전성 5차수)",
+    version: "R50+ (안전성 10차)",
     tagline: "6개 존 점술 SaaS — 그러나 진짜 자랑할 만한 건 25라운드 안전성 스프린트로 12축 → 15축까지 확장된 *AI 운영 인프라 baseline*.",
     stack: ["Next.js 16", "TypeScript", "Supabase", "Claude Haiku", "motion/react", "Sentry", "Playwright"],
     metrics: {
@@ -184,6 +192,7 @@ const PROJECTS = [
       rounds: 25,
       compoundCycles: 5,
       stabilityAxes: "12 → 15",
+      qualityJudge: "4차원",
     },
     environment: [
       {
@@ -210,6 +219,10 @@ const PROJECTS = [
         title: "Deferred Upgrades 트래킹 — 실패도 자산",
         detail: "R23에서 eslint 9→10 업그레이드 시도 실패(upstream 블로커: eslint-plugin-react 호환 안 됨). 그 실패 자체를 docs/maintenance/deferred-upgrades.md에 박제. 다음 시도자가 같은 조사를 반복하지 않음. **실패도 compound 자산이라는 것**이 R23 한 라운드의 진짜 메시지.",
       },
+      {
+        title: "LLM-as-a-Judge 품질 자동 측정",
+        detail: "fortune/tarot-chat 응답 완료 후 Haiku로 4차원 채점(domain_accuracy, empathy, specificity, safety). 명리학적 근거, 공감 어투, 구체적 조언, 위험 발언 배제를 자동 평가. fire-and-forget.",
+      },
     ],
     cycles: [
       {
@@ -235,6 +248,63 @@ const PROJECTS = [
     ],
     retrospective:
       "이 프로젝트의 자랑은 콘텐츠가 아니라 *Round 번호*다. R1부터 R25까지 25라운드를 돌면서, 매 5라운드마다 compound 단계로 회고와 솔루션을 박았다. 각 라운드의 마지막은 항상 \"다음에 할 만한 후보\" 목록을 남기고, 다음 사이클은 그 목록을 입력으로 받는다. *사람의 to-do list가 아니라 문서 기반 큐*.\n\nMoneyFlow에서 쌓은 인프라 패턴이 그대로 이식돼 첫 라운드부터 baseline 위에서 시작할 수 있었다. Circuit Breaker 패턴, Quality Gate 5단계, env runtime 검증, 5 commit batched push, 회고 포맷, 솔루션 카테고리 디렉터리 — 전부 한 번 만들어두니 두 번째 프로젝트는 \"이식\"으로 끝났다. *이게 Compound Engineering이 말하는 \"다음 작업이 더 쉬워진다\"의 실체*. \"다른 프로젝트도 더 쉬워진다\"까지 확장된다는 게 한 단계 더 큰 발견이었다.\n\n가장 중요한 메타 학습: AI가 만든 결과물의 품질을 사람이 매번 검토하는 건 확장 불가능하다. 그 자리를 *자동화 게이트*가 메워야 한다. R21의 RLS 회귀 테스트가 사람 감사보다 더 꼼꼼하게 누락을 잡은 사례가 결정적이었다 — 사람 검토는 \"있으면 좋은 것\"이지 \"기댈 수 있는 것\"이 아니다. AI가 자유롭게 달리도록 하려면, 사람의 시선이 아니라 *테스트와 훅과 정적 분석*이 울타리 역할을 해야 한다.",
+  },
+  {
+    name: "AI Study Wiki",
+    url: "https://ai-study-wheat.vercel.app/",
+    color: "#f59e0b",
+    period: "2026.03 ~",
+    version: "57 entries · 11 categories",
+    tagline: "두 워커 프로젝트(MoneyFlow, TaroSaju)를 관찰하고 기록하는 메타 허브 — AI 엔지니어링 방법론을 박제하고, 박제된 패턴이 다시 워커로 전이되는 복리 구조.",
+    stack: ["Next.js 15", "TypeScript", "MDX", "Tailwind CSS 4", "Gemini 2.5 Flash", "Vercel"],
+    metrics: {
+      entries: 57,
+      journals: 18,
+      categories: 11,
+      slashCommands: 5,
+    },
+    environment: [
+      {
+        title: "허브-워커 모델 (Journal 011)",
+        detail: "ai-study(허브)가 moneyflow/tarosaju(워커)를 /projects-sync로 관찰. 워커 세션의 git 상태, worktree 수, 최근 PR을 read-only로 진단. 다른 세션과 충돌 없이 워커 코드를 /wt-branch로 안전하게 수정. 사고 재발률 0/18+ 사이클.",
+      },
+      {
+        title: "AI 과외 선생님 파이프라인",
+        detail: "매일 09:00 KST GitHub Actions → 지식 그래프 분석 → 빈 카테고리/dangling connections/낮은 confidence 기반 3개 주제 추천 → 사용자 선택 → Gemini가 MDX 자동 생성 → PR → 사용자 수정 = 학습 기록.",
+      },
+      {
+        title: "박제 전이성 — 허브에서 워커로, 워커에서 허브로",
+        detail: "허브에 박제된 패턴이 별도 안내 없이 다른 세션에 의해 워커에 이식된 사례 5회+. 반대 방향(워커→허브)도 Journal 014에서 확립. 문서가 곧 전파 채널.",
+      },
+      {
+        title: "Compound Engineering 자동화",
+        detail: "git commit 전 빌드 게이트 강제, push 후 /compound 리마인더. CHANGELOG + 회고 + 솔루션 문서를 한 커맨드로 생성. 회고의 '다음 후보'가 다음 세션의 입력 큐가 되는 문서 기반 루프.",
+      },
+      {
+        title: "Tokenomics 실측 기반 최적화",
+        detail: "RTK(Rust Token Killer)로 CLI 출력 47.4M tokens 절감(99.5%). .claudeignore로 context ~50% 축소. API cache read 98%+. 3 레버가 각각 다른 레이어에서 독립 작동.",
+      },
+    ],
+    cycles: [
+      {
+        title: "Phase 1 — 위키 인프라 + AI 과외 선생님 (Journal 000-004)",
+        detail: "MDX + force-directed 그래프 + 대시보드 + 히트맵 + 퀴즈. Gemini 파이프라인으로 매일 자동 콘텐츠 생성. CI/CD 자동화(ci.yml + daily-lesson.yml).",
+      },
+      {
+        title: "Phase 2 — 허브-워커 모델 + 자동 머지 (Journal 011-014)",
+        detail: "/projects-sync + /wt-branch 슬래시 커맨드 신설. 3 프로젝트 ai-review.yml 통일. 인바운드 tips PR 흐름으로 워커→허브 역방향 기여 확립.",
+      },
+      {
+        title: "Phase 3 — Runtime Validation 시리즈 (Journal 012-018)",
+        detail: "moneyflow 10/10 에이전트 Layer 1-4 완료. type guard vs Zod 3차 재평가 → type guard 최종. retryWithValidation으로 validator 실패 시 LLM 재요청.",
+      },
+      {
+        title: "Phase 4 — LLM-as-a-Judge + Tokenomics (현재)",
+        detail: "3 프로젝트 품질 자동 평가. RTK + .claudeignore + cache 실측. evaluation 카테고리 첫 실전 엔트리.",
+      },
+    ],
+    retrospective:
+      "이 프로젝트의 진짜 정체는 '위키'가 아니라 '관제 센터'다. MoneyFlow에서 만든 패턴을 박제하면, 다른 세션이 그 박제를 발견해서 TaroSaju에 이식한다. TaroSaju에서 발견한 환경 팁은 허브로 PR을 쏴서 다시 박제된다. 이 양방향 흐름이 인프라로 확립된 게 Journal 011-014의 핵심이다.\n\n가장 놀라운 발견은 '박제 전이성'이다. 내가 직접 이식하지 않아도, 다른 세션이 허브의 박제를 읽고 알아서 워커에 적용한다. wt-branch(Journal 004)가 tarosaju에 이식된 건 내가 시킨 게 아니라 다른 세션이 스스로 발견한 것이다. 문서가 곧 전파 채널이 된다는 건 Compound Engineering의 가장 강력한 증거다.\n\n18개 Journal이 기록한 건 '코드를 어떻게 짰나'가 아니라 '환경을 어떻게 조정했나'다. CI 게이트를 어떻게 잡았고, 동시 세션 충돌을 어떻게 방지했고, 도구 선택을 어떤 실시간 제약 기반으로 결정했는지. 이게 Harness Engineering의 실체 — 말(AI)에 하네스를 씌워서 원하는 방향으로 안전하게 달리게 하는 일의 기록.",
   },
 ];
 
@@ -297,7 +367,7 @@ export default function ProjectsPage() {
           <div className="rounded-[var(--radius-md)] border border-accent/20 bg-accent/5 p-4">
             <p className="text-sm text-text leading-relaxed">
               <span className="font-bold text-accent">Compound Engineering</span> · <span className="font-bold text-accent">Context Engineering</span> · <span className="font-bold text-accent">Harness Engineering</span> 세 가지 방법론 위에서 운영.
-              두 프로젝트 모두 동일한 토대를 공유하고, MoneyFlow에서 검증된 패턴이 TaroSaju로 그대로 이식되며, 다시 그 자산이 다음 프로젝트로 흘러간다.
+              세 프로젝트 모두 동일한 토대를 공유하고, MoneyFlow에서 검증된 패턴이 TaroSaju로 그대로 이식되며, AI Study Wiki가 허브로서 양방향 복리 구조를 운영한다.
               사람이 코드 한 줄을 직접 치는 비중은 거의 0에 수렴하고, 대부분의 시간은 <span className="font-semibold">에이전트가 안전하게 달릴 환경을 조정하는 일</span>에 들어간다.
             </p>
           </div>
@@ -445,6 +515,11 @@ export default function ProjectsPage() {
                     rounds: "라운드",
                     compoundCycles: "Compound 사이클",
                     stabilityAxes: "안정성 축",
+                    entries: "위키 엔트리",
+                    journals: "Harness Journal",
+                    categories: "카테고리",
+                    slashCommands: "슬래시 커맨드",
+                    qualityJudge: "품질 Judge",
                   };
                   return <StatBadge key={key} label={labels[key] || key} value={val} />;
                 })}
