@@ -368,3 +368,32 @@ cd /Users/jominho/Develop/ai-study && rtk npm run build
 **사고 재발률**: **0회 / 11 사이클** (014까지 누적).
 
 ---
+
+### 2026-04-12 (final-latest session) — Journal 011~015 직후 4 사이클 연속
+
+**요약**: 사용자 트리거 "쭉쭉 진행"으로 4 작은 사이클 + Journal 015 + Vercel Pro 작업 연속.
+
+**추가 landing**:
+- moneyflow/tarosaju/ai-study **ai-review.yml Node 24 opt-in** 이식 — `env: FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"` 한 줄, 3 PR 자동 머지 (Tokenomics "4 조건" 첫 실제 적용 사례, annotation 메시지 "Node 20 ... forced to run on Node.js 24"로 전환 확인)
+- ai-study `tips/checkout-fast-forward-trap` PR — dev-setup-tips-log에 체크아웃 함정 박제 (허브가 자기 프로젝트에 tips/ 브랜치 dogfood). 2회 재발 패턴을 명시, 3회 재발 또는 /wt-branch 자동 checkout main 추가 가치 생기면 Journal 승격 후보.
+- moneyflow **trader validator** — Harness Journal 015. Zod 도입 재평가 2차 → type guard 유지 결정 (근거: /projects-sync 상태 Journal 012와 동일 + 4 analyst 패턴 일관성 + TraderProposal 평면 구조).
+
+**13 에이전트 Layer 1+2 진행률 업데이트**: **5 / 13 = 38%**
+- ✅ market_analyst (J012), news/sentiment/fundamentals (J013), trader (J015)
+- ⏳ investment_judge, devils_advocate (J016 평면 에이전트 후보)
+- ⏳ research_debate, risk_debate, portfolio_manager (J017 중첩 구조, Zod 3차 재평가 지점)
+- custom_prompt: 스코프 제외 (user-defined shape)
+
+**Vercel Pro 사이클 (별도 PR)**:
+- 사용자 트리거: *"버셀 프로모드 결제했으니까 analytics 제대로 활용해줘 뭐 커스텀 이벤트나 그런거 다 제대로 써줘. 그리고 버셀 프로모드일때 사용할 수 있는 기능들 우리 프로젝트에 적용할 수 있는거 있으면 다 해줘"*
+- 별도 사이클로 진행 (아직 open)
+
+**큐 재정렬**:
+- 🔴 Journal 016: investment_judge + devils_advocate (2 평면 에이전트 묶음)
+- 🔴 Journal 017: research-debate + risk-debate + portfolio-manager (중첩 구조, Zod 3차 재평가)
+- 🔴 Journal 018+: Layer 3-4 (retry + instruction augmentation), 13 에이전트 전체 완료 후
+- 🟡 `/wt-branch`에 자동 `checkout main` 단계 추가 검토 (체크아웃 함정 재발 3회 시 승격)
+
+**사고 재발률**: **0회 / 13 사이클** (015까지 누적).
+
+---
