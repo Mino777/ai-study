@@ -2,6 +2,29 @@
 
 모든 주목할 만한 변경사항을 이 파일에 기록합니다.
 
+## [2026-04-12 wave 2] — UI 개선 + Tokenomics 신설 + Node 24 + Journal 015 + 세션 마무리
+
+### Added
+- **네비게이션 중앙 검색** — Header에 SearchTrigger 배치, SearchDialog를 root layout으로 글로벌화. 모든 페이지에서 Cmd+K 또는 클릭으로 검색 가능 (#22)
+- **사이드바 4 그룹 아코디언** — `CATEGORY_GROUPS`(AI 엔지니어링 방법론 / 시스템 설계 / 평가&인프라 / 응용) 기반 2층 접이식. 엔트리 수가 늘어나면서 필요해진 시각적 구조화 (#22)
+- **Tokenomics 카테고리 (11번째)** — 토큰 절감/경제학을 harness-engineering에서 독립 승격. 지속 연구/디벨롭 영역. "프로덕트 적용 기준 4 조건" 섹션 포함 (안정적 + 확실한 효과만 즉시 적용) (#23)
+- **`.claudeignore` 신설** (Tokenomics 첫 적용) — `src/generated/`, `package-lock.json`, `.next/`, `docs/retros/`, `docs/solutions/` 등 불필요 context 배제. 4 조건 만족.
+- **Node 24 opt-in** (3 프로젝트) — `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"` env 한 줄. Tokenomics 4 조건 첫 실제 적용 사례. annotation이 "forced to run on Node.js 24"로 전환 확인 (#24, moneyflow #103, tarosaju #11)
+- **체크아웃 함정 tips** — `dev-setup-tips-log.mdx`에 `git pull --ff-only`가 feature 브랜치에서 실패하는 패턴 append. 2회 재발 기록 (#25)
+- **Journal 015** — Trader 런타임 검증 (debate 9 에이전트 중 첫 1개). Zod 재평가 2차 → type guard 유지. 13 에이전트 Layer 1+2 진행 5/13 = 38% (#27, moneyflow #104)
+- **MDX JSX 파싱 함정 2개 발견** — (a) 인라인 code의 `{}` → JSX expression 파싱, (b) `<숫자` → JSX 태그 시작. 메모리 `project_ai_generated_mdx_guards.md`에 패턴 3+4 박제
+
+### Fixed
+- **Journal 015 MDX 컴파일 에러** — `<3으로`가 JSX 태그 시작으로 파싱. `` `< 3` `` 공백 추가로 해결. 2차 push에서 통과.
+
+### Metrics
+- 이번 wave: ai-study PR 6개 (자동 5 + 1실패→재시도), moneyflow 2개 (자동), tarosaju 1개 (자동)
+- Tokenomics 적용 2건 (Node 24 opt-in + `.claudeignore`)
+- 누적 13 에이전트 validator 진행: 5/13 = 38%
+- MDX 컴파일 에러 패턴 2개 신규 박제
+
+---
+
 ## [2026-04-12] — 허브-워커 양방향 모델 + 허브 자동 머지 + validator Layer 1+2 (4/13)
 
 ### Added
