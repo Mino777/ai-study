@@ -62,7 +62,7 @@ Journal 012 시점에 내린 결정을 *다시* 검토:
 
 2. **debate 9 에이전트 응답 구조 복잡도** (types.ts 조사):
    - 중첩 배열: `ResearchDebateResult.rounds[]`, `RiskDebateResult.messages[]`
-   - 중첩 객체: `PortfolioManagerDecision.price_targets{bull_case, base_case, bear_case}`, `RiskDebateResult.var_result?`
+   - 중첩 객체: `PortfolioManagerDecision.price_targets` (bull_case / base_case / bear_case), `RiskDebateResult.var_result?`
    - 독립 평면: `TraderProposal` (가장 단순)
    - 이 복잡도는 Journal 012/013 (4 analyst 평면 구조)보다 한 단계 높다
 
