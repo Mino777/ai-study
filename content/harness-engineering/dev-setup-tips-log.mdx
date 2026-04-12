@@ -1,0 +1,146 @@
+---
+title: "Dev Setup Tips 로그 — 작은 환경 셋업 박제"
+category: harness-engineering
+date: "2026-04-12"
+tags: [dev-setup, claude-code, vscode, terminal, env, living-document, append-only]
+confidence: 5
+connections:
+  - harness-engineering/ai-ops-environment-diagnosis-checklist
+  - harness-engineering/harness-engineering-overview
+status: complete
+description: "세션 하나짜리로 지나쳐버리기 쉬운 '작은 셋업 팁'들을 한 엔트리에 누적. 터미널 스크롤 점프, CLAUDE.md 크기 초과 같은 QoL 수정을 발견한 날짜 기준으로 박제. 새 팁은 섹션 단위 append-only."
+type: entry
+quiz:
+  - question: "이 로그가 Harness Journal 시리즈와 *별도*로 존재하는 이유는?"
+    choices:
+      - "카테고리가 달라서"
+      - "Journal은 1 사이클 = 1 엔트리라는 서사 단위인데, 자잘한 환경 팁은 사이클을 이루지 않는 *단발성 QoL 수정*이라 묶일 곳이 없었다 — 잃어버리면 다시 30분씩 검색하게 된다"
+      - "작성자가 달라서"
+      - "AI가 못 읽어서"
+    answer: 1
+    explanation: "Journal은 서사형(why → what → lesson), 이 로그는 카탈로그형(증상 → 수정 → 검증). 단위가 다르기 때문에 같은 엔트리에 섞으면 양쪽 다 읽기 어려워진다. 분리해서 append-only 로그로 관리하는 게 정답."
+  - question: "`CLAUDE_CODE_NO_FLICKER=1`이 단순히 깜빡임만 고치는 게 아닌 이유는?"
+    choices:
+      - "메모리 사용량 증가"
+      - "alternate screen(전체 화면) 렌더링 경로로 전환되면서 *스크롤 위치 보존*과 메모리 절감도 같이 따라온다 — 깜빡임은 부수 효과 중 하나"
+      - "로그 저장 기능"
+      - "프롬프트 캐싱 활성화"
+    answer: 1
+    explanation: "이름은 no-flicker지만 실질은 '전통적 라인 추가 방식' → 'alternate screen 모드'로의 렌더링 경로 전환. 이 경로가 스크롤 튐, 깜빡임, 불필요한 리드로우를 모두 한 번에 해결한다. 이름만 보고 판단하면 안 되는 env var의 전형."
+  - question: "CLAUDE.md가 40k를 넘었을 때 *그냥 줄이지 말고* `docs/FEATURES.md`로 추출하는 이유는?"
+    choices:
+      - "파일 수 제한"
+      - "기능 상세는 *모든 세션*에 필요한 게 아니라 *해당 모듈을 건드릴 때만* 필요하다 — on-demand 로드로 분리하면 CLAUDE.md의 신호/잡음 비율이 올라가고 매 세션 컨텍스트 비용이 내려간다"
+      - "GitHub 파일 크기 제한"
+      - "Markdown 렌더 성능"
+    answer: 1
+    explanation: "CLAUDE.md는 *자동 로드*되는 컨텍스트, docs/*.md는 *참조 시 로드*되는 컨텍스트. 세션마다 한 번씩 읽힐 정보와 필요할 때만 읽힐 정보를 같은 파일에 두면 비용은 전자 기준으로 계산된다. 쪼개기는 단순히 크기 줄이기가 아니라 *로딩 시점 분리*."
+---
+
+## 목적
+
+Harness Journal에 넣기에는 *한 사이클*을 이루지 않는 소형 환경 수정들을 한 곳에 박제한다. 증상을 발견한 날짜 기준으로 섹션을 append하는 *살아있는 카탈로그*.
+
+같은 문제를 두 번째 마주쳤을 때 "어제 고쳤는데 어떻게 했더라"로 30분을 태우지 않기 위한 장치다. Journal이 *서사*라면 이 로그는 *인덱스*다.
+
+## For AI Agents
+
+이 문서를 발견한 에이전트가 즉시 사용할 수 있도록:
+
+- **언제 append할까** — 사용자가 환경/툴 설정 관련 불편을 고쳐달라고 했고, 그 해결책이 (a) 특정 프로젝트에 종속되지 않고 (b) 1 사이클짜리 Journal을 이룰 만큼 크지 않을 때.
+- **어떻게 append할까** — 아래 "로그" 섹션 하단에 *새 섹션*을 추가. 기존 엔트리는 **절대 수정/삭제 금지** (append-only). 연관 엔트리가 있으면 *Related* 라인에 링크.
+- **엔트리 포맷** (아래 템플릿 준수):
+
+```
+## YYYY-MM-DD — <한 줄 증상>
+
+**환경**: <OS / 에디터 / 툴 버전 등>
+**증상**: <관찰 가능한 현상 1~2 문장>
+**근본 원인**: <진단 — 확실하지 않으면 "가설:"로 표시>
+**수정**: <복붙 가능한 명령/설정>
+**검증**: <고쳐졌는지 확인하는 방법>
+**Related**: <연관 엔트리 링크, 없으면 생략>
+```
+
+- **Journal로 승격해야 할 때** — 같은 수정이 3개 이상의 프로젝트에 이식되거나, 아예 슬래시 커맨드/훅으로 자동화할 가치가 생기면 Harness Journal 엔트리로 승격. 승격 후 이 로그의 원래 섹션은 **지우지 않고** Related에 Journal 링크만 추가.
+
+- **중복 방지** — append 전에 이 파일을 grep하여 같은 증상이 이미 박제됐는지 확인. 이미 있으면 해당 섹션에 *재발 노트*를 보조 bullet으로 추가하되 본문은 수정하지 않는다.
+
+## 왜 append-only인가
+
+이 로그의 가치는 *과거의 나*가 당시 환경에서 어떻게 문제를 해결했는지를 그대로 보여주는 데 있다. 나중에 "더 나은 방법"이 나와도 옛 섹션을 고치면 *그 시점의 증상-해결 쌍*이 사라진다. 새로운 해결책은 *새 섹션*으로 추가하고 옛 섹션에 "2026-MM-DD 업데이트: X 섹션 참조"만 보조로 붙인다.
+
+이것은 git log의 축약본이 아니라 *증상-해결 인덱스*다. git log는 *변경*을 기록하지만 이 로그는 *왜 그 변경이 필요했는지*를 재현 가능한 형태로 기록한다.
+
+---
+
+# 로그
+
+## 2026-04-11 — VS Code 통합 터미널 스크롤이 최상단으로 튀는 현상
+
+**환경**: macOS, VS Code 통합 터미널(zsh), Claude Code 세션 장시간 유지.
+
+**증상**: Claude Code 세션을 열어두고 있으면 터미널 스크롤이 자꾸 *최상단*으로 튀어올라 가서, 최신 출력을 보려면 매번 수동으로 맨 아래로 내려야 했다. 타이핑 중에도 포커스와 별개로 뷰포트만 점프.
+
+**근본 원인**: 최근 Claude Code의 "flicker fix" 업데이트가 전통적 라인-추가 렌더링 경로를 쓰면서, 긴 세션에서 스크롤 앵커가 상단으로 튀는 부작용이 있었다. Claude Code는 이를 우회하기 위해 *alternate screen* 기반 풀스크린 렌더링 경로를 ENV 변수로 제공하는데, 이 경로는 스크롤 위치 보존 + 메모리 절감까지 같이 따라온다.
+
+**수정**: `~/.zshrc`에 다음 한 줄 추가.
+
+```bash
+export CLAUDE_CODE_NO_FLICKER=1
+```
+
+적용: `source ~/.zshrc` 또는 VS Code 완전 종료 후 재시작 (VS Code 통합 터미널은 새 세션 시작 시 `~/.zshrc`를 다시 읽는다).
+
+**검증**:
+
+```bash
+echo $CLAUDE_CODE_NO_FLICKER   # → 1
+```
+
+그 다음 Claude Code를 다시 실행해 10분 이상 세션 유지 → 스크롤이 최신 출력 위치에 머무는지 확인.
+
+**관련 삽질 기록**: 처음에는 VS Code `settings.json`에 `terminal.integrated.scrollback`, `smoothScrolling`, `fastScrollSensitivity`, `mouseWheelScrollSensitivity`를 넣어봤는데 *근본 수정은 아니었다*. VS Code에는 `terminal.integrated.scrollOnUserInput` 같은 설정이 존재하지 않으므로 에디터 레벨에서 막을 수 없고, Claude Code의 출력 경로 자체를 바꿔야 한다. 위 4개 설정은 남겨도 무해하지만 실제 해결은 ENV 변수가 담당.
+
+**Related**: 없음 — 첫 박제.
+
+---
+
+## 2026-04-11 — `CLAUDE.md`가 40k 자 경고를 넘어감 (mino-moneyflow 케이스)
+
+**환경**: 모든 Claude Code 프로젝트. 특정 케이스는 `mino-moneyflow/CLAUDE.md` 73.9KB / 1108 줄.
+
+**증상**: Claude Code가 세션 시작 시 경고 출력 — `Large CLAUDE.md will impact performance (47.8k chars > 40.0k)`. 단순 경고지만 실제로 매 세션 시작마다 그 크기만큼의 토큰이 자동 로드되고 있었다.
+
+**근본 원인**: "기능 상세" 섹션이 파일의 60% 이상(라인 155~836, ~45K)을 차지. *모든 세션에 필요한 규약/스택*과 *특정 모듈을 건드릴 때만 필요한 기능 상세*가 한 파일에 섞여 있었다. 전자는 auto-load, 후자는 on-demand여야 한다.
+
+**수정**: 기능 상세를 별도 파일로 추출하고 CLAUDE.md에는 포인터만 남긴다.
+
+1. 기능 상세 블록을 `docs/FEATURES.md`로 이동 (파일 신설).
+2. CLAUDE.md 해당 위치에 한 줄 pointer 삽입:
+
+   ```markdown
+   ## 기능 상세
+   기능별 상세 스펙은 [docs/FEATURES.md](./docs/FEATURES.md) 참조.
+   ```
+
+3. CLAUDE.md 헤더에 "필요 시 로드" 구역을 만들어 `docs/FEATURES.md`, `DESIGN.md` 등을 명시 — *자동 로드는 아님*임을 AI 에이전트에게 알린다.
+
+**검증**:
+
+```bash
+wc -c CLAUDE.md
+# mino-moneyflow 케이스: 73.9K → 27.7K (-62%)
+```
+
+Claude Code 재시작 → 경고 사라짐 확인.
+
+**승격 조건**: 같은 패턴이 3개 프로젝트 이상에서 발생하면 Harness Journal 엔트리로 승격 후보. 현재는 moneyflow 1건만 처리했으므로 이 로그에 유지.
+
+**원칙 요약**: CLAUDE.md는 *auto-load 컨텍스트*, `docs/*.md`는 *참조 시 로드 컨텍스트*. 세션마다 한 번씩 읽힐 정보와 모듈 작업 때만 읽힐 정보를 같은 파일에 두면 비용은 항상 전자 기준으로 계산된다. 크기 문제처럼 보이지만 실제로는 *로딩 시점 분리* 문제.
+
+**Related**: 없음 — 첫 박제.
+
+---
+
+> **📌 append 규칙**: 새 팁은 이 구분선 *위*가 아니라 *아래*에 새 섹션을 추가한다. 기존 섹션은 건드리지 않는다.
