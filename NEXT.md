@@ -301,3 +301,29 @@ cd /Users/jominho/Develop/ai-study && rtk npm run build
 **사고 재발률**: **0회 / 9 사이클** (012까지 누적).
 
 ---
+
+### 2026-04-12 (late-latest session) — Journal 013 작성
+
+**Journal 013 — 3 analyst 확장 (Layer 1+2)**:
+- 🔴 `harness-journal-013-three-analysts-runtime-validation.mdx` 신규
+- moneyflow **PR #98** (`ai-ops/validators-3-analysts`) → validateNewsAnalystReport + validateSentimentAnalystReport + validateFundamentalsAnalystReport 3 validator + 3 호출 사이트 1줄씩 + vitest 24 케이스 → **1m30s급 자동 머지** ✅
+- checkAgentReportBase 공유 → 4 validator가 동일 base 체크 공유 (변경 단일 지점 원칙)
+
+**13 에이전트 진행률**: **4 / 13 = 31%** (market + news + sentiment + fundamentals)
+
+**남은 에이전트 9개**:
+- Journal 014 스코프: bull_researcher, bear_researcher, research_judge, risk_debate, devils_advocate, trader, portfolio_manager, custom_prompt
+- 응답 구조가 analyst와 완전히 다름 (bull/bear report, judge decision, trader proposal, PM decision 등)
+
+**다음 큐 재정렬**:
+- 🔴 **Journal 014 (결정 필요)**: *9 debate/judge/trader/PM 에이전트*
+  - **Zod 도입 결정 포인트** — analyst 4개는 type guard로 충분했지만 debate 9개 구조 복잡도가 달라 zod가 표현력에서 유리할 수 있음
+  - Journal 014 착수 전: `/projects-sync`로 다시 moneyflow 상태 확인 → 다른 세션 worktree 수 변동 있는지 재평가 → zod dep 추가 안전성 판단
+- 🔴 **Journal 015**: *Layer 3-4 (retry + instruction augmentation)* — `callAI`에 `maxRetries` 옵션 추가. 13 에이전트 전체 영향.
+- 🟡 text guards 발동률 측정 (tarosaju, 여전히 데이터 대기)
+
+**허브-워커 모델**: 두 번째 자기 사용 완료. Journal 012와 거의 동일한 리듬(1m30s 자동 머지) — *반복 가능한 리듬* 확인.
+
+**사고 재발률**: **0회 / 10 사이클** (013까지 누적).
+
+---
