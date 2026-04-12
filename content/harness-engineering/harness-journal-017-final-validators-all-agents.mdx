@@ -1,0 +1,179 @@
+---
+title: "Harness Journal 017 — 10/10 에이전트 런타임 검증 완료 (Zod 3차 재평가 → type guard 최종)"
+category: harness-engineering
+date: "2026-04-12"
+tags: [harness-journal, harness-engineering, moneyflow, runtime-validation, devils-advocate, research-debate, risk-debate, portfolio-manager, zod-decision]
+confidence: 5
+connections:
+  - harness-engineering/harness-journal-015-trader-runtime-validation
+  - harness-engineering/harness-journal-013-three-analysts-runtime-validation
+  - harness-engineering/harness-journal-012-market-analyst-runtime-validation
+  - harness-engineering/ai-output-zod-validation-pattern
+status: complete
+description: "Journal 012에서 시작한 에이전트 런타임 검증 시리즈 완결. devils_advocate(후처리 전 raw output 검증 패턴) + research-debate(bull/bear) + risk-debate(3 관점 중첩) + portfolio-manager(price_targets 중첩) = 4 validator 추가, vitest 40 케이스. custom_prompt 제외 10/10 에이전트 Layer 1+2 완료. Zod 3차 재평가에서 type guard 최종 확정 — 중첩 구조에서도 type guard가 충분했다."
+type: entry
+quiz:
+  - question: "DevilsAdvocate validator가 다른 에이전트와 다른 점은?"
+    choices:
+      - "Zod를 사용한다"
+      - "parseJSON 후 수동 후처리(activated 설정, counterarguments slice, confidence_penalty clamp)가 있어서 validator를 *LLM raw output*에 적용한다. 다른 에이전트는 parseJSON 결과를 그대로 사용하지만 DevilsAdvocate는 *파싱된 객체 → 후처리 → 최종 반환*이라 validator 적용 시점이 다르다"
+      - "테스트가 더 많다"
+      - "비동기 validator다"
+    answer: 1
+    explanation: "validator 적용 시점이 핵심. parseJSON(raw, fallback, validator) 3번째 인자로 넘기되, validator는 LLM이 반환한 4 필드(counterarguments, risk_factors, confidence_penalty, summary)만 검증. activated는 코드가 수동 추가하므로 validator 대상이 아니다."
+  - question: "Zod 도입을 3번 재평가한 후 최종 결론은?"
+    choices:
+      - "Zod를 도입했다"
+      - "type guard로 중첩 구조(price_targets, 3 perspectives)까지 충분히 커버 가능. 동시 세션 lock file 위험 + 기존 패턴 일관성 + 실제 구현 결과 코드량 합리적 → Zod 불필요 확정"
+      - "다음 세션으로 미뤘다"
+      - "일부만 Zod로 전환했다"
+    answer: 1
+    explanation: "3번 재평가는 교과서적 정답이 아니라 *실제 복잡도 관찰*에 기반. 중첩 구조에서도 checkRiskPerspective 헬퍼 하나로 3 관점 검증을 깔끔하게 처리. Zod의 선언적 이점이 *구현 비용*(dep 추가 + 패턴 이중화)을 넘지 못했다."
+  - question: "Layer 1+2 완료 후 다음 단계(Layer 3-4)는?"
+    choices:
+      - "에이전트 추가"
+      - "callAI에 maxRetries 옵션 추가 → validator 실패 시 실패 이유를 instruction에 추가해서 LLM에 재요청. 현재는 실패 시 fallback 반환이지만, retry로 *정확한 출력을 유도*하는 단계"
+      - "Zod 전환"
+      - "프론트엔드 표시"
+    answer: 1
+    explanation: "5 Layer 패턴에서 Layer 3은 retry, Layer 4는 instruction augmentation. validator의 issues 배열을 LLM 프롬프트에 추가해서 '이 필드가 잘못됐다'고 알려주면 LLM이 고칠 수 있다. 13 에이전트 전체에 영향."
+---
+
+## 사이클 트리거
+
+사용자 "쭉쭉 진행" 트리거. NEXT.md 큐에서 Journal 016(investment_judge + devils_advocate) + Journal 017(research-debate + risk-debate + portfolio-manager).
+
+이전 세션이 이미 investment_judge를 PR #106으로 완료한 것을 발견 → devils_advocate부터 시작, 나머지 3 에이전트를 별도 worktree에서 병렬 작업.
+
+## Devils Advocate — 후처리 전 Raw Output 검증
+
+이전 세션(Journal 016)이 남긴 노트:
+
+> DevilsAdvocateResult는 이번 사이클에서 제외 — parseJSON 후 수동 후처리 (activated 수동 설정, counterarguments slice 등)가 있어서 기존 validator 패턴과 자연스럽게 맞지 않음.
+
+### 해결: validator를 LLM raw output에 적용
+
+```
+LLM → parseJSON(raw, fallback, validateDevilsAdvocateRaw) → parsed (4 fields)
+                                                              ↓
+                                                    수동 후처리
+                                                    - activated: true 추가
+                                                    - counterarguments.slice(0, 5)
+                                                    - confidence_penalty clamp(0, 15)
+                                                              ↓
+                                                    DevilsAdvocateResult 반환
+```
+
+`DevilsAdvocateRawOutput` 타입을 별도 정의 — `activated` 없이 LLM이 실제 반환하는 4 필드만:
+
+```typescript
+export interface DevilsAdvocateRawOutput {
+  counterarguments: string[];
+  risk_factors: string[];
+  confidence_penalty: number; // 0-15
+  summary: string;
+}
+```
+
+validator가 실패하면 fallback(빈 배열, 0, 빈 문자열) → 후처리가 안전하게 빈 결과 반환. **기존 코드의 방어적 후처리(Array.isArray, typeof 등)도 그대로 유지** — validator는 *추가* 안전망이지 기존 방어를 *대체*하지 않는다.
+
+## 나머지 3 에이전트 Validator
+
+### validateDebateMessageRaw (bull/bear researcher)
+
+가장 단순. research-debate.ts에서 bull과 bear 모두 같은 shape:
+
+```typescript
+{ argument: string, counter_points: string[] }
+```
+
+parseJSON 호출 2곳(bull/bear)에 동일 validator 주입.
+
+### validateRiskPerspectives (risk debate)
+
+3 관점 중첩 구조:
+
+```typescript
+{ aggressive: { argument, risk_assessment },
+  conservative: { argument, risk_assessment },
+  neutral: { argument, risk_assessment } }
+```
+
+`checkRiskPerspective` 헬퍼로 3 관점 검증 코드 중복 제거. 이 패턴이 **Zod 3차 재평가의 핵심 데이터** — 중첩이어도 헬퍼 하나로 깔끔하게 처리 가능.
+
+### validatePortfolioManagerDecision (portfolio manager)
+
+가장 복잡한 에이전트. 중첩 `price_targets` + 9 string/array 필드:
+
+```typescript
+{
+  final_rating: SignalRating,
+  confidence: number,
+  executive_summary: string,
+  entry_strategy: string,
+  position_sizing: string,
+  risk_management: string,
+  time_horizon: string,
+  key_catalysts: string[],
+  key_risks: string[],
+  price_targets: { bull_case: number, base_case: number, bear_case: number }
+}
+```
+
+price_targets 중첩 검증: `isRecord` 체크 후 3 필드 각각 positive number 확인.
+
+## Zod 3차 재평가 — 최종 결론
+
+| 재평가 | 시점 | 결론 | 근거 |
+|---|---|---|---|
+| 1차 (J012) | market_analyst | type guard | 7 worktree + Conductor, 평면 구조 |
+| 2차 (J015) | trader | type guard | 여전히 7 worktree, 평면 구조 |
+| **3차 (J017)** | **중첩 구조 3개** | **type guard 최종** | 아래 참조 |
+
+### 3차 재평가 입력
+
+1. **실제 구현 결과**: `checkRiskPerspective` 헬퍼 패턴이 중첩을 깔끔하게 처리. Zod의 `.object().shape()` 대비 코드량 차이 미미.
+2. **동시 세션 상태**: worktree 여전히 활성 (Conductor la-paz + 3 agent). package-lock.json 충돌 위험 지속.
+3. **9 validator 패턴 일관성**: 모두 동일한 `ValidationResult<T>` 반환. Zod 도입 시 *패턴 이중화* 발생.
+4. **성과**: 중첩 구조 포함 10개 validator를 vitest 92 케이스로 커버. type guard만으로 충분.
+
+**Zod 불필요 확정.** 이 결정은 *교과서적*이 아니라 *실측 기반*:
+- 3번 재평가해도 답이 같으면 확정이다
+- Zod의 가치는 *더 복잡한 구조*에서 나오는데, moneyflow 에이전트의 최고 복잡도(PM)도 type guard로 충분했다
+
+## Test Suite
+
+| 파일 | 테스트 수 | 커버 대상 |
+|---|---|---|
+| devils-advocate-validator.test.ts | 15 | validateDevilsAdvocateRaw + parseJSON 통합 |
+| remaining-validators.test.ts | 25 | debate message + risk perspectives + PM decision |
+| **이번 사이클 합계** | **40** | |
+| **시리즈 누적 (J012~J017)** | **92** | 10 validators |
+
+## 최종 진행률
+
+| # | 에이전트 | Layer 1+2 |
+|---|---|---|
+| 1 | market_analyst | ✅ Journal 012 |
+| 2 | news_analyst | ✅ Journal 013 |
+| 3 | sentiment_analyst | ✅ Journal 013 |
+| 4 | fundamentals_analyst | ✅ Journal 013 |
+| 5 | trader | ✅ Journal 015 |
+| 6 | investment_judge | ✅ Journal 016 (다른 세션) |
+| 7 | **devils_advocate** | **✅ Journal 017** |
+| 8 | **bull/bear researcher** | **✅ Journal 017** |
+| 9 | **risk_debate (3 perspectives)** | **✅ Journal 017** |
+| 10 | **portfolio_manager** | **✅ Journal 017** |
+| 11 | custom_prompt | 스코프 제외 (user-defined shape) |
+
+**10 / 10 = 100%** (custom_prompt 제외)
+
+## 다음 큐
+
+- 🔴 **Layer 3-4 (retry + instruction augmentation)**: `callAI`에 `maxRetries` 옵션 + validator issues를 instruction에 추가. 13 에이전트 전체 영향. Journal 018.
+- 🟡 **moneyflow worktree cleanup**: prunable 4개 정리 (다른 세션 스코프)
+- 🟡 **validator 통합 테스트**: 실제 LLM 응답 로그에서 validator 통과율 측정
+
+## 핵심 메시지
+
+> *"3번 물어봤으니 더 이상 물어볼 필요 없다"가 아니라, *"3번 물어보고 3번 다 같은 답이 나왔으니 이 답이 맞다"*. 재평가의 가치는 *답을 바꿀 때*만 있는 게 아니라 *같은 답이 나올 때도* 있다 — 그 답에 대한 확신이 1차보다 3차가 훨씬 높다.*
