@@ -78,7 +78,8 @@ quiz:
 ### 적용 로그
 
 - `2026-04-12 — Node 24 opt-in` — 3 프로젝트 ai-review.yml에 `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"` 환경변수 추가. annotation 메시지가 "forced to run on Node.js 24"로 전환 확인. 절감 수치: 토큰 직접 절감 아님 (런타임 안정화 목적), 하지만 Node 20 제거(2026-09-16) 전 선제 전환으로 CI 중단 리스크 0으로.
-- `2026-04-12 — .claudeignore 신설` — ai-study 프로젝트에 `.claudeignore` 추가. `src/generated/`, `package-lock.json`, `.next/`, `docs/retros/`, `docs/solutions/` 등 매 턴 prefix에 불필요한 파일을 구조적으로 배제. 절감 수치: 적용 직후 `/context` 비교 미실시 (다음 세션에서 `/context` → before/after 스냅샷 수집 예정).
+- `2026-04-12 — .claudeignore 신설` — ai-study 프로젝트에 `.claudeignore` 추가. `src/generated/`, `package-lock.json`, `.next/`, `docs/retros/`, `docs/solutions/` 등 매 턴 prefix에 불필요한 파일을 구조적으로 배제. **실측 (2026-04-12 후속)**: 배제 대상 텍스트 파일 ~194K tokens (package-lock.json 117K + src/generated 48K + docs/* 29K). 프로젝트 텍스트 전체 ~384K tokens 대비 **~50% context 축소**. `.next/` 466MB는 바이너리 포함이라 토큰 계산에서 제외하지만 파일 탐색 시간 절감에 기여.
+- `2026-04-12 — ccusage 베이스라인` — 오늘 하루 사용량: 833M tokens / $499.76. 일일 평균(최근 20일): ~360M tokens / ~$211. cache read가 전체의 98%+ (7.1B/7.2B). cache 히트율이 높아서 실비용은 총 토큰 대비 매우 낮음. 이 베이스라인은 향후 새 레버 적용 시 before/after 비교 기준.
 
 ### 연구 중 / 미적용
 
