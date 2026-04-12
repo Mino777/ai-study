@@ -2,6 +2,24 @@
 
 모든 주목할 만한 변경사항을 이 파일에 기록합니다.
 
+## [2026-04-12 wave 5] — LLM-as-a-Judge 3 프로젝트 + Tokenomics 실측
+
+### Added
+- **LLM-as-a-Judge 패턴 엔트리** — `evaluation/llm-as-judge-pattern.mdx`. evaluation 카테고리 첫 실전 엔트리. 도메인별 평가 차원 설계 + fire-and-forget 패턴
+- **moneyflow QualityScore validator** — `validateQualityScore` 추가 + parseJSON Layer 2 연결 (PR #111). `quality_score`를 portfolio insights select에 추가 (PR #112)
+- **tarosaju quality-judge 신설** — `quality-judge.ts` 생성 + fortune/tarot-chat 라우트 fire-and-forget 연결 (PR #16). 4차원: domain_accuracy, empathy, specificity, safety
+- **Tokenomics 실측** — `.claudeignore` 효과: ~194K tokens 배제 (~50% context 축소). ccusage 베이스라인: 일평균 ~360M tokens/$211, cache read 98%+
+
+### Fixed
+- `inapp-browser-white-screen-defense.mdx` confidence 9→5 (범위 1-5 초과)
+
+### Metrics
+- moneyflow PR: #111 + #112 자동 머지
+- tarosaju PR: #16 자동 머지
+- 3 프로젝트 모두 LLM-as-a-Judge 적용 (moneyflow 기존 + validator 보강, tarosaju 신설, ai-study 패턴 박제)
+
+---
+
 ## [2026-04-12 wave 4] — Journal 018 + Layer 1-4 실용적 완성
 
 ### Added
