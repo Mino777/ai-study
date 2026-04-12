@@ -4,6 +4,7 @@ export const CATEGORIES = [
   "prompt-engineering",
   "context-engineering",
   "harness-engineering",
+  "tokenomics",
   "rag",
   "agents",
   "fine-tuning",
@@ -19,6 +20,7 @@ export const CATEGORY_LABELS: Record<string, string> = {
   "prompt-engineering": "Prompt Engineering",
   "context-engineering": "Context Engineering",
   "harness-engineering": "Harness Engineering",
+  tokenomics: "Tokenomics",
   rag: "RAG",
   agents: "Agents",
   "fine-tuning": "Fine-tuning",
@@ -32,6 +34,7 @@ export const CATEGORY_COLORS: Record<string, string> = {
   "prompt-engineering": "#f59e0b",
   "context-engineering": "#eab308",
   "harness-engineering": "#84cc16",
+  tokenomics: "#14b8a6", // teal — 토큰 경제학, 지속 연구/디벨롭 영역
   rag: "#10b981",
   agents: "#8b5cf6",
   "fine-tuning": "#ec4899",
@@ -51,7 +54,7 @@ export const CATEGORY_GROUPS: Array<{
   {
     key: "methodology",
     label: "AI 엔지니어링 방법론",
-    categories: ["prompt-engineering", "context-engineering", "harness-engineering"],
+    categories: ["prompt-engineering", "context-engineering", "harness-engineering", "tokenomics"],
   },
   {
     key: "system",
