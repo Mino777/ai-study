@@ -49,33 +49,40 @@ function extractMermaidBlocks(content) {
 }
 
 /**
- * Mermaid 다이어그램의 흔한 syntax 에러 탐지
+ * Mermaid 다이어그램의 흔한 syntax 에러 감지 + 자동 수정
  * Mermaid는 node label/subgraph name에 특수문자(괄호, 콜론, 특수기호) 제약이 있음
  */
-function validateMermaid(code, filename) {
+function fixAndValidateMermaid(code, filename) {
+  let fixed = code;
   const errors = [];
-  const lines = code.split("\n");
+  const lines = fixed.split("\n");
 
-  lines.forEach((line, i) => {
+  // AUTO-FIX: 노드 라벨의 괄호를 따옴표로 감싸기
+  // 패턴: A[label (with parens)] → A["label (with parens)"]
+  fixed = fixed.replace(/([A-Z]\d*)\[([^\[\]]*\([^\[\]]*\)[^\[\]]*)\]/g, '$1["$2"]');
+
+  const fixedLines = fixed.split("\n");
+  const fixedContent = fixed;
+
+  // 수정된 내용이 원본과 다르면 기록
+  if (fixedContent !== code) {
+    // 자동 수정 로그 (콘솔 출력만, 에러로 처리하지 않음)
+    return { fixed: fixedContent, autoFixed: true, errors: [] };
+  }
+
+  // 수정 후 유효성 검증 (남은 에러만)
+  fixedLines.forEach((line, i) => {
     const trimmed = line.trim();
     const lineNum = i + 1;
 
-    // 1. subgraph: 유효한 형식은
-    //   subgraph id
-    //   subgraph id ["label"]
-    //   subgraph "name"
-    // 문제: subgraph name with (), &, : 등 특수문자를 따옴표 없이
+    // 1. subgraph 검증
     const subgraphMatch = trimmed.match(/^subgraph\s+(.+)$/);
     if (subgraphMatch) {
       const rest = subgraphMatch[1];
-      // id ["label"] 형식은 OK
       const bracketLabelForm = /^\w+\s*\[".+"\]\s*$/;
-      // "name" 형식은 OK
       const quotedForm = /^".+"\s*$/;
-      // id (단순 식별자) 형식은 OK
       const idOnlyForm = /^[\w-]+\s*$/;
       if (!bracketLabelForm.test(rest) && !quotedForm.test(rest) && !idOnlyForm.test(rest)) {
-        // 한글이나 특수문자가 있으면 에러
         if (/[()\[\]{}:;&]/.test(rest) || /\s/.test(rest)) {
           errors.push({
             line: lineNum,
@@ -85,22 +92,19 @@ function validateMermaid(code, filename) {
       }
     }
 
-    // 2. 노드 라벨 괄호 안에 또 다른 괄호/따옴표 없이 한글 괄호 사용
-    // 예: A[Harness Engineering (테스트 환경)]
-    // Mermaid는 [] 안에 () 추가 괄호를 제대로 처리 못함
+    // 2. 노드 라벨 검증 (자동 수정 후 남은 문제)
     const nodeBracketMatches = trimmed.matchAll(/\[([^\]]+)\]/g);
     for (const m of nodeBracketMatches) {
       const label = m[1];
-      // 라벨 내에 괄호가 따옴표 없이 있는 경우
-      if (/[()]/.test(label) && !label.includes('"')) {
+      if (/[()]/.test(label) && !label.startsWith('"') && !label.endsWith('"')) {
         errors.push({
           line: lineNum,
-          message: `노드 라벨에 괄호 사용: "${label}". 따옴표로 감싸세요: ["${label}"]`,
+          message: `노드 라벨에 괄호 사용: "${label}". 수정: ["${label}"]`,
         });
       }
     }
 
-    // 3. 화살표 라벨 (|...|) 안에 괄호
+    // 3. 화살표 라벨 검증
     const arrowLabelMatch = trimmed.match(/\|([^|]+)\|/);
     if (arrowLabelMatch && /[()]/.test(arrowLabelMatch[1])) {
       errors.push({
@@ -110,7 +114,7 @@ function validateMermaid(code, filename) {
     }
   });
 
-  return errors;
+  return { fixed: fixedContent, autoFixed: false, errors };
 }
 
 async function main() {
@@ -150,22 +154,40 @@ async function main() {
       continue;
     }
 
-    // 2. Mermaid 블록 검증
+    // 2. Mermaid 블록 검증 + 자동 수정
     const blocks = extractMermaidBlocks(content);
     if (blocks.length === 0) continue;
 
     mermaidFiles++;
     const fileErrors = [];
+    let mermaidFixed = false;
 
     for (const block of blocks) {
       totalBlocks++;
-      const errors = validateMermaid(block.code, rel);
+      const { fixed, autoFixed, errors } = fixAndValidateMermaid(block.code, rel);
+
+      // 자동 수정이 적용되면 파일 업데이트
+      if (autoFixed) {
+        const oldBlockStart = content.indexOf(`\`\`\`mermaid\n${block.code}`);
+        if (oldBlockStart !== -1) {
+          const oldBlockEnd = oldBlockStart + `\`\`\`mermaid\n${block.code}\`\`\``.length;
+          raw = raw.substring(0, oldBlockStart) + `\`\`\`mermaid\n${fixed}\`\`\`` + raw.substring(oldBlockEnd);
+          mermaidFixed = true;
+        }
+      }
+
       for (const err of errors) {
         fileErrors.push({
           line: block.startLine + err.line,
           message: err.message,
         });
       }
+    }
+
+    // 자동 수정된 경우 파일 저장
+    if (mermaidFixed) {
+      fs.writeFileSync(file, raw, "utf-8");
+      console.log(`   🔧 ${rel}: Mermaid 노드 라벨 괄호 자동 수정`);
     }
 
     if (fileErrors.length > 0) {
