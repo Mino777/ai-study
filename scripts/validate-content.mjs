@@ -59,7 +59,9 @@ function fixAndValidateMermaid(code, filename) {
 
   // AUTO-FIX: 노드 라벨의 괄호를 따옴표로 감싸기
   // 패턴: A[label (with parens)] → A["label (with parens)"]
-  fixed = fixed.replace(/([A-Z]\d*)\[([^\[\]]*\([^\[\]]*\)[^\[\]]*)\]/g, '$1["$2"]');
+  // ⚠️ 이미 따옴표가 있는 라벨은 건너뛰어야 함 (negative lookahead `(?!")`).
+  //    안 그러면 매 실행마다 따옴표가 누적: D["x"] → D[""x""] → D["""x"""] ...
+  fixed = fixed.replace(/([A-Z]\d*)\[(?!")([^\[\]"]*\([^\[\]"]*\)[^\[\]"]*)\]/g, '$1["$2"]');
 
   const fixedLines = fixed.split("\n");
   const fixedContent = fixed;

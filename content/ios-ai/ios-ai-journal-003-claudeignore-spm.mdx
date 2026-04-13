@@ -100,7 +100,7 @@ Claude가 Glob을 돌리면 여전히 `Bridge/.build/`, `Common/.build/`, `Accou
 
 ---
 
-## gma-ios `.claudeignore` 전체
+## moneyflow-ios `.claudeignore` 전체
 
 실전에서 돌고 있는 전체 파일이다.
 
@@ -117,7 +117,7 @@ vendor/
 LOTTIMS-SPM/
 
 # Xcode project XML — Claude가 직접 편집하지 않는 generated 파일
-GreenCar.xcodeproj/
+MoneyFlow.xcodeproj/
 
 # Lock files
 Gemfile.lock
@@ -134,7 +134,7 @@ Gemfile.lock
 - `**/.build/` — SPM 멀티모듈 `.build/` 전부 (130GB)
 - `vendor/` — CocoaPods 벤더 디렉토리 (63MB, AI가 편집 불필요)
 - `LOTTIMS-SPM/` — 외부 SPM 소스 미러 (3.7MB, AI가 편집 불필요)
-- `*.xcodeproj/` (여기선 `GreenCar.xcodeproj/`) — Xcode generated XML, AI가 직접 편집하지 않음
+- `*.xcodeproj/` (여기선 `MoneyFlow.xcodeproj/` 등 프로젝트별 이름) — Xcode generated XML, AI가 직접 편집하지 않음
 
 ---
 

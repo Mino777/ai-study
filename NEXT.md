@@ -384,7 +384,7 @@ cd /Users/jominho/Develop/ai-study && rtk npm run build
    - slug 패턴: Web = `harness-journal-*`, iOS = `ios-ai-journal-*`
 
 3. **iOS Harness Journal 000~005 전면 재작성**
-   - 직전 세션에서 "AI 앱 개발" 내용으로 잘못 작성됐던 것을 실제 gma-ios 프로젝트 기반으로 전면 재작성
+   - 직전 세션에서 "AI 앱 개발" 내용으로 잘못 작성됐던 것을 실제 moneyflow-ios 프로젝트 기반으로 전면 재작성
    - Ep.000: RIBs+ReactorKit 베이스라인, 커스텀 스킬 5종 목록
    - Ep.001: 실제 `.swiftlint.yml` + `.swiftformat` 기반 PreToolUse/PostToolUse 훅
    - Ep.002: 실제 5종 슬래시 커맨드 (triage/review/investigate/ship/arch) — 기존 3종 오류 수정
@@ -422,7 +422,7 @@ cd /Users/jominho/Develop/ai-study && rtk npm run build
    - For AI Agents 60줄 → 3줄 핵심으로 압축, 위치를 본문 마지막으로
    - frontmatter `connections`에 applied-log entry 추가
 
-2. **iOS Harness Journal 000~005** — gma-ios 실제 AI 하네스 문서 기반 사실 정정 재작성 (이전 세션의 가상 코드/잘못된 카운트/허구 스킬 전부 폐기)
+2. **iOS Harness Journal 000~005** — moneyflow-ios 실제 AI 하네스 문서 기반 사실 정정 재작성 (이전 세션의 가상 코드/잘못된 카운트/허구 스킬 전부 폐기)
 
    | Ep | 주요 정정 사항 |
    |---|---|
@@ -450,10 +450,46 @@ cd /Users/jominho/Develop/ai-study && rtk npm run build
 **다음 큐 (NEW)**:
 - 🟡 `validate-content.mjs` 슬라이싱 버그가 다른 파일도 손상시켰는지 grep으로 확인
 - 🟡 `harness-engineering/compound-engineering-philosophy` dangling connection 12건 — 실제 엔트리 작성 또는 connections 정리
-- 🟡 ios-ai 시리즈 Ep.006+ 큐 (gma-ios 실제 패턴 발견 시 트리거): Persistent 모듈 / async 전환 / Xcode 타겟 멤버십 함정
+- 🟡 ios-ai 시리즈 Ep.006+ 큐 (moneyflow-ios 실제 패턴 발견 시 트리거): Persistent 모듈 / async 전환 / Xcode 타겟 멤버십 함정
 - 🟡 학습 히트맵 캘린더 모드 전환 (월/년 단위 토글)
 
 **사고 재발률**: 0회 (이번 세션 4 에이전트 + 본인 모두 충돌 없음)
+
+---
+
+### 2026-04-13 (terminal 세션 후반) — Journal 019 + 회사 프로젝트명 위반 정정 + validate regex fix
+
+**작업 트리거**: 사용자 *"오늘 맥앱세션 뻘짓한것도 글로 좀 남기자. ~/mino-moneyflow, ~/mino-tarosaju 두 플젝 참고해서 글로 남겨줘"*.
+
+**작업 산출**:
+
+1. **Harness Journal 019 신규** — `harness-journal-019-mcapp-cross-session-cleanup.mdx`
+   - 3 프로젝트(ai-study + moneyflow + tarosaju) 동시 발생 맥앱 Claude 세션 부산물 박제
+   - tarosaju: 5 심각(NOT NULL 마이그레이션 위험 / Realtime 과잉설계 + dead code / Codex 오인용 / stale worktree / `.claude/worktrees` exclude)
+   - moneyflow: PR #114 → #115 자가 fix(빌드 실패 + tsc 11 errors + Codex 오인용 commit message)
+   - ai-study: 학습 히트맵 / 탭 라벨 / apple-intelligence-api 손상 / **validate-content.mjs slicing 버그** / iOS Journal 사실 오류
+   - 6 공통 함정 패턴 박제: PR 메타데이터 거짓말 / 과잉설계+소비자0 / 빌드검증 누락 / Codex 오인용 / stale worktree / 자동수정 도구 silent 손상
+   - 처방: 크로스 세션 리뷰 5단 프로토콜 (`/cross-session-review` 슬래시 커맨드 후보)
+
+2. **회사 프로젝트명 위반 즉시 정정** ⚠️
+   - 사용자가 발견 — 4 에이전트가 iOS Journal 재작성 시 *"gma-ios"*, *"GreenCar.xcodeproj"* 등 회사 프로젝트명을 그대로 노출
+   - 메모리 `feedback_company_project_names.md`에 명시되어 있던 룰을 본인이 위반 (에이전트 prompt에 익명화 지시 누락)
+   - 5건 grep + 치환: `gma-ios` → `moneyflow-ios`, `GreenCar` → `MoneyFlow`, 메모리 경로도 익명화
+   - 메모리 강화: 위반 사례 박제 + grep 가드 프로토콜 추가 + 에이전트 위임 시 익명화 지시 명시 룰 추가
+
+3. **validate-content.mjs regex 누적 손상 버그 fix**
+   - mermaid 노드 라벨 괄호 자동 수정 regex가 *이미 따옴표가 있는 라벨도 매치* → 매 실행마다 따옴표 누적: `D["x"]` → `D[""x""]` → `D["""""x"""""]`
+   - apple-intelligence-api.mdx에서 5-quote(`"""""perform() 실행"""""`)로 누적된 흔적 발견 → 1-quote로 정상화
+   - regex에 negative lookahead `(?!")` 추가 + 라벨 내부 `"` 제외 패턴 (`[^\[\]"]*`) 적용
+   - 이번 세션에서 발견한 **두 번째 validate-content.mjs 버그** (첫 번째는 slicing offset, 두 번째는 regex 누적). 자동 수정 도구 신뢰 0.
+
+**다음 큐 (NEW)**:
+- 🔴 **회사 프로젝트명 grep 가드를 PreToolUse 훅으로** — Edit/Write 시 `gma|GreenCar|LOTTIMS` 패턴 감지 → 차단
+- 🔴 **`/cross-session-review` 슬래시 커맨드 신설** — Journal 019의 5단 프로토콜 자동화
+- 🟡 **validate-content.mjs 자동 수정 도구 자체 검증** — 자동 수정 후 git diff stat 출력 + 누적 손상 검출 (test fixture로)
+- 🟡 **다른 mermaid 블록 누적 손상 grep** — 따옴표 5+ 매치 패턴으로 다른 파일 검증
+
+**사고 재발률 (수정)**: 1건 — 본인이 메모리 룰 위반. 즉시 발견 + 정정 + 메모리 강화.
 
 ---
 
@@ -461,7 +497,7 @@ cd /Users/jominho/Develop/ai-study && rtk npm run build
 
 ### iOS Harness Journal 006+ 후보
 
-실제 gma-ios에서 아직 박제 안 된 패턴들:
+실제 moneyflow-ios에서 아직 박제 안 된 패턴들:
 
 - **Ep.006**: Persistent 모듈 — AES256 암호화 UserDefaults 패턴 (`UserDefaultsWrapper<T>` 프로토콜 기반)
 - **Ep.007**: ReactorKit + async/await 전환 패턴 — Observable에서 async로 점진적 마이그레이션
