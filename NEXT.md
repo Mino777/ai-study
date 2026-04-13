@@ -369,6 +369,62 @@ cd /Users/jominho/Develop/ai-study && rtk npm run build
 
 ---
 
+### 2026-04-13 — UI 정비 + iOS Harness Journal 재작성
+
+**작업 트리거**: 이전 컨텍스트 소멸 후 재개. 복수의 미완성 작업 동시 처리.
+
+**완료 항목**:
+
+1. **Projects 페이지 탭 UI** — MoneyFlow | TaroSaju | AI Study 3탭. "all" 탭 없음, 기본값 첫 번째 탭.
+   - Server Component(`page.tsx`) + Client Component(`projects-page-client.tsx`) 분리 패턴
+   - 카테고리 키: `"moneyflow"` | `"tarosaju"` | `"ai-study-wiki"`
+
+2. **`/harness-journal` 페이지 Web/iOS 탭 UI** — `🌐 Web | 📱 iOS Harness Journal` 탭 전환
+   - 동일한 Server/Client 분리: `page.tsx`(데이터) + `harness-journal-client.tsx`(탭 상태)
+   - slug 패턴: Web = `harness-journal-*`, iOS = `ios-ai-journal-*`
+
+3. **iOS Harness Journal 000~005 전면 재작성**
+   - 직전 세션에서 "AI 앱 개발" 내용으로 잘못 작성됐던 것을 실제 gma-ios 프로젝트 기반으로 전면 재작성
+   - Ep.000: RIBs+ReactorKit 베이스라인, 커스텀 스킬 5종 목록
+   - Ep.001: 실제 `.swiftlint.yml` + `.swiftformat` 기반 PreToolUse/PostToolUse 훅
+   - Ep.002: 실제 5종 슬래시 커맨드 (triage/review/investigate/ship/arch) — 기존 3종 오류 수정
+   - Ep.003: `.claudeignore` 전체 구성 + SPM 멀티모듈 `.build/` 130GB 함정
+   - Ep.004: `/ios-triage` 인터뷰 패턴 + RIBs 자주 나오는 버그 패턴 목록
+   - Ep.005: iOS Compound 5단계 + `docs/solutions/` 실제 카테고리(swiftui/networking/storage/xctest/performance/build/ios-compat/appstore)
+
+4. **`apple-intelligence-api.mdx` 전면 재작성**
+   - 존재하지 않는 `IntelligenceKit` 가상 프레임워크 코드 완전 제거
+   - 실제 iOS 18 API 3가지로 재작성: App Intents (`@AssistantSchemas`), CoreSpotlight (`CSSearchableItem`), Writing Tools (`UITextView.writingToolsBehavior`)
+
+**CI 수정 (이전 세션 누적)**:
+- `.claude/worktrees/` embedded git repo 문제 → `.gitignore` 추가 + unstage
+- `apple-intelligence-api.mdx` mermaid 블록 파괴 복구
+- `dynamic-context-injection.mdx` frontmatter YAML 오류 수정
+
+---
+
+## 🎯 다음 큐 (이번 세션 추가)
+
+### iOS Harness Journal 006+ 후보
+
+실제 gma-ios에서 아직 박제 안 된 패턴들:
+
+- **Ep.006**: Persistent 모듈 — AES256 암호화 UserDefaults 패턴 (`UserDefaultsWrapper<T>` 프로토콜 기반)
+- **Ep.007**: ReactorKit + async/await 전환 패턴 — Observable에서 async로 점진적 마이그레이션
+- **Ep.008**: iOS CI/CD — 자동 빌드 + 앱스토어 배포 플로우 (`ios-ship` 커맨드 심화)
+- **Ep.009**: Xcode 타겟 멤버십 함정 — AI가 파일 추가 후 타겟에 포함 안 되는 문제 구조적 해결
+
+우선순위는 **사용자가 실제로 해당 패턴에 부딪힌 시점**에 작성하는 것이 맞음 (라이브 발견 > 추측 큐).
+
+### 기존 큐 유지
+
+- 🔴 **Web Journal 015**: moneyflow 9 debate/judge/trader/PM 에이전트 validator (Zod 도입 결정 후)
+- 🔴 **Web Journal 016**: Layer 3-4 (retry + instruction augmentation)
+- 🟡 **tarosaju text guards 발동률 측정** (데이터 대기 중)
+- 🟡 **비용 추적 DB 저장** (Supabase 승인 대기)
+
+---
+
 ### 2026-04-12 (final-latest session) — Journal 011~015 직후 4 사이클 연속
 
 **요약**: 사용자 트리거 "쭉쭉 진행"으로 4 작은 사이클 + Journal 015 + Vercel Pro 작업 연속.
