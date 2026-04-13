@@ -1,0 +1,227 @@
+---
+title: "Supabase Realtime `channel(name)` 재시도 함정 — 새 인스턴스 no-op + 좀비 setTimeout + dead code 3콤보"
+category: harness-engineering
+date: "2026-04-13"
+tags: [harness-engineering, supabase, realtime, react-hooks, anti-pattern, dead-code, retry, instance-identity]
+confidence: 5
+connections:
+  - harness-engineering/harness-journal-019-mcapp-cross-session-cleanup
+  - harness-engineering/fixture-silent-failure-trap
+  - harness-engineering/ai-call-patterns-circuit-breaker-fallback
+status: complete
+description: "Supabase Realtime에 재시도 로직을 추가하면서 흔히 발생하는 3중 안티패턴: supabase.channel(name)이 같은 이름으로 호출해도 새 인스턴스를 반환한다는 사실을 몰라 no-op unsubscribe가 되고, setTimeout retry가 cleanup에서 clear되지 않아 좀비 구독이 되고, return된 error state를 consumer가 destructure하지 않아 dead code가 되는 패턴. 2026-04-13 tarosaju PR #17에서 실제 발생, PR #20에서 롤백으로 처리."
+type: entry
+quiz:
+  - question: "`supabase.channel(channelName)`을 두 번 호출하면 어떻게 되는가?"
+    choices:
+      - "첫 호출의 인스턴스가 캐시되어 두 번째 호출에서 재사용된다"
+      - "이름이 같으면 같은 인스턴스를 리턴 (singleton)"
+      - "호출마다 **새 인스턴스**를 리턴 — 이름은 서버 subscribe topic에만 쓰일 뿐, 클라이언트 객체 identity와 무관"
+      - "두 번째 호출은 에러를 던진다"
+    answer: 2
+    explanation: "Supabase JS SDK의 `supabase.channel(name)`은 일반적인 name-keyed singleton 패턴이 아니라 **이름이 같아도 매번 새 RealtimeChannel 인스턴스를 생성**한다. 이름은 서버 측 subscribe topic 식별자일 뿐. 그래서 `supabase.channel(name).unsubscribe()`는 *방금 만든 새 인스턴스*를 unsubscribe하는 것이고, 기존 인스턴스(이미 .subscribe() 중인)는 그대로 살아있다 — 대표적 no-op 버그."
+  - question: "훅이 새 return 필드(예: `error` state)를 추가했을 때 반드시 해야 할 검증은?"
+    choices:
+      - "TypeScript가 체크해주므로 특별히 할 일 없음"
+      - "Grep으로 소비자 전수 검색하여 실제로 destructure하는지 확인 — 안 하면 dead code"
+      - "단위 테스트만 추가하면 충분"
+      - "React DevTools로 확인"
+    answer: 1
+    explanation: "TS는 destructure *여부*를 강제하지 않는다 (`const { a, b } = hook()`에서 c를 안 써도 에러 없음). Grep으로 소비자 전수 검색 — `grep -r 'useChatMessages' src/**/*.tsx`로 찾아서 *각 호출 시점의 destructure 패턴*을 확인해야 dead code 여부 판단 가능. 소비자 0건이면 훅 변경 자체를 롤백하는 게 정답."
+  - question: "`setTimeout` 기반 재시도 로직에서 React 컴포넌트 unmount 시 가장 큰 위험은?"
+    choices:
+      - "메모리 누수 (minor)"
+      - "콜백이 unmount 후 실행되면서 **언마운트된 훅의 setState를 호출** → stale closure + 경고 + 잠재적 race condition"
+      - "CPU 부하"
+      - "TypeScript 에러"
+    answer: 1
+    explanation: "setTimeout 콜백이 ref에 저장되지 않으면 cleanup에서 clearTimeout할 수 없고, 예약된 콜백은 그대로 실행된다. 콜백이 unmount된 훅의 `setState`, `setError`를 호출하면 React가 경고를 뱉는 것은 그나마 운이 좋은 경우 — 나쁜 경우는 *언마운트된 훅 인스턴스 상태를 조작*하면서 조용히 race condition을 만든다. 재시도 타이머는 항상 `useRef<NodeJS.Timeout>()`에 저장 + cleanup에서 `clearTimeout(ref.current)` 필수."
+---
+
+## 한 줄 요약
+
+Supabase Realtime 훅에 재시도 로직을 추가할 때 세 가지 숨은 함정이 **동시에** 터질 수 있다: (1) `supabase.channel(name)`은 호출마다 새 인스턴스 → unsubscribe가 no-op, (2) `setTimeout` retry가 cleanup 누락 → 좀비 구독, (3) return한 `error` state를 소비자가 읽지 않음 → dead code. **3콤보가 함께 발견되면 고치지 말고 전체 롤백**이 정답.
+
+---
+
+## 실제 사례 — tarosaju PR #17
+
+2026-04-13 맥앱 Claude 세션이 "Realtime 에러 처리 보강" 명목으로 `useChatMessages.ts` / `useNotifications.ts` 두 훅에 재시도 + 에러 state + AbortController를 추가. 커밋 메시지와 PR 설명은 합리적으로 들렸지만 diff를 line-by-line 읽어보니 3콤보 안티패턴.
+
+```ts
+// ❌ PR #17 — 세 가지 결함이 동시에
+channel
+  .on("postgres_changes", {...}, (payload) => {
+    setMessages((prev) => [...prev, payload.new]);
+    setError(null);  // 결함 3: setError 호출하지만 소비자가 error를 안 읽음
+  })
+  .subscribe((status, err) => {
+    if (status === "SUBSCRIBED") {
+      retryCount = 0;
+    } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+      if (retryCount < maxRetries) {
+        retryCount += 1;
+        setError(`재시도 중... (${retryCount}/${maxRetries})`);
+        setTimeout(() => {
+          supabase.channel(channelName).unsubscribe();  // 결함 1: 새 인스턴스 만들어 unsubscribe → no-op
+          channel.subscribe();
+        }, 3000 * retryCount);  // 결함 2: ref 없이 setTimeout → cleanup에서 clear 불가
+      }
+    }
+  });
+
+return () => {
+  supabase.removeChannel(channel);
+  // retry setTimeout은 clear 안 됨 → 좀비
+};
+```
+
+**소비자 확인** (Grep 결과):
+
+```
+src/app/chat/[roomId]/page.tsx:56:
+  const { messages, loading, hasMore, sending, send, loadMore } = useChatMessages(roomId);
+src/app/notifications/page.tsx:29:
+  const { notifications, unreadCount, loading, markAllRead, markRead } = useNotifications();
+```
+
+→ **두 소비자 모두 `error` 필드를 destructure하지 않음**. 재시도 메시지, 타임아웃 안내, 모든 에러 UX가 state만 세팅하고 사용자 화면엔 단 1픽셀도 안 나옴.
+
+---
+
+## 왜 이게 세 가지 함정인가
+
+### 함정 1 — `supabase.channel(name)`의 인스턴스 identity
+
+Supabase JS SDK의 `channel(name)`은 **name-keyed singleton이 아니다**. 호출마다 새 `RealtimeChannel` 객체를 생성하고, 이름은 서버 측 subscribe topic 식별자로만 쓰인다. 따라서:
+
+```ts
+const a = supabase.channel("foo");
+const b = supabase.channel("foo");
+console.log(a === b); // false — 다른 인스턴스
+a.subscribe(); // 서버에 "foo" topic 구독 1번
+b.unsubscribe(); // b만 내려감 (b는 subscribe도 안 했음). a는 그대로 살아있음.
+```
+
+재시도 코드에서 `supabase.channel(channelName).unsubscribe()`는 *방금 만든 빈 인스턴스*를 unsubscribe하는 의미 없는 호출이고, 이미 구독 중인 원본 `channel`은 건드리지 않는다. 재시도 사이클마다 **서버에 중복 구독이 쌓인다**.
+
+올바른 방법은 원본 참조로 처리:
+
+```ts
+// ✅ 기존 채널 정리 후 재구독
+supabase.removeChannel(channel);
+// 또는 새 채널 객체 생성 후 채널 변수 갱신
+channel = supabase.channel(channelName);
+channel.on(...).subscribe(...);
+```
+
+### 함정 2 — setTimeout + cleanup 누락 = 좀비 구독
+
+```ts
+setTimeout(() => { /* retry */ }, 3000 * retryCount);
+```
+
+이 타이머는 `useEffect`의 cleanup에서 clear되지 않으면, 컴포넌트가 언마운트된 후에도 예약된 시점에 실행된다. 콜백 안에서 stale closure의 `setError`, `setState`를 호출하면 언마운트된 훅 인스턴스의 상태를 건드리게 되고, React는 경고를 뱉거나 — 더 나쁜 경우 — 조용히 race condition을 만든다.
+
+올바른 패턴:
+
+```ts
+// ✅ ref에 타이머 저장 + cleanup에서 clear
+const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+// retry 예약
+retryTimerRef.current = setTimeout(() => { ... }, delay);
+
+// cleanup
+return () => {
+  if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+  supabase.removeChannel(channel);
+};
+```
+
+### 함정 3 — return한 state를 소비자가 읽지 않으면 dead code
+
+훅이 `error` 필드를 return한다고 해서 UI에 에러가 표시되는 건 *아니다*. 소비자가 명시적으로 destructure + JSX에 렌더해야 한다.
+
+```ts
+// hook
+return { messages, loading, error, hasMore, sending, send, loadMore };
+
+// consumer (문제)
+const { messages, loading, hasMore, sending, send, loadMore } = useChatMessages(roomId);
+// ↑ error가 destructure 목록에 없으면 화면에 0픽셀 영향
+```
+
+TypeScript는 destructure 완전성을 강제하지 않으므로 이런 dead code는 정적 분석에서 잡히지 않는다. **훅이 새 return 필드를 추가하면 즉시 `grep -r '<hookName>' src/**/*.tsx`로 소비자 전수 검사**가 유일한 방어선.
+
+---
+
+## 해결 — 전체 롤백
+
+세 함정이 동시에 있을 때 "하나씩 고치기"를 시도하면 수정 분량이 커지고 리스크가 누적된다. PR #20의 결정은 **전체 롤백 + 필요 시 다시 설계**:
+
+```ts
+// ✅ PR #20 — 단순한 상태로 복귀
+.subscribe((status, err) => {
+  if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+    logger.error(`useChatMessages subscription ${status}:`, err);
+  }
+});
+```
+
+- retry? → 제거. 재연결이 필요하면 사용자가 페이지 새로고침.
+- error state? → 제거. 소비자가 안 읽으면 존재 의미 없음.
+- AbortController (30s 타임아웃)? → 제거. 네트워크 레벨 타임아웃은 fetch/WS 스택이 처리.
+
+**81줄 삭제 / 코드 복잡도 급감 / 테스트 691/0 유지 / 동작 동일**. 진짜 재시도가 필요할 때 세 함정 모두 피해서 다시 설계하면 된다.
+
+---
+
+## 일반화 — "인스턴스 identity 착각" 계열 안티패턴
+
+`supabase.channel(name)`은 특정 사례이지만, 같은 함정 패턴이 다른 API에도 존재한다:
+
+| API | 착각 | 실제 |
+|---|---|---|
+| `supabase.channel(name)` | name이 같으면 같은 인스턴스 | 호출마다 새 인스턴스 |
+| `document.querySelector(sel)` | 같은 selector면 같은 노드 | 매번 새로 탐색 (DOM 변경 시 다른 노드) |
+| `new Intl.NumberFormat(locale)` | 동일 locale은 cache됨 | JS 엔진마다 다름, 명시 캐싱 필요 |
+| RxJS `new Subject()` (실수) | named constructor가 캐시 | 매번 새 인스턴스 |
+
+**공통 처방**: API가 "factory function"인지 "lookup/singleton"인지 문서로 확인. 문서가 불분명하면 `===` 비교로 실측. *이름 같으면 같은 것* 가정은 JavaScript 생태계에서 매우 위험하다.
+
+---
+
+## 소비자 Grep 감사 (일반 체크리스트)
+
+hook/util이 새 return 필드 또는 새 파라미터를 추가할 때:
+
+- [ ] **Grep**: `grep -rn '<hookName>\|<utilName>' src/**/*.{ts,tsx}` — 모든 호출 위치 목록화
+- [ ] **각 호출 시점의 destructure 패턴 확인**: 새 필드가 destructure 목록에 포함되는지
+- [ ] **0건이면 변경 롤백**: 쓰지도 않는 필드를 return하는 것은 API 표면적 증가 + 혼란
+- [ ] **1건 이상이지만 UI 미연결**: consumer가 destructure는 하지만 JSX에 쓰지 않으면 그것도 dead code 후보
+- [ ] **테스트가 새 필드를 검증하는지**: 테스트만 쓰고 실제 UI에서 안 쓰면 production 관점에서는 dead code
+
+---
+
+## 체크리스트 — Supabase Realtime 재시도 구현 직전
+
+- [ ] `supabase.channel(name)`을 두 번 호출하지 않는다. 원본 참조를 ref/변수로 유지.
+- [ ] 재시도 타이머는 `useRef`에 저장. cleanup에서 `clearTimeout` 또는 `clearInterval`.
+- [ ] 재구독 시 `supabase.removeChannel(old)` → 새 `supabase.channel(newName)` 생성 (이전 채널 정리 확실히).
+- [ ] 채널 이름에 timestamp나 uuid를 섞어 중복 구독 방지: `channel-${userId}-${Date.now()}`.
+- [ ] `error` state를 훅이 return할 거면, **먼저 소비자 쪽에 error UI를 추가**한 뒤 훅을 수정 (bottom-up).
+- [ ] `setError(null)` 호출은 실제로 에러 클리어 UX가 필요할 때만. 모든 메시지 수신 시마다 null 호출은 의미 없음.
+- [ ] 맥스 retry 도달 시 사용자에게 어떻게 알릴지 명시. 로그만 남기고 UI에 안 보이면 "조용한 실패"가 됨.
+
+---
+
+## 핵심 메시지
+
+> Supabase Realtime 재시도 로직은 "쉬워 보이지만" 세 가지 JavaScript/React 레벨 함정(인스턴스 identity, 타이머 cleanup, dead code return)이 동시에 터지기 쉬운 지점이다. 새 복잡도를 추가하기 전에 **"지금 사용자에게 실제로 보이는 에러 UX가 있는가?"**를 먼저 묻고, 답이 "없다"이면 그 복잡도는 애초에 추가할 이유가 없다.
+
+## 관련
+
+- [Harness Journal 019 — 맥앱 Claude 세션 부산물 크로스 검증](/wiki/harness-engineering/harness-journal-019-mcapp-cross-session-cleanup) — 이 패턴이 발견된 원본 사이클 (3 프로젝트 중 tarosaju 케이스)
+- [Fixture Silent Failure Trap](/wiki/harness-engineering/fixture-silent-failure-trap) — "통과하는 척하는 테스트"의 다른 변형 (간접 검증 vs 직접 검증)
+- [AI Call Patterns — Circuit Breaker / Fallback](/wiki/harness-engineering/ai-call-patterns-circuit-breaker-fallback) — 재시도가 진짜 필요한 경우 어떻게 설계하는가
