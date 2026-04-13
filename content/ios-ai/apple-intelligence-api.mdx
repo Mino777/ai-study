@@ -132,21 +132,12 @@ import Foundation
 enum IntelligentActionType {
     case summarize(content: String) // 특정 텍스트 요약
     case suggestFollowUpActions(forContextIdentifier: String, contextType: String) // 특정 컨텍스트에 대한 후속 조치 제안
-    case generateDraft(basedOnContext: IntelligenceContextPayload, intent: String) // 특정 컨텍스트 기반으로 초안 생성
-    case refineText(text: String, style: TextRefinementStyle) // 텍스트 다듬기
-
-    enum TextRefinementStyle: String {
-        case professional, friendly, concise, elaborate
-    }
-}
-
-class IntelligentAgent {
-    // I```mermaid
+    ca```mermaid
 graph TD
     A[iOS 앱 개발자] --> B{IntelligenceKit API};
     B --> C{Apple Intelligence Layer};
     C --> D[온디바이스 모델];
-    C --> E["""""""Private Cloud Compute (PCC)"""""""];
+    C --> E[""""""""Private Cloud Compute (PCC)""""""""];
     D --> F[시스템 컨텍스트 저장소];
     E --> F;
     F --> C;
@@ -167,6 +158,12 @@ graph TD
     style C fill:#9cf,stroke:#333,stroke-width:2px;
     style B fill:#ffd,stroke:#333,stroke-width:1px;
     style I fill:#ffd,stroke:#333,stroke-width:1px;
+    style D fill:#afa,stroke:#333,stroke-width:1px;
+    style E fill:#fca,stroke:#333,stroke-width:1px;
+    style F fill:#add,stroke:#333,stroke-width:1px;
+    style G fill:#dee,stroke:#333,stroke-width:1px;
+    style H fill:#eef,stroke:#333,stroke-width:1px;
+```tyle I fill:#ffd,stroke:#333,stroke-width:1px;
     style D fill:#afa,stroke:#333,stroke-width:1px;
     style E fill:#fca,stroke:#333,stroke-width:1px;
     style F fill:#add,stroke:#333,stroke-width:1px;
