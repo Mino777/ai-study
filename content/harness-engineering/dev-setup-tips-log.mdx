@@ -318,4 +318,257 @@ npm run build
 
 ---
 
+## 2026-04-13 — Next.js 16 RSC: Server Component에서 Client Component로 함수 prop 전달 시 프로덕션 500 + `digest` 해시만 노출
+
+**환경**: Next.js 16.2.1 (Turbopack), `@vercel/analytics ^2.0.1`, App Router, Server Component로 작성된 루트 `app/layout.tsx`. 실제 발생 케이스: `mino-moneyflow` 프로덕션 (`mino-moneyflow.vercel.app`).
+
+**증상**: 프로덕션 모든 public 페이지(`/`, `/login`, `/signup` 등) HTTP 500. 사용자 화면은 `global-error.tsx` fallback이 렌더링하는 "문제가 발생했습니다" 페이지 + `오류 코드: 2912116883`(`error.digest`) 노출. `/api/*` 엔드포인트는 정상 200. 로컬 `next build`는 성공, 로컬 `next start`에서만 재현.
+
+```
+# 로컬 next start 서버 stderr
+⨯ Error: Functions cannot be passed directly to Client Components unless
+  you explicitly expose it by marking it with "use server". Or maybe you
+  meant to call this function rather than return it.
+  {beforeSend: function beforeSend}
+               ^^^^^^^^^^^^^^^^^^^
+    at stringify (<anonymous>) {
+  digest: '3379263931'
+}
+```
+
+사용자가 보는 `digest`(`2912116883`)와 로컬 서버 로그의 `digest`(`3379263931`)는 *다르다* — 같은 에러 클래스라도 Next.js가 프로덕션 환경의 스택 트레이스 컨텍스트를 섞어 해싱하기 때문에 배포 환경마다 다른 숫자가 나온다. 즉 프로덕션 digest만 보면 로컬에서 같은 해시를 만들어낼 수 없고, *서버 stderr에서 실제 메시지를 뽑아야* 원인이 드러난다. 프로덕션 응답 HTML에는 digest만 노출되고 실제 에러 메시지는 *숨겨져 있다*(보안 기본값). Vercel Function Logs나 Sentry 없이는 원격 상태에서 원인을 알 수 없다.
+
+**근본 원인**: 문제의 코드는 다음과 같다.
+
+```tsx
+// app/layout.tsx — Server Component
+import { Analytics } from '@vercel/analytics/next'
+
+export default async function RootLayout({ children }) {
+  // ...
+  return (
+    <html>
+      <body>
+        {/* ... */}
+        <Analytics
+          beforeSend={(event) => {
+            const url = event.url.replace(/[?&](key|token|secret)=[^&]*/gi, '')
+            return { ...event, url }
+          }}
+        />
+      </body>
+    </html>
+  )
+}
+```
+
+Server Component가 렌더링될 때 Next.js는 children/props 트리를 JSON으로 직렬화해서 Client Component인 `<Analytics>`에 전달한다. 그런데 `beforeSend`는 클로저(함수)이므로 JSON.stringify 대상이 될 수 없다 — 함수는 직렬화 불가. React Server Components의 규칙은 "Server → Client 경계를 넘는 모든 값은 직렬화 가능해야 한다 (primitives, plain objects, Arrays, Promises, Server Actions만 허용)"이다. Next.js 16의 RSC 런타임이 이 규칙을 *엄격히* 강제하면서 렌더 시점에 `stringify`가 던지는 에러가 곧 SSR 500이 된다.
+
+특히 악질적인 부분 3가지:
+
+1. **`next build`는 성공한다.** 이 검증은 *렌더 타임*에 일어나는 런타임 체크라서 빌드 단계에서는 잡히지 않는다. `npm run build` exit 0을 보고 "배포해도 되겠네"로 넘기면 프로덕션에서 터진다.
+2. **Dev 서버는 이를 콘솔 경고로만 표시**하고 페이지는 계속 렌더링해줄 수 있어서, 개발 중에는 정상처럼 보인다. 프로덕션 `next start`에서만 500으로 치명화된다.
+3. **에러 메시지가 "beforeSend"를 명시적으로 지목**하는데도, 프로덕션에서는 그 메시지가 사용자/관리자에게 안 보이고 `digest` 숫자만 남는다. Vercel Function Logs 없이 로컬에서 `next start`로 *재현*하지 않으면 근본 원인 도달 불가.
+
+이전 `@vercel/analytics ^1.x` + Next.js 15 조합에서는 이 패턴이 *묵인*됐다 — 함수 prop이 직렬화 불가라는 건 같지만, 런타임 체크가 느슨해서 "Warn + 무시"로 동작했을 가능성이 높다. Next.js 16 / `@vercel/analytics ^2.x` 조합에서 체크가 throw로 승격되면서 기존 코드가 일제히 깨진다. 즉 *업그레이드 시 RSC 함수 prop 패턴을 전부 검사*해야 한다.
+
+**수정**: 함수 prop을 사용하는 Client Component는 *그 자체를 또 하나의 Client Component로 래핑*한다. 함수가 Client 경계를 넘어가지 않게 *클라이언트 내부에서 정의*해야 한다.
+
+```tsx
+// src/components/AnalyticsWrapper.tsx — 신규 Client Component
+'use client'
+
+import { Analytics } from '@vercel/analytics/next'
+
+export function AnalyticsWrapper() {
+  return (
+    <Analytics
+      beforeSend={(event) => {
+        // 이 함수는 클라이언트 번들에서만 정의/실행된다 — Server→Client 경계를 건너지 않음
+        const url = event.url.replace(/[?&](key|token|secret)=[^&]*/gi, '')
+        return { ...event, url }
+      }}
+    />
+  )
+}
+```
+
+```tsx
+// app/layout.tsx — Server Component (기존 import 교체)
+import { AnalyticsWrapper } from '@/components/AnalyticsWrapper'
+
+export default async function RootLayout({ children }) {
+  return (
+    <html>
+      <body>
+        {/* ... */}
+        <AnalyticsWrapper /> {/* 함수 prop 없음 — 직렬화 가능 */}
+      </body>
+    </html>
+  )
+}
+```
+
+**검증**:
+
+```bash
+# 로컬 재현 (수정 전) — 500 나와야 함
+rm -rf .next && npm run build
+NEXT_PUBLIC_SUPABASE_URL=https://placeholder.supabase.co \
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...placeholder... \
+PORT=3458 node_modules/.bin/next start &
+sleep 3 && curl -s -o /dev/null -w "%{http_code}\n" http://localhost:3458/
+# → 500 (서버 stderr에 beforeSend 에러 출력)
+
+# 수정 후 — 200 나와야 함 (AnalyticsWrapper 적용)
+rm -rf .next && npm run build
+PORT=3459 node_modules/.bin/next start &
+sleep 3 && curl -s -o /dev/null -w "%{http_code}\n" http://localhost:3459/
+# → 200
+
+# 프로덕션 검증
+for path in / /login /signup /api/health; do
+  curl -s -o /dev/null -w "$path = %{http_code}\n" "https://<your-app>.vercel.app$path"
+done
+# → 200, 200, 200, 200 (또는 /dashboard = 307 auth redirect)
+```
+
+`mino-moneyflow` 실제 결과: 수정 전 `/` `/login` 500, 수정 후 둘 다 200 + 208KB 정상 응답(`__next_error__`·`digest` 마커 없음).
+
+**일반화 — 함수 prop을 쓰고 있을 가능성이 높은 Client Component 체크리스트**:
+
+이 에러가 나올 때 한 파일만 고쳐서 끝내지 말고 레포 전역 검사:
+
+```bash
+# 1) Server Component(layout.tsx, page.tsx 등)에서 import한 Client Component에
+#    함수 prop(=>)이 들어가는 패턴 찾기
+rg -n "on[A-Z]\w*=\{|beforeSend=\{|serialize=\{|transform=\{|render=\{" \
+   --glob '!**/node_modules/**' \
+   src/app src/layouts 2>/dev/null
+
+# 2) '라는 이름의 함수 prop'이 보편적으로 함정인 라이브러리
+#    - @vercel/analytics: beforeSend
+#    - 차트 라이브러리: formatter, tooltip.content, label.formatter
+#    - 커스텀 provider: onError, onSettled, transform
+#    - i18n provider: getMessageFallback, onError
+```
+
+**Related**:
+- [Harness Journal 019 — Mac 앱 cross-session cleanup](./harness-journal-019-mcapp-cross-session-cleanup.mdx): 오늘 같은 날에 *다른* Mac 앱 인시던트도 처리함. 두 사건 모두 "프로덕션 배포가 침묵으로 실패하고 나중에 인지"라는 공통 축.
+- [Harness Journal 003 — squash merge trap](./harness-journal-003-squash-merge-trap-pattern.mdx): 이 버그가 왜 오래 숨어있었는지의 맥락 (배포 체인 실패 — 아래 다음 팁 참조).
+- 다음 섹션 (2026-04-13 — `GITHUB_TOKEN` 머지는 downstream workflow 안 깨운다): 이 버그가 *오늘 터진 이유*를 부분적으로 설명. 기존에 코드가 잠재적으로 깨져 있었지만 실제 배포는 PR 머지 이후 이뤄지지 않아서 노출 안 됐던 것.
+- [@vercel/analytics beforeSend docs](https://vercel.com/docs/analytics/redacting-sensitive-data): Vercel 공식 문서가 *Client Component 예시만 제공*하고 Server Component 경고는 없다. 업스트림 개선 여지 있음.
+
+**승격 조건**: Next.js 16 업그레이드로 같은 RSC 직렬화 에러가 다른 프로젝트에서 재발하거나, 함수 prop을 금지하는 lint 규칙/codemod를 만들 수 있게 되면 Harness Journal로 승격 후보. 현재는 `mino-moneyflow` 1건.
+
+---
+
+## 2026-04-13 — `ai-review.yml`의 squash merge는 `deploy.yml`을 트리거하지 않는다 (GitHub의 GITHUB_TOKEN 정책)
+
+**환경**: 모든 워커 프로젝트에서 사용 중인 [Harness Journal 002 inline Test Gate](./harness-journal-002-inline-test-gate.mdx) 기반 `ai-review.yml` + 별도 `deploy.yml` 워크플로우 조합. 실제 발생: `mino-moneyflow`에서 PR #113 ~ #117을 자동 머지하는 동안 `deploy.yml`이 한 번도 트리거되지 않아 프로덕션이 *수 시간 동안 stale 상태*로 남음.
+
+**증상**: main 브랜치에 squash merge는 성공적으로 적용되는데 (GitHub UI에서 "Merged" 표시 + `git log origin/main`에 새 커밋 보임), `.github/workflows/deploy.yml`의 `on: push: branches: [main]` 트리거가 작동하지 않음. 최근 성공한 `deploy.yml` 실행이 *직접 main 푸시*였던 오래된 커밋(mino-moneyflow 케이스: 04:48 UTC `3682016`)에 머물러 있고, 이후 자동 PR 머지된 4개 커밋(#114 ~ #117)에 대해서는 deploy 워크플로우가 한 번도 뜨지 않음.
+
+```bash
+# 증상 재현 확인
+gh run list --workflow "🚀 Deploy to Vercel" --limit 5 \
+  --json headSha,createdAt,conclusion
+
+# 결과 (mino-moneyflow, 2026-04-13):
+# [
+#   { createdAt: "2026-04-13T04:48:35Z", headSha: "3682016...", conclusion: "success" },  # 직접 main 푸시
+#   { createdAt: "2026-04-13T04:37:33Z", headSha: "c2ef57a...", conclusion: "success" },  # 직접 main 푸시
+#   ...
+# ]
+# → PR #114 (05:43), #115 (06:13), #116 (06:26), #117 (07:41) 4건은 deploy 트리거 없음
+
+gh run list --limit 20 --json name,headBranch,event | grep -c "push.*main"
+# → ai-review.yml만 돌았을 뿐 deploy.yml은 0회
+```
+
+**근본 원인**: GitHub의 [GITHUB_TOKEN 정책](https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/triggering-a-workflow#triggering-a-workflow-from-a-workflow)은 명시적으로 다음과 같이 규정한다:
+
+> *"When you use the repository's `GITHUB_TOKEN` to perform tasks, events triggered by the `GITHUB_TOKEN`, with the exception of `workflow_dispatch` and `repository_dispatch`, will not create a new workflow run."*
+
+`ai-review.yml`은 PR을 squash merge한 뒤 `git push origin HEAD:main`을 `GITHUB_TOKEN`으로 실행한다. 이 push는 git 관점에서는 정상 push지만, GitHub Actions 관점에서는 *downstream 워크플로우(`deploy.yml`의 `on: push`)를 의도적으로 깨우지 않는다*. 이 정책의 의도는 *무한 워크플로우 루프 방지*다 — workflow A가 push → workflow B → workflow B의 push → workflow A → ... 를 막기 위해 `GITHUB_TOKEN`으로 만들어진 push는 `push` 이벤트를 발행하지 않는다.
+
+이 정책은 *잠재적으로 알려진 사실*이지만 실제로 마주하기 전까지 인지되지 않는 경우가 대부분이다 — `ai-review.yml`은 머지를 성공시켜 main을 업데이트하지만 deploy를 *조용히* 건너뛰고, 개발자는 "main에 머지됐으니 배포됐겠지"라는 멘탈 모델로 움직인다. 로컬 `git log origin/main`은 최신 커밋을 보여주고, GitHub UI에는 "Merged" 배지가 달린다. 어디에도 *"배포가 안 됐다"는 신호*가 없다. 프로덕션에 직접 접속해서 새 코드가 서빙되고 있는지 확인하기 전까지는 문제가 보이지 않는다.
+
+이 사건에서는 운 나쁜 타이밍이 겹쳤다: v0.9.37에서 들어간 `beforeSend` 함수 prop 버그(위 섹션)가 존재했지만, *실제로 프로덕션에 반영된 마지막 deploy는 그 버그를 포함한 뒤에*(`3682016`, 04:48 UTC) 이뤄졌다. 그 후 PR로 올라간 여러 fix/compound 커밋들은 deploy 없이 main에만 누적됐고, 프로덕션은 *버그 있는 버전에 고정*된 채 수 시간 동안 노출됐다. 사용자가 실제 페이지를 열고 나서야 500이 드러났다.
+
+**수정** — 3가지 옵션, 가장 침습도 낮은 순:
+
+```yaml
+# 옵션 1 (권장): ai-review.yml 맨 마지막에 workflow_dispatch로 deploy 명시 호출
+# 가장 작은 변경 — 파일 하나 추가 step만 수정
+- name: Trigger deploy workflow (bypass GITHUB_TOKEN push event silence)
+  if: steps.merge.outputs.merged == 'true'
+  uses: actions/github-script@v7
+  with:
+    script: |
+      await github.rest.actions.createWorkflowDispatch({
+        owner: context.repo.owner,
+        repo: context.repo.repo,
+        workflow_id: 'deploy.yml',
+        ref: 'main',
+      })
+```
+
+```yaml
+# 옵션 2: deploy.yml의 트리거를 workflow_run으로 바꿔서 ai-review.yml 완료를 체인
+# ai-review.yml을 건드리지 않고 deploy.yml만 수정하면 됨
+# 주의: workflow_run도 성공한 run만 감지. 또 workflow_run은 conclusion을 검사해야 함.
+on:
+  workflow_run:
+    workflows: ["🤖 AI-Review Merge"]
+    types: [completed]
+    branches: [main]
+jobs:
+  deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    # ...
+```
+
+```yaml
+# 옵션 3 (가장 침습도 높음): ai-review.yml에서 GITHUB_TOKEN 대신 PAT 사용
+# GITHUB_TOKEN 제약을 완전히 우회하지만 PAT 관리(로테이션/권한 최소화)가 비용
+token: ${{ secrets.PAT_FOR_CI_CHAIN }}
+```
+
+각 옵션의 트레이드오프:
+
+- **옵션 1**: 가장 명시적. `ai-review.yml` 쪽에 "deploy를 일부러 깨운다"는 의도가 코드로 남아서 다음 사람이 읽을 때 체인을 추적하기 쉽다. 실패 모드: `workflow_dispatch` 호출 자체가 실패하면 무음 drop.
+- **옵션 2**: `deploy.yml` 쪽만 고치면 되므로 여러 프로젝트에 이식할 때 `ai-review.yml`의 유사도를 깨지 않는다. 단점: `workflow_run`은 *독립 실행*이라 `ai-review.yml` 컨텍스트(PR 번호 등)를 기본으로 못 받음. 필요하면 `github.event.workflow_run.head_sha` 등으로 다시 lookup 필요.
+- **옵션 3**: 근본 해결이지만 PAT 관리 오버헤드가 붙고, PAT 만료 시 *조용히* 전체 체인이 깨진다는 새 실패 모드가 생긴다.
+
+**긴급 수동 트리거** (수정 적용 전 빠른 배포용):
+
+```bash
+gh workflow run "🚀 Deploy to Vercel" --ref main
+gh run list --workflow "🚀 Deploy to Vercel" --limit 1 --json status,conclusion,headSha
+# → status: in_progress → completed/success 확인
+```
+
+**검증**: 옵션 적용 후 테스트 PR을 하나 만들고 ai-review 자동 머지 → `gh run list`에서 *같은 SHA*에 대해 `🚀 Deploy to Vercel`이 `ai-review` 직후 자동으로 큐잉되는지 확인. 머지 성공만 확인하지 말고 반드시 `deploy.yml` 큐잉까지 확인.
+
+**일반화 — 이 문제는 다른 워크플로우 체인에도 영향**:
+
+이 제약은 `deploy.yml`뿐만 아니라 *`on: push: main`으로 트리거되는 모든 downstream 워크플로우*에 동일하게 적용된다. 체크 목록:
+
+- Post-merge 태깅/릴리스 (`release.yml`)
+- Post-merge 문서 사이트 재빌드 (`docs.yml`)
+- Post-merge canary 모니터링 시작 (`canary.yml`)
+- Post-merge slack/telegram 알림 워크플로우
+
+이 중 어느 것이든 `ai-review.yml` squash merge 후 *자동으로* 떠야 하는데 사실은 안 뜨고 있을 수 있다. `gh run list --event push --branch main --limit 20`으로 확인해서 ai-review 머지와 downstream 워크플로우가 1:1로 매칭되는지 점검.
+
+**Related**:
+- [Harness Journal 003 — squash merge trap pattern](./harness-journal-003-squash-merge-trap-pattern.mdx): 이 Journal은 *로컬 git 상태*와 origin이 갈라지는 문제를 다룬다. 지금 팁은 그 패턴의 *CI 확장*판 — 로컬이 갈라지는 게 아니라 *워크플로우 체인*이 갈라지는 현상.
+- [Harness Journal 014 — hub auto-merge inbound tips](./harness-journal-014-hub-auto-merge-inbound-tips.mdx): 이 체인 문제가 허브(ai-study) 리포에는 영향 없음을 확인 (허브는 squash merge 후 downstream 워크플로우가 없음). 그러나 워커 프로젝트들(moneyflow/tarosaju)은 모두 영향권.
+- 위 섹션 (Next.js 16 RSC 함수 prop): *같은 사건의 두 축*. beforeSend 버그가 *존재*하는 것과 그 버그가 *프로덕션에 노출되는 것*은 별개이며, 후자는 이 deploy 체인 실패가 원인의 일부다.
+
+**승격 조건**: 다른 워커 프로젝트(`mino-tarosaju` 등)에서도 같은 downstream 체인 실패가 관측되면 즉시 Harness Journal로 승격 (이 경우 옵션 1을 `.github/workflows/ai-review.yml` 템플릿화해서 전 프로젝트 일괄 이식). 현재는 `mino-moneyflow` 1건만 확인.
+
+---
+
 > **📌 append 규칙**: 새 팁은 이 구분선 *위*가 아니라 *아래*에 새 섹션을 추가한다. 기존 섹션은 건드리지 않는다.
