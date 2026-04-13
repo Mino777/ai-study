@@ -167,8 +167,11 @@ async function main() {
       const { fixed, autoFixed, errors } = fixAndValidateMermaid(block.code, rel);
 
       // 자동 수정이 적용되면 파일 업데이트
+      // ⚠️ raw(frontmatter 포함) 기준으로 검색해야 슬라이싱 오프셋이 정확함.
+      //    content(frontmatter 제거 후) 기준으로 검색하면 오프셋이 frontmatter 길이만큼
+      //    어긋나서 파일이 손상됨 (apple-intelligence-api.mdx 손상 사례).
       if (autoFixed) {
-        const oldBlockStart = content.indexOf(`\`\`\`mermaid\n${block.code}`);
+        const oldBlockStart = raw.indexOf(`\`\`\`mermaid\n${block.code}`);
         if (oldBlockStart !== -1) {
           const oldBlockEnd = oldBlockStart + `\`\`\`mermaid\n${block.code}\`\`\``.length;
           raw = raw.substring(0, oldBlockStart) + `\`\`\`mermaid\n${fixed}\`\`\`` + raw.substring(oldBlockEnd);

@@ -42,7 +42,7 @@ export function HarnessJournalClient({
             <div className="font-data text-2xl font-semibold text-text">{totalEpisodes}</div>
           </div>
           <div>
-            <div className="text-xs text-muted">Web</div>
+            <div className="text-xs text-muted">Web + Backend</div>
             <div className="font-data text-2xl font-semibold text-text">{webEpisodes.length}</div>
           </div>
           <div>
@@ -80,7 +80,7 @@ export function HarnessJournalClient({
               : "bg-surface border border-border text-text hover:border-accent hover:text-accent"
           }`}
         >
-          🌐 Web
+          🌐 Web + Backend
         </button>
         <button
           onClick={() => setActiveTab("ios")}
@@ -90,7 +90,7 @@ export function HarnessJournalClient({
               : "bg-surface border border-border text-text hover:border-accent hover:text-accent"
           }`}
         >
-          📱 iOS Harness Journal
+          📱 iOS
         </button>
       </div>
 
