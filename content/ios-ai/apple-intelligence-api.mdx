@@ -66,34 +66,12 @@ struct MyMeetingEvent: Identifiable, Codable {
 extension MyMeetingEvent: IntelligenceContextRepresentable {
     // Intelligence Layer에 전달될 컨텍스트 페이로드
     var intelligenceContextPayload: IntelligenceContextPayload {
-        var payload = IntelligenceContextPayload()
-        payload.add(self.title, for: .eventTitle)
-        payload.add(self.description, for: .eventDescription)
-        payload.add(self.date, for: .eventDate)
-        payload.add(self.participants.joined(separator: ", "), for: .peopleNames)
-        payload.add(self.id.uuidString, for: .identifier) // 고유 식별자
-        self.location.map { payload.add($0, for: .locationName) }
-        
-        // 이 컨텍스트의 타입을 지정하여 Intelligence Layer가 적절하게 분류하도록 돕습니다.
-        payload.setContextType("com.myapp.meeting_event") 
-        return payload
-    }
-}
-
-// 3. 앱 내에서 컨텍스트 기여 및 철회 관리
-class MeetingManager {
-    // 이벤트 추가 및 컨텍스트 기여
-    func addMeeting(_ event: MyMeetingEvent) async throws {
-        // ... 앱의 데이터베이스에 이벤트 저장 로직 ...
-        
-        // Intelligence Layer에 컨텍스트 기여 요청
-        try await IntelligenceContextManager.shared.contribute(event)
-        print("Meeting context contributed: \(event.title```mermaid
+        var pay```mermaid
 graph TD
     A[iOS 앱 개발자] --> B{IntelligenceKit API};
     B --> C{Apple Intelligence Layer};
     C --> D[온디바이스 모델];
-    C --> E[""""""""""""Private Cloud Compute (PCC)""""""""""""];
+    C --> E["""""""""""""""Private Cloud Compute (PCC)"""""""""""""""];
     D --> F[시스템 컨텍스트 저장소];
     E --> F;
     F --> C;
@@ -114,6 +92,24 @@ graph TD
     style C fill:#9cf,stroke:#333,stroke-width:2px;
     style B fill:#ffd,stroke:#333,stroke-width:1px;
     style I fill:#ffd,stroke:#333,stroke-width:1px;
+    style D fill:#afa,stroke:#333,stroke-width:1px;
+    style E fill:#fca,stroke:#333,stroke-width:1px;
+    style F fill:#add,stroke:#333,stroke-width:1px;
+    style G fill:#dee,stroke:#333,stroke-width:1px;
+    style H fill:#eef,stroke:#333,stroke-width:1px;
+```tyle I fill:#ffd,stroke:#333,stroke-width:1px;
+    style D fill:#afa,stroke:#333,stroke-width:1px;
+    style E fill:#fca,stroke:#333,stroke-width:1px;
+    style F fill:#add,stroke:#333,stroke-width:1px;
+    style G fill:#dee,stroke:#333,stroke-width:1px;
+    style H fill:#eef,stroke:#333,stroke-width:1px;
+```tyle I fill:#ffd,stroke:#333,stroke-width:1px;
+    style D fill:#afa,stroke:#333,stroke-width:1px;
+    style E fill:#fca,stroke:#333,stroke-width:1px;
+    style F fill:#add,stroke:#333,stroke-width:1px;
+    style G fill:#dee,stroke:#333,stroke-width:1px;
+    style H fill:#eef,stroke:#333,stroke-width:1px;
+```tyle I fill:#ffd,stroke:#333,stroke-width:1px;
     style D fill:#afa,stroke:#333,stroke-width:1px;
     style E fill:#fca,stroke:#333,stroke-width:1px;
     style F fill:#add,stroke:#333,stroke-width:1px;
