@@ -403,6 +403,60 @@ cd /Users/jominho/Develop/ai-study && rtk npm run build
 
 ---
 
+### 2026-04-13 (terminal 복귀 세션) — UI 재정비 + tokenomics 분리 + iOS 시리즈 사실 정정 재작성
+
+**작업 트리거**: 사용자가 클로드 앱 세션 결과물에 불만 → 터미널로 복귀해서 **다 갈아엎고 다시 정리**. 4 에이전트 병렬 투입.
+
+**A안 (1차 push, commit `42dd44b`)** — UI + 인프라 수정:
+1. **학습 히트맵** 요일 정렬 GitHub 스타일로 재작성 — 기존 sequential 7-day 블록(요일 정렬 X) → 일/월/.../토 행 기반 그리드 + 미래 셀 투명 + 월/수/금 라벨
+2. **`/harness-journal` 탭 라벨** 정정 — `🌐 Web` → `🌐 Web + Backend`, `📱 iOS Harness Journal` → `📱 iOS` (Stats 섹션 동기화)
+3. **`apple-intelligence-api.mdx` 손상 복구** — §3 Writing Tools 섹션에서 mermaid 블록이 Swift 코드 블록 시작부에 잘못 끼어들어가 acorn 파서 에러 발생. Swift 코드 fence 복원 + UITextView Writing Tools 설명 정상화
+4. **`scripts/validate-content.mjs` 슬라이싱 버그 수정** — mermaid 자동 수정 시 `content`(frontmatter 제거 후) 기준으로 `indexOf` 검색하면서 `raw`(frontmatter 포함)에 슬라이싱 적용 → 오프셋이 frontmatter 길이만큼 어긋나서 파일 손상. **이게 apple-intelligence-api 손상의 진짜 원인** — 기존 세션의 자동 수정이 파일을 망가뜨리고 있었음. `raw.indexOf(...)`로 1줄 수정
+5. **`tokenomics/claude-code-token-levers-applied-log.mdx` 신규** — 카탈로그에서 메타 분리. 4 조건 / 적용 로그 5건 / 실측 결과 표 / append-only live document
+
+**B안 (2차 push, commit `7개 파일 824 insertions / 775 deletions`)** — 콘텐츠 재구조화 + 사실 정정:
+
+1. **tokenomics 카탈로그 본체 재구조화** (`claude-code-token-levers-catalog.mdx`)
+   - 503 → 443줄 압축 (적용 로그 분리)
+   - 본문 순서 정비: 한 줄 요약 → 4 곱셈 모델 → 15 레버 → 안티패턴 → 우선순위 → 신뢰 → 출처
+   - For AI Agents 60줄 → 3줄 핵심으로 압축, 위치를 본문 마지막으로
+   - frontmatter `connections`에 applied-log entry 추가
+
+2. **iOS Harness Journal 000~005** — gma-ios 실제 AI 하네스 문서 기반 사실 정정 재작성 (이전 세션의 가상 코드/잘못된 카운트/허구 스킬 전부 폐기)
+
+   | Ep | 주요 정정 사항 |
+   |---|---|
+   | **000** | "스킬 5종" → **7종** (compound + ios-arch + ios-bugfix + ios-investigate + ios-review + ios-ship + ios-triage). RIBs Swift 코드 80줄 삭제 → 한 줄 컨텍스트로 축소. 실제 settings.json 3 hooks 명시 |
+   | **001** | 제목: "PreToolUse 훅" → **"git pre-commit 훅으로 코드 규칙 차단"**. 가짜 `swift-pre-write.sh` 전면 삭제. 진짜는 `.githooks/` + `setup.sh`. Claude PreToolUse는 informational 보조 신호일 뿐 |
+   | **002** | "5종" → **"7종 (병렬 Agent 패턴 포함)"**. 가짜 .md 통째 인용 80줄 삭제. 병렬 Agent 패턴 명시: `/ios-review`(2 Agent), `/ios-arch`(3 Agent), `/compound`(3 Agent) |
+   | **003** | 가상 `.claudeignore` 삭제 → 실제 21줄로 교체. **`**/.build/` 글로브 패턴 필수성** 강조. tokenomics applied-log 양방향 connection |
+   | **004** | "가설 3개" 폐기 → **5 Round 인터뷰 + 5 체크리스트** 실제 구조. 인터뷰 4 룰 박제 (탐정식 / 라운드당 최대 3개 / 모호 답변 즉시 파고들기 / 로그 반드시 수령) |
+   | **005** | "/ios-compound" → **"/compound"** 정정. 카테고리 8개 정정 (`appstore` 삭제, `architecture` 추가). Phase 1~5 실제 source 그대로 박제. **3 Agent 병렬 강조** |
+
+**4 에이전트 병렬 투입** — 사용자 트리거 *"에이전트좀 더 투입해서 재작성해"*:
+- Agent 1: tokenomics 카탈로그 재구조화 (233s)
+- Agent 2: iOS 000 + 001 (148s) — 둘 다 in-place rewrite
+- Agent 3: iOS 002 + 003 (108s)
+- Agent 4: iOS 004 + 005 (149s)
+- 모두 source 자료를 prompt에 inline으로 받아서 외부 fetch 0회
+
+**산출**:
+- ai-study 커밋 2개 (1차 + 2차)
+- 신규 entry 1개 (`tokenomics/claude-code-token-levers-applied-log`)
+- 재작성/대규모 수정 9개 파일
+- 인프라 버그 1건 박제 (`validate-content.mjs` slicing offset)
+- iOS 카테고리 진실값 8개 확정
+
+**다음 큐 (NEW)**:
+- 🟡 `validate-content.mjs` 슬라이싱 버그가 다른 파일도 손상시켰는지 grep으로 확인
+- 🟡 `harness-engineering/compound-engineering-philosophy` dangling connection 12건 — 실제 엔트리 작성 또는 connections 정리
+- 🟡 ios-ai 시리즈 Ep.006+ 큐 (gma-ios 실제 패턴 발견 시 트리거): Persistent 모듈 / async 전환 / Xcode 타겟 멤버십 함정
+- 🟡 학습 히트맵 캘린더 모드 전환 (월/년 단위 토글)
+
+**사고 재발률**: 0회 (이번 세션 4 에이전트 + 본인 모두 충돌 없음)
+
+---
+
 ## 🎯 다음 큐 (이번 세션 추가)
 
 ### iOS Harness Journal 006+ 후보
