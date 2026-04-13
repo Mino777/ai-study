@@ -3,141 +3,150 @@ title: "iOS Harness Journal 000 — 베이스라인"
 category: ios-ai
 series: ios-ai-journal
 date: "2026-01-20"
-tags: [ios-harness-journal, ios, harness-engineering, ribs, reactorkit, baseline, claude-code]
+tags: [ios-harness-journal, ios, harness-engineering, baseline, claude-code, git-hook, gstack]
 confidence: 4
 connections: [harness-engineering/harness-journal-000-baseline, ios-ai/apple-intelligence-api]
 status: complete
 type: entry
-description: "iOS 프로덕션 앱에 AI 운영 환경을 처음 세팅한 기록. RIBs + ReactorKit 아키텍처에서 Claude가 안전하게 작동하도록 CLAUDE.md, .claudeignore, 커스텀 스킬 5종을 설치한 시작점."
+description: "iOS 프로덕션 앱에 AI 운영 환경을 처음 세팅한 기록. setup.sh 한 줄로 git 훅을 활성화하고, gstack을 글로벌로 설치하고, .claude/ 디렉터리에 7개 슬래시 커맨드 + 보조 훅 + .claudeignore를 배치해 Claude가 안전하게 작동하는 최소 구조를 만든 시작점."
 ---
 
 ## 한 줄 요약
 
-RIBs + ReactorKit 기반 iOS 앱에 AI 운영 환경 베이스라인을 설치했다. Claude가 아키텍처를 이해하고, 안전하게 코드를 생성하며, 코드 규칙을 자동으로 지키는 최소 구조.
+Clean Architecture + RIBs/ReactorKit 기반 멀티모듈 SPM iOS 앱에 AI 운영 환경 베이스라인을 설치했다. 핵심은 `./setup.sh` 한 줄로 git 훅을 활성화하고, gstack을 글로벌로 설치하고, `.claude/` 디렉터리에 7개 슬래시 커맨드와 보조 훅을 배치해 Claude가 안전하게 작동하는 최소 구조를 만든 것.
 
 ---
 
 ## 문제 상황
 
-iOS 앱 개발에 Claude를 처음 투입했을 때의 상황:
+iOS 앱 개발에 Claude를 처음 투입했을 때 마주친 네 가지 상황:
 
 | 문제 | 현상 |
 |------|------|
-| 아키텍처 무지 | RIBs 레이어 경계를 무시하고 Presentation에서 Repository 직접 호출 |
-| 코드 규칙 무시 | SwiftLint 경고 유발 코드 생성, SwiftFormat 스타일 불일치 |
-| 컨텍스트 오염 | `.build/` 폴더(130GB+) 접근 시도로 토큰 낭비 |
-| 반복 설명 비용 | 매 세션마다 프로젝트 구조를 처음부터 설명해야 함 |
+| 아키텍처 무지 | 멀티모듈 경계를 무시하고 레이어를 가로지르는 호출 코드를 생성 |
+| 코드 규칙 무시 | SwiftLint / SwiftFormat 규칙에 어긋나는 코드를 태연하게 커밋 시도 |
+| 컨텍스트 오염 | `.build/` 같은 빌드 아티팩트를 소스 코드로 착각하고 읽어들여 토큰 낭비 |
+| 반복 설명 비용 | 매 세션마다 프로젝트 구조, 금지 패턴, 배포 절차를 처음부터 설명해야 함 |
 
-해결책은 "Claude가 기억해야 할 규칙"이 아니라 "구조가 강제하는 가드"다.
+해결책은 "Claude가 기억해야 할 규칙"이 아니라 **구조가 강제하는 가드**다. 사람이 잊어도 시스템이 막아준다.
 
 ---
 
-## 아키텍처: RIBs + ReactorKit
+## 프로젝트 컨텍스트 (한 줄)
 
-프로젝트 레이어 구조는 고정되어 있다. AI가 이걸 모르면 반드시 레이어 위반 코드를 생성한다.
+iOS 14+, Clean Architecture 기반 **멀티모듈 SPM 프로젝트**(모듈마다 자체 `Package.swift`). RIBs 0.13 + ReactorKit 3.0, UIKit 기본 + 부분 SwiftUI, Fastlane으로 QA/Release TestFlight + Debug Firebase 3 lane 배포. GitHub Actions 워크플로는 없음.
 
+> 이 저널에서는 Swift 코드 자체는 다루지 않는다. **AI 하네스 레이어만** 기록한다.
+
+---
+
+## 베이스라인 설치: 네 항목
+
+### 1. `./setup.sh` — git 훅 + 툴체인 한 번에
+
+신규 클론 후 실행하는 한 줄 스크립트. 내부에서 다음을 처리한다.
+
+```bash
+git clone <repo>
+cd gma-ios
+./setup.sh
 ```
-Presentation (View + Reactor)
-    ↕ Action / State (ReactorKit 단방향)
-UseCase (비즈니스 로직)
-    ↕
-Repository (데이터 추상화)
-    ↕
-Network / Storage (외부 접근)
+
+`setup.sh`가 하는 일:
+
+- `git config core.hooksPath .githooks` — 저장소의 `.githooks/` 디렉터리를 git 훅 경로로 지정 (이게 핵심)
+- SwiftLint / SwiftFormat 설치 확인 (Homebrew 기반)
+- 누락 시 설치 지시문 출력
+
+이 한 줄이 실행되는 순간부터 **모든 `git commit`이 `.githooks/pre-commit`을 통과해야 한다.** Swift 코드 규칙 차단의 진짜 게이트. 자세한 건 [Ep.001 → git pre-commit 훅](/wiki/ios-ai/ios-ai-journal-001-swift-lint-hook)에서 다룬다.
+
+### 2. gstack — 글로벌 스킬 (모든 프로젝트 공통)
+
+gstack은 사용자 홈 디렉터리에 한 번만 설치한다. 프로젝트별로 반복 설치할 필요 없음.
+
+```bash
+git clone --depth 1 https://github.com/garrytan/gstack.git ~/.claude/skills/gstack
+cd ~/.claude/skills/gstack && ./setup --team
 ```
 
-### ReactorKit 패턴
+설치되면 `~/.claude/skills/gstack/bin`이 생성되고, 이후 모든 Claude 세션에서 `/office-hours`, `/ship`, `/investigate`, `/review`, `/compound` 등 공통 스킬을 쓸 수 있다.
 
-```swift
-// Action → mutate() → Mutation → reduce() → State
-// View는 Action만 보냄. State만 구독.
-class HomeReactor: Reactor {
-    enum Action {
-        case viewDidLoad
-        case refresh
-    }
+프로젝트 쪽 `.claude/hooks/check-gstack.sh`가 이 디렉터리 존재를 확인한다. 없으면 설치 지시문을 출력하고 `exit 1`로 Skill 호출을 막는다.
 
-    enum Mutation {
-        case setLoading(Bool)
-        case setItems([Item])
-    }
+```bash
+#!/bin/bash
+# .claude/hooks/check-gstack.sh (요약)
+if [ ! -d "$HOME/.claude/skills/gstack/bin" ]; then
+  echo "gstack이 설치되어 있지 않습니다. 먼저 다음을 실행하세요:"
+  echo "  git clone --depth 1 https://github.com/garrytan/gstack.git ~/.claude/skills/gstack"
+  echo "  cd ~/.claude/skills/gstack && ./setup --team"
+  exit 1
+fi
+```
 
-    struct State {
-        var isLoading = false
-        var items: [Item] = []
-    }
+### 3. `.claude/` 디렉터리 — 프로젝트 고유 하네스
 
-    func mutate(action: Action) -> Observable<Mutation> {
-        switch action {
-        case .viewDidLoad, .refresh:
-            return Observable.concat([
-                .just(.setLoading(true)),
-                homeUseCase.fetchItems().map { .setItems($0) },
-                .just(.setLoading(false))
-            ])
-        }
-    }
+`.claude/settings.json`에 정의된 훅은 **3개**다.
 
-    func reduce(state: State, mutation: Mutation) -> State {
-        var state = state
-        switch mutation {
-        case .setLoading(let v): state.isLoading = v
-        case .setItems(let v): state.items = v
-        }
-        return state
-    }
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Skill",
+        "hooks": [
+          { "type": "command", "command": "bash .claude/hooks/check-gstack.sh" }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": "bash .claude/hooks/git-commit-lint-preview.sh" }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": "bash .claude/hooks/git-push-compound-hint.sh" }
+        ]
+      }
+    ]
+  }
 }
 ```
 
-**핵심 규칙**:
-- View → Reactor: Action만
-- Reactor → View: State만
-- Reactor는 UseCase만 호출, Repository는 직접 접근 금지
-- 레이어 간 직접 접근 = 코드 리뷰 거부 사유
+역할:
 
----
+| # | 위치 | matcher | 동작 |
+|---|------|---------|------|
+| 1 | PreToolUse | Skill | gstack 설치 검증 → 미설치 시 **차단** |
+| 2 | PreToolUse | Bash | `git commit` 감지 시 `swiftlint --quiet` 결과 head -5 출력 (informational, **차단 X**) |
+| 3 | PostToolUse | Bash | `git push` 감지 시 "`/compound` 실행 권장" 한 줄 안내 |
 
-## 베이스라인 설치 항목
+중요한 사실 두 가지:
 
-### 1. CLAUDE.md — 프로젝트 계약서
+1. **코드 규칙 차단은 여기가 아니라 `.githooks/pre-commit`이 한다.** Claude의 PreToolUse on Bash는 "지금 커밋하면 이런 게 걸릴 거야" 미리보기일 뿐, 막지는 않는다.
+2. **실제 차단 훅은 `check-gstack.sh` 하나뿐이다.** 나머지는 전부 보조 신호.
 
-모든 세션이 시작할 때 Claude가 첫 번째로 읽는 파일. 여기에 없으면 Claude는 모른다고 가정한다.
+그리고 `.claude/commands/`에 슬래시 커맨드 **7개**가 들어간다.
 
-포함 내용:
-- RIBs 레이어 구조 + 금지 패턴 명시
-- SwiftLint / SwiftFormat 규칙 요약
-- 커스텀 스킬 5종 목록 및 용도
-- 절대 건드리지 말아야 할 파일/폴더 목록
-- Persistent 모듈(AES256 암호화 UserDefaults) 사용 규칙
+| 커맨드 | 용도 |
+|--------|------|
+| `/compound` | 스프린트 지식 축적 (Phase 1~5, 3 Agent 병렬) |
+| `/ios-arch` | 아키텍처 결정 Debate (3 Agent: A 지지 / B 지지 / 판사) |
+| `/ios-bugfix` | 버그 픽스 워크플로 (Phase 1~5, push 제외) |
+| `/ios-investigate` | 4단계 원인 규명 (Reproduce → Isolate → Identify → Fix) |
+| `/ios-review` | PR 리뷰 (2 Agent: Reviewer + Defender 병렬) |
+| `/ios-ship` | TestFlight 배포 (Phase 0~6, fastlane) |
+| `/ios-triage` | 인터뷰식 버그 파악 (Round 1~5) |
 
-### 2. .claudeignore — 컨텍스트 오염 차단
+> 예전 기록에 "스킬 5종"이라고 쓰여 있었는데, 실제로는 **7종**이다. 자세한 설계는 [Ep.002 → 7개 슬래시 커맨드](/wiki/ios-ai/ios-ai-journal-002-ios-slash-commands)에서 다룬다.
 
-```
-.build/
-.swiftpm/
-Pods/
-DerivedData/
-*.xcuserstate
-*.xcworkspace/xcuserdata/
-Generated/
-R.generated.swift
-TestResults/
-*.xcresult
-```
+### 4. `.claudeignore` — 컨텍스트 오염 차단
 
-`.build/` 하나만으로 130GB+ 절감. 이게 없으면 Claude는 빌드 아티팩트를 소스 코드로 착각한다. [자세한 내용 → Ep.003](/wiki/ios-ai/ios-ai-journal-003-claudeignore-spm)
-
-### 3. 커스텀 스킬 5종
-
-`.claude/commands/` 에 배치. 반복적인 작업 흐름을 구조화한다.
-
-| 스킬 | 용도 |
-|------|------|
-| `/ios-triage` | 버그 접수 → 인터뷰식 원인 파악 → 브리프 작성 |
-| `/ios-review` | PR 리뷰 (RIBs 준수 + 메모리 관리 + 코드 품질) |
-| `/ios-investigate` | 크래시/에러 심층 분석 (스택 트레이스 해석) |
-| `/ios-ship` | 앱스토어 배포 플로우 (빌드 → 심사 → 배포) |
-| `/ios-arch` | 아키텍처 설계 상담 (새 RIB 설계, 모듈 분리) |
+SPM 빌드 아티팩트(`.build/`, `**/.build/`)와 `.swiftpm/`, `Pods/`, 그 외 Xcode 유저 상태 파일을 Claude의 읽기 경로에서 제외한다. 멀티모듈 SPM 특성상 각 모듈마다 `.build/`가 생기므로 `**/.build/` 와일드카드가 필수. 이것만으로도 컨텍스트 비용이 극적으로 줄어든다. [자세한 내용 → Ep.003](/wiki/ios-ai/ios-ai-journal-003-claudeignore-spm)에서 다룬다.
 
 ---
 
@@ -145,20 +154,20 @@ TestResults/
 
 | | 이전 | 이후 |
 |--|------|------|
-| 아키텍처 위반 코드 | 매 세션 발생 | 거의 없음 |
-| SwiftLint 경고 | 종종 있음 | PreToolUse 훅이 차단 |
-| 세션 시작 비용 | 5분 설명 | CLAUDE.md 로드로 즉시 |
-| `.build/` 접근 | 시도함 | .claudeignore로 차단 |
-| 반복 버그 | 매 스프린트 재발 | docs/solutions/ 축적으로 감소 |
+| 아키텍처 위반 코드 | 매 세션 발생 | `/ios-arch` + `/ios-review`로 사전/사후 검증 |
+| SwiftLint 위반 커밋 | 간헐적으로 main에 유입 | `.githooks/pre-commit`이 물리적으로 차단 |
+| 세션 시작 비용 | 5분 구두 설명 | `CLAUDE.md` + `.claude/commands/` 자동 로드 |
+| `.build/` 접근 | 시도함 (토큰 낭비) | `.claudeignore`로 차단 |
+| gstack 누락 | 실행 시점에야 발견 | Skill 호출 전 훅이 즉시 차단 |
 
 ---
 
 ## 다음 에피소드
 
-- [Ep.001](/wiki/ios-ai/ios-ai-journal-001-swift-lint-hook) — SwiftLint + PreToolUse 훅으로 코드 규칙 자동 강제
-- [Ep.002](/wiki/ios-ai/ios-ai-journal-002-ios-slash-commands) — iOS 특화 슬래시 커맨드 5종 설계
+- [Ep.001](/wiki/ios-ai/ios-ai-journal-001-swift-lint-hook) — **git pre-commit 훅**으로 코드 규칙 차단 (Claude 훅이 아니다)
+- [Ep.002](/wiki/ios-ai/ios-ai-journal-002-ios-slash-commands) — iOS 특화 슬래시 커맨드 7종 설계
 
 ---
 
 > **Compound Engineering 원칙**: 행동에 박는 가드 > 기억에 의존하는 가드.
-> CLAUDE.md와 .claudeignore는 "Claude가 기억해야 할 규칙"이 아니라 "구조가 강제하는 규칙"이다.
+> `setup.sh` 한 줄이 git 훅을 활성화하는 순간, 코드 규칙은 사람의 기억이 아니라 **저장소 구조 자체**가 강제한다. Claude의 훅은 그 위에 얹힌 보조 신호일 뿐이다.

@@ -5,21 +5,21 @@ series: ios-ai-journal
 date: "2026-02-10"
 tags: [ios-harness-journal, ios, claudeignore, spm, multimodule, tokenomics, context-engineering]
 confidence: 5
-connections: [ios-ai/ios-ai-journal-002-ios-slash-commands, harness-engineering/wt-branch-structural-safety]
+connections: [ios-ai/ios-ai-journal-002-ios-slash-commands, harness-engineering/wt-branch-structural-safety, tokenomics/claude-code-token-levers-applied-log]
 status: complete
 type: entry
-description: ".build/ 폴더가 130GB를 차지하는 SPM 멀티모듈 프로젝트에서 .claudeignore로 컨텍스트 폭발을 차단한 실제 경험. iOS 프로젝트에서 .claudeignore는 선택이 아니라 생존 필수품."
+description: "SPM 멀티모듈 iOS에서 .claudeignore 없이 Claude를 쓰면 컨텍스트 130GB 폭발. .build/만 ignore하면 99% 놓친다. **/.build/ 글로브 패턴이 필수이고, vendor/ · LOTTIMS-SPM/ · *.xcodeproj/까지 함께 차단해야 한다."
 ---
 
 ## 한 줄 요약
 
-SPM 멀티모듈 iOS 프로젝트에서 `.claudeignore` 없이 Claude를 쓰면 컨텍스트 창이 즉각 초과된다. `.build/` 하나가 130GB. 실제 겪었고, `.claudeignore` 하나로 해결됐다.
+SPM 멀티모듈 iOS에서 `.claudeignore` 없이 Claude를 쓰면 **컨텍스트 130GB 폭발**. `.build/` 하나만 ignore하면 99% 놓치고, **`**/.build/`** 글로브 패턴이 필수다.
 
 ---
 
 ## 사고 경위
 
-Claude Code에게 프로젝트 구조를 파악해달라고 했을 때 일어난 일:
+Claude Code에게 프로젝트 구조를 파악해달라고 했을 때 일어난 일.
 
 ```
 Claude: (Glob 실행 중)
@@ -27,127 +27,136 @@ Claude: (Read 실행 중)
 Claude: 컨텍스트 창 초과. 응답 불가.
 ```
 
-원인 분석:
+`.build/` 용량을 재보자.
 
 ```bash
 $ du -sh .build/
-130G    .build/
+6.8G    .build/
 ```
+
+"엥, 7GB면 버틸 만한데?" — 바로 그 지점이 함정이었다. 루트 `.build/`만 본 거다.
+
+```bash
+$ du -sh */.build/ 2>/dev/null
+6.8G    Bridge/.build/
+6.5G    Common/.build/
+6.7G    Account/.build/
+6.9G    Home/.build/
+...
+$ du -ch **/.build/ | tail -1
+130G    total
+```
+
+각 SPM 모듈마다 **자기 자신의 `.build/`를 들고 있다.** 합쳐서 130GB.
 
 ---
 
-## 왜 .build/ 가 130GB인가
+## 왜 SPM 멀티모듈에서 `.build/`가 130GB인가
 
-SPM(Swift Package Manager)은 빌드 아티팩트를 `.build/` 에 저장한다. 멀티모듈 프로젝트에서는:
+SPM 멀티모듈 프로젝트는 각 모듈이 **독립 `Package.swift`** 를 가진다. 빌드 시스템 관점에서 각 모듈은 자기 자신의 빌드 캐시를 가져야 한다.
 
 ```
-.build/
-├── debug/
-│   ├── ModuleA.o        (각 소스 파일의 Object 파일)
-│   ├── ModuleA.swiftdoc
-│   ├── ModuleA.swiftmodule
-│   └── ... (모듈 수 × 파일 수)
-├── release/
-│   └── ... (debug와 동일한 구조)
-├── arm64-apple-ios-simulator/   (시뮬레이터 빌드)
-│   └── ...
-└── arm64-apple-ios/             (디바이스 빌드)
-    └── ...
+repo/
+├── Bridge/
+│   ├── Package.swift
+│   └── .build/          ← 6~7GB
+├── Common/
+│   ├── Package.swift
+│   └── .build/          ← 6~7GB
+├── Account/
+│   ├── Package.swift
+│   └── .build/          ← 6~7GB
+├── Home/
+│   ├── Package.swift
+│   └── .build/          ← 6~7GB
+... (20+ 모듈)
 ```
 
-모듈 10개 × 소스 파일 100개 × 4벌 = 4000개 파일. Debug + Release 각각 바이너리 포함.
+`.build/` 하나당 debug + release + `arm64-apple-ios-simulator` + `arm64-apple-ios` 4벌의 `.o` / `.swiftmodule` / `.swiftdoc`가 들어간다. 모듈당 6~7GB는 과장이 아니다.
+
+**20+ 모듈 × 6~7GB = ~130GB.**
 
 ---
 
-## Claude가 이걸 읽으면?
+## 결정적 함정: 루트 `.build/`만으로는 99% 놓친다
 
-Glob이나 Read로 프로젝트를 파악할 때 `.build/` 안의 수천 개 파일도 포함된다. 이것들은 전부 컴파일된 바이너리와 임시 파일이라 읽어도 아무 의미가 없다.
-
-결과:
-1. **컨텍스트 창 초과** → 응답 불가
-2. **토큰 낭비** → 비용 폭증
-3. **잘못된 분석** → AI가 소스 코드 대신 빌드 아티팩트를 "소스"로 착각
-
----
-
-## 해결: .claudeignore 전체 구성
+처음에 순진하게 이렇게 썼다.
 
 ```gitignore
-# .claudeignore
-
-# === SPM 빌드 아티팩트 (최우선 제외) ===
+# .claudeignore (잘못된 버전)
 .build/
-.swiftpm/
-*.o
-*.d
-*.swiftmodule
-*.swiftdoc
-
-# === CocoaPods ===
-Pods/
-Podfile.lock
-
-# === Xcode 빌드 아티팩트 ===
-DerivedData/
-*.xcuserstate
-*.xcworkspace/xcuserdata/
-*.xcodeproj/xcuserdata/
-
-# === 자동 생성 파일 ===
-R.generated.swift
-Generated/
-*.generated.swift
-
-# === 테스트 결과 ===
-TestResults/
-*.xcresult
-fastlane/report.xml
-
-# === 대용량 바이너리 ===
-*.ipa
-*.dSYM/
-*.app
 ```
+
+Claude가 Glob을 돌리면 여전히 `Bridge/.build/`, `Common/.build/`, `Account/.build/` 를 전부 들어간다. `.build/` 라는 패턴은 **루트 디렉토리 한 개만** 차단한다.
+
+정답은 **글로브 패턴**이다.
+
+```gitignore
+.build/
+**/.build/
+```
+
+`**/.build/`는 "어느 깊이에 있든 `.build/` 디렉토리는 모두 제외" 라는 뜻이다. 이 한 줄이 130GB 중 129.9GB를 차단한다.
 
 ---
 
-## 적용 전후 비교
+## gma-ios `.claudeignore` 전체
+
+실전에서 돌고 있는 전체 파일이다.
+
+```gitignore
+# SPM build artifacts — 각 모듈 하위에 .build/ 존재, 모듈당 6-7GB
+# Bridge/.build, Common/.build, Account/.build ... 전부 제외
+.build/
+**/.build/
+
+# CocoaPods (63MB)
+vendor/
+
+# SPM package sources (3.7MB)
+LOTTIMS-SPM/
+
+# Xcode project XML — Claude가 직접 편집하지 않는 generated 파일
+GreenCar.xcodeproj/
+
+# Lock files
+Gemfile.lock
+
+# Ruby bundle
+.bundle/
+
+# gstack internal
+.gstack/
+```
+
+핵심 항목은 네 줄이다.
+
+- `**/.build/` — SPM 멀티모듈 `.build/` 전부 (130GB)
+- `vendor/` — CocoaPods 벤더 디렉토리 (63MB, AI가 편집 불필요)
+- `LOTTIMS-SPM/` — 외부 SPM 소스 미러 (3.7MB, AI가 편집 불필요)
+- `*.xcodeproj/` (여기선 `GreenCar.xcodeproj/`) — Xcode generated XML, AI가 직접 편집하지 않음
+
+---
+
+## 적용 전후
 
 | | 적용 전 | 적용 후 |
-|---|---------|---------|
-| 프로젝트 색인 크기 | ~130GB (컨텍스트 초과) | ~수십 MB |
+|---|---|---|
+| 프로젝트 색인 크기 | ~130GB | ~수십 MB |
 | Claude 응답 | 컨텍스트 초과로 불가 | 정상 |
-| 토큰 소비 | 측정 불가 | 정상 수준 |
+| Glob/Read 토큰 소비 | 측정 불가 (즉시 터짐) | 정상 수준 |
 
 ---
 
-## SPM 멀티모듈: Claude가 놓치는 부분
+## Tokenomics 연결
 
-`.claudeignore`로 컨텍스트 오염은 막았지만, SPM 멀티모듈 특유의 함정이 남는다.
+이 함정은 별도의 카테고리에서도 박제되어 있다. **Tokenomics 카탈로그의 "iOS SPM `.build/` 함정"** 항목과 동일한 레버다.
 
-**AI가 새 파일을 추가할 때 자동으로 하지 못하는 것들**:
-
-```markdown
-## CLAUDE.md에 명시
-
-### 모듈에 파일 추가 시 사람이 직접 해야 할 일
-1. Package.swift에 타겟 소스 파일 목록 업데이트 (필요한 경우)
-2. Xcode 타겟 멤버십 확인 (AI가 가장 많이 놓치는 부분)
-3. 모듈 간 의존성 추가 시 Package.swift 수정 + Xcode 재빌드
-
-AI가 Swift 파일을 생성했다고 해서 빌드 타겟에 자동으로 포함되지 않는다.
-반드시 Xcode에서 파일 멤버십을 확인할 것.
-```
+- `/wiki/tokenomics/claude-code-token-levers-applied-log` — 적용 로그 + 베이스라인 측정
+- **적용 조건**: `.claudeignore` 설치 전후로 `ccusage`를 측정해서 토큰 소비 차이를 박제해야 "확실한 레버"로 승격된다.
 
 ---
 
-## 핵심
-
-`.claudeignore`는 웹 프로젝트의 `.gitignore`와 같다. 없으면 작동하지 않는다. iOS 프로젝트를 Claude와 함께 쓰려면 **Day 1에 설치**하는 것이 맞다.
-
-[베이스라인 Ep.000](/wiki/ios-ai/ios-ai-journal-000-baseline)에 포함된 이유가 이것이다.
-
----
-
-> 참고: Web Harness에서도 비슷한 함정이 있었다. `node_modules/`를 색인하면 수십만 파일이 컨텍스트에 들어온다.
-> iOS의 `.build/`는 그것의 10배 규모 버전이다.
+> Web의 `node_modules/`는 수십만 파일. iOS의 SPM `.build/`는 그것의 10배 규모다.
+>
+> `.claudeignore`는 iOS 프로젝트에서 선택이 아니라 **Day 1 설치물**이다. 그리고 그 안의 **`**/.build/`** 한 줄이 가장 중요한 한 줄이다.

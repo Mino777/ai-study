@@ -1,25 +1,25 @@
 ---
-title: "iOS Harness Journal 005 — iOS Compound: 배포 후 지식 축적"
+title: "iOS Harness Journal 005 — /compound 5 Phase: 3 Agent 병렬로 지식 박제"
 category: ios-ai
 series: ios-ai-journal
 date: "2026-02-24"
-tags: [ios-harness-journal, ios, compound-engineering, docs-solutions, retrospective, appstore]
+tags: [ios-harness-journal, ios, compound-engineering, docs-solutions, retrospective, parallel-agents]
 confidence: 4
 connections: [ios-ai/ios-ai-journal-004-ios-triage, harness-engineering/compound-automation-slash-commands]
 status: complete
 type: entry
-description: "iOS 배포 후 발생하는 지식을 docs/solutions/로 체계적으로 축적하고 다음 사이클의 입력으로 만드는 iOS Compound 패턴. 5단계 회고 플로우와 카테고리별 솔루션 저장 구조."
+description: "iOS 배포 후 생기는 지식을 흘려보내지 않는다. /compound가 3 Agent 병렬로 CHANGELOG / 솔루션 문서 / 회고를 동시에 생성하고, CLAUDE.md와 Claude 메모리까지 동기화한 뒤 단일 커밋으로 박제한다. 5 Phase 전체와 docs/solutions/ 8 카테고리를 박제한다."
 ---
 
 ## 한 줄 요약
 
-iOS 배포 후 생기는 지식을 그냥 흘려보내지 않는다. `/ios-compound`가 5단계로 회고를 돌리고, 모든 해결책을 `docs/solutions/`에 박제한다. 다음 스프린트가 이걸 입력으로 받는다.
+iOS 배포 후 생기는 지식을 흘려보내지 않는다. **`/compound`** (`/ios-compound` 아님 — 실제 파일명은 `.claude/commands/compound.md`)가 **3 Agent를 병렬로** 돌려서 CHANGELOG 업데이트 / 솔루션 문서 생성 / 회고 작성을 동시에 수행하고, CLAUDE.md + Claude 메모리까지 동기화한 뒤 단일 커밋으로 박제한다. 다음 스프린트는 이 자산을 입력으로 받는다.
 
 ---
 
-## iOS 특화 Compound가 필요한 이유
+## 왜 iOS에 compound가 필요한가
 
-웹 배포와 iOS 배포의 사이클은 다르다:
+웹 배포와 iOS 배포의 사이클은 다르다.
 
 | | 웹 | iOS |
 |--|---|-----|
@@ -28,130 +28,209 @@ iOS 배포 후 생기는 지식을 그냥 흘려보내지 않는다. `/ios-compo
 | 롤백 | 즉시 가능 | 불가 (심사 재제출) |
 | 지식 생산 시점 | 배포 직후 | 심사 중 / 배포 후 |
 
-배포와 피드백 사이에 시간이 있다. 이 시간을 **지식 축적**으로 쓰는 것이 iOS Compound다.
+배포와 피드백 사이에 물리적 시간이 있다. 이 시간을 **지식 축적**으로 쓰는 것이 `/compound`의 역할이다.
 
 ---
 
-## iOS Compound 사이클
+## 전체 사이클 한 장
 
 ```
-코드 작성 → PR → /ios-ship (앱스토어 심사 제출)
+코드 작업 → PR → 앱스토어 제출
                       ↓
               심사 중 (1~3일)
                       ↓
-              /ios-compound (회고 + 지식 축적)
+         /compound 실행 (5 Phase)
                       ↓
-              사용자 피드백 / 크래시 리포트
+  CHANGELOG · docs/solutions/ · docs/retros/
+  + CLAUDE.md · Claude 메모리
                       ↓
-         /ios-triage → /ios-investigate → 수정
+              단일 커밋으로 박제
                       ↓
-              docs/solutions/ 업데이트
-                      ↓
-              다음 스프린트 NEXT.md 입력 ←────────┘
+  다음 스프린트 NEXT.md 입력 ←──────┘
 ```
 
 ---
 
-## /ios-compound 5단계
+## /compound 5 Phase
+
+실제 `.claude/commands/compound.md` (167 줄) 구조 그대로다.
+
+### Phase 1 — 변경사항 수집
+
+```bash
+# 마지막 compound 커밋 이후의 변경 추출
+git log --oneline $(git log --oneline --all | grep "compound:" | head -1 | cut -d' ' -f1)..HEAD \
+  2>/dev/null || git log --oneline -20
+```
+
+git log만으로는 부족하다. **대화 히스토리**에서도 추출한다.
+
+- 해결한 문제들 (트리아지 결과)
+- iOS 특화 함정 (OS 버전 / 스레드 / 메모리)
+- 재사용 가능한 패턴
+
+---
+
+### Phase 2 — 3 Agent 병렬 실행
+
+> **동시 실행이 핵심.** 순차가 아니라 **3개를 동시에** 띄운다. CHANGELOG 쓰는 동안 솔루션도 쓰고, 회고도 같이 쓴다. 세 종류의 산출물은 서로 의존하지 않기 때문에 병렬로 묶여도 안전하다.
+
+**Agent A — `CHANGELOG.md` 업데이트**
+
+- `vX.X.X (YYYY-MM-DD)` 섹션 추가
+- 섹션: **Added / Fixed / Changed / Performance**(있을 때만) / **Dependencies**(변경 시만)
+
+**Agent B — `docs/solutions/[카테고리]/YYYY-MM-DD-[slug].md` 생성**
+
+- 판단 기준: **"다음에 또 만날 수 있는가?"** → YES면 문서화, NO면 스킵
+- 카테고리는 8개 (아래 섹션)
+- 솔루션 포맷:
+  ```markdown
+  # [문제 제목]
+
+  ## 문제
+  (언제, 어디서, 어떤 증상)
+
+  ## 근본 원인
+  (트리아지 결과)
+
+  ## 해결책
+  (실제 수정 코드 포함)
+
+  ## 예방
+  (재발 방지 / 컨벤션)
+
+  ## 관련
+  - iOS 최소 버전: …
+  - 영향 컴포넌트: …
+  ```
+
+**Agent C — `docs/retros/YYYY-MM-DD.md` 생성**
+
+- 배포된 것
+- 잘된 것
+- 아쉬운 것
+- 다음에 적용할 것
+- Compound Assets (이번 사이클에서 생긴 재사용 자산)
+
+---
+
+### Phase 3 — CLAUDE.md 동기화
+
+이번 스프린트에서 나온 새 정보로 프로젝트 CLAUDE.md의 핵심 원칙을 갱신한다.
+
+- 새로 추가된 화면/뷰
+- 새로 도입한 의존성/SDK
+- 새롭게 발견한 컨벤션
+
+---
+
+### Phase 4 — Claude 메모리 업데이트
+
+`/Users/jominho/.claude/projects/-Users-jominho-Develop-gma-ios/memory/`에 학습을 저장한다. 이건 프로젝트 저장소가 아니라 Claude Code 세션이 읽는 개인 메모리다.
+
+- iOS 버전별 호환성 함정
+- 성능 최적화 패턴
+- 재사용 확인된 컴포넌트
+- 프로젝트 특화 패턴
+
+---
+
+### Phase 5 — 단일 커밋
+
+3 Agent 산출물 + CLAUDE.md를 하나의 커밋으로 묶는다. "compound:" 프리픽스가 Phase 1의 차분 기준이 되므로 반드시 이 형식을 지킨다.
+
+```bash
+git add CHANGELOG.md docs/ CLAUDE.md
+git commit -m "compound: $(date +%Y-%m-%d) vX.X 스프린트
+- CHANGELOG vX.X 업데이트
+- 솔루션 문서 N개: [주제들]
+- 스프린트 회고"
+```
+
+---
+
+## docs/solutions/ 카테고리 8개
+
+실제 `compound.md`에 박제된 분류 그대로다.
+
+```
+swiftui/        ← SwiftUI 레이아웃, 상태 관리, 애니메이션
+networking/     ← URLSession, Alamofire, WebSocket, 인증
+storage/        ← CoreData, Keychain, UserDefaults, FileManager
+xctest/         ← XCUITest, Unit Test, Mock 패턴
+performance/    ← 메모리 누수, FPS, 배터리 최적화
+build/          ← Xcode 설정, SPM, CocoaPods, 서명
+ios-compat/     ← iOS 버전별 deprecation, API 차이
+architecture/   ← MVVM 패턴, 레이어 분리, 의존성
+```
+
+새로운 문제가 이 8개 중 어디에도 맞지 않으면, 카테고리를 추가하는 게 아니라 "진짜 재사용 가능한가?"를 다시 묻는다. 억지로 끼워 넣은 솔루션은 다음 세션에서 절대 찾지 못한다.
+
+---
+
+## 솔루션 문서 예시
+
+"다음에 또 만날 수 있는가?"가 YES인 전형적인 패턴 하나.
 
 ```markdown
-# .claude/commands/ios-compound.md
-
-## iOS Compound 회고
-
-### Phase 1: 이번 스프린트 결과 정리
-- 해결한 버그 목록
-- 추가한 기능 목록
-- 도입한 패턴/도구
-
-### Phase 2: docs/solutions/ 기록
-각 해결책을 카테고리별로 저장:
-
-**포맷**:
-- 문제 상황 (언제, 어디서, 어떤 증상)
-- 원인 (트리아지 결과)
-- 해결책 (코드 포함)
-- 재발 방지 방법
-- 관련 RIB / 모듈
-
-### Phase 3: deferred 업데이트
-미해결 이슈 → docs/solutions/ios/deferred/ 에 기록
-(시도한 것, 실패 이유, 다음 시도 방향 포함)
-
-### Phase 4: NEXT.md 업데이트
-다음 스프린트 후보 3개 작성
-우선순위: 이번 회고 발견 사항 > 기존 백로그
-
-### Phase 5: CHANGELOG 업데이트
-앱스토어 출시 노트 초안 작성
-사용자 관점으로 기술 (기술 용어 최소화)
-```
-
----
-
-## docs/solutions/ 카테고리 구조
-
-```
-docs/solutions/
-├── swiftui/         ← SwiftUI 관련 패턴 / 버그
-├── networking/      ← API 통신 / Alamofire / async-await
-├── storage/         ← UserDefaults / Keychain / CoreData
-│                       (Persistent 모듈 관련 포함)
-├── xctest/          ← 유닛 테스트 / UI 테스트 패턴
-├── performance/     ← 성능 최적화 / 메모리 리크
-├── build/           ← 빌드 에러 / 의존성 문제 / SPM
-├── ios-compat/      ← iOS 버전별 호환성 이슈
-└── appstore/        ← 심사 관련 이슈 / 거절 사유
-```
-
----
-
-## 솔루션 기록 예시
-
-```markdown
-# docs/solutions/ios/storage/aes256-userdefaults-migration.md
+# tableView 갱신이 간헐적으로 멈추는 문제
 
 ## 문제
-Persistent 모듈의 AES256 암호화 UserDefaults에서 키 마이그레이션 시
-기존 암호화된 데이터가 읽히지 않는 문제
+네트워크 응답 후 tableView가 새 데이터를 그리지 않음.
+실기기에서 재현. 시뮬레이터에서는 재현 안 됨.
 
-## 원인
-새 키로 암호화된 데이터를 쓰기 전에 기존 키로 읽기를 시도하지 않음.
-마이그레이션 순서: 읽기(구 키) → 쓰기(신 키) → 삭제(구 키)
+## 근본 원인
+`reloadData()` 호출이 background queue에서 이뤄짐.
+UIKit은 모든 UI 업데이트를 main queue에서만 받음.
 
 ## 해결책
 ```swift
-func migrateEncryptedValue<T: Codable>(key: String, oldKey: String) {
-    guard let oldValue: T = Persistent.read(key: oldKey) else { return }
-    Persistent.write(oldValue, key: key)
-    Persistent.delete(key: oldKey)
+DispatchQueue.main.async { [weak self] in
+    self?.tableView.reloadData()
 }
 ```
 
-## 재발 방지
-마이그레이션이 필요한 경우 항상 이 순서: 읽기 → 쓰기 → 삭제
-CLAUDE.md에 마이그레이션 패턴 추가
+## 예방
+- UI 업데이트는 항상 main queue로 디스패치
+- 네트워크 완료 핸들러 안에서 UI를 만지는 코드는 리뷰 시 main queue 체크
+
+## 관련
+- iOS 최소 버전: 15.0
+- 영향 컴포넌트: 리스트 계열 화면 전체
 ```
+
+이 문서가 `docs/solutions/performance/2026-02-24-tableview-main-queue.md`로 박제되면, 다음에 유사 증상이 보이자마자 `/ios-triage`가 이 케이스를 먼저 체크한다.
 
 ---
 
-## 앱스토어 심사 거절도 자산
+## 회고 포맷
+
+Agent C가 생성하는 `docs/retros/YYYY-MM-DD.md`는 다섯 섹션이다.
 
 ```markdown
-# docs/solutions/ios/appstore/guideline-4-3-spam-rejection.md
+# 2026-02-24 스프린트 회고
 
-## 심사 거절: Guideline 4.3 (Spam)
+## 배포된 것
+- vX.X.X 앱스토어 제출
+- …
 
-**상황**: 신규 기능 버전 심사 거절
-**이유**: 기존 앱과 기능이 유사하다는 판정
-**해결**: 차별화 기능 스크린샷 추가 + 심사 메모 작성
+## 잘된 것
+- /ios-triage 도입 후 버그 → 브리프 소요 시간 단축
+- …
 
-**다음 버전 적용**:
-처음부터 스크린샷에 차별화 포인트를 넣는다.
-심사 메모에 "기존 버전 대비 추가된 기능" 명시.
+## 아쉬운 것
+- 심사 중 발견한 이슈가 hotfix로 이어짐
+- …
+
+## 다음에 적용
+- 심사 제출 전 TestFlight 최소 24h 운용
+- …
+
+## Compound Assets
+- 솔루션 문서 3건 (performance / storage / build)
+- CLAUDE.md에 main queue 체크 컨벤션 추가
 ```
-
-심사 거절 이유가 쌓이면, 다음 버전에서 같은 이유로 거절당하는 일이 없어진다.
 
 ---
 
@@ -159,16 +238,16 @@ CLAUDE.md에 마이그레이션 패턴 추가
 
 | 사이클 | 도입 내용 | 효과 |
 |--------|----------|------|
-| Ep.000 | CLAUDE.md + .claudeignore + 스킬 5종 | 세션 시작 비용 0 |
-| Ep.001 | SwiftLint PreToolUse 훅 | 코드 규칙 위반 자동 차단 |
-| Ep.002 | 슬래시 커맨드 5종 | 버그→수정→배포 흐름 구조화 |
-| Ep.003 | .claudeignore 완성 | 컨텍스트 오염 차단 |
-| Ep.004 | ios-triage | 원인 파악 속도 향상 |
-| Ep.005 | ios-compound | 지식 축적 자동화 |
+| Ep.000 | CLAUDE.md + .claudeignore + 스킬 7종 | 세션 시작 비용 0 |
+| Ep.001 | SwiftLint git pre-commit 훅 | 규칙 위반 자동 차단 |
+| Ep.002 | 슬래시 커맨드 도입 | 버그→수정→배포 구조화 |
+| Ep.003 | .claudeignore + SPM 예외 처리 | 컨텍스트 오염 차단 |
+| Ep.004 | /ios-triage 5 라운드 인터뷰 | 브리프 인계로 수정 가속 |
+| Ep.005 | /compound 5 Phase + 3 Agent 병렬 | 지식 박제 자동화 |
 
-Journal 000~005를 완주하면 iOS 프로젝트도 Compound Engineering이 돌아간다.
+Journal 000~005를 완주하면 iOS 프로젝트에서도 Compound Engineering 루프가 돈다. 중요한 건 **배포의 느린 사이클이 약점이 아니라 지식 축적 시간**이라는 사고 전환이다.
 
 ---
 
-> **iOS 배포의 느린 사이클이 약점이 아니다. 지식 축적의 시간이다.**
-> 심사 기다리는 동안 회고를 돌리고, 다음 스프린트의 입력을 준비한다.
+> **심사 기다리는 시간을 `/compound`에 맡겨라.**
+> 3 Agent가 병렬로 돌면서 다음 스프린트의 입력을 자동으로 준비한다.
