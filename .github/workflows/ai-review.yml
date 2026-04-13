@@ -209,8 +209,59 @@ jobs:
               ].join('\n'),
             });
 
+      # ─────────────────────────────────────────────────────────────
+      # patterns/ 브랜치 감지 — 라벨 부착 + auto-merge skip
+      # Harness Journal 020 — `/curate-inbound` 파이프라인. patterns/ 브랜치는
+      # raw 콘텐츠라서 허브 세션이 curation(익명화 / 분류 / frontmatter / connections)을
+      # 해야 하므로 auto-merge하면 안 됨. Test Gate는 여전히 통과해야 구문 검증은 됨.
+      # 허브는 `gh pr list --label patterns`로 큐 확인 → `/curate-inbound #<num>` 실행.
+      # ─────────────────────────────────────────────────────────────
+      - name: Label patterns branch (skip auto-merge)
+        if: |
+          steps.sync.outputs.status != 'conflict' &&
+          startsWith(github.ref_name, 'patterns/')
+        uses: actions/github-script@v7
+        env:
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const prNumber = parseInt(process.env.PR_NUMBER);
+            try {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                labels: ['patterns', 'needs-curation'],
+              });
+            } catch (e) {
+              console.warn('라벨 부착 실패 (라벨이 없을 수 있음):', e.message);
+            }
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: [
+                '## 🏗️ patterns/ 브랜치 감지 — 허브 curation 대기',
+                '',
+                '이 PR은 `patterns/` 브랜치라 **자동 머지 스킵**되었습니다. Test Gate는 통과했지만 raw 콘텐츠이므로 허브 세션이 `/curate-inbound`로 분류 + 커레이션 + 재포맷 해야 합니다.',
+                '',
+                '### 허브 세션 처리',
+                '```',
+                `/curate-inbound #${prNumber}`,
+                '```',
+                '',
+                '`/curate-inbound`가 6 카테고리(reject / tips / solution / journal / pattern-entry / needs-review) 중 하나로 분류 → curation → 새 `curate/<slug>` 브랜치 + PR → 그 PR은 자동 머지됩니다. 이 원본 `patterns/` PR은 그때 닫힙니다.',
+                '',
+                '상세: [`/curate-inbound` 슬래시 커맨드](https://github.com/Mino777/ai-study/blob/main/.claude/commands/curate-inbound.md) / [Harness Journal 020](https://github.com/Mino777/ai-study/blob/main/content/harness-engineering/harness-journal-020-promise-timeout-wrapper.mdx)',
+              ].join('\n'),
+            });
+            core.info('patterns/ 브랜치 — auto-merge skipped');
+
       - name: Squash Merge
-        if: steps.sync.outputs.status != 'conflict'
+        if: |
+          steps.sync.outputs.status != 'conflict' &&
+          !startsWith(github.ref_name, 'patterns/')
         id: merge
         uses: actions/github-script@v7
         env:
