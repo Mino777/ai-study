@@ -210,4 +210,62 @@ rtk git log --oneline -1           # → 가장 최근 squash merge commit
 
 ---
 
+## 2026-04-13 — `/wt-branch` 워크트리에서 Next.js 16 Turbopack 프로덕션 빌드 실패
+
+**환경**: macOS, Next.js 16 (Turbopack), `/wt-branch`로 만든 `/tmp/<project>-<branch>` 워크트리. 실제 발생 케이스: `mino-tarosaju` 프로젝트 `fix/mcapp-cleanup` 워크트리에서 `npm run build` 실행 중.
+
+**증상**: `npm run build` 실행 시 Turbopack이 다음과 같이 실패:
+
+```
+- Execution of Project::get_all_endpoint_groups_with_app_route_filter failed
+- Execution of find_package failed
+- Symlink [project]/node_modules is invalid, it points out of the filesystem root
+  at ignore-listed frames {
+  type: 'TurbopackInternalError',
+}
+```
+
+빌드 직후에도 비슷하게, `npm run build`가 env validation 단계에서 터짐:
+
+```
+Error: [env] 필수 NEXT_PUBLIC_* 환경 변수 누락:
+  - NEXT_PUBLIC_SUPABASE_URL: Invalid input: expected string, received undefined
+  - NEXT_PUBLIC_SUPABASE_ANON_KEY: Invalid input: expected string, received undefined
+```
+
+**근본 원인**: 두 가지가 겹쳐 발생한다 — 둘 다 `/wt-branch`로 만든 `/tmp/<project>-<branch>` 워크트리가 *원본 워킹트리와 다른 파일시스템 위치*에 있다는 점에서 비롯.
+
+1. **Turbopack의 filesystem root 제약**: 워크트리를 빨리 띄우려고 `ln -s /Users/<me>/Develop/<project>/node_modules /tmp/<project>-<branch>/node_modules`로 심볼릭 링크를 걸면, Turbopack은 "심볼릭 링크가 프로젝트 루트 *밖*을 가리킨다"고 판단해 resolve 자체를 거부한다. Webpack은 이 케이스를 묵인하지만 Turbopack은 내부 가드(`Symlink points out of the filesystem root`)가 걸려 있다. 테스트(vitest)와 린트는 filesystem root 가드가 없어서 심볼릭으로도 돌아가므로 *빌드 단계에서만* 에러가 보인다. "테스트/린트 pass → 빌드 pass 아닐 것" 라는 안이한 가정이 깨지는 지점.
+
+2. **`.env.local`이 gitignored**: `/wt-branch`는 origin/main에서 *트래킹된 파일만* 체크아웃하므로 `.env.local`이 복사되지 않는다. 이 프로젝트들은 `next.config.js` 또는 `src/lib/env.ts`에서 `NEXT_PUBLIC_SUPABASE_URL` 같은 변수를 *빌드 타임에 zod로 validation*하기 때문에, 값이 없으면 프로덕션 빌드가 즉사. Dev 서버(`npm run dev`)는 runtime validation이므로 페이지 진입 시에만 터지고, 빌드는 통과하는 경우가 있어 "dev는 되는데 build는 안 되네?"로 헷갈릴 수 있다.
+
+**왜 발견 어려운가**: 두 증상은 서로 *독립적*이라 "한 개 고치면 다음 에러가 나오는" 양파 디버깅이 된다. 심볼릭 링크를 먼저 고치면 env 에러가 나오고, env를 먼저 고치면 심볼릭 에러가 나온다. 또 둘 다 *"워크트리에서만"* 재현되고 원본 워킹트리에서는 `node_modules`가 진짜고 `.env.local`도 있으므로 로컬 빌드가 잘 되어서 문제를 예측하기 어렵다. Turbopack 에러 메시지도 내부 스택 트레이스만 뿌리고 사용자 조언(`filesystem root` 용어)이 없어서 구글링으로 찾기 어렵다.
+
+**수정**: 워크트리에서 프로덕션 빌드가 필요하면 *두 단계*를 모두 밟는다.
+
+```bash
+# 1. 심볼릭 링크 대신 실제 설치 (dedupe 덕에 보통 30~60초, lockfile이 있으면 빠름)
+cd /tmp/<project>-<branch>
+npm install
+
+# 2. 원본 워킹트리의 .env.local을 복사 (gitignored라 워크트리엔 없음)
+cp /Users/<me>/Develop/<project>/.env.local /tmp/<project>-<branch>/.env.local
+
+# 3. 이제 빌드
+npm run build
+```
+
+**검증**: `mino-tarosaju/fix/mcapp-cleanup` 워크트리에서 이 순서대로 실행 — 691/0 test pass + lint clean + Turbopack 프로덕션 빌드 exit 0 확인. 이전 심볼릭 링크 방식은 build에서 즉사했지만 `npm install` + `cp .env.local` 조합은 성공.
+
+**주의**: `cp .env.local`한 파일은 워크트리 내부에 남아있지만 `.gitignore`에 `.env.local`이 이미 등록돼 있으므로 *실수로 커밋되지 않는다*. 그래도 `git status`에 untracked로 뜨지 않는지 한 번 확인할 것.
+
+**Related**:
+- [Harness Journal 003 — squash merge trap](./harness-journal-003-squash-merge-trap-pattern.mdx): `/wt-branch` 커맨드의 탄생 배경
+- [Harness Journal 014 — inbound tips](./harness-journal-014-hub-auto-merge-inbound-tips.mdx): 이 팁이 들어오는 경로
+- 향후 `/wt-branch` 커맨드에 선택적 `--with-node-modules` / `--with-env` 플래그를 붙이는 것도 고려할 수 있음 — 현재는 명시적 2단계로 두는 편이 "왜 이 단계가 필요한가"의 맥락을 잊지 않게 함.
+
+**승격 조건**: Next.js Turbopack 기반 프로젝트 3개 이상에서 같은 증상이 재발하거나, `/wt-branch`에 자동화 플래그를 붙이게 되면 Harness Journal로 승격 후보. 현재는 `mino-tarosaju` 1건만 발생.
+
+---
+
 > **📌 append 규칙**: 새 팁은 이 구분선 *위*가 아니라 *아래*에 새 섹션을 추가한다. 기존 섹션은 건드리지 않는다.
