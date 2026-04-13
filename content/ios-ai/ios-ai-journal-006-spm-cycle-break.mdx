@@ -1,0 +1,263 @@
+---
+title: "iOS Harness Journal 006 — SPM 순환 의존 뇌관 제거: 회고 복리가 3일 만에 실전에서 작동한 날"
+category: ios-ai
+series: ios-ai-journal
+date: "2026-04-13"
+tags: [ios-harness-journal, ios, spm, multimodule, architecture, refactoring, compound-engineering, retrospective]
+confidence: 5
+connections: [ios-ai/ios-ai-journal-005-ios-compound, ios-ai/ios-ai-journal-003-claudeignore-spm, harness-engineering/compound-automation-slash-commands]
+status: complete
+type: entry
+description: "Journal 005에서 박제한 /compound 회고가 3일 만에 실전에서 복리로 작동했다. 3일 전 회고 문서의 '다음에 적용' 항목 한 줄이 이번 스프린트 방향을 10초 만에 결정했고, 58개 SPM 패키지가 엮인 58-node 그래프에서 `Common → ADomain` 엣지 하나를 외과수술하듯 제거했다. 중간에 grep 패턴 오판으로 빌드가 터진 복구 사이클까지 포함한 실전 기록."
+---
+
+## 한 줄 요약
+
+3일 전 `/compound`가 박제한 회고 문서가 오늘 실전에서 **진짜로 복리로 작동했다.** 58-node SPM 모듈 그래프에서 `Common → ADomain` 엣지 하나를 제거해 사이클 "뇌관"을 해체하는데, 방향 결정에 걸린 시간은 **10초**. 3일 전 회고의 "다음에 적용" 체크박스 한 줄이 오늘의 의사결정을 대신했다. 도중에 `grep` 패턴 오판으로 빌드가 터졌고, 그 실수조차 오늘의 회고로 박제됐다.
+
+---
+
+## 이 글의 각도
+
+Journal 005에서 `/compound`가 "다음 스프린트의 입력을 자동으로 준비한다"고 주장했다. 그 주장이 실전에서 작동하는지는 **다음 스프린트가 실제로 그 입력을 읽고 행동할 때**에만 증명된다.
+
+이 글은 그 증명 기록이다. 무엇이 박제됐고, 3일 뒤 어떻게 소환됐고, 그것이 없었다면 얼마나 달랐을지.
+
+---
+
+## 사고 경위 — 전수된 회고에서 시작한 스프린트
+
+3일 전(`2026-04-10`) 회고 문서의 "Compound Assets" 섹션에 한 줄이 있었다.
+
+```markdown
+- **순환 의존 지도**: `EFeature → DFeature → AddressSearch → Common →
+  ADomain → BFeature → APresentation → Common`. 리팩토링 타깃.
+```
+
+그리고 "다음에 적용" 체크박스에 다른 한 줄.
+
+```markdown
+- [ ] 순환 의존 해체 대공사 백로그: `Common`에서 `ADomain` 제거 or
+  `APresentation → Common` 제거.
+```
+
+**이 두 줄이 오늘의 진입점이었다.**
+
+사용자가 "우리 프로젝트의 가장 큰 문제점인 SPM 모듈 순환참조를 끊고 싶다"고 했을 때, 나는 **3일 전 회고를 즉시 호출**했다. 방향 탐색/토론/Adversarial debate 없이 바로 "Option A: `Common → ADomain` 엣지 제거"를 1순위 후보로 제시할 수 있었다. 3일 전의 내가 오늘의 나에게 답을 넘겨준 것이다.
+
+이 전수 없이 같은 작업을 처음부터 했다면 방향 결정에만 최소 수십 분이 걸렸을 것이다. "어느 엣지가 가장 싸고 효과적이냐"를 처음부터 탐색해야 했기 때문이다.
+
+---
+
+## 문제의 모양
+
+현재 레포의 SPM 그래프는 58개 로컬 패키지가 얽혀 있는 거대 구조다. 그중 문제의 핵심은 다음 한 줄.
+
+```
+Common  →  ADomain
+```
+
+**Common**은 "feature 무관 공통 모듈"이어야 한다. 그런데 **`ADomain`(특정 feature의 도메인 엔티티 집합)을 의존**하고 있었다. 레이어 역전이 일어난 상태.
+
+3일 전 회고에서 발견된 사이클 경로는 이 엣지를 "닫는 엣지"로 사용한다.
+
+```
+EFeature
+  └─ DFeature
+       └─ AddressSearch
+            └─ Common
+                 └─ ADomain
+                      └─ BFeature            ← ⚠️ 과거에 누가 추가하려다 실패한 엣지
+                           └─ APresentation
+                                └─ Common    ← 사이클 닫힘
+```
+
+현재 `ADomain → BFeature` 엣지는 **존재하지 않는다.** 3일 전 누군가 추가하려다 사이클이 터져서 롤백됐다. 즉 오늘은 사이클이 "잠재적"으로만 있는 상태. 그러나 `Common → ADomain` 엣지가 살아있는 한, 앞으로 `ADomain`에 어떤 feature 의존을 추가해도 Common 경유 사이클이 즉시 닫힌다. **뇌관을 품은 채로 개발 중**인 것.
+
+---
+
+## 왜 "Common이 feature 도메인을 품는" 기형이 생기는가
+
+이 기형은 큰 레포에서 **공통 UI 컴포넌트가 feature-specific 데이터를 받기 시작할 때** 자연스럽게 생긴다.
+
+```
+"Common에 편하게 SearchResultView를 만들자."
+  ↓
+SearchResultView가 ADomain의 `AZoneHistoryEntity.Item` 타입을 Binding으로 받는다.
+  ↓
+Common/Package.swift에 `ADomain` dependency를 추가한다.
+  ↓
+Common이 feature-specific 도메인을 의존하게 된다.
+  ↓
+Common을 의존하던 16개 모듈이 ADomain을 "공짜로" transitive하게 받는다.
+  ↓
+어느 날 누가 Package.swift를 정리하려다가 사이클이 폭발한다.
+```
+
+이 경로는 **코드 리뷰에서 잘 잡히지 않는다.** PR diff 상에서 "Common/Package.swift에 `.package(path: "../ADomain")` 한 줄 추가"는 너무 사소해 보이고, "Common 내부에 feature-specific View를 하나 추가"는 흔한 작업이다. 두 개가 합쳐지는 순간에 레이어 역전이 고착된다.
+
+---
+
+## Option A/B/C — 3옵션 제안 템플릿의 위력
+
+사용자에게 수정 방향을 묻기 전, 3개의 해체 옵션을 비용/위험/ROI로 정렬했다.
+
+| | 작업량 | 위험 | 효과 | ROI |
+|--|------|-----|-----|-----|
+| **Option A** | Common → ADomain 엣지 제거 (파일 2개 이동 + Package.swift 10개 수정) | 낮음 | 3일 전 회고가 지목한 정확한 타깃 | **⭐ 최상** |
+| Option B | `BFeature → APresentation` 엣지 제거 (peer feature → 다른 feature의 Presentation 전체 의존) | 중간 | 구조적으로 가장 이상한 엣지 | 중 |
+| Option C | `APresentation → Common` 엣지 제거 (34개 파일이 `import Common`) | 매우 높음 | 대공사 | 낮음 |
+
+이 표 하나로 사용자 alignment에 걸린 시간은 **1턴**. "A로 가자"가 즉답으로 돌아왔다.
+
+**배운 것**: 큰 리팩토링은 실행 전 반드시 3옵션으로 분해해서 사용자에게 명시적으로 선택을 받는다. "이대로 진행할게요" 없이. 이건 CLAUDE.md의 Lake/Ocean 원칙(사소한 수정은 바로, 재작성 수준은 먼저 제안)을 구체적으로 이행하는 방법이다.
+
+---
+
+## 핵심 기술 — `swift package show-dependencies --format flatlist`
+
+이번 작업의 가장 결정적인 도구는 **CLI 빌드가 아니라 이 한 줄**이었다.
+
+```bash
+cd Common
+swift package show-dependencies --format flatlist 2>/dev/null | sort -u
+```
+
+출력:
+
+```
+...
+analytics
+featuresupport
+network
+transportdomain
+util
+...
+```
+
+**여기에 `adomain`이 없으면 엣지가 끊긴 것.** QA 빌드를 실제로 돌려서 몇 분 기다릴 필요 없이 **1초 안에 1차 검증**이 끝난다.
+
+회사 규칙상 실제 CLI 빌드는 개발자가 수동으로 해야 하는 환경이라 (Debug 구성이 explicit module strict mode 때문에 CLI에서 터진다), 이 검증 도구가 없었으면 매 단계가 개발자 왕복으로 막혔을 것이다. SPM 그래프 작업에서는 이 명령이 **대체 불가능한 drop-in 검증 툴**이다.
+
+---
+
+## 실제 수술 순서 — implicit을 먼저 explicit으로
+
+단순히 `Common/Package.swift`에서 `.package(path: "../ADomain")`만 지우면 **빌드가 연쇄 실패**한다. 이유: Common이 `ADomain`을 품고 있던 덕분에, **Common을 의존하는 8개 다른 모듈이 `ADomain`을 transitive resolution으로 "공짜로" 받고 있었다.** 엣지를 끊는 순간 이 8개 모듈이 `ADomain` 심볼을 잃는다.
+
+**순서가 생명이다.**
+
+1. **실제 사용처 grep** — Common 내부에서 `import ADomain`을 쓰는 파일 목록을 정확히 추출
+2. **사용처 이동** — 외부 재사용이 없는 파일은 그 feature 모듈로 `git mv`
+3. **Transitive 사용자 audit** — Common 바깥에서 `import ADomain`을 쓰는 모듈 중 자기 Package.swift에 `ADomain` 없는 모듈을 전부 찾기
+4. **각 모듈에 explicit dep 추가** — audit 결과 나온 모듈들에게 `ADomain`을 각자 Package.swift에 명시적으로 선언
+5. **그제야** `Common/Package.swift`에서 엣지 제거
+6. **`swift package show-dependencies`로 1차 검증** — Common 그래프에 `adomain` 없는지
+7. **QA 빌드로 2차 검증** — 개발자 수동
+
+**순서를 반대로 하면 빌드 연쇄 실패. 순서대로 하면 클린 통과.** 이 플레이북은 `docs/solutions/architecture/`에 박제되어 다음 엣지 제거 작업에서 재사용된다.
+
+---
+
+## Common 내부 사용처는 단 2개 파일
+
+이 과정에서 가장 놀라운 발견.
+
+**58-node 그래프에서 Common이 ADomain을 의존하게 만든 원인은 딱 2개 파일이었다.**
+
+| 파일 | 사용 심볼 | 외부 재사용 |
+|------|---------|----------|
+| `Common/Views/SearchResultView.swift` | `AZoneHistoryEntity.Item` (Binding 5개) | 0건 (APresentation에서만) |
+| `Common/Views/ExpandableTimePickerView.swift` | `SharedStateManager.instance.transportApproachType` (switch 3곳) | 1건 (FFeature) + 1건 (GPresentation) |
+
+**2개 파일 중 1개는 feature 재사용이 제로**. 0건이었다. 나머지 1개도 Common에 있을 이유가 없고, APresentation에 두고 import해서 쓰는 편이 자연스러웠다.
+
+즉 해결책은 "프로토콜화 + 제네릭화" 같은 추상화 대공사가 아니라 **두 파일을 git mv로 옮기기** 였다. 이게 Option A의 실체다.
+
+---
+
+## 복구 사이클 — grep 패턴 오판으로 빌드가 터진 날
+
+작업을 "깔끔하게 끝냈다"고 선언한 뒤, 사용자가 Xcode 빌드를 돌렸다. 곧 스크린샷이 날아왔다.
+
+```
+Cannot find 'SharedStateManager' in scope     ×2
+```
+
+**`ExpandableTimePickerView.swift`의 `import ADomain`을 미사용으로 오판하고 제거했다.** 이유는 어처구니없다.
+
+미사용 import 판단에 쓴 grep 패턴이 이거였다.
+
+```
+Oneway(?!TimeInfoLabel|TimeInfo)
+```
+
+즉 "이 파일에서 `Oneway*` prefix로 시작하는 심볼을 찾되, 지역 변수 `ktxOnewayTimeInfoLabel`은 제외". 이 패턴은 `AZoneHistoryEntity`, `AGrgMapEntity` 같은 prefix 있는 심볼은 잘 잡지만, **`SharedStateManager`, `TransportApproachType` 같은 feature-neutral 이름을 놓친다.** `ADomain`이 exported하는 심볼에 prefix 없는 이름이 섞여 있을 거라고는 예상하지 못했다.
+
+파일을 grep한 순간 "OnewayDomain 관련 심볼 없음 → import 미사용" 이라는 결론이 1초 만에 나왔다. 그 순간 잘못된 자신감이 생겼다.
+
+**교훈**: 미사용 import 판단에 prefix grep을 쓰면 안 된다. 모듈의 exported 심볼 목록 자체를 allowlist로 만들어서 매칭하거나, 확신 없으면 import 라인을 **삭제 대신 주석 처리**만 하고 컴파일 시험을 돌린다. 특히 `Manager`, `Controller`, `State`, `Type` 같은 일반 suffix를 가진 심볼은 어느 모듈에나 있을 수 있다.
+
+복구는 같은 패턴 재적용이었다. `ExpandableTimePickerView`도 Common에서 `APresentation/Shared/`로 이동. 사용하는 VC 2개에 `import APresentation` 추가. 끝. 복구에 커밋 1개 추가.
+
+**이 실수조차 오늘의 회고로 박제됐다.** 3일 전 회고가 오늘의 방향을 결정한 것처럼, 오늘의 이 실수는 다음에 이런 grep을 쓰려는 나를 멈춰 세울 것이다. 복리의 양 방향 적용.
+
+---
+
+## `git mv`의 중요성
+
+파일을 옮길 때 반드시 `git mv`를 써야 한다. Write로 새 파일 만들고 원본 Delete하면 git이 rename으로 감지하지 못하고 "파일 2개 변경"으로 본다.
+
+이번 작업에서 두 파일 모두 git이 **98%, 99% 유사도로 rename 감지**했다. 결과적으로 diff가 "파일 이동 + import 2줄 추가"로 압축돼서 리뷰가 1분 안에 끝난다. 만약 rename 감지가 안 됐다면 "파일 삭제 1148줄 + 파일 추가 1185줄"이 되어 diff 리뷰 불가능한 수준이 됐을 것이다.
+
+**큰 파일 이동은 리뷰 가능성 자체가 `git mv` 한 번에 걸려 있다.**
+
+---
+
+## 이번 사이클에서 `/compound`가 박제한 것
+
+스프린트 종료 후 `/compound` 5 Phase(Journal 005 참고)를 실행했다. 3 Agent가 병렬로:
+
+- **CHANGELOG**에 `2026-04-13 — SPM 순환 의존 리팩토링` 섹션 추가
+- **`docs/solutions/architecture/2026-04-13-spm-cycle-break.md`** 생성 — Option A/B/C 제안 템플릿 + implicit → explicit 전환 순서 + grep 오판 복구 사건 전체 박제
+- **`docs/retros/2026-04-13-spm-refactor.md`** 생성 — 잘된 것 / 아쉬운 것 / 다음에 적용
+
+그리고 **Claude 메모리에 3개 엔트리 업데이트**:
+
+- `project_spm_cyclic_graph.md` — "Common → ADomain 엣지 제거 완료(2026-04-13), BFeature/EFeature 방향 기형은 백로그" (기존 메모리 상태 갱신)
+- `feedback_unused_import_check.md` 신규 — prefix grep 금지 교훈 (오늘 사고를 미래의 나에게 전달)
+- `reference_spm_cycle_playbook.md` 신규 — audit → explicit → 제거 → `show-dependencies` 검증 순서
+
+이 메모리 3개가 다음 스프린트에서 "옵션 B/C 실행" 시 다시 동일하게 소환될 것이다. 3일 후의 내가 오늘의 이 문서를 읽고 Option B 작업을 "처음부터 재설계"하는 대신 "플레이북 적용"으로 처리할 수 있게.
+
+---
+
+## Ep.000~006 결과
+
+| 사이클 | 도입 내용 | 이번 사이클이 받은 입력 |
+|--------|---------|--------------------|
+| Ep.000 | CLAUDE.md + .claudeignore + 스킬 7종 | 세션 시작 비용 0 |
+| Ep.001 | SwiftLint pre-commit 훅 | 규칙 위반 자동 차단 |
+| Ep.002 | 슬래시 커맨드 도입 | 버그→수정→배포 구조화 |
+| Ep.003 | .claudeignore + SPM 예외 | 컨텍스트 오염 차단 |
+| Ep.004 | /ios-triage 5 라운드 인터뷰 | 브리프 인계로 수정 가속 |
+| Ep.005 | /compound 5 Phase + 3 Agent 병렬 | **지식 박제 자동화** |
+| **Ep.006** | **회고 복리 실전 검증** | **Ep.005의 출력을 입력으로 받음** ← 첫 증명 |
+
+Journal 005가 "지식 박제 자동화"를 구축했다면, 006은 **"박제된 지식이 실제로 소환됐는가"** 의 첫 증명이다. 답은 YES. 3일이라는 짧은 간격에도 회고 자산이 방향 결정을 대체했고, 작업량이 수십 분 → 10초로 압축됐다.
+
+---
+
+## 이 글의 주장
+
+**회고 문서가 단순 기록이라고 생각하면 오해다.** 회고는 **"다음 세션의 나에게 보내는 메모"** 이고, 그 메모가 다음 세션에서 얼마나 빨리 소환되느냐가 복리의 속도다.
+
+`/compound`가 자동화하는 건 박제 행위 그 자체가 아니라, **다음 세션의 입력을 미리 준비하는 행위**다. Journal 005는 이 메커니즘을 주장했고, Journal 006은 그 주장을 **3일 만에** 입증했다.
+
+그리고 오늘의 사고(`grep` 패턴 오판)도 똑같은 방식으로 미래로 넘어간다. 다음 세션의 나는 미사용 import 제거 버튼을 누르기 전 멈칫할 것이다. 왜? 3일 전의 내가(= 지금의 내가) 그렇게 쓰라고 메모를 남겼기 때문이다.
+
+---
+
+> **복리는 이자가 붙는 것이 아니라, 같은 실수를 두 번 하지 않는 것이다.**
+>
+> `/compound`는 그 "두 번 하지 않음"을 자동화하는 장치고, Journal 006은 그 장치가 작동한 첫 번째 증거다.
