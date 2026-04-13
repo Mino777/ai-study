@@ -1,5 +1,5 @@
 ---
-title: "Compound 자동화 슬래시 커맨드 — /compound, /autoceo, /wt-branch, /ingest 패턴 정리"
+title: "Compound 자동화 슬래시 커맨드 — /compound, /autoceo, /wt-branch, /ingest, /projects-sync, /curate-inbound, /cross-session-review 패턴 정리"
 category: harness-engineering
 date: "2026-04-12"
 tags: [harness-engineering, slash-command, claude-code, compound-engineering, automation, transferable-pattern]
@@ -8,8 +8,11 @@ connections:
   - harness-engineering/compound-engineering-philosophy
   - harness-engineering/harness-journal-004-wt-branch-command
   - harness-engineering/harness-journal-000-baseline
+  - harness-engineering/harness-journal-011-concurrent-session-safety
+  - harness-engineering/harness-journal-014-hub-auto-merge-inbound-tips
+  - harness-engineering/harness-journal-019-mcapp-cross-session-cleanup
 status: complete
-description: "두 프로젝트와 ai-study에 박혀 있는 4개 슬래시 커맨드(/compound, /autoceo, /wt-branch, /ingest)의 패턴을 정리. 어떤 작업이 어느 커맨드에 들어가야 하는지, 각 커맨드의 phase 구조, 다른 사람의 이식 가이드."
+description: "두 프로젝트와 ai-study에 박혀 있는 7개 슬래시 커맨드(/compound, /autoceo, /wt-branch, /ingest, /projects-sync, /curate-inbound, /cross-session-review)의 패턴을 정리. 어떤 작업이 어느 커맨드에 들어가야 하는지, 각 커맨드의 phase 구조, 다른 사람의 이식 가이드."
 type: entry
 quiz:
   - question: "*Compound Engineering*의 4단계 루프(Plan → Work → Review → Compound)와 *4개 슬래시 커맨드*의 매핑이 정확한 것은?"
@@ -44,9 +47,9 @@ quiz:
 
 해결책: **각 사이클 단계를 슬래시 커맨드로 박는 것**. 사용자가 *명령 하나*를 호출하면 그 단계의 모든 작업이 순서대로 실행된다. 부분 실행 함정 차단.
 
-이 글은 두 프로젝트와 ai-study에 박혀 있는 *4개 슬래시 커맨드*를 정리한다. 4단계 루프와 어떻게 매핑되는지, 각 커맨드의 phase 구조, 이식 가이드.
+이 글은 두 프로젝트와 ai-study에 박혀 있는 *7개 슬래시 커맨드*를 정리한다. 4단계 루프와 어떻게 매핑되는지, 각 커맨드의 phase 구조, 이식 가이드.
 
-## 4단계 루프 ↔ 4개 슬래시 커맨드 매핑
+## 4단계 루프 ↔ 7개 슬래시 커맨드 매핑
 
 ```mermaid
 flowchart LR
@@ -61,6 +64,9 @@ flowchart LR
   wt["/wt-branch<br/>Work의<br/>안전한 시작점"]
   compound["/compound<br/>Compound 단계<br/>박제 자동화"]
   autoceo["/autoceo<br/>4단계 루프<br/>N라운드 자동 반복"]
+  psync["/projects-sync<br/>워커 프로젝트<br/>read-only 진단"]
+  curate["/curate-inbound<br/>inbound PR 분류<br/>+ 하네스 박제"]
+  csr["/cross-session-review<br/>다른 세션 결과물<br/>크로스 검증"]
 
   ingest -. "주입" .-> P
   wt -. "감싸기" .-> W
@@ -69,11 +75,14 @@ flowchart LR
   autoceo -. "전체 자동화" .-> W
   autoceo -. "전체 자동화" .-> R
   autoceo -. "전체 자동화" .-> C
+  psync -. "상태 관찰" .-> P
+  curate -. "인바운드 흡수" .-> P
+  csr -. "품질 게이트" .-> R
 ```
 
 각 커맨드는 *서로 다른 부분*에 박혀 있다. 합치면 4단계 전체가 자동화.
 
-## 4개 커맨드 패턴 정리
+## 7개 커맨드 패턴 정리
 
 ### `/compound` — Compound 단계 박제 자동화
 
@@ -161,7 +170,62 @@ flowchart LR
 
 **핵심 결정**: *날조 방지가 최우선*. 직접 인용 `"..."`은 *원본에서 글자 단위로 확인된 것만*. 추측으로 인용구 만들면 신뢰도 0이 된다는 메모리 박제([feedback_external_source_verification](#)).
 
-## 4개 커맨드의 *중첩과 분업*
+### `/projects-sync` — 워커 프로젝트 read-only 진단
+
+**위치**: `.claude/commands/projects-sync.md` (ai-study 허브)
+
+**책임**: 허브 세션(ai-study)에서 워커 프로젝트(moneyflow, tarosaju)의 git 상태를 *읽기 전용으로* 진단. 다른 세션이 남긴 작업 흔적 감지 + 충돌 사전 탐지. [Journal 011](/wiki/harness-engineering/harness-journal-011-concurrent-session-safety)에서 도입.
+
+**Phase 구조** (4 phase):
+
+| Phase | 작업 |
+|---|---|
+| 1. 워커 프로젝트 목록 확인 | 등록된 워커 경로 순회 |
+| 2. git 상태 수집 | `git status`, `git log --oneline -5`, uncommitted 변경 탐지 |
+| 3. 충돌 위험 분석 | 브랜치 분기점, 미머지 커밋, worktree 잔여물 |
+| 4. 진단 리포트 | 워커별 상태 요약 + 허브 세션 권고 액션 |
+
+**핵심 결정**: *write 0*. 어떤 파일도 수정하지 않는다. 관찰만. 허브 세션이 워커 프로젝트를 실수로 건드리는 함정을 시스템 차원에서 막음.
+
+**호출 시점**: 새 세션 시작 직후, 또는 워커 프로젝트에 작업이 예정된 경우 Plan 단계 첫 번째.
+
+### `/curate-inbound` — 워커 프로젝트 inbound PR 분류 + 하네스 박제 파이프라인
+
+**위치**: `.claude/commands/curate-inbound.md` (ai-study 허브)
+
+**책임**: 워커 프로젝트(moneyflow, tarosaju)에서 올라온 inbound PR/tips를 분류하고, 하네스 엔지니어링 관점에서 *재사용 가능한 패턴*을 추출해 ai-study에 박제. [Journal 014](/wiki/harness-engineering/harness-journal-014-hub-auto-merge-inbound-tips)에서 도입.
+
+**Phase 구조** (5 phase):
+
+| Phase | 작업 |
+|---|---|
+| 1. inbound 수집 | 워커 프로젝트 PR 목록 조회 (read-only) |
+| 2. 분류 | 버그픽스 / 패턴 / 하네스 레슨 / 단순 변경 4분류 |
+| 3. 하네스 레슨 추출 | "패턴" + "하네스 레슨"으로 분류된 것만 MDX 초안 |
+| 4. 머지 판단 | 자동 머지 가능 / 사람 검토 필요 / 보류 3단계 |
+| 5. 박제 + 리포트 | ai-study 엔트리 생성 제안 + 워커별 상태 요약 |
+
+**핵심 결정**: 하네스 박제 파이프라인의 *인바운드 필터*. 워커에서 올라오는 모든 변경이 지식으로 전환되는 것은 아님 — 패턴과 레슨만 허브에 흡수.
+
+### `/cross-session-review` — 다른 Claude 세션 결과물 크로스 검증
+
+**위치**: `.claude/commands/cross-session-review.md` (ai-study 허브)
+
+**책임**: 다른 Claude 세션(또는 자동화 파이프라인)이 생성한 결과물을 *독립적인 시각*으로 검증. 동일한 AI가 만들고 검토하는 단일 실패 지점을 제거. [Journal 019](/wiki/harness-engineering/harness-journal-019-mcapp-cross-session-cleanup)에서 도입.
+
+**Phase 구조** (5 phase):
+
+| Phase | 작업 |
+|---|---|
+| 1. 대상 수집 | 검토할 커밋 범위 또는 파일 목록 |
+| 2. 독립 분석 | 이전 세션 컨텍스트 *없이* 코드/MDX 자체만 읽기 |
+| 3. 이슈 분류 | Critical(배포 차단) / Warning(품질 저하) / Info(개선 제안) |
+| 4. 자동 수정 | Critical만 즉시 수정 + 커밋, Warning/Info는 리스트업 |
+| 5. 검증 리포트 | 수정 내역 + 미수정 이유 + 다음 세션 인계 메모 |
+
+**핵심 결정**: Review 단계의 *독립성 보장*. 같은 세션이 만들고 검토하면 blind spot이 생긴다. 특히 AI 생성 MDX의 Mermaid/구문 에러는 생성 세션이 못 잡는 경우가 많아 별도 세션 검토가 유효.
+
+## 7개 커맨드의 *중첩과 분업*
 
 | 작업 종류 | 어느 커맨드 |
 |---|---|
@@ -169,6 +233,9 @@ flowchart LR
 | 여러 사이클 자동화 | `/autoceo` (전체 루프 × N) |
 | 새 작업 시작 | `/wt-branch` (Work 단계의 안전한 시작) |
 | 외부 콘텐츠 가공 | `/ingest` (Plan 단계의 외부 입력) |
+| 워커 프로젝트 상태 관찰 | `/projects-sync` (Plan 단계의 상황 파악) |
+| 워커 inbound PR 분류 + 박제 | `/curate-inbound` (Plan 단계의 인바운드 흡수) |
+| 다른 세션 결과물 검증 | `/cross-session-review` (Review 단계의 독립 게이트) |
 
 `/autoceo`는 *내부에서* `/compound` 같은 다른 슬래시 커맨드를 *호출하지는 않는다*. 대신 *그 동작을 직접 수행*한다. 이게 슬래시 커맨드 시스템의 한계 — 슬래시 커맨드끼리 *호출 관계*를 만들기 어렵다. 그 빈자리를 [Skill 시스템](/wiki/harness-engineering/skill-system-introduction)이 메울 수 있음.
 
@@ -186,23 +253,26 @@ flowchart LR
 
 이게 [Harness Journal 000 베이스라인](/wiki/harness-engineering/harness-journal-000-baseline) 단계와 동일.
 
-### 2단계 — 4개 커맨드 중 어떤 것을 *먼저* 이식할지
+### 2단계 — 7개 커맨드 중 어떤 것을 *먼저* 이식할지
 
 권장 순서:
 
 1. **`/compound` 먼저** — 가장 가치 큰 단일 자산. 매 사이클 박제를 강제.
 2. **`/wt-branch`** — squash merge 환경이면 즉시. 아니면 후순위.
 3. **`/ingest`** — 외부 콘텐츠 학습이 필요하면.
-4. **`/autoceo`** — 가장 마지막. 다른 3개가 안정된 후에야 *전체 자동화*가 안전.
+4. **`/projects-sync`** — 멀티 프로젝트(허브-워커) 구조가 생기면 즉시.
+5. **`/cross-session-review`** — AI 자동 생성 결과물이 누적되기 시작하면.
+6. **`/curate-inbound`** — 워커 프로젝트가 활성화되고 inbound PR 흐름이 생기면.
+7. **`/autoceo`** — 가장 마지막. 다른 커맨드들이 안정된 후에야 *전체 자동화*가 안전.
 
-### 3단계 — 이식 명령 (4개 커맨드 모두)
+### 3단계 — 이식 명령 (7개 커맨드 모두)
 
 ```bash
 # 1. .claude/commands/ 디렉터리 확인
 mkdir -p /your-project/.claude/commands
 
-# 2. 4개 파일 cp
-for cmd in compound autoceo wt-branch ingest; do
+# 2. 7개 파일 cp
+for cmd in compound autoceo wt-branch ingest projects-sync curate-inbound cross-session-review; do
   cp /Users/jominho/Develop/ai-study/.claude/commands/$cmd.md \
      /your-project/.claude/commands/$cmd.md
 done
@@ -212,6 +282,9 @@ done
 # - 자동 스프린트, 풀 자동 개발 루프 → invoke autoceo
 # - 새 작업 시작, 안전한 브랜치 분기 → invoke wt-branch
 # - 외부 URL 정리, 학습 엔트리로 가공 → invoke ingest
+# - 워커 프로젝트 상태 확인, 충돌 사전 탐지 → invoke projects-sync
+# - 워커 inbound PR 분류 + 하네스 박제 → invoke curate-inbound
+# - 다른 세션 결과물 크로스 검증 → invoke cross-session-review
 
 # 4. (autoceo 사용 시) .claude/settings.json에 PreToolUse / PostToolUse 훅 설정
 #    test + build + push 자동 검증 + 알림
@@ -224,9 +297,11 @@ done
 1. `/compound` — 작은 변경 후 호출. CHANGELOG + retro 생성되는지.
 2. `/wt-branch test-cmd` — worktree 만들어지는지 + cleanup 명령 안내 정상.
 3. `/ingest <test-url>` — 8 phase가 다 도는지.
-4. `/autoceo dry` — 드라이런으로 계획만 출력되는지.
+4. `/projects-sync` — 워커 프로젝트 상태 리포트 출력되는지.
+5. `/cross-session-review` — 최근 커밋 범위 검토 후 이슈 분류 리스트 출력되는지.
+6. `/autoceo dry` — 드라이런으로 계획만 출력되는지.
 
-이 4가지가 모두 작동하면 *4단계 루프 자동화*가 작동.
+이 6가지가 모두 작동하면 *4단계 루프 자동화*가 작동.
 
 ## 자기 점검
 
@@ -235,10 +310,11 @@ done
 3. 슬래시 커맨드와 [Skill](/wiki/harness-engineering/skill-system-introduction)의 차이를 운영에 어떻게 반영할 것인가?
 4. *전체 자동화(/autoceo)*를 호출할 신뢰가 생기는 시점은 언제인가?
 5. (열린 질문) 슬래시 커맨드들끼리 *호출 관계*를 만들 수 있는 패턴이 있는가? (Skill로 우회 가능?)
+6. `/projects-sync`와 `/cross-session-review`는 *사람이 직접 봐야 하는 단계*를 대신하는가, 보조하는가?
 
 ### 실습 과제
 
-자신의 프로젝트에 *4개 중 1개*를 골라서 이식:
+자신의 프로젝트에 *7개 중 1개*를 골라서 이식:
 
 1. 가장 가치 큰 1개 선택 (권장: `/compound`)
 2. ai-study의 `.claude/commands/<cmd>.md`를 cp
@@ -248,17 +324,21 @@ done
 
 ## 출처
 
-- 슬래시 커맨드 4개 정의 파일:
+- 슬래시 커맨드 7개 정의 파일:
   - `.claude/commands/compound.md` (양쪽 프로젝트 + ai-study)
   - `.claude/commands/autoceo.md` (양쪽 프로젝트 + ai-study)
   - `.claude/commands/wt-branch.md` (ai-study, [Journal 004](/wiki/harness-engineering/harness-journal-004-wt-branch-command))
   - `.claude/commands/ingest.md` (ai-study)
+  - `.claude/commands/projects-sync.md` (ai-study, [Journal 011](/wiki/harness-engineering/harness-journal-011-concurrent-session-safety))
+  - `.claude/commands/curate-inbound.md` (ai-study, [Journal 014](/wiki/harness-engineering/harness-journal-014-hub-auto-merge-inbound-tips))
+  - `.claude/commands/cross-session-review.md` (ai-study, [Journal 019](/wiki/harness-engineering/harness-journal-019-mcapp-cross-session-cleanup))
 - 4단계 루프 출처: [Compound Engineering 엔트리](/wiki/harness-engineering/compound-engineering-philosophy)
 - Skill 시스템 비교: [Skill 시스템 도입 엔트리](/wiki/harness-engineering/skill-system-introduction)
 
 ### 검증 메모
 
-- 4개 슬래시 커맨드 정의는 *직접 보유한 파일*에서 본 내용. 외부 인용 없음.
+- 7개 슬래시 커맨드 정의는 *직접 보유한 파일*에서 본 내용. 외부 인용 없음.
 - /autoceo의 6가지 안전장치는 양쪽 프로젝트의 autoceo.md에서 직접 확인
-- 4단계 루프와 4개 커맨드의 매핑은 *내 해석*이며 [Compound Engineering 원문](/wiki/harness-engineering/compound-engineering-philosophy)에 명시된 매핑은 아님
+- 4단계 루프와 7개 커맨드의 매핑은 *내 해석*이며 [Compound Engineering 원문](/wiki/harness-engineering/compound-engineering-philosophy)에 명시된 매핑은 아님
+- /projects-sync, /curate-inbound, /cross-session-review의 phase 구조는 Journal 011/014/019 기반 요약이며, 커맨드 파일 직접 검증 필요
 - 이식 가이드는 *제안*이며, 실제 다른 프로젝트로의 이식 결과 데이터는 없음 (다음 사이클의 입력)

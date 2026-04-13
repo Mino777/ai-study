@@ -159,7 +159,7 @@ Compound가 성립하려면 2가지가 필요:
 
 **왜**: 4단계 루프는 *Compound 단계*가 빠지는지를 매 사이클 체크 가능. 5단계 ladder는 *어느 단계 박제가 부족한지* 측정 가능.
 
-**실제 사례**: compound-automation-slash-commands의 4개 슬래시 커맨드 매핑 — `/ingest`(Plan 입력), `/wt-branch`(Work 시작), `/compound`(Compound 단계), `/autoceo`(전체 루프 × N 라운드). 4개 합치면 4단계가 다 커버됨.
+**실제 사례**: compound-automation-slash-commands의 슬래시 커맨드 매핑 — `/ingest`(Plan 입력), `/wt-branch`(Work 시작), `/compound`(Compound 단계), `/autoceo`(전체 루프 × N 라운드). 이 4개가 4단계 루프의 뼈대. 이후 3개 추가(`/cross-session-review`, `/curate-inbound`, `/projects-sync`)로 총 7개 커맨드가 정착됨.
 
 ---
 
@@ -185,7 +185,7 @@ flowchart LR
 
 ---
 
-## 12 referencing 엔트리 — 어디서 어떻게 인용되는가
+## 13 referencing 엔트리 — 어디서 어떻게 인용되는가
 
 | 엔트리 | 어느 원칙을 인용 | 핵심 발췌 |
 |---|---|---|

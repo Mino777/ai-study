@@ -48,8 +48,8 @@ quiz:
 
 - **저장소**: Jominho의 `ai-study` 위키 ([SPEC.md](../../SPEC.md) 참조)
 - **목적**: Jominho의 두 프로젝트(mino-moneyflow, mino-tarosaju)에서 검증된 AI 엔지니어링 방법론을 *당신이 즉시 실행할 수 있는 형태*로 박제
-- **주요 시리즈**: [Harness Journal](/harness-journal) — AI 운영 환경 개선 사이클 기록 (006까지)
-- **당신의 역할**: (a) 위키를 읽고 *현재 작업에 적용*, (b) 작업 결과를 *다음 에이전트가 읽을 수 있게* 박제
+- **주요 시리즈**: [Harness Journal](/harness-journal) — AI 운영 환경 개선 사이클 기록 (000~021, 21 에피소드) + [iOS Journal](/harness-journal) (000~006, 7 에피소드)
+- **당신의 역할**: (a) 위키를 읽고 *현재 작업에 적용*, (b) 작업 결과를 *다음 에이전트가 읽을 수 있게* 박제, (c) 워커 프로젝트에서 발견한 패턴을 허브로 전달 (`/curate-inbound`)
 
 ## 세션 시작 필수 로드 순서
 
@@ -118,6 +118,21 @@ quiz:
 1. `.claude/commands/compound.md` (슬래시 커맨드 정의) — `/compound` 호출
 2. [Compound Engineering Philosophy](/wiki/harness-engineering/compound-engineering-philosophy) — 4단계 루프의 Compound 단계
 
+### 🔄 다른 세션 결과물 검증
+
+1. `.claude/commands/cross-session-review.md` (슬래시 커맨드 정의) — `/cross-session-review` 호출
+2. [Harness Journal 019 — 맥앱 크로스 세션 정리](/wiki/harness-engineering/harness-journal-019-mcapp-cross-session-cleanup) — 6 함정 패턴 + 5단 프로토콜
+
+### 📥 워커 프로젝트에서 온 PR 큐레이션
+
+1. `.claude/commands/curate-inbound.md` (슬래시 커맨드 정의) — `/curate-inbound #<PR번호>` 호출
+2. [Harness Journal 014 — 허브 자동 머지 + 인바운드 팁](/wiki/harness-engineering/harness-journal-014-hub-auto-merge-inbound-tips) — 양방향 기여 인프라
+
+### 🔍 워커 프로젝트 상태 진단
+
+1. `.claude/commands/projects-sync.md` (슬래시 커맨드 정의) — `/projects-sync` 호출
+2. [Harness Journal 011 — 동시 세션 안전](/wiki/harness-engineering/harness-journal-011-concurrent-session-safety) — 4층 방어 모델
+
 ## 기본 계약 — 10가지
 
 1. **세션 시작 3개 파일 로드**: CLAUDE.md → SPEC.md → 이 엔트리
@@ -149,11 +164,14 @@ quiz:
 
 | 항목 | 값 |
 |---|---|
-| 총 엔트리 | 36+ |
-| 주 시리즈 | Harness Journal (000~006) |
-| 슬래시 커맨드 | 4개 (`/compound`, `/autoceo`, `/wt-branch`, `/ingest`) |
-| 현재 최우선 큐 | Zod 출력 검증 적용 / AI API 비용 추적 적용 (양쪽 프로젝트 공통 미적용 영역) |
-| 최근 검증 인프라 | test-gate.yml (moneyflow), test.yml typecheck (tarosaju), `/wt-branch` 3 프로젝트 통일 |
+| 총 엔트리 | 70 |
+| 카테고리 | 11개 (prompt/context/harness/tokenomics/rag/agents/fine-tuning/evaluation/infrastructure/ios-ai/frontend-ai) |
+| 주 시리즈 | Harness Journal (000~021, 21 에피소드) + iOS Journal (000~006, 7 에피소드) |
+| 슬래시 커맨드 | 7개 (`/compound`, `/autoceo`, `/wt-branch`, `/ingest`, `/cross-session-review`, `/curate-inbound`, `/projects-sync`) |
+| 허브-워커 모델 | ai-study(허브) + moneyflow/tarosaju(워커) — 양방향 기여 인프라 확립 |
+| Runtime Validator | moneyflow 10/10 에이전트 Layer 1-4 완료 |
+| LLM-as-a-Judge | 3 프로젝트 적용 (moneyflow/tarosaju/ai-study) |
+| CI/CD | ai-review.yml (3 프로젝트) + test-gate.yml (moneyflow) + validate-content.mjs + vitest 회귀 테스트 |
 
 이 상태는 *스냅샷*이다. 최신 큐는 [Harness Journal 000 베이스라인의 갱신 로그](/wiki/harness-engineering/harness-journal-000-baseline#갱신-로그) 확인.
 
@@ -215,7 +233,7 @@ quiz:
 
 ### 검증 메모
 
-- 상황별 라우팅 7개 섹션은 *현 시점 위키 상태*. 새 엔트리 추가 시 갱신 필요.
+- 상황별 라우팅 10개 섹션은 *현 시점 위키 상태*. 새 엔트리 추가 시 갱신 필요.
 - 기본 계약 10가지는 *이 위키 운영 경험*에서 추출. 다른 환경에선 조정 필요.
 - 자율 모드 경계 5가지는 [Journal 003 (Multi-session)](/wiki/harness-engineering/multi-session-ai-ops-patterns)에서 직접 입증된 것만 기록.
 - 위키 상태 스냅샷(총 엔트리 수 등)은 2026-04-12 기준. 실제 상태와 차이 발생 시 `/harness-journal` 인덱스 페이지가 진짜 소스.

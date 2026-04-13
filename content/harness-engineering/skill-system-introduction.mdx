@@ -24,10 +24,10 @@ quiz:
     choices:
       - "Claude Code가 Skill을 지원하지 않기 때문"
       - "두 프로젝트가 작아서 Skill이 필요 없기 때문"
-      - "*슬래시 커맨드 2개(/compound, /autoceo)*로 시작해서 점점 그 안에 모든 워크플로를 박는 패턴이 굳어졌기 때문. 작은 단위를 *분리*할 필요를 느끼기 전에 *통합 워크플로*에 익숙해짐. 이게 미활용의 경로 의존성"
+      - "*슬래시 커맨드 7개(/compound, /autoceo, /wt-branch, /ingest, /cross-session-review, /curate-inbound, /projects-sync)*로 시작해서 점점 그 안에 모든 워크플로를 박는 패턴이 굳어졌기 때문. 작은 단위를 *분리*할 필요를 느끼기 전에 *통합 워크플로*에 익숙해짐. 이게 미활용의 경로 의존성"
       - "Skill은 GPT 전용 기능이기 때문"
     answer: 2
-    explanation: "초기에 슬래시 커맨드로 시작하면 *모든 자동화를 슬래시 커맨드에 박는* 습관이 생긴다. /compound에 회고+솔루션+CHANGELOG+메모리 4가지가 다 들어간 게 그 예. 작은 재사용 단위로 분리하는 *비용*이 통합된 워크플로의 *익숙함*보다 커 보인다. 이게 *경로 의존성* — 시작점이 그 후 모든 결정을 좁힌다."
+    explanation: "초기에 슬래시 커맨드로 시작하면 *모든 자동화를 슬래시 커맨드에 박는* 습관이 생긴다. /compound에 회고+솔루션+CHANGELOG+메모리 4가지가 다 들어간 게 그 예. 현재 7개(/compound, /autoceo, /wt-branch, /ingest, /cross-session-review, /curate-inbound, /projects-sync)로 늘어났지만 .claude/skills/는 여전히 비어 있다. 작은 재사용 단위로 분리하는 *비용*이 통합된 워크플로의 *익숙함*보다 커 보인다. 이게 *경로 의존성* — 시작점이 그 후 모든 결정을 좁힌다."
   - question: "Skill 도입의 *첫 한 가지*로 가장 좋은 후보는?"
     choices:
       - "/compound을 쪼개서 4개 Skill로 만들기"
@@ -42,7 +42,7 @@ quiz:
 
 [Journal 000 베이스라인](/wiki/harness-engineering/harness-journal-000-baseline)에서 발견된 **공통 갭 #8**:
 
-> `.claude/skills/` 디렉터리 미활용 — 양쪽 모두 슬래시 커맨드 2개(`/compound`, `/autoceo`)만. *작은 재사용 단위*인 skill 형식 미사용.
+> `.claude/skills/` 디렉터리 미활용 — 양쪽 모두 슬래시 커맨드 7개(`/compound`, `/autoceo`, `/wt-branch`, `/ingest`, `/cross-session-review`, `/curate-inbound`, `/projects-sync`)만. *작은 재사용 단위*인 skill 형식 미사용.
 
 이 글은 양쪽 미적용 상태에서 *제안 + 도입 가이드*. Skill은 슬래시 커맨드보다 진입 비용이 낮은 *작은 능력 단위*인데, 양쪽 프로젝트 모두 *경로 의존성*으로 미사용 상태.
 
