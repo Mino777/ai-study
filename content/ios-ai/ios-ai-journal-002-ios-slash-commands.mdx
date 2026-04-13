@@ -1,99 +1,193 @@
 ---
-title: "iOS AI Journal 002 — iOS 특화 슬래시 커맨드 시스템"
+title: "iOS Harness Journal 002 — iOS 특화 슬래시 커맨드 5종"
 category: ios-ai
 series: ios-ai-journal
-date: "2026-04-13"
-tags: [ios, slash-commands, ios-review, ios-investigate, ios-bugfix]
+date: "2026-02-03"
+tags: [ios-harness-journal, ios, slash-commands, ios-triage, ios-review, ios-investigate, ios-ship, ios-arch]
 confidence: 4
 connections: [ios-ai/ios-ai-journal-001-swift-lint-hook, harness-engineering/skill-system-introduction]
 status: complete
 type: entry
-description: "iOS 프로젝트에 특화된 슬래시 커맨드 3종 설계 — ios-review, ios-investigate, ios-bugfix의 작동 방식과 실제 적용"
+description: "iOS 프로젝트에 특화된 슬래시 커맨드 5종 설계 — ios-triage, ios-review, ios-investigate, ios-ship, ios-arch. 일반 커맨드로는 iOS 고유 문제(RIBs 위반, 메모리 리크, 앱스토어 심사)를 잡기 어렵다."
 ---
 
-## iOS AI Journal 002: iOS 특화 슬래시 커맨드 시스템
+## 한 줄 요약
 
-일반 `/review`, `/investigate`로는 iOS 특유의 문제를 잡기 어렵다. **RIBs 레이어 위반**, **메모리 리크**, **시뮬레이터 환경 차이** 같은 것들은 iOS 전용 체크리스트가 필요하다.
+일반 `/review`, `/investigate`는 iOS 특유 문제를 잡지 못한다. RIBs 레이어 위반, 메모리 리크, 앱스토어 심사 관련 체크리스트는 iOS 전용 커맨드가 필요하다.
 
-### ios-review
+---
+
+## 5종 커맨드 전체 맵
+
+```
+버그 발생
+  ↓ /ios-triage     ← 인터뷰식 원인 파악
+  ↓ /ios-investigate ← 크래시/에러 심층 분석
+  ↓ 수정 완료
+  ↓ /ios-review     ← PR 리뷰 (RIBs + 메모리 + 코드 품질)
+  ↓ /ios-ship       ← 앱스토어 배포 플로우
+  ↓ /ios-arch       ← (필요 시) 아키텍처 설계 상담
+```
+
+---
+
+## /ios-triage
+
+버그를 받았을 때 바로 수정하지 않는다. 먼저 질문으로 원인을 좁힌다.
+
+```markdown
+# .claude/commands/ios-triage.md
+
+## iOS 버그 트리아지
+
+모든 질문에 답하기 전에 수정을 시작하지 않는다.
+
+### 1단계: 현상 파악
+- 어떤 화면/액션에서 발생하나요?
+- 증상 분류: 크래시 / UI 깨짐 / 동작 안 함 / 성능 저하
+
+### 2단계: 재현 조건
+- 항상 발생 vs 간헐적 발생?
+- 특정 조건? (로그인 상태, 특정 데이터, iOS 버전)
+- 디바이스 vs 시뮬레이터 차이?
+
+### 3단계: 증거 수집
+- 크래시 로그 / 스택 트레이스 있나요?
+- 최근 변경된 코드가 있나요?
+- 발생 직전 사용자 액션?
+
+### 4단계: 가설 수립 (최대 3개)
+수집된 정보로 원인 후보 목록 작성.
+→ /ios-investigate 또는 /ios-bugfix로 전달.
+```
+
+---
+
+## /ios-review
+
+RIBs + ReactorKit 구조를 체크하는 PR 리뷰 커맨드.
 
 ```markdown
 # .claude/commands/ios-review.md
 
-## iOS 코드 리뷰 체크리스트
+## iOS PR 리뷰 체크리스트
 
 ### RIBs 레이어 검사
-- [ ] Interactor가 UIKit import하고 있지 않은지
-- [ ] Router가 비즈니스 로직을 갖고 있지 않은지
+- [ ] Presentation이 Repository를 직접 호출하고 있지 않은지
+- [ ] Reactor가 UIKit을 import하고 있지 않은지
 - [ ] Builder 외부에서 의존성 주입이 일어나고 있지 않은지
+- [ ] Router가 비즈니스 로직을 갖고 있지 않은지
+
+### ReactorKit 패턴 검사
+- [ ] View가 Reactor에만 바인딩하는지 (직접 UseCase 호출 금지)
+- [ ] mutate()에서 side effect 처리, reduce()는 순수 함수인지
+- [ ] State가 불필요하게 크지 않은지
 
 ### 메모리 관리
-- [ ] Closure capture list에 [weak self] 누락 없는지
+- [ ] Closure에 [weak self] 누락 없는지
 - [ ] delegate 프로퍼티가 weak으로 선언되어 있는지
 - [ ] Timer, NotificationCenter 해제 코드 있는지
+- [ ] DisposeBag 사용 적절한지
 
 ### Swift 코드 품질
-- [ ] force unwrap (!) 사용 여부
+- [ ] force unwrap (!) 사용 여부 — error 레벨 위반
 - [ ] guard let / if let 대신 ! 남용 여부
-- [ ] async/await에서 MainActor 적절히 사용하는지
+- [ ] @MainActor / DispatchQueue.main 적절한지
+- [ ] async/await에서 Task 취소 처리 있는지
 
 ### 테스트
-- [ ] Interactor 로직에 대한 유닛 테스트 존재하는지
-- [ ] Mock 객체가 프로토콜 기반인지
+- [ ] Reactor 로직에 대한 유닛 테스트 있는지
+- [ ] Mock 객체가 프로토콜 기반인지 (ConcreteClass 직접 사용 금지)
 ```
 
-### ios-investigate
+---
+
+## /ios-investigate
+
+크래시 리포트나 스택 트레이스가 있을 때 심층 분석.
 
 ```markdown
 # .claude/commands/ios-investigate.md
 
-## iOS 버그 조사 프로토콜
+## iOS 버그 심층 조사
 
-1. **크래시 리포트 분석** (있는 경우)
-   - Stack trace에서 첫 번째 앱 코드 라인 찾기
-   - 해당 시점의 메모리 상태 추론
+### 1. 크래시 리포트 분석
+- Stack trace에서 첫 번째 앱 코드 라인 특정
+- 시스템 프레임 vs 앱 프레임 구분
+- 해당 시점의 메모리/스레드 상태 추론
 
-2. **RIBs 흐름 추적**
-   - 어떤 RIB에서 발생했는지 특정
-   - attach/detach 순서 확인
+### 2. RIBs 흐름 추적
+- 어떤 RIB에서 발생했는지 특정
+- attach/detach 순서 확인
+- 연관된 Router 흐름 파악
 
-3. **재현 조건 특정**
-   - 항상 발생 vs 간헐적 발생
-   - 특정 iOS 버전에서만 발생 여부
-   - 디바이스 vs 시뮬레이터 차이
+### 3. 재현 조건 검증
+- 항상 발생 vs 간헐적 발생
+- 특정 iOS 버전에서만?
+- 디바이스 vs 시뮬레이터 차이?
 
-4. **가설 목록 작성** (최대 3개)
-   → ios-bugfix로 이관
+### 4. 가설 목록 (최대 3개)
+각 가설에 검증 방법 포함.
+→ 수정 후 docs/solutions/ 에 기록.
 ```
 
-### ios-bugfix
+---
+
+## /ios-ship
+
+앱스토어 배포 플로우를 단계별로 안내.
 
 ```markdown
-# .claude/commands/ios-bugfix.md
+# .claude/commands/ios-ship.md
 
-## iOS 버그 수정 브리프
+## iOS 앱스토어 배포 플로우
 
-ios-investigate 결과를 입력받아 수정 계획 수립:
+### Pre-flight 체크
+- [ ] 버전 번호 / 빌드 번호 업데이트
+- [ ] CHANGELOG 업데이트
+- [ ] 스크린샷 / 메타데이터 최신 상태
 
-1. 영향 범위 확인 (이 RIB만 or 전체 흐름)
-2. 테스트 먼저 작성 (버그 재현 테스트)
-3. 수정 → 테스트 통과 확인
-4. 회귀 가능성 있는 주변 코드 ios-review 실행
-5. docs/solutions/ios/ 에 기록
+### 빌드
+- [ ] Archive 빌드 (Release 스킴)
+- [ ] 코드 서명 확인
+- [ ] TestFlight 업로드 → 내부 테스트
+
+### 심사 제출
+- [ ] App Store Connect 릴리즈 노트 작성
+- [ ] 심사 제출
+- [ ] 심사 거절 시 docs/solutions/ios/appstore/ 에 기록
+
+### 배포 후
+- [ ] /ios-compound 실행 (회고 + 지식 축적)
 ```
 
-### 3개 커맨드의 흐름
+---
 
-```
-버그 발견
-  ↓
-/ios-investigate  ← 원인 분석
-  ↓
-/ios-bugfix       ← 수정 계획 + 실행
-  ↓
-/ios-review       ← 수정 코드 검증
-  ↓
-docs/solutions/ios/ 기록
+## /ios-arch
+
+새 RIB 설계, 모듈 분리, 아키텍처 결정 상담.
+
+```markdown
+# .claude/commands/ios-arch.md
+
+## iOS 아키텍처 설계 상담
+
+### 새 RIB 설계 시
+1. 부모 RIB이 무엇인지 확인
+2. 이 RIB의 책임 범위 정의
+3. 필요한 Repository 목록
+4. 연관 RIB과의 통신 방식 (Listener 프로토콜)
+
+### 모듈 분리 시
+- Core 모듈 변경은 전체 영향 → 신중하게
+- Feature 모듈은 독립적으로 수정 가능
+- Package.swift 변경은 사람이 직접 확인
+
+### 결정 기록
+중요한 아키텍처 결정은 docs/solutions/ios/architecture/ 에 ADR 작성.
 ```
 
-이 흐름을 거치면 같은 버그가 다시 나왔을 때 과거 해결책을 바로 찾을 수 있다.
+---
+
+> 5종 커맨드는 각자 독립적으로 쓸 수도 있고, 위의 흐름대로 연결해서 쓸 수도 있다.
+> 핵심은 "바로 코드 수정"이 아니라 "먼저 원인 파악 → 검증 → 수정 → 기록" 순서를 강제하는 것.

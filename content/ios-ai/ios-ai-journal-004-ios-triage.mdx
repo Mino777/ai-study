@@ -1,72 +1,66 @@
 ---
-title: "iOS AI Journal 004 — ios-triage: 인터뷰식 버그 파악 패턴"
+title: "iOS Harness Journal 004 — ios-triage 설계: 인터뷰식 버그 파악"
 category: ios-ai
 series: ios-ai-journal
-date: "2026-04-13"
-tags: [ios, triage, bug, interview-pattern, bugfix]
+date: "2026-02-17"
+tags: [ios-harness-journal, ios, triage, bug-investigation, interview-pattern, ribs]
 confidence: 4
 connections: [ios-ai/ios-ai-journal-003-claudeignore-spm, ios-ai/ios-ai-journal-002-ios-slash-commands]
 status: complete
 type: entry
-description: "iOS 버그를 인터뷰 방식으로 단계적으로 좁혀가는 ios-triage 패턴과 bugfix 브리프로 연결하는 흐름"
+description: "iOS 버그를 인터뷰 방식으로 단계적으로 좁혀가는 /ios-triage 패턴. 증상만 보고 바로 코드를 건드리지 않고, 먼저 원인 가설 3개를 만든 후 수정에 들어간다."
 ---
 
-## iOS AI Journal 004: ios-triage - 인터뷰식 버그 파악 패턴
+## 한 줄 요약
 
-iOS 버그는 맥락이 부족하면 AI가 엉뚱한 곳을 수정한다. **ios-triage**는 먼저 질문으로 버그를 좁혀가는 패턴이다.
+iOS 버그를 받았을 때 바로 코드를 건드리지 않는다. `/ios-triage`가 질문으로 원인을 좁히고, 가설 3개를 만들고, 브리프를 작성한다. 그 다음에 수정이 시작된다.
 
-### 왜 "인터뷰"인가?
+---
 
-의사가 진단하는 방식과 같다. 증상을 들고 바로 수술하지 않는다.
+## 왜 "인터뷰"인가
+
+맥락이 없으면 AI는 잘못된 곳을 수정한다. RIBs 프로젝트에서 특히 심하다.
 
 ```
-❌ 나쁜 방식:
-"HomeViewController에서 크래시나요. 고쳐주세요."
-→ AI가 HomeViewController 전체를 수정 시도
+❌ 나쁜 방식
+"HomeViewController에서 크래시납니다. 고쳐주세요."
+→ AI가 HomeViewController 전체를 뒤지다가
+   전혀 관계없는 코드를 수정
 
-✅ 좋은 방식 (ios-triage):
+✅ /ios-triage 방식
 Q: 언제 발생하나요?
 A: 탭바에서 홈 탭 두 번 탭할 때
 Q: 항상 발생하나요?
-A: 특정 사용자만 (로그인 상태)
+A: 로그인 상태에서만
 Q: 크래시 로그 있나요?
-A: EXC_BAD_ACCESS at RootRouter.swift:42
-→ 이제 정확한 원인 범위 특정
+A: EXC_BAD_ACCESS at HomeRouter.swift:42
+→ HomeRouter의 attach 중복 호출 가능성으로 범위 특정
 ```
 
-### ios-triage 슬래시 커맨드
+---
 
-```markdown
-# .claude/commands/ios-triage.md
-
-## iOS 버그 트리아지 인터뷰
-
-다음 질문을 순서대로 사용자에게 묻고 답을 기록한다.
-모든 질문에 답하기 전에 수정을 시작하지 않는다.
-
-### 1단계: 버그 현상
-- 어떤 화면/액션에서 발생하나요?
-- 어떤 증상인가요? (크래시 / 화면 깨짐 / 동작 안 함 / 느림)
-
-### 2단계: 재현 조건
-- 항상 발생하나요, 간헐적인가요?
-- 특정 조건이 있나요? (로그인 상태, 특정 데이터, iOS 버전)
-- 디바이스 vs 시뮬레이터 차이가 있나요?
-
-### 3단계: 증거 수집
-- 크래시 로그나 스택 트레이스가 있나요?
-- 발생 직전에 어떤 사용자 액션이 있었나요?
-- 최근 변경된 코드가 있나요?
-
-### 4단계: 가설 수립
-수집된 정보로 가능한 원인 최대 3개를 나열하고
-/ios-bugfix로 브리프 전달.
-```
-
-### 실제 트리아지 예시
+## /ios-triage 전체 플로우
 
 ```
-[ios-triage 시작]
+입력: 버그 증상 (자유 형식)
+  ↓
+1단계: 현상 파악 (화면 + 증상 분류)
+  ↓
+2단계: 재현 조건 (항상 vs 간헐적, 특정 조건)
+  ↓
+3단계: 증거 수집 (크래시 로그, 최근 변경 코드)
+  ↓
+4단계: 가설 수립 (최대 3개, 검증 방법 포함)
+  ↓
+출력: Bugfix 브리프 → /ios-investigate 또는 직접 수정
+```
+
+---
+
+## 실제 트리아지 예시
+
+```
+[/ios-triage 시작]
 
 Q: 어떤 화면/액션에서 발생하나요?
 A: 알림 탭에서 특정 알림 누를 때
@@ -75,35 +69,70 @@ Q: 어떤 증상인가요?
 A: 앱 크래시
 
 Q: 항상 발생하나요?
-A: 딥링크로 진입한 경우에만
+A: 딥링크로 앱 진입 후에만
 
 Q: 크래시 로그 있나요?
 A: Thread 1: EXC_BAD_ACCESS
-   NotificationRouter.routeToDetail(notificationId:)
+   NotificationRouter.routeToDetail(notificationId:) + 48
+
+Q: 최근 변경된 코드 있나요?
+A: 딥링크 처리 코드를 어제 수정했음
+
+---
 
 [트리아지 결과]
-- 범위: NotificationRouter
-- 원인 가설:
-  1. notificationId가 nil인데 강제 언래핑
-  2. RIB이 아직 attach되기 전에 라우팅 시도
-  3. 딥링크 처리 시 RIB 생명주기 순서 문제
 
-→ /ios-bugfix에 전달
+범위: NotificationRouter.routeToDetail
+관련 RIB: NotificationRIB
+
+가설 목록:
+1. notificationId가 nil인데 강제 언래핑 (확인: routeToDetail 파라미터 타입)
+2. RIB이 아직 attach되기 전에 딥링크 라우팅 시도 (확인: attach 시점 vs 딥링크 처리 시점)
+3. 딥링크 처리 후 RIB 생명주기 순서 문제 (확인: AppDelegate → Router 호출 순서)
+
+우선 가설 2 확인. RIB이 준비되기 전에 라우팅이 들어오는 패턴이 딥링크에서 자주 발생.
 ```
 
-### bugfix 브리프 포맷
+---
+
+## Bugfix 브리프 포맷
+
+트리아지가 끝나면 이 형식으로 브리프를 작성하고 수정에 들어간다:
 
 ```markdown
-## Bugfix 브리프 (ios-triage 결과)
+## Bugfix 브리프
 
-**증상**: 딥링크 진입 시 알림 상세 화면에서 크래시
-**재현 조건**: 딥링크로 진입 + 알림 탭 → 특정 알림 탭
+**증상**: 딥링크 진입 후 알림 상세 화면 크래시
+**재현**: 딥링크 앱 진입 → 알림 탭 → 특정 알림 탭
 **증거**: NotificationRouter.routeToDetail 스택 트레이스
-**가설 1순위**: notificationId 강제 언래핑
+**1순위 가설**: RIB attach 전 라우팅 시도
 
 **수정 순서**:
-1. NotificationRouter.routeToDetail 확인
-2. nil 체크 또는 optional binding으로 수정
-3. 딥링크 진입 재현 테스트
-4. docs/solutions/ios/2026-04-13-notification-deeplink-crash.md 기록
+1. NotificationRouter.routeToDetail 코드 확인
+2. 딥링크 처리 시점과 RIB attach 시점 비교
+3. guard 또는 딥링크 대기 큐 패턴 적용
+4. 딥링크 진입 재현 테스트
+5. docs/solutions/ios/crashes/notification-deeplink-crash.md 기록
 ```
+
+---
+
+## RIBs에서 자주 나오는 가설 패턴
+
+트리아지를 반복하다 보면 iOS RIBs 프로젝트에서 자주 나오는 패턴이 있다:
+
+| 증상 | 자주 나오는 원인 |
+|------|----------------|
+| 딥링크 크래시 | RIB attach 전 라우팅 시도 |
+| 탭바 전환 크래시 | 동일 RIB 중복 attach |
+| 메모리 리크 | Listener 순환 참조 (strong delegate) |
+| 화면 깜빡임 | State 업데이트 스레드 불일치 |
+| 무한 로딩 | DisposeBag 해제 타이밍 |
+
+트리아지를 할 때 이 패턴 목록을 가설의 출발점으로 쓴다.
+
+---
+
+> `/ios-triage`가 쌓이면 docs/solutions/ios/crashes/에 케이스가 쌓인다.
+> 같은 패턴이 다시 나왔을 때 트리아지 없이 바로 해결 가능해진다.
+> 이게 iOS Compound의 핵심이다. → [Ep.005](/wiki/ios-ai/ios-ai-journal-005-ios-compound)

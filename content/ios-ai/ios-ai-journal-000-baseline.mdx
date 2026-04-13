@@ -1,77 +1,164 @@
 ---
-title: "iOS AI Journal 000 — iOS AI 하네스 베이스라인"
+title: "iOS Harness Journal 000 — 베이스라인"
 category: ios-ai
 series: ios-ai-journal
-date: "2026-04-13"
-tags: [ios, harness-engineering, ribs, claude-code, baseline]
+date: "2026-01-20"
+tags: [ios-harness-journal, ios, harness-engineering, ribs, reactorkit, baseline, claude-code]
 confidence: 4
-connections: [harness-engineering/harness-engineering-overview, ios-ai/apple-intelligence-api]
+connections: [harness-engineering/harness-journal-000-baseline, ios-ai/apple-intelligence-api]
 status: complete
 type: entry
-description: "iOS 프로젝트에서 AI 에이전트가 안전하게 작동할 수 있는 하네스 베이스라인 설계 — RIBs 아키텍처, 컨텍스트 주입, CLAUDE.md 원칙"
+description: "iOS 프로덕션 앱에 AI 운영 환경을 처음 세팅한 기록. RIBs + ReactorKit 아키텍처에서 Claude가 안전하게 작동하도록 CLAUDE.md, .claudeignore, 커스텀 스킬 5종을 설치한 시작점."
 ---
 
-## iOS AI Journal 000: iOS AI 하네스 베이스라인
+## 한 줄 요약
 
-모든 iOS 프로젝트에 AI 에이전트를 붙이기 전에 먼저 **환경 설계**를 해야 한다. 에이전트가 코드를 잘못 건드리지 않도록 울타리를 치는 것이 핵심.
+RIBs + ReactorKit 기반 iOS 앱에 AI 운영 환경 베이스라인을 설치했다. Claude가 아키텍처를 이해하고, 안전하게 코드를 생성하며, 코드 규칙을 자동으로 지키는 최소 구조.
 
-### 왜 iOS는 별도 하네스가 필요한가?
+---
 
-웹 프로젝트와 iOS 프로젝트는 AI 에이전트 관점에서 다르다:
+## 문제 상황
 
-| 구분 | 웹 | iOS |
-|------|-----|-----|
-| 아키텍처 | 자유로움 | RIBs / VIPER / Clean 강제 |
-| 빌드 | npm run build (수초) | xcodebuild (수분) |
-| 의존성 | node_modules | SPM + CocoaPods 혼재 |
-| 테스트 | 즉각적 | 시뮬레이터 필요 |
-| 컨텍스트 크기 | 보통 | .build/ 폴더가 130GB+ |
+iOS 앱 개발에 Claude를 처음 투입했을 때의 상황:
 
-에이전트가 iOS 프로젝트를 그냥 읽으면 빌드 아티팩트까지 다 삼켜버린다.
+| 문제 | 현상 |
+|------|------|
+| 아키텍처 무지 | RIBs 레이어 경계를 무시하고 Presentation에서 Repository 직접 호출 |
+| 코드 규칙 무시 | SwiftLint 경고 유발 코드 생성, SwiftFormat 스타일 불일치 |
+| 컨텍스트 오염 | `.build/` 폴더(130GB+) 접근 시도로 토큰 낭비 |
+| 반복 설명 비용 | 매 세션마다 프로젝트 구조를 처음부터 설명해야 함 |
 
-### RIBs 아키텍처에서 AI 에이전트의 역할 범위
+해결책은 "Claude가 기억해야 할 규칙"이 아니라 "구조가 강제하는 가드"다.
 
-RIBs 구조에서 AI가 건드려도 되는 곳과 건드리면 안 되는 곳을 명확히 한다:
+---
+
+## 아키텍처: RIBs + ReactorKit
+
+프로젝트 레이어 구조는 고정되어 있다. AI가 이걸 모르면 반드시 레이어 위반 코드를 생성한다.
 
 ```
-✅ 건드려도 되는 곳
-├── Interactor (비즈니스 로직)
-├── Presenter (뷰 로직)
-├── Builder (의존성 조립)
-└── Tests/
-
-❌ 건드리면 안 되는 곳
-├── .build/           ← SPM 캐시, 130GB+
-├── Pods/             ← CocoaPods 의존성
-├── *.xcodeproj       ← Xcode 프로젝트 파일
-└── DerivedData/      ← 빌드 아티팩트
+Presentation (View + Reactor)
+    ↕ Action / State (ReactorKit 단방향)
+UseCase (비즈니스 로직)
+    ↕
+Repository (데이터 추상화)
+    ↕
+Network / Storage (외부 접근)
 ```
 
-### CLAUDE.md 핵심 원칙
+### ReactorKit 패턴
 
-```markdown
-## iOS 프로젝트 AI 에이전트 규약
+```swift
+// Action → mutate() → Mutation → reduce() → State
+// View는 Action만 보냄. State만 구독.
+class HomeReactor: Reactor {
+    enum Action {
+        case viewDidLoad
+        case refresh
+    }
 
-### 절대 금지
-- .build/, Pods/, DerivedData/ 파일 수정
-- xcodeproj 파일 직접 수정
-- 시뮬레이터 없이 UI 코드 "완성됐다" 주장
+    enum Mutation {
+        case setLoading(Bool)
+        case setItems([Item])
+    }
 
-### 필수 확인
-- PR 전 swiftlint 실행
-- RIBs 레이어 경계 침범 여부 확인
-- 새 파일 추가 시 타겟 멤버십 확인 (AI가 놓치는 부분)
+    struct State {
+        var isLoading = false
+        var items: [Item] = []
+    }
 
-### 컨텍스트 주입
-- 현재 작업 중인 RIB 이름 명시
-- 연관된 Interactor/Router/Builder 파일 미리 열기
+    func mutate(action: Action) -> Observable<Mutation> {
+        switch action {
+        case .viewDidLoad, .refresh:
+            return Observable.concat([
+                .just(.setLoading(true)),
+                homeUseCase.fetchItems().map { .setItems($0) },
+                .just(.setLoading(false))
+            ])
+        }
+    }
+
+    func reduce(state: State, mutation: Mutation) -> State {
+        var state = state
+        switch mutation {
+        case .setLoading(let v): state.isLoading = v
+        case .setItems(let v): state.items = v
+        }
+        return state
+    }
+}
 ```
 
-### 베이스라인 체크리스트
+**핵심 규칙**:
+- View → Reactor: Action만
+- Reactor → View: State만
+- Reactor는 UseCase만 호출, Repository는 직접 접근 금지
+- 레이어 간 직접 접근 = 코드 리뷰 거부 사유
 
-- [ ] .claudeignore로 빌드 아티팩트 제외
-- [ ] CLAUDE.md에 RIBs 레이어 설명 추가
-- [ ] SwiftLint 룰 AI가 이해할 수 있게 주석 처리
-- [ ] 테스트 실행 커맨드 명시
+---
 
-다음 Journal에서는 SwiftLint + SwiftFormat을 **PreToolUse 훅으로 자동 강제**하는 방법을 다룬다.
+## 베이스라인 설치 항목
+
+### 1. CLAUDE.md — 프로젝트 계약서
+
+모든 세션이 시작할 때 Claude가 첫 번째로 읽는 파일. 여기에 없으면 Claude는 모른다고 가정한다.
+
+포함 내용:
+- RIBs 레이어 구조 + 금지 패턴 명시
+- SwiftLint / SwiftFormat 규칙 요약
+- 커스텀 스킬 5종 목록 및 용도
+- 절대 건드리지 말아야 할 파일/폴더 목록
+- Persistent 모듈(AES256 암호화 UserDefaults) 사용 규칙
+
+### 2. .claudeignore — 컨텍스트 오염 차단
+
+```
+.build/
+.swiftpm/
+Pods/
+DerivedData/
+*.xcuserstate
+*.xcworkspace/xcuserdata/
+Generated/
+R.generated.swift
+TestResults/
+*.xcresult
+```
+
+`.build/` 하나만으로 130GB+ 절감. 이게 없으면 Claude는 빌드 아티팩트를 소스 코드로 착각한다. [자세한 내용 → Ep.003](/wiki/ios-ai/ios-ai-journal-003-claudeignore-spm)
+
+### 3. 커스텀 스킬 5종
+
+`.claude/commands/` 에 배치. 반복적인 작업 흐름을 구조화한다.
+
+| 스킬 | 용도 |
+|------|------|
+| `/ios-triage` | 버그 접수 → 인터뷰식 원인 파악 → 브리프 작성 |
+| `/ios-review` | PR 리뷰 (RIBs 준수 + 메모리 관리 + 코드 품질) |
+| `/ios-investigate` | 크래시/에러 심층 분석 (스택 트레이스 해석) |
+| `/ios-ship` | 앱스토어 배포 플로우 (빌드 → 심사 → 배포) |
+| `/ios-arch` | 아키텍처 설계 상담 (새 RIB 설계, 모듈 분리) |
+
+---
+
+## 변화 전/후
+
+| | 이전 | 이후 |
+|--|------|------|
+| 아키텍처 위반 코드 | 매 세션 발생 | 거의 없음 |
+| SwiftLint 경고 | 종종 있음 | PreToolUse 훅이 차단 |
+| 세션 시작 비용 | 5분 설명 | CLAUDE.md 로드로 즉시 |
+| `.build/` 접근 | 시도함 | .claudeignore로 차단 |
+| 반복 버그 | 매 스프린트 재발 | docs/solutions/ 축적으로 감소 |
+
+---
+
+## 다음 에피소드
+
+- [Ep.001](/wiki/ios-ai/ios-ai-journal-001-swift-lint-hook) — SwiftLint + PreToolUse 훅으로 코드 규칙 자동 강제
+- [Ep.002](/wiki/ios-ai/ios-ai-journal-002-ios-slash-commands) — iOS 특화 슬래시 커맨드 5종 설계
+
+---
+
+> **Compound Engineering 원칙**: 행동에 박는 가드 > 기억에 의존하는 가드.
+> CLAUDE.md와 .claudeignore는 "Claude가 기억해야 할 규칙"이 아니라 "구조가 강제하는 규칙"이다.

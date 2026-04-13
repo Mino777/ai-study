@@ -90,7 +90,7 @@ export function HarnessJournalClient({
               : "bg-surface border border-border text-text hover:border-accent hover:text-accent"
           }`}
         >
-          📱 iOS
+          📱 iOS Harness Journal
         </button>
       </div>
 
