@@ -132,57 +132,12 @@ import Foundation
 enum IntelligentActionType {
     case summarize(content: String) // 특정 텍스트 요약
     case suggestFollowUpActions(forContextIdentifier: String, contextType: String) // 특정 컨텍스트에 대한 후속 조치 제안
-    case generateDraft(basedOnContext: IntelligenceContextPayload, intent: String) // 특정 컨텍스트 기반으로 초안 생성
-    case refineText(text: String, style: TextRefinementStyle) // 텍스트 다듬기
-
-    enum TextRefinementStyle: String {
-        case professional, friendly, concise, elaborate
-    }
-}
-
-class IntelligentAgent {
-    // Intelligence Layer에 지능형 작업 요청
-    func requestIntelligentAction(_ action: IntelligentActionType) async throws -> IntelligenceResult {
-        let request: IntelligenceActionRequest
-        switch action {
-        case .summarize(let content):
-            request = IntelligenceActionRequest.summarize(content: content)
-        case .suggestFollowUpActions(let id, let type):
-            request = IntelligenceActionRequest.suggestActions(forContextIdentifier: id, contextType: type)
-        case .generateDraft(let payload, let intent):
-            request = IntelligenceActionRequest.generateDraft(withContext: payload, intent: intent)
-        case .refineText(let text, let style):
-            request = IntelligenceActionRequest.refine(text: text, style: style.rawValue)
-        }
-
-        // Intelligence Layer로부터 결과 수신
-        let response = try await IntelligenceActionManager.shared.perform(request)
-        return response
-    }
-}
-
-// 사용 예시:
-/*
-Task {
-    let agent = IntelligentAgent()
-    
-    // 1. 앱 내에서 사용자가 선택한 텍스트 요약 요청
-    let longText = "이것은 매우 긴 텍스트 내용으로, 사용자가 간략하게 요약하기를 원하는 부분입니다. 이 텍스트는 중요한 정보를 담고 있을 수 있으며..."
-    let summaryResult = try await agent.requestIntelligentAction(.summarize(content: longText))
-    if let summary = summaryResult.stringValue {
-        print("Summarized Text: \(summary)")
-    }
-
-    // 2. 이전에 기여한 회의 이벤트에 대한 후속 조치 제안 요청
-    // (여기서는 가상의 이벤트 ID와 타입 사용)
-    let meetingID = UUID() // 실제 앱의 이벤트 ID
-    let suggestedActionsResult = try await agent.requestIntelligentAction(
-        .suggestFollowUpActions```mermaid
+    ca```mermaid
 graph TD
     A[iOS 앱 개발자] --> B{IntelligenceKit API};
     B --> C{Apple Intelligence Layer};
     C --> D[온디바이스 모델];
-    C --> E[""Private Cloud Compute (PCC)""];
+    C --> E[""""""""Private Cloud Compute (PCC)""""""""];
     D --> F[시스템 컨텍스트 저장소];
     E --> F;
     F --> C;
@@ -203,6 +158,42 @@ graph TD
     style C fill:#9cf,stroke:#333,stroke-width:2px;
     style B fill:#ffd,stroke:#333,stroke-width:1px;
     style I fill:#ffd,stroke:#333,stroke-width:1px;
+    style D fill:#afa,stroke:#333,stroke-width:1px;
+    style E fill:#fca,stroke:#333,stroke-width:1px;
+    style F fill:#add,stroke:#333,stroke-width:1px;
+    style G fill:#dee,stroke:#333,stroke-width:1px;
+    style H fill:#eef,stroke:#333,stroke-width:1px;
+```tyle I fill:#ffd,stroke:#333,stroke-width:1px;
+    style D fill:#afa,stroke:#333,stroke-width:1px;
+    style E fill:#fca,stroke:#333,stroke-width:1px;
+    style F fill:#add,stroke:#333,stroke-width:1px;
+    style G fill:#dee,stroke:#333,stroke-width:1px;
+    style H fill:#eef,stroke:#333,stroke-width:1px;
+```tyle I fill:#ffd,stroke:#333,stroke-width:1px;
+    style D fill:#afa,stroke:#333,stroke-width:1px;
+    style E fill:#fca,stroke:#333,stroke-width:1px;
+    style F fill:#add,stroke:#333,stroke-width:1px;
+    style G fill:#dee,stroke:#333,stroke-width:1px;
+    style H fill:#eef,stroke:#333,stroke-width:1px;
+```tyle I fill:#ffd,stroke:#333,stroke-width:1px;
+    style D fill:#afa,stroke:#333,stroke-width:1px;
+    style E fill:#fca,stroke:#333,stroke-width:1px;
+    style F fill:#add,stroke:#333,stroke-width:1px;
+    style G fill:#dee,stroke:#333,stroke-width:1px;
+    style H fill:#eef,stroke:#333,stroke-width:1px;
+```tyle I fill:#ffd,stroke:#333,stroke-width:1px;
+    style D fill:#afa,stroke:#333,stroke-width:1px;
+    style E fill:#fca,stroke:#333,stroke-width:1px;
+    style F fill:#add,stroke:#333,stroke-width:1px;
+    style G fill:#dee,stroke:#333,stroke-width:1px;
+    style H fill:#eef,stroke:#333,stroke-width:1px;
+```tyle I fill:#ffd,stroke:#333,stroke-width:1px;
+    style D fill:#afa,stroke:#333,stroke-width:1px;
+    style E fill:#fca,stroke:#333,stroke-width:1px;
+    style F fill:#add,stroke:#333,stroke-width:1px;
+    style G fill:#dee,stroke:#333,stroke-width:1px;
+    style H fill:#eef,stroke:#333,stroke-width:1px;
+```tyle I fill:#ffd,stroke:#333,stroke-width:1px;
     style D fill:#afa,stroke:#333,stroke-width:1px;
     style E fill:#fca,stroke:#333,stroke-width:1px;
     style F fill:#add,stroke:#333,stroke-width:1px;
