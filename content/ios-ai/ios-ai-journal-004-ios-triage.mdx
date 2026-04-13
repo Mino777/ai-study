@@ -23,8 +23,8 @@ iOS 버그를 받았을 때 코드를 바로 건드리지 않는다. `/ios-triag
 
 ```
 나쁜 방식
-"HomeViewController에서 크래시납니다. 고쳐주세요."
-→ AI가 HomeViewController 전체를 뒤지다가
+"MainViewController에서 크래시납니다. 고쳐주세요."
+→ AI가 MainViewController 전체를 뒤지다가
    전혀 관계없는 코드를 수정. 버그는 그대로.
 
 /ios-triage 방식
@@ -109,7 +109,7 @@ A: 딥링크로 앱 진입한 직후에만. 앱을 직접 켜면 괜찮음.
 Round 3 — 증거
 Q: 크래시 로그 있나요? 최근 변경된 코드 있나요?
 A: Thread 1: EXC_BAD_ACCESS
-   NotificationRouter.routeToDetail(notificationId:) + 48
+   AlertRouter.routeToDetail(notificationId:) + 48
    어제 딥링크 처리 코드를 수정했음.
 
 Round 4 — 맥락
@@ -137,7 +137,7 @@ A: AppDelegate에서 바로 Router를 호출함.
 
 증상: 딥링크 진입 직후 알림 상세 크래시 (EXC_BAD_ACCESS)
 재현: 딥링크 앱 진입 → 알림 탭 → 특정 알림 탭 (로그인 상태 필수)
-증거: NotificationRouter.routeToDetail +48 스택 트레이스
+증거: AlertRouter.routeToDetail +48 스택 트레이스
 영향 범위: 로그인 사용자 전체, 전 OS
 1순위 가설: 라우팅 호출 시점이 화면 준비보다 앞섬
 2순위 가설: routeToDetail 파라미터 강제 언래핑 실패

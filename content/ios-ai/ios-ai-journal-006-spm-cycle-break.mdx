@@ -30,7 +30,7 @@ Journal 005에서 `/compound`가 "다음 스프린트의 입력을 자동으로 
 3일 전(`2026-04-10`) 회고 문서의 "Compound Assets" 섹션에 한 줄이 있었다.
 
 ```markdown
-- **순환 의존 지도**: `EFeature → DFeature → AddressSearch → Common →
+- **순환 의존 지도**: `EFeature → DFeature → CSearch → Common →
   ADomain → BFeature → APresentation → Common`. 리팩토링 타깃.
 ```
 
@@ -64,7 +64,7 @@ Common  →  ADomain
 ```
 EFeature
   └─ DFeature
-       └─ AddressSearch
+       └─ CSearch
             └─ Common
                  └─ ADomain
                       └─ BFeature            ← ⚠️ 과거에 누가 추가하려다 실패한 엣지
@@ -81,9 +81,9 @@ EFeature
 이 기형은 큰 레포에서 **공통 UI 컴포넌트가 feature-specific 데이터를 받기 시작할 때** 자연스럽게 생긴다.
 
 ```
-"Common에 편하게 SearchResultView를 만들자."
+"Common에 편하게 ResultListView를 만들자."
   ↓
-SearchResultView가 ADomain의 `AZoneHistoryEntity.Item` 타입을 Binding으로 받는다.
+ResultListView가 ADomain의 `AHistoryEntity.Item` 타입을 Binding으로 받는다.
   ↓
 Common/Package.swift에 `ADomain` dependency를 추가한다.
   ↓
@@ -130,7 +130,7 @@ swift package show-dependencies --format flatlist 2>/dev/null | sort -u
 analytics
 featuresupport
 network
-transportdomain
+servicedomain
 util
 ...
 ```
@@ -167,8 +167,8 @@ util
 
 | 파일 | 사용 심볼 | 외부 재사용 |
 |------|---------|----------|
-| `Common/Views/SearchResultView.swift` | `AZoneHistoryEntity.Item` (Binding 5개) | 0건 (APresentation에서만) |
-| `Common/Views/ExpandableTimePickerView.swift` | `SharedStateManager.instance.transportApproachType` (switch 3곳) | 1건 (FFeature) + 1건 (GPresentation) |
+| `Common/Views/ResultListView.swift` | `AHistoryEntity.Item` (Binding 5개) | 0건 (APresentation에서만) |
+| `Common/Views/ExpandablePickerView.swift` | `AppStateManager.instance.serviceApproachType` (switch 3곳) | 1건 (FFeature) + 1건 (GPresentation) |
 
 **2개 파일 중 1개는 feature 재사용이 제로**. 0건이었다. 나머지 1개도 Common에 있을 이유가 없고, APresentation에 두고 import해서 쓰는 편이 자연스러웠다.
 
@@ -181,24 +181,26 @@ util
 작업을 "깔끔하게 끝냈다"고 선언한 뒤, 사용자가 Xcode 빌드를 돌렸다. 곧 스크린샷이 날아왔다.
 
 ```
-Cannot find 'SharedStateManager' in scope     ×2
+Cannot find 'AppStateManager' in scope     ×2
 ```
 
-**`ExpandableTimePickerView.swift`의 `import ADomain`을 미사용으로 오판하고 제거했다.** 이유는 어처구니없다.
+**`ExpandablePickerView.swift`의 `import ADomain`을 미사용으로 오판하고 제거했다.** 이유는 어처구니없다.
 
 미사용 import 판단에 쓴 grep 패턴이 이거였다.
 
 ```
-Oneway(?!TimeInfoLabel|TimeInfo)
+ServiceA(?!TimeInfoLabel|TimeInfo)
 ```
 
-즉 "이 파일에서 `Oneway*` prefix로 시작하는 심볼을 찾되, 지역 변수 `ktxOnewayTimeInfoLabel`은 제외". 이 패턴은 `AZoneHistoryEntity`, `AGrgMapEntity` 같은 prefix 있는 심볼은 잘 잡지만, **`SharedStateManager`, `TransportApproachType` 같은 feature-neutral 이름을 놓친다.** `ADomain`이 exported하는 심볼에 prefix 없는 이름이 섞여 있을 거라고는 예상하지 못했다.
+즉 "이 파일에서 `ServiceA*` prefix로 시작하는 심볼을 찾되, 지역 변수 `localServiceATimeInfoLabel`은 제외". 이 패턴은 `AHistoryEntity`, `AMapEntity` 같은 prefix 있는 심볼은 잘 잡지만, **`AppStateManager`, `ServiceApproachType` 같은 feature-neutral 이름을 놓친다.** `ADomain`이 exported하는 심볼에 prefix 없는 이름이 섞여 있을 거라고는 예상하지 못했다.
 
-파일을 grep한 순간 "OnewayDomain 관련 심볼 없음 → import 미사용" 이라는 결론이 1초 만에 나왔다. 그 순간 잘못된 자신감이 생겼다.
+파일을 grep한 순간 "ADomain 관련 심볼 없음 → import 미사용" 이라는 결론이 1초 만에 나왔다. 그 순간 잘못된 자신감이 생겼다.
 
 **교훈**: 미사용 import 판단에 prefix grep을 쓰면 안 된다. 모듈의 exported 심볼 목록 자체를 allowlist로 만들어서 매칭하거나, 확신 없으면 import 라인을 **삭제 대신 주석 처리**만 하고 컴파일 시험을 돌린다. 특히 `Manager`, `Controller`, `State`, `Type` 같은 일반 suffix를 가진 심볼은 어느 모듈에나 있을 수 있다.
 
-복구는 같은 패턴 재적용이었다. `ExpandableTimePickerView`도 Common에서 `APresentation/Shared/`로 이동. 사용하는 VC 2개에 `import APresentation` 추가. 끝. 복구에 커밋 1개 추가.
+> ⚠️ 이 글에서 모듈/클래스명은 익명화되어 있다. `ADomain`, `BFeature`, `APresentation` 등은 실제 이름이 아닌 패턴 전달용 가명이다.
+
+복구는 같은 패턴 재적용이었다. `ExpandablePickerView`도 Common에서 `APresentation/Shared/`로 이동. 사용하는 VC 2개에 `import APresentation` 추가. 끝. 복구에 커밋 1개 추가.
 
 **이 실수조차 오늘의 회고로 박제됐다.** 3일 전 회고가 오늘의 방향을 결정한 것처럼, 오늘의 이 실수는 다음에 이런 grep을 쓰려는 나를 멈춰 세울 것이다. 복리의 양 방향 적용.
 
