@@ -1,0 +1,215 @@
+---
+title: "ai-review.yml Downstream Workflow Chain Pattern — GITHUB_TOKEN 정책으로 침묵하는 배포 체인 수정"
+category: harness-engineering
+date: "2026-04-13"
+tags: [ci-cd, github-actions, ai-review, deploy, workflow-chaining, github-token, inbound-pattern, raw]
+confidence: 4
+connections:
+  - harness-engineering/harness-journal-003-squash-merge-trap-pattern
+  - harness-engineering/harness-journal-014-hub-auto-merge-inbound-tips
+  - harness-engineering/harness-journal-020-promise-timeout-wrapper
+status: draft
+description: "ai-review.yml 기반 auto-merge 파이프라인을 쓰는 모든 프로젝트는 squash merge가 downstream `on: push` 워크플로우(예: deploy.yml)를 조용히 건너뛴다. 원인은 GitHub의 GITHUB_TOKEN 정책(무한 루프 방지). 3가지 해결 옵션 + 이번 사건의 실제 체인 실패 이력 + dogfooding."
+type: entry
+source: mino-moneyflow
+incident: 2026-04-13 v0.9.39 hotfix
+---
+
+> ⚠️ **RAW INBOUND — `/curate-inbound` 대기 중**
+>
+> 이 엔트리는 워커 세션(`mino-moneyflow`)에서 `patterns/` 브랜치로 쏜 *초안*이다. 허브 세션이 `/curate-inbound`로 6 카테고리(reject / tips / solution / journal / pattern / series-update) 중 어느 것에 박제할지 결정 + 재포맷한다.
+>
+> 작성자(워커 세션)의 *분류 추천*: **pattern entry** 또는 **Harness Journal 021** 후보. 이유: 이 문제는 `ai-review.yml`을 사용하는 모든 프로젝트(moneyflow / tarosaju / ai-study 자신)에 영향 + 구조적 CI/CD 결함이라 Journal 003/014과 같은 시리즈 유전자.
+
+## 목적
+
+`ai-review.yml` 기반 auto-merge 파이프라인의 *맹점*을 박제: **squash merge는 성공하지만 `deploy.yml`(또는 다른 `on: push: main` 기반 downstream 워크플로우)이 자동으로 깨어나지 않는다**. 원인은 GitHub Actions의 `GITHUB_TOKEN` 정책(무한 루프 방지)이라 *구조적*이고 *침묵한다*. 매 머지마다 수동으로 deploy를 확인하지 않으면 프로덕션이 stale 상태로 빠지는데, 이 stale 상태 자체는 어디에도 경고가 뜨지 않아 잠재 버그가 프로덕션에 숨어있는 동안 유저가 페이지를 열기 전까지는 드러나지 않는다.
+
+## 배경 — 2026-04-13 mino-moneyflow 사건
+
+### 타임라인
+
+| Time (UTC) | SHA | 트리거 경로 | `deploy.yml` 실행? |
+|---|---|---|---|
+| 04:35 | `cf52ead` | 직접 main push | ✅ |
+| 04:37 | `c2ef57a` | 직접 main push | ✅ |
+| 04:48 | `3682016` | 직접 main push | ✅ (마지막 정상 배포) |
+| 05:43 | `5aeefa6` (#114) | ai-review squash merge | ❌ 침묵 |
+| 06:13 | `b521b4e` (#115) | ai-review squash merge | ❌ 침묵 |
+| 06:26 | `309e6e4` (#116) | ai-review squash merge | ❌ 침묵 |
+| 07:41 | `a981714` (#117) | ai-review squash merge | ❌ 침묵 |
+| 07:28 | — | **유저가 페이지 열고 500 인지** | — |
+| 07:43 | `a981714` | **수동 `gh workflow run`** | ✅ (긴급 복구) |
+
+→ ai-review auto-merge 도입 이후 *100% deploy 체인 실패율*. 4번 연속 머지됐지만 프로덕션은 `3682016`에 고정됐고, v0.9.37(`f6901a2`)에서 추가된 `<Analytics beforeSend={fn}>` RSC 직렬화 버그가 그 stale 버전에 포함된 채 유저가 페이지 열 때까지 숨어있었다.
+
+### 왜 일찍 드러나지 않았나
+
+- **merge 성공 ≠ deploy 성공이지만 UI는 구분을 안 한다**: GitHub "Merged" 배지, `git log origin/main` 최신 커밋, CI 상태 초록불 — 모두 "배포됐다"는 잘못된 시그널을 준다.
+- **유저가 API endpoint만 쓰면 증상이 안 보인다**: `beforeSend` 버그는 페이지 SSR에서만 터지고 `/api/*`는 정상. 개발 중 API 테스트만 하다가 페이지를 처음 여는 순간 500.
+- **Vercel Git 통합 있다고 *착각*하기 쉽다**: 많은 Vercel 프로젝트가 git 통합으로 자동 배포한다. `deploy.yml`이 있는 프로젝트는 "어차피 Vercel이 알아서 배포하겠지"라고 넘길 수 있지만, 이 프로젝트는 git 통합을 쓰지 않고 `deploy.yml`이 유일한 배포 경로였다.
+
+## 근본 원인 — GitHub의 명시적 정책
+
+[GitHub Actions 공식 문서](https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/triggering-a-workflow#triggering-a-workflow-from-a-workflow):
+
+> *"When you use the repository's `GITHUB_TOKEN` to perform tasks, events triggered by the `GITHUB_TOKEN`, with the exception of `workflow_dispatch` and `repository_dispatch`, will not create a new workflow run."*
+
+`ai-review.yml`은 PR을 squash merge한 뒤 `git push origin HEAD:main`을 `GITHUB_TOKEN`으로 실행한다. 이 push는 git 관점에서는 정상 push지만, GitHub Actions 관점에서는 *의도적으로* downstream `on: push: main` workflow를 깨우지 않는다. 의도는 **무한 워크플로우 루프 방지** — workflow A push → workflow B → workflow B push → workflow A → ... 의 재귀를 막기 위해 GITHUB_TOKEN으로 만들어진 push는 `push` 이벤트를 *발행하지 않는다*.
+
+이 정책은 일반에 알려진 사실이지만, 실제로 마주하기 전까지 인지되지 않는다. `ai-review.yml` 자체는 "머지 성공"을 반환하고, downstream 워크플로우가 "안 돌아서" 드러나는 에러는 *없다*. 사일런트 실패는 모니터링하기 어렵다.
+
+## 해결 — 3가지 옵션 (침습도 낮은 순)
+
+### 옵션 1: `ai-review.yml` 마지막 step에 `workflow_dispatch` 호출 추가 (권장)
+
+```yaml
+# .github/workflows/ai-review.yml
+# 기존 merge step 이후에 추가
+- name: Trigger deploy workflow (bypass GITHUB_TOKEN push event silence)
+  if: steps.merge.outputs.merged == 'true'
+  uses: actions/github-script@v7
+  with:
+    github-token: ${{ secrets.GITHUB_TOKEN }}
+    script: |
+      await github.rest.actions.createWorkflowDispatch({
+        owner: context.repo.owner,
+        repo: context.repo.repo,
+        workflow_id: 'deploy.yml',
+        ref: 'main',
+      })
+```
+
+**장점**: 가장 명시적. "여기서 deploy를 일부러 깨운다"는 의도가 코드에 남아 다음 사람이 읽을 때 체인을 추적하기 쉽다. 기존 `GITHUB_TOKEN` 권한(`actions:write`)으로 `workflow_dispatch` 호출 가능 — PAT 불필요.
+
+**단점**: `workflow_dispatch` 호출 자체가 실패하면 그것도 무음 drop. 실패 감지 필요 시 step conclusion 체크로 방어.
+
+### 옵션 2: `deploy.yml` 트리거를 `workflow_run`으로 전환
+
+```yaml
+# .github/workflows/deploy.yml 상단
+on:
+  workflow_run:
+    workflows: ["🤖 AI-Review Merge"]   # ai-review.yml의 name 필드와 정확히 일치해야 함
+    types: [completed]
+    branches: [main]
+
+jobs:
+  deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    # ...
+```
+
+**장점**: `ai-review.yml`을 건드리지 않고 `deploy.yml`만 수정하면 됨. 이식 시 `ai-review.yml`의 유사도를 깨지 않음.
+
+**단점**: `workflow_run`은 *독립 실행*이라 `ai-review.yml` 컨텍스트(PR 번호 등)를 기본으로 받지 못함. 필요하면 `github.event.workflow_run.head_sha`로 lookup해야 함. `conclusion == 'success'` 체크 필수 (실패한 run에도 트리거되므로).
+
+### 옵션 3: PAT(`PAT_FOR_CI_CHAIN`) 사용
+
+```yaml
+# .github/workflows/ai-review.yml
+token: ${{ secrets.PAT_FOR_CI_CHAIN }}
+```
+
+**장점**: GITHUB_TOKEN 제약을 완전히 우회. "GITHUB_TOKEN 정책"을 다시 생각할 필요 없음.
+
+**단점**: PAT 관리(로테이션, 권한 최소화, 소유자 종속) 오버헤드. **PAT 만료 시 *조용히* 전체 체인이 깨지는 새 실패 모드**가 생긴다. 리스크가 낮지 않다.
+
+### 즉시 복구 — 수동 트리거 스니펫
+
+근본 해결 적용 전까지는 매 머지 후 수동 트리거로 대응:
+
+```bash
+# 1. 최신 main SHA로 deploy.yml 수동 트리거
+gh workflow run "🚀 Deploy to Vercel" --ref main
+
+# 2. 트리거 확인 (2~3초 대기 후)
+gh run list --workflow "🚀 Deploy to Vercel" --limit 1 \
+  --json headSha,status,conclusion
+# → status: queued → in_progress → completed/success
+
+# 3. 프로덕션 스모크 테스트 (배포 완료 후)
+for p in / /login /signup /api/health; do
+  curl -s -o /dev/null -w "$p = %{http_code}\n" "https://<host>$p"
+done
+# → 200/307만 허용
+```
+
+이 스니펫은 회고/compound 사이클의 *필수 체크리스트*로 편입해야 한다. "머지 성공 = 끝"이 아니라 "머지 성공 + deploy 실행 확인 + 프로덕션 200 = 끝".
+
+## 일반화 — 이 제약이 영향을 주는 다른 downstream 체인
+
+`deploy.yml`뿐 아니라 *`on: push: main`으로 트리거되는 모든 downstream 워크플로우*에 동일하게 적용:
+
+- Post-merge 태깅/릴리스 (`release.yml`)
+- Post-merge 문서 사이트 재빌드 (`docs.yml`)
+- Post-merge canary 모니터링 (`canary.yml`)
+- Post-merge Slack/Telegram 알림 워크플로우
+- Post-merge DB 마이그레이션 (`db-migrate.yml`)
+
+체크 방법:
+
+```bash
+# 전 워크플로우 최근 실행 + 트리거 경로 확인
+gh run list --event push --branch main --limit 20 \
+  --json name,headSha,event,createdAt
+
+# ai-review 머지 직후 downstream 워크플로우가 같은 SHA에 대해 1:1로 매칭되는지 관찰
+# 매칭 안 되면 그 워크플로우도 침묵 실패 중
+```
+
+## 검증 — Dogfooding
+
+이 pattern을 푸시하는 그 자체가 `patterns/` 플로우 dogfooding이다:
+
+```bash
+# Phase 1: patterns/ 브랜치로 ai-study에 푸시
+git -C /Users/jominho/Develop/ai-study worktree add -b \
+  patterns/2026-04-13-github-token-deploy-chain-fix \
+  /tmp/ai-study-patterns-deploy-chain origin/main
+# (이 파일 생성 + commit + push)
+
+# Phase 2: ai-review.yml 자동 PR 동작 관찰
+gh run list --branch patterns/2026-04-13-github-token-deploy-chain-fix --limit 5
+# 기대: "🔒 Test Gate" 통과 + "🚀 Auto Merge" SKIP (patterns/ 감지)
+
+gh pr list --label patterns --state open
+# 기대: 이 PR이 patterns + needs-curation 라벨 달린 채 OPEN
+
+# Phase 3: 허브 세션의 /curate-inbound 진입점 확인
+# → 이 pattern을 Journal 021로 승격할지, pattern entry로 둘지, solution으로 쪼갤지 결정
+```
+
+검증 기대값:
+
+| 단계 | 기대 결과 |
+|---|---|
+| `git push origin patterns/...` | 성공 |
+| ai-review.yml Test Gate | ✅ 통과 (`npm test + npm run build + frontmatter zod + manifest 검증`) |
+| ai-review.yml Auto Merge | ❌ **skip** (patterns/ 감지) |
+| PR 라벨 | `patterns` + `needs-curation` 부착 |
+| PR 코멘트 | "허브 curation 대기" 안내 |
+| PR 상태 | OPEN 유지 (허브 `/curate-inbound` 대기) |
+
+## Related
+
+- [Harness Journal 003 — squash merge trap pattern](./harness-journal-003-squash-merge-trap-pattern.mdx): 이 패턴의 *로컬 git* 버전. 로컬 git과 origin이 갈라지는 현상 박제. 지금 이 엔트리는 그 패턴의 *CI 확장*판 — 로컬 git이 아니라 *워크플로우 그래프*가 갈라짐.
+- [Harness Journal 014 — hub auto-merge inbound tips](./harness-journal-014-hub-auto-merge-inbound-tips.mdx): `tips/` 플로우. 이 엔트리와 동일한 `ai-review.yml` 기반이지만 auto-merge가 *성공하는* 케이스라 본 체인 실패 문제의 영향권 밖 (허브 리포는 `deploy.yml`이 없음).
+- [Harness Journal 020 — promise timeout wrapper](./harness-journal-020-promise-timeout-wrapper.mdx): 직전 Journal. 이 사건과 같은 날 박제된 moneyflow 학습.
+- [dev-setup-tips-log 2026-04-13 엔트리 2건](./dev-setup-tips-log.mdx): 같은 사이클의 *tip 형태* 버전. 이 pattern으로 승격되면 tips 쪽은 Related에 링크 추가로 연결 유지 (삭제 금지).
+- [Journal 003 Squash Merge Trap 원본](/wiki/harness-engineering/harness-journal-003-squash-merge-trap-pattern): `/wt-branch` 커맨드 탄생 배경. 이 엔트리가 승격되면 같은 계열에서 2번째 구조적 CI 결함 박제가 된다.
+
+## 승격 노트 (허브 `/curate-inbound` 세션을 위한 메타)
+
+- **분류 추천**: `pattern-entry` (유력) 또는 `Journal 021` (가능)
+- **승격 판단 근거**: 영향 범위 = 3 워커 프로젝트 전부 + 허브 자신. 구조적 결함 + 명시적 정책 + 실제 P0 장애 이력 1건 + 3가지 수정 옵션 + dogfooding 가능.
+- **분할 제안** (Journal로 승격 시):
+  1. Journal 021 본문: 사건 + 원인 + 3 옵션 + 옵션 1 적용 결정 + dogfooding 결과
+  2. `ai-review-yml-downstream-workflow-chain-pattern.mdx`: 재사용 가능한 pattern entry로 별도 유지 (이 파일 자체)
+  3. dev-setup-tips-log의 기존 2026-04-13 엔트리: Related에 Journal 링크 추가만 (본문 미수정)
+- **다음 스프린트 연결**: 옵션 1을 `.github/workflows/ai-review.yml` 템플릿화해서 moneyflow / tarosaju / ai-study 전체 이식 PR. 이식 후 각 프로젝트에서 1회 dogfooding (PR 머지 → 자동으로 deploy 체인 트리거되는지 확인).
+- **원본 incident 파일들 (mino-moneyflow 쪽)**:
+  - `CHANGELOG.md` [0.9.39] 엔트리
+  - `docs/retros/2026-04-13-hotfix.md`
+  - `docs/solutions/workflow/2026-04-13-github-token-deploy-chain.md`
+  - `docs/solutions/react-patterns/2026-04-13-nextjs16-rsc-function-prop.md` (*원인 원인 1*, 이 엔트리는 *원인 2*만 다룸)
