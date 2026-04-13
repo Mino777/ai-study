@@ -1,0 +1,378 @@
+---
+title: "Harness Journal 020 — Promise 타임아웃 래퍼 + 자가 fix 사이클"
+category: harness-engineering
+series: harness-journal
+date: "2026-04-13"
+tags: [harness-journal, promise, timeout, async, self-fix-cycle, type-inference, api-routes, moneyflow]
+confidence: 5
+connections:
+  - harness-engineering/ai-call-patterns-circuit-breaker-fallback
+  - harness-engineering/ai-output-zod-validation-pattern
+  - harness-engineering/harness-journal-002-inline-test-gate
+  - harness-engineering/harness-journal-019-mcapp-cross-session-cleanup
+  - harness-engineering/fixture-silent-failure-trap
+status: complete
+description: "moneyflow 백엔드 API 15 routes에 Promise 타임아웃 래퍼 3종(withTimeout / allSettledWithTimeout / raceWithTimeout) 적용 사이클. 무한 대기 방지 + 30분 windowed 자가 fix 사이클(구조 붕괴 1 + 타입 붕괴 3)이 inline test gate로 catch된 실전 박제. /curate-inbound 슬래시 커맨드 첫 dogfooding 결과물."
+type: entry
+quiz:
+  - question: "`allSettledWithTimeout<T>(promises: Promise<T>[], ...)` 시그니처가 *이종* Promise 배열과 함께 쓰일 때 타입 붕괴가 나는 이유는?"
+    choices:
+      - "TypeScript 버전이 낮아서"
+      - "제네릭 `T` 하나로는 서로 다른 Promise 반환 타입을 커버 못한다. TypeScript가 모든 원소를 공통 상위 타입으로 넓혀서 `T = unknown`이 되거나 명시 annotation 시 `Record<string, unknown>`로 붕괴. 해결책은 `tuple` overload 또는 호출부에서 각 promise를 래핑해서 동일 반환 타입으로 정규화"
+      - "`Promise.race`가 race condition을 만들어서"
+      - "`setTimeout`이 micro-task가 아니어서"
+    answer: 1
+    explanation: "제네릭 `<T>` 하나는 *한 가지 타입만* 표현한다. `[fetchUser(), fetchPosts(), fetchStats()]`처럼 이종 Promise를 넘기면 TS가 `User | Post | Stats` 합 타입이 아니라 *공통 상위 타입*으로 넓혀버린다. 명시 annotation을 `<any>` / `<Record<string, unknown>>`로 주면 `.value`가 unknown이 되어 이후 사용 시점에서 타입 체크가 전부 깨진다. 해결: (1) tuple overload `<T1, T2, T3>(p1: P<T1>, p2: P<T2>, ...)` 추가, (2) 호출부에서 각 promise를 `.then(r => ({ kind: 'foo', r }))`로 discriminated union으로 정규화."
+  - question: "30분 안에 터진 자가 fix 사이클(#114 → #115)이 *인프라 실패*가 아니라 *인프라 성공*인 이유는?"
+    choices:
+      - "빠르게 고쳤으니까"
+      - "'inline test gate'가 PR #114 머지 직후 *빌드 실패 + tsc 11 errors*를 즉시 감지했고, 30분 안에 #115가 교정 PR을 올려 자동 머지됨. 이게 없었다면 프로덕션 배포까지 도달 후 롤백이 필요했을 것. *사고 발생률은 0이 아니지만 사고 → 복구 시간이 짧아지는* 게 Compound Engineering의 핵심 목표 중 하나"
+      - "두 번째 PR이 작아서"
+      - "자동 머지 속도가 빨라서"
+    answer: 1
+    explanation: "Compound Engineering은 *사고 0*을 목표로 하지 않는다 (불가능하니까). 목표는 *사고 → 감지 → 복구 시간*을 구조적으로 단축하는 것. Harness Journal 002의 inline test gate가 이 사이클의 게이트. 가드 없이 #114가 머지됐다면 realestate/analyze 빌드 실패가 프로덕션까지 도달해서 롤백 + hotfix 사이클 필요. 30분 자가 fix는 *가드가 제대로 작동한 증거*."
+  - question: "타임아웃 값을 endpoint 타입별로 3 그룹(dashboard 8-10s, background 5-8s, batch 90s)으로 나눈 이유는?"
+    choices:
+      - "구현 편의"
+      - "UX 응답성 / 비용 / 완결성 trade-off가 endpoint 종류마다 다르다. Dashboard는 사용자 대기 중이라 빨라야 하고 (8-10s가 UI 불안 한계), background job은 실패해도 재시도 가능하니 더 짧게 (5-8s), batch는 *완결*이 중요하니 길게 허용 (90s). 단일 타임아웃 값으로 통일하면 세 종류 모두 비효율"
+      - "서버 자원 분리"
+      - "로그 필터링 용이성"
+    answer: 1
+    explanation: "타임아웃은 *무한 대기 방지*뿐 아니라 *응답 실패의 의미*를 결정한다. Dashboard에서 8s 초과는 'UI가 느리다'는 신호 → 사용자가 새로고침. Background job에서 5s 초과는 '재시도 가능' 신호 → cron이 다음 사이클에 재실행. Batch에서 90s 초과는 '작업 설계 문제' 신호 → 알림. 통일된 값은 이 신호 분리를 지운다."
+---
+
+## 한 줄 요약
+
+moneyflow의 46개 `Promise.allSettled` 호출이 **무한 대기 가능성**을 갖고 있었음 → 3종 래퍼(`withTimeout` / `allSettledWithTimeout` / `raceWithTimeout`)를 신설해 15개 critical API routes에 적용. 30분 뒤 **4 버그 자가 fix 사이클**(구조 붕괴 1 + 타입 붕괴 3)이 inline test gate로 즉시 catch되어 프로덕션 도달 전 복구. `/curate-inbound` 파이프라인의 **첫 dogfooding** 결과물.
+
+---
+
+## 문제 — 무한 대기 버그
+
+moneyflow 백엔드의 API routes는 여러 외부 데이터 소스를 병렬로 fetch한다: KRX / Yahoo Finance / 뉴스 API / macro 지표 / ETF 로테이션 등. 이 중 하나가 **timeout 없이 hanging**되면 전체 `Promise.allSettled`가 멈춤 → API route가 504 없이 *영원히* client에 응답 안 함 → Next.js serverless function이 플랫폼 timeout(10s~60s)까지 쥐고 있다가 죽음.
+
+### 증상
+- Vercel 로그에 `FUNCTION_INVOCATION_TIMEOUT` 산발적 발생
+- 특정 외부 API가 느릴 때 (KRX 장중 vs 장마감, Yahoo Finance rate limit 경계)
+- 사용자 화면: 대시보드 spinner가 10초 이상 돌다가 갑자기 500 / 504
+
+### 왜 `Promise.allSettled`가 보호 안 해주나
+
+`Promise.allSettled`는 *모든 promise의 settle*을 기다린다. 하나라도 영원히 pending이면 영원히 pending. `Promise.race`와 결합하지 않으면 무방비.
+
+---
+
+## 패턴 — 3 래퍼 함수
+
+`src/lib/promise-helpers.ts` 신설. AbortController를 쓰지 않고 **setTimeout reject race** 패턴.
+
+### 1. `withTimeout<T>` — 단일 promise 래핑
+
+```ts
+export function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number = 8000,
+  label: string = 'operation',
+): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => {
+      setTimeout(() => {
+        reject(new Error(`${label} timeout: ${timeoutMs}ms`))
+      }, timeoutMs)
+    }),
+  ])
+}
+```
+
+가장 많이 쓰이는 형태. **어떤 Promise든 하나 감쌀 수 있음**. `Promise.allSettled` 전체도 이걸로 감싸면 됨:
+
+```ts
+// 실전 사용 (src/app/api/quotes/route.ts)
+results = await withTimeout(
+  Promise.allSettled(
+    symbols.map(async (sym) => {
+      const isKorean = isKoreanSymbol(sym)
+      return isKorean ? fetchKrxQuote(sym) : fetchYahooQuote(sym)
+    }),
+  ),
+  8000,
+  'quotes-fetch',
+)
+```
+
+### 2. `allSettledWithTimeout<T>` — 동종 배열 전용
+
+```ts
+export async function allSettledWithTimeout<T>(
+  promises: Promise<T>[],
+  timeoutMs: number = 8000,
+  label: string = 'allSettled',
+): Promise<PromiseSettledResult<T>[]> {
+  return Promise.race([
+    Promise.allSettled(promises),
+    new Promise<PromiseSettledResult<T>[]>((_, reject) => {
+      setTimeout(() => {
+        reject(new Error(`${label} timeout: ${timeoutMs}ms`))
+      }, timeoutMs)
+    }),
+  ]).catch((e) => {
+    if (e.message?.includes('timeout')) throw e
+    throw e
+  })
+}
+```
+
+`Promise.allSettled`를 직접 호출하는 대신 이걸 쓰면 한 줄로 보호됨. **단, 이종 타입 배열에는 주의**(§자가 fix 버그 2~4 참조).
+
+### 3. `raceWithTimeout<T>` — 동종 배열의 첫 성공 + timeout
+
+```ts
+export function raceWithTimeout<T>(
+  promises: Promise<T>[],
+  timeoutMs: number = 5000,
+  label: string = 'race',
+): Promise<T> {
+  return Promise.race([
+    Promise.race(promises),
+    new Promise<T>((_, reject) => {
+      setTimeout(() => reject(new Error(`${label} timeout: ${timeoutMs}ms`)), timeoutMs)
+    }),
+  ])
+}
+```
+
+fallback 패턴에 유용: `[fetchFromPrimary(), fetchFromSecondary()]`에서 **먼저 성공하는 쪽** 또는 timeout.
+
+---
+
+## 적용 사이클 — 15 API routes + 타임아웃 값 3 그룹
+
+| 그룹 | 타임아웃 | 대표 routes | 이유 |
+|---|---|---|---|
+| **Dashboard / UI** | **8~10s** | `/api/quotes`, `/api/portfolio`, `/api/news/top`, `/api/market/heatmap`, `/api/market/macro`, `/api/watchlist/news`, `/api/admin/stats`, `/api/keywords/recommend` | 사용자 대기 중 → UI 불안 한계(8s) 내 응답 |
+| **Background / Cron** | **5~8s** | `/api/scanner/cron`, `/api/etf/rotation`, `/api/realestate/analyze`, `/api/earnings` | 실패해도 재시도 가능 → 짧게 잘라서 다음 사이클 기다림 |
+| **Batch / Analysis** | **90s** | `/api/trading/batch` | 13 에이전트 병렬 분석 → 완결이 중요, 시간 허용 |
+
+### 왜 통일된 값을 안 쓰나
+
+타임아웃은 *무한 대기 방지*만이 아니라 **응답 실패의 *의미***를 결정한다:
+
+- **Dashboard 8s 초과** = "UI가 느리다" → 사용자가 새로고침
+- **Background 5s 초과** = "재시도 가능" → cron이 다음 사이클 재실행
+- **Batch 90s 초과** = "작업 설계 문제" → 알림 + 에스컬레이션
+
+단일 값(예: 30s)으로 통일하면 세 시그널이 섞여서 운영 정보가 줄어든다.
+
+---
+
+## 자가 fix 사이클 — 4 버그 (PR #114 → #115, 30분 window)
+
+#114 머지 직후 **inline test gate**가 두 가지 실패를 catch했다. 30분 안에 #115가 교정 PR을 올려 자동 머지됨.
+
+### 버그 1 — `realestate/analyze` 구조 붕괴 (빌드 실패)
+
+**증상**: `npm run build` 실패. 구체적으로 `src/app/api/realestate/analyze/route.ts`의 괄호 짝이 깨짐.
+
+**원인**: 새 `try/catch` 블록을 추가하면서 **기존 `if(saleResult/rentResult)` 블록을 삭제 안 함**. 결과:
+
+```ts
+// ❌ After (깨진 상태)
+try {
+  results = await withTimeout(Promise.allSettled([salePromise, rentPromise]), 8000)
+} catch (e) { /* ... */ }
+
+// 🧟 기존 블록 잔재 (삭제됐어야 함)
+if (saleResult && rentResult) {
+  // for 루프 밖에서 스코프 없는 변수 참조
+  for (const r of results) { ... }  // results는 try 블록에서 정의됨 ✓
+  // 하지만 이 블록 자체가 중복 + 닫는 괄호 `}` 하나 더 있음
+}
+}  // ← 여기 } 하나 더
+```
+
+**수정**: 중복 12줄 제거. try/catch 하나로 통일.
+
+**메타 교훈**: LLM이 "교체"를 지시받으면 *추가*는 잘하는데 *삭제*를 빠뜨리는 경우가 많음. 특히 try/catch 같은 블록 구조는 before/after를 *한 번에* 패치해야 함. 이건 [Journal 019 §1 try/catch 블록 잔재 함정](/wiki/harness-engineering/harness-journal-019-mcapp-cross-session-cleanup)과 정확히 같은 패턴.
+
+### 버그 2~4 — 타입 붕괴 3건 (tsc 11 errors)
+
+**대상**: `admin/stats`, `quotes`, `realestate/analyze`
+
+**증상**: `tsc --noEmit` 실패. `results[i].value`의 타입이 `unknown` 또는 `Record<string, unknown>`.
+
+**원인**: `allSettledWithTimeout<T>` 시그니처는 제네릭 `T` 하나뿐. **이종 Promise 배열**에 쓰이면 TypeScript가 공통 상위 타입으로 넓혀버림:
+
+```ts
+// ❌ 이종 배열 + 제네릭 T 하나
+const results = await allSettledWithTimeout([
+  fetchStats(),      // Promise<{ userCount: number }>
+  fetchQuotes(),     // Promise<Quote[]>
+  fetchNews(),       // Promise<Article[]>
+], 8000)
+// T = { userCount: number } | Quote[] | Article[] 이 아니라
+// T = unknown 으로 붕괴 → results[0].value : unknown
+```
+
+명시 annotation을 `<any>` / `<Record<string, unknown>>`로 주면 `.value`가 `unknown`이 되어 *이후 사용 시점*에서 타입 체크가 전부 깨짐. tsc 11 errors.
+
+**수정 옵션**:
+
+1. **Tuple overload 추가** (가장 정석):
+   ```ts
+   function allSettledWithTimeout<T1, T2>(p: [Promise<T1>, Promise<T2>], ...): Promise<[PromiseSettledResult<T1>, PromiseSettledResult<T2>]>
+   function allSettledWithTimeout<T1, T2, T3>(p: [Promise<T1>, Promise<T2>, Promise<T3>], ...): ...
+   // ... up to T5
+   ```
+2. **호출부 discriminated union** (현재 채택):
+   ```ts
+   const results = await withTimeout(
+     Promise.allSettled([
+       fetchStats().then(r => ({ kind: 'stats' as const, r })),
+       fetchQuotes().then(r => ({ kind: 'quotes' as const, r })),
+       fetchNews().then(r => ({ kind: 'news' as const, r })),
+     ]),
+     8000,
+   )
+   // results[i].value는 { kind: 'stats' | 'quotes' | 'news', r: ... } 의 합 타입
+   if (results[0].status === 'fulfilled') {
+     if (results[0].value.kind === 'stats') { /* TS가 r 타입 좁혀줌 */ }
+   }
+   ```
+3. **withTimeout 사용 + 원본 Promise.allSettled 유지** — TypeScript가 `Promise.allSettled`의 original overload를 쓰도록. `allSettledWithTimeout`을 피하고 `withTimeout(Promise.allSettled(...))`로 직접 래핑. 이게 `quotes/route.ts`에서 실제로 쓰인 방식.
+
+`moneyflow`는 **옵션 3** 채택 — `withTimeout`이 더 범용적이고 타입 붕괴가 없다.
+
+**메타 교훈**: 제네릭 helper 함수를 설계할 때 *동종 배열 전용*인지 *이종 배열도 허용*인지 명시해야 함. 시그니처만 보고 판단 불가 → JSDoc 또는 함수명으로 구분해야. `allSettledWithTimeout<T>`라는 이름은 *동종 전용*을 암시하지 않음.
+
+---
+
+## Inline test gate가 catch한 과정 (Compound 가치)
+
+```
+PR #114 자동 머지 (5aeefa6)
+     ↓ ai-review.yml push 이벤트 감지
+     ↓ Test Gate: npm run build
+     ↓ ❌ realestate/analyze 빌드 실패
+     ↓ ❌ tsc 11 errors
+     ↓ ai-review.yml이 PR 코멘트로 실패 이유 남김
+     ↓
+30분 이내: 세션이 #115 교정 PR 생성
+     ↓ commit message: "Claude Mac 앱이 작업한 c04a19e를 리뷰 중 발견한 3건 수정"
+     ↓
+PR #115 자동 머지 (b521b4e)
+     ↓ Test Gate: 통과
+     ↓ main 복구
+```
+
+**만약 inline test gate가 없었다면**:
+- #114가 빌드 실패 상태로 main에 머지 → Vercel 자동 배포 → 프로덕션 빌드 실패 → 롤백 / hotfix 필요
+- 최소 1~2시간의 response 사이클 + 사용자 영향
+
+**inline test gate가 있었기에**:
+- 30분 안에 자가 fix
+- 프로덕션 도달 0
+- main이 항상 build-clean 상태
+
+이게 [Harness Journal 002 inline test gate](/wiki/harness-engineering/harness-journal-002-inline-test-gate)의 ROI가 실전에서 입증된 순간.
+
+---
+
+## 핵심 교훈
+
+### 1. 무한 대기는 *silent* 실패다
+
+504 timeout은 적어도 에러를 반환하지만, serverless function이 무한 pending이면 **metric에 잡히지도 않는다** (플랫폼 timeout까지 대기). 무한 대기 방어는 **AI 호출 / 외부 fetch / DB 쿼리 모든 I/O 경계**에 필수.
+
+### 2. `Promise.allSettled`는 *모든 settle을 대기*하는 거지 *timeout을 모른다*
+
+```ts
+// ❌ 무방비
+await Promise.allSettled(promises)
+
+// ✅ timeout race
+await withTimeout(Promise.allSettled(promises), 8000, 'fetch')
+```
+
+`.allSettled`의 이름이 "모든 실패를 허용"으로 해석되어서 timeout을 빠뜨리기 쉬움. 46개 call site 중 46개 모두 timeout 없었음 — 인프라 레이어의 sliceable 실패.
+
+### 3. 제네릭 `<T>` 하나 = *동종 배열 전용*
+
+이종 배열은 tuple overload 또는 discriminated union 필수. helper 함수 설계 시 JSDoc으로 *동종 전용*을 명시해야 오용 방지.
+
+### 4. Try/catch 블록 교체 시 *이전 블록 삭제*가 진짜 작업
+
+새 try/catch 추가 시 *기존 if/else 블록 잔재*가 흔한 실패 모드. LLM은 추가는 잘하지만 삭제를 빠뜨림. [Journal 019 §1](/wiki/harness-engineering/harness-journal-019-mcapp-cross-session-cleanup)에 박제된 동일 패턴.
+
+### 5. Inline test gate는 자가 fix 사이클의 *전제 조건*
+
+30분 자가 fix가 가능했던 건 Test Gate가 즉시 catch했기 때문. 가드 없이는 30분 → 1~2시간 사이클로 늘어나고 프로덕션까지 도달. Compound Engineering의 *감지 → 복구 시간 단축*이 실측된 사례.
+
+---
+
+## 패턴 일반화 — 재사용 가능한 자산
+
+이 패턴을 *3 프로젝트 공통*으로 이식할 수 있는 형태:
+
+```ts
+// src/lib/promise-helpers.ts (모든 Next.js 프로젝트 공통)
+export function withTimeout<T>(p: Promise<T>, ms = 8000, label = 'op'): Promise<T>
+export function raceWithTimeout<T>(ps: Promise<T>[], ms = 5000, label = 'race'): Promise<T>
+// allSettledWithTimeout은 피하고 withTimeout(Promise.allSettled(...))로 대체 권장
+```
+
+### 적용 체크리스트
+
+- [ ] `grep -rn "Promise.allSettled" src/` → 모든 call site 목록
+- [ ] 각 site가 *외부 I/O*를 포함하는가? → 포함되면 timeout 필요
+- [ ] Endpoint 타입별 timeout 값 분류 (dashboard 8-10s / background 5-8s / batch 90s)
+- [ ] `withTimeout(Promise.allSettled(...))` 래핑 (이종 배열 타입 붕괴 회피)
+- [ ] `.catch`로 timeout error 구분 처리 (504 응답 vs 로깅만 vs 재시도)
+- [ ] Inline test gate 통과 확인 (빌드 + tsc --noEmit)
+
+### 이식 가능 범위
+
+| 프로젝트 | 적용 가능성 | 우선순위 |
+|---|---|---|
+| **moneyflow** | ✅ 이미 적용 (15 routes) | - |
+| **tarosaju** | ✅ `fortune/ai` / `tarot-chat` AI 호출에 즉시 적용 가능 | 🔴 높음 |
+| **ai-study** | 🟡 `/api/og` edge runtime + daily-lesson Gemini 호출에 적용 고려 | 🟡 중간 |
+
+---
+
+## `/curate-inbound` 파이프라인 첫 dogfooding
+
+이 Journal은 **`/curate-inbound` 슬래시 커맨드의 첫 실전 사용 결과물**이다. 파이프라인 실효성 검증:
+
+### 5 Phase 실행 결과
+
+| Phase | 결과 |
+|---|---|
+| **1. 원본 수집** | moneyflow commit `5aeefa6` + `b521b4e` + `src/lib/promise-helpers.ts` + 13 API routes 파일 목록 수집 |
+| **2. 분류** | `journal` 판정 (1 사이클 서사 + 200줄+ + 메타 교훈 5) |
+| **3. Curation** | 회사명 grep 0 / 프로젝트 특정 경로 유지 (`src/app/api/...`는 Next.js convention으로 추상화 불필요) / frontmatter zod 통과 / connections 5개 |
+| **4. 출력** | `content/harness-engineering/harness-journal-020-promise-timeout-wrapper.mdx` / build + test 통과 |
+| **5. 사용자 리뷰** | journal 카테고리 → user review 필수 (이 커밋 자체가 리뷰 대상) |
+
+### 발견된 파이프라인 개선점
+
+- **워커 측 `patterns/` 브랜치 push 생략**: 이번은 허브가 pull 방식 ("moneyflow에서 올려줘"). 실전 dogfooding에서는 워커가 `patterns/promise-timeout-wrapper` 브랜치로 raw 설명 + 관련 파일 링크를 push하는 쪽이 더 자연스러움
+- **Connections grep이 효과적**: `promise | timeout | race | allSettled` 키워드로 관련 엔트리 4개 자동 발견 (ai-call-patterns / ai-output-zod / inline-test-gate / journal-019)
+- **타입 붕괴 섹션이 크게 나옴**: 원본 commit message는 2줄짜리 언급이었지만 curation 시 3 수정 옵션 비교로 확장됨. *Curation이 raw 재료의 압축이 아니라 *확장*이 되는 경우 발생* — 이런 건 사용자 review 필수
+
+---
+
+## 다음 큐
+
+- 🔴 **tarosaju에 Promise 타임아웃 래퍼 이식** — `fortune/ai` / `tarot-chat` Anthropic 호출에 withTimeout 적용. 박제 전이성 6회째 사이클
+- 🟡 **ai-study `/api/og` edge runtime에 withTimeout 적용 검토** — edge runtime은 timeout 다르게 동작할 수 있어서 실측 필요
+- 🟡 **`promise-helpers.ts`를 ai-study에 lib로 export** — 3 프로젝트가 공통 사용할 수 있도록 stub 엔트리 + 코드 박제
+- 🟢 **`/curate-inbound` 파이프라인 메타 리뷰** — 이번 dogfooding에서 발견한 *pull 방식 편의성* / *curation이 확장되는 경우* 두 관찰을 슬래시 커맨드에 반영할지
+
+---
+
+## 핵심 메시지
+
+> **무한 대기는 504보다 더 silent한 실패다. 모든 I/O 경계에 timeout race를 걸어두는 건 비용이 거의 0이지만, 없으면 metric에도 안 잡힌다.** 46 call site 중 46 모두 방치됐던 건 `Promise.allSettled`의 이름이 만든 *오해*(모든 실패를 허용 = 모든 대기도 허용)에 기인한다. Helper 함수의 이름과 시그니처가 *사용 시점에 떠오르는 생각*을 지배한다.
+
+그리고 **30분 자가 fix 사이클은 감지 → 복구 시간 단축의 실측 사례**다. Inline test gate가 없었다면 이 Journal은 "#114가 프로덕션 빌드 실패로 도달해서 롤백 + hotfix 2시간 사이클"로 썼을 것. 가드의 ROI가 사고 발생 시점에 한 번 증명된다.
