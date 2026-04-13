@@ -3,17 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { CATEGORY_LABELS, CATEGORY_COLORS, CATEGORY_GROUPS } from "@/lib/schema";
+import { CATEGORY_LABELS, CATEGORY_COLORS, CATEGORY_GROUPS, SERIES_LABELS } from "@/lib/schema";
+import type { SidebarCategory, SidebarEntry } from "@/lib/content";
 
-
-interface SidebarEntry {
-  slug: string;
-  title: string;
-  confidence: number;
-}
 
 interface SidebarProps {
-  data: Record<string, SidebarEntry[]>;
+  data: Record<string, SidebarCategory>;
 }
 
 function ConfidenceDots({ level }: { level: number }) {
@@ -52,60 +47,59 @@ function EntryLink({ entry, pathname }: { entry: SidebarEntry; pathname: string 
   );
 }
 
-function EntryList({
-  entries,
+function CategoryBody({
   category,
   pathname,
 }: {
-  entries: SidebarEntry[];
-  category: string;
+  category: SidebarCategory;
   pathname: string;
 }) {
-  // harness-engineering: journal 엔트리를 별도 접이식 서브그룹으로 분리
-  if (category === "harness-engineering") {
-    const journals = entries.filter((e) =>
-      e.slug.includes("harness-journal-")
-    );
-    const others = entries.filter(
-      (e) => !e.slug.includes("harness-journal-")
-    );
+  const subGroupKeys = Object.keys(category.subGroups);
+  const hasSubGroups = subGroupKeys.length > 0;
+  const hasEntries = category.entries.length > 0;
 
-    if (journals.length > 0) {
-      return (
-        <div className="ml-3.5 mt-0.5 mb-1">
-          {others.length > 0 && (
-            <ul className="space-y-0.5 mb-1">
-              {others.map((entry) => (
-                <EntryLink key={entry.slug} entry={entry} pathname={pathname} />
-              ))}
-            </ul>
-          )}
-          <JournalSubGroup journals={journals} pathname={pathname} />
-        </div>
-      );
-    }
-  }
+  if (!hasSubGroups && !hasEntries) return null;
 
   return (
-    <ul className="ml-3.5 mt-0.5 mb-1 space-y-0.5">
-      {entries.map((entry) => (
-        <EntryLink key={entry.slug} entry={entry} pathname={pathname} />
+    <div className="ml-3.5 mt-0.5 mb-1">
+      {hasEntries && (
+        <ul className="space-y-0.5 mb-1">
+          {category.entries.map((entry) => (
+            <EntryLink key={entry.slug} entry={entry} pathname={pathname} />
+          ))}
+        </ul>
+      )}
+      {subGroupKeys.map((seriesKey) => (
+        <SeriesSubGroup
+          key={seriesKey}
+          seriesKey={seriesKey}
+          entries={category.subGroups[seriesKey]}
+          pathname={pathname}
+        />
       ))}
-    </ul>
+    </div>
   );
 }
 
-function JournalSubGroup({
-  journals,
+function SeriesSubGroup({
+  seriesKey,
+  entries,
   pathname,
 }: {
-  journals: SidebarEntry[];
+  seriesKey: string;
+  entries: SidebarEntry[];
   pathname: string;
 }) {
   const [open, setOpen] = useState(false);
-  // 현재 보고 있는 페이지가 journal이면 자동 펼침
-  const hasActive = journals.some((e) => pathname === `/wiki/${e.slug}`);
+  // 현재 보고 있는 페이지가 이 series에 있으면 자동 펼침
+  const hasActive = entries.some((e) => pathname === `/wiki/${e.slug}`);
   const isOpen = open || hasActive;
+
+  // SERIES_LABELS에 없는 series는 slug-cased fallback 라벨
+  const meta = SERIES_LABELS[seriesKey] ?? {
+    label: seriesKey.replace(/-/g, " "),
+    icon: "📑",
+  };
 
   return (
     <div>
@@ -113,9 +107,9 @@ function JournalSubGroup({
         onClick={() => setOpen((prev) => !prev)}
         className="flex w-full items-center gap-2 py-1 text-xs font-medium text-muted hover:text-text transition-colors"
       >
-        <span className="text-[10px]">📓</span>
-        <span className="flex-1 text-left">Harness Journal</span>
-        <span className="text-[10px] text-muted/70">{journals.length}</span>
+        <span className="text-[10px]">{meta.icon}</span>
+        <span className="flex-1 text-left">{meta.label}</span>
+        <span className="text-[10px] text-muted/70">{entries.length}</span>
         <svg
           className={`h-2.5 w-2.5 transition-transform ${isOpen ? "rotate-90" : ""}`}
           viewBox="0 0 16 16"
@@ -126,7 +120,7 @@ function JournalSubGroup({
       </button>
       {isOpen && (
         <ul className="ml-3 mt-0.5 space-y-0.5 border-l border-border/40 pl-2">
-          {journals.map((entry) => (
+          {entries.map((entry) => (
             <EntryLink key={entry.slug} entry={entry} pathname={pathname} />
           ))}
         </ul>
@@ -165,6 +159,15 @@ export function Sidebar({ data }: SidebarProps) {
     });
   }
 
+  function categoryEntryCount(cat?: SidebarCategory): number {
+    if (!cat) return 0;
+    const subTotal = Object.values(cat.subGroups).reduce(
+      (sum, list) => sum + list.length,
+      0,
+    );
+    return cat.entries.length + subTotal;
+  }
+
   return (
     <nav className="w-64 shrink-0 border-r border-border bg-bg overflow-y-auto h-[calc(100vh-56px)] sticky top-14 hidden lg:block">
       <div className="p-4">
@@ -173,7 +176,7 @@ export function Sidebar({ data }: SidebarProps) {
           const groupCategories = group.categories;
           const isGroupOpen = openGroups.has(group.key);
           const groupEntryCount = groupCategories.reduce(
-            (sum, cat) => sum + (data[cat]?.length ?? 0),
+            (sum, cat) => sum + categoryEntryCount(data[cat]),
             0,
           );
 
@@ -199,7 +202,8 @@ export function Sidebar({ data }: SidebarProps) {
               {isGroupOpen && (
                 <div className="mt-1 ml-2 border-l border-border/60 pl-2 space-y-1">
                   {groupCategories.map((category) => {
-                    const entries = data[category] ?? [];
+                    const catData = data[category];
+                    const catTotal = categoryEntryCount(catData);
                     const isCatOpen = openCategories.has(category);
                     const catLabel = CATEGORY_LABELS[category] || category;
 
@@ -214,8 +218,8 @@ export function Sidebar({ data }: SidebarProps) {
                             style={{ background: CATEGORY_COLORS[category] }}
                           />
                           <span className="flex-1 text-left">{catLabel}</span>
-                          {entries.length > 0 && (
-                            <span className="text-[10px] text-muted/70">{entries.length}</span>
+                          {catTotal > 0 && (
+                            <span className="text-[10px] text-muted/70">{catTotal}</span>
                           )}
                           <svg
                             className={`h-2.5 w-2.5 transition-transform ${isCatOpen ? "rotate-90" : ""}`}
@@ -226,15 +230,11 @@ export function Sidebar({ data }: SidebarProps) {
                           </svg>
                         </button>
 
-                        {isCatOpen && entries.length > 0 && (
-                          <EntryList
-                            entries={entries}
-                            category={category}
-                            pathname={pathname}
-                          />
+                        {isCatOpen && catTotal > 0 && catData && (
+                          <CategoryBody category={catData} pathname={pathname} />
                         )}
 
-                        {isCatOpen && entries.length === 0 && (
+                        {isCatOpen && catTotal === 0 && (
                           <p className="ml-3.5 py-1 text-[11px] italic text-muted/50">
                             아직 엔트리가 없음
                           </p>

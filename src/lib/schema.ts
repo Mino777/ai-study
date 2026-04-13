@@ -30,6 +30,13 @@ export const CATEGORY_LABELS: Record<string, string> = {
   "frontend-ai": "Frontend + AI",
 };
 
+// 시리즈(frontmatter `series` 필드) 라벨/아이콘. 사이드바 sub-group 헤더에 사용.
+// 새 시리즈 추가 시 여기에 한 줄 추가하면 사이드바가 자동으로 그룹화한다.
+export const SERIES_LABELS: Record<string, { label: string; icon: string }> = {
+  "harness-journal": { label: "Harness Journal", icon: "📓" },
+  "ios-ai-journal": { label: "iOS Journal", icon: "📱" },
+};
+
 export const CATEGORY_COLORS: Record<string, string> = {
   "prompt-engineering": "#f59e0b",
   "context-engineering": "#eab308",

@@ -40,18 +40,45 @@ export function getEntriesByCategory(category: string) {
   return manifest.entries.filter((e) => e.frontmatter.category === category);
 }
 
-export function getSidebarData() {
+export interface SidebarEntry {
+  slug: string;
+  title: string;
+  confidence: number;
+}
+
+export interface SidebarCategory {
+  // series가 없는 일반 엔트리
+  entries: SidebarEntry[];
+  // frontmatter `series` 값으로 그룹화된 엔트리들 (예: "harness-journal", "ios-ai-journal")
+  // sidebar.tsx가 SERIES_LABELS와 매칭해서 sub-group으로 렌더
+  subGroups: Record<string, SidebarEntry[]>;
+}
+
+export function getSidebarData(): Record<string, SidebarCategory> {
   const manifest = getManifest();
-  const grouped: Record<string, Array<{ slug: string; title: string; confidence: number }>> = {};
+  const grouped: Record<string, SidebarCategory> = {};
 
   for (const entry of manifest.entries) {
     const cat = entry.frontmatter.category;
-    if (!grouped[cat]) grouped[cat] = [];
-    grouped[cat].push({
+    if (!grouped[cat]) {
+      grouped[cat] = { entries: [], subGroups: {} };
+    }
+
+    const sidebarEntry: SidebarEntry = {
       slug: entry.slug,
       title: entry.frontmatter.title,
       confidence: entry.frontmatter.confidence,
-    });
+    };
+
+    const series = entry.frontmatter.series;
+    if (series) {
+      if (!grouped[cat].subGroups[series]) {
+        grouped[cat].subGroups[series] = [];
+      }
+      grouped[cat].subGroups[series].push(sidebarEntry);
+    } else {
+      grouped[cat].entries.push(sidebarEntry);
+    }
   }
 
   return grouped;
