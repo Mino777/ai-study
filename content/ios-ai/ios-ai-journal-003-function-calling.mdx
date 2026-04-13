@@ -1,0 +1,80 @@
+---
+title: "iOS AI Journal 003 — Function Calling으로 Context 실시간 갱신하기"
+category: ios-ai
+date: "2026-04-13"
+tags: [ios, function-calling, tool-use, moneyflow]
+confidence: 2
+connections: [ios-ai/ios-ai-journal-002-context-filtering]
+status: draft
+description: "Static context injection의 한계를 넘는 Function Calling 패턴. AI가 '현재 재고 확인', '장바구니 조회' 등 함수를 직접 호출해서 필요한 데이터를 실시간으로 수집하는 agentic 구조."
+type: entry
+series: ios-ai-journal
+---
+
+## Static Context의 한계
+
+맨 처음 context를 수집한 후 LLM에 고정으로 넣으면:
+- "재고가 몇 개인가요?" → Static context의 5개를 답함 (실제는 2개)
+- 데이터 신선도 문제로 사용자 불신 증가
+
+## iOS에서 Function Calling 구현
+
+```swift
+struct ToolDefinition: Codable {
+  let name: String  // "checkInventory"
+  let description: String
+  let parameters: [String: AnyCodable]
+}
+
+let tools = [
+  ToolDefinition(
+    name: "checkInventory",
+    description: "특정 상품의 현재 재고를 확인합니다",
+    parameters: ["productId": .string]
+  ),
+  ToolDefinition(
+    name: "getCartTotal",
+    description: "현재 장바구니의 총액을 계산합니다",
+    parameters: [:]
+  )
+]
+```
+
+## LLM 응답 처리
+
+```swift
+// LLM이 이런 응답을 주면:
+// {"type": "function_call", "name": "checkInventory", "args": {"productId": "PROD123"}}
+
+func handleFunctionCall(_ call: FunctionCall) async {
+  switch call.name {
+  case "checkInventory":
+    let stock = await inventoryService.getStock(call.args["productId"] as! String)
+    // LLM에 다시 "PROD123의 재고는 2개입니다" 제시
+  case "getCartTotal":
+    let total = await cartService.getTotal()
+    // 다시 루프
+  default:
+    // ...
+  }
+}
+```
+
+## 아키텍처: iOS Agentic Loop
+
+```
+User Query
+   ↓
+LLM + Tools 호출 (Static context + tools 정의)
+   ↓
+LLM이 "checkInventory" 함수 호출?
+   ├─ YES → iOS 앱이 데이터 수집 → LLM에 피드백 → 2번째 루프
+   └─ NO → 최종 응답 반환
+```
+
+moneyflow-ios: 평균 1.3회 function calling으로 정답 도달 (재고, 가격, 사용자 정보 등)
+
+---
+
+**다음**: 004에서는 이 패턴의 UX/성능 트레이드오프를 다룬다.
+

@@ -92,6 +92,7 @@ export const frontmatterSchema = z.object({
   status: z.enum(["draft", "in-progress", "complete"]).default("draft"),
   description: z.string(),
   type: z.enum(["entry", "til"]).default("entry"),
+  series: z.string().optional(), // Journal series grouping (e.g., "harness-journal", "ios-ai-journal")
   quiz: z.array(quizQuestionSchema).optional(),
 });
 

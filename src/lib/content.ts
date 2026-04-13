@@ -40,18 +40,43 @@ export function getEntriesByCategory(category: string) {
   return manifest.entries.filter((e) => e.frontmatter.category === category);
 }
 
-export function getSidebarData() {
+export interface SidebarEntry {
+  slug: string;
+  title: string;
+  confidence: number;
+}
+
+export interface SidebarCategory {
+  entries: SidebarEntry[];
+  subGroups?: Record<string, SidebarEntry[]>;
+}
+
+export function getSidebarData(): Record<string, SidebarCategory> {
   const manifest = getManifest();
-  const grouped: Record<string, Array<{ slug: string; title: string; confidence: number }>> = {};
+  const grouped: Record<string, SidebarCategory> = {};
 
   for (const entry of manifest.entries) {
     const cat = entry.frontmatter.category;
-    if (!grouped[cat]) grouped[cat] = [];
-    grouped[cat].push({
+    if (!grouped[cat]) {
+      grouped[cat] = { entries: [], subGroups: {} };
+    }
+
+    const sidebarEntry = {
       slug: entry.slug,
       title: entry.frontmatter.title,
       confidence: entry.frontmatter.confidence,
-    });
+    };
+
+    // If entry has a series field, add to subGroups; otherwise add to entries
+    if (entry.frontmatter.series) {
+      if (!grouped[cat].subGroups) grouped[cat].subGroups = {};
+      if (!grouped[cat].subGroups![entry.frontmatter.series]) {
+        grouped[cat].subGroups![entry.frontmatter.series] = [];
+      }
+      grouped[cat].subGroups![entry.frontmatter.series].push(sidebarEntry);
+    } else {
+      grouped[cat].entries.push(sidebarEntry);
+    }
   }
 
   return grouped;

@@ -1,0 +1,63 @@
+---
+title: "iOS AI Journal 000 — Baseline: Dynamic Context Injection in iOS"
+category: ios-ai
+date: "2026-04-13"
+tags: [ios, ai, context-injection, dynamic-context, moneyflow]
+confidence: 2
+connections: [context-engineering/dynamic-context-injection]
+status: draft
+description: "iOS 앱에서 실시간 데이터와 사용자 상태를 AI 에이전트에 동적으로 주입하는 기초 패턴. 이커머스 앱(moneyflow-ios)의 장바구니, 사용자 프로필, 실시간 데이터를 LLM에 context로 전달하는 구체적 구현 사례를 다룬다."
+type: entry
+series: ios-ai-journal
+---
+
+## 들어가며
+
+iOS 앱에서 AI를 도입할 때 가장 흔한 실수는 **정적인 프롬프트에만 의존**하는 것이다.
+
+예를 들어, 이커머스 앱(moneyflow-ios)에서 사용자가 "이 상품 추천해줘"라고 물었을 때, 많은 팀들은:
+- 그냥 사용자 query만 LLM에 보낸다
+- 사용자의 장바구니 정보, 구매 이력, 현재 위치, 디바이스 상태 등은 무시한다
+
+결과? AI가 hallucinate하거나 엉뚱한 추천을 한다.
+
+**Dynamic Context Injection**은 이를 해결하는 패턴이다. iOS 앱의 모든 관련 정보(세션, 환경, 실시간 데이터)를 실시간으로 수집해서 LLM에 함께 전달하는 것이다.
+
+## iOS에서 Dynamic Context Injection의 구조
+
+```
+User Action (장바구니 탭) 
+     ↓
+Context Collection (앱 상태 + 디바이스 정보 + 실시간 데이터)
+     ↓
+Context Pre-processing (필터링, 요약, 형식 변환)
+     ↓
+LLM에 injection (프롬프트 템플릿 또는 Function Calling)
+     ↓
+Response + Action
+```
+
+moneyflow-ios의 경우:
+- **User Action**: 사용자가 홈 탭의 AI Assistant에게 물음
+- **Context Collection**: 현재 장바구니 상품, 최근 본 상품, 사용자 프로필, 현재 시간/위치
+- **Pre-processing**: "불필요한" 필드 제거 (배송 정보 등은 스킵), JSON 형식 변환
+- **Injection**: `system_message + user_input + context`로 프롬프트 조립
+- **Response**: AI가 장바구니 기반의 개인화된 추천 제공
+
+## 주의: 모든 정보를 context에 담지 마라
+
+초보자는 "최대한 많은 정보를 주면 AI가 더 잘한다"고 생각한다.
+
+하지만:
+1. **토큰 낭비** — 불필요한 정보로 context 크기가 3배 이상 커짐
+2. **AI 혼동** — 정보가 많을수록 hallucination 가능성 증가
+3. **레이턴시** — 수집할 데이터가 많으면 API 호출 시간 증가
+
+moneyflow-ios의 경험담: 모든 유저 메타데이터(계정 생성일, 마지막 로그인 등)를 다 보냈더니 오히려 추천 정확도가 5% 떨어짐.
+
+→ **"현재 작업에 필요한 정보만" filtering이 핵심**
+
+## 다음 에피소드
+
+001에서는 구체적인 Swift 구현 코드를 다룬다 (SwiftUI에서 context 수집하기, async/await 패턴, Codable JSON 변환)
+

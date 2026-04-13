@@ -1,0 +1,72 @@
+---
+title: "iOS AI Journal 004 — Function Calling의 UX/성능 트레이드오프"
+category: ios-ai
+date: "2026-04-13"
+tags: [ios, function-calling, ux, performance, moneyflow]
+confidence: 2
+connections: [ios-ai/ios-ai-journal-003-function-calling]
+status: draft
+description: "Function calling이 많을수록 정확해지지만 레이턴시가 증가하는 문제. moneyflow-ios에서 '병렬 function calling', '캐싱 전략', 'fallback to static context' 등으로 해결한 사례."
+type: entry
+series: ios-ai-journal
+---
+
+## 트레이드오프
+
+Function calling이 3개면?
+- 정확도: ↑ (각각 재고, 가격, 최신 쿠폰)
+- 레이턴시: 700ms (순차) vs 300ms (병렬)
+- UX: 스피너 3회 vs 1회
+
+## iOS 구현: Parallel Function Calling
+
+```swift
+async let checkStock = inventoryService.getStock(productId)
+async let checkPrice = pricingService.getLatest(productId)
+async let checkCoupon = couponService.getApplicable(userId)
+
+let (stock, price, coupon) = await (checkStock, checkPrice, checkCoupon)
+```
+
+moneyflow-ios: 순차 700ms → 병렬 280ms
+
+## 캐싱 전략
+
+```swift
+struct CachedContext {
+  let data: DynamicContext
+  let expiry: Date
+  
+  func isValid() -> Bool {
+    Date() < expiry
+  }
+}
+
+// 5초 이내면 캐시된 context 사용
+// (사용자가 "좀 더 보기" 눌렀을 때)
+if cache.isValid() {
+  return cache.data
+} else {
+  // 다시 수집
+}
+```
+
+## Fallback: 너무 오래 걸리면?
+
+```swift
+let contextTask = Task {
+  return await collectContext()  // 최대 2초
+}
+
+let response = await withTimeoutSeconds(2) {
+  // 2초 안에 context 못 모으면 static만 사용
+  let ctx = try? await contextTask.value ?? getStaticContext()
+  return await llm.call(userQuery, context: ctx)
+}
+```
+
+moneyflow-ios의 정책:
+- 홈 탭: function calling O (사용자 인내심 높음)
+- 빠른 검색 팝업: static context만 (UX 우선)
+- 체크아웃: 병렬 호출 (정확도 우선)
+
