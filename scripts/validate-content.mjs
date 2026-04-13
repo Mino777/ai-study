@@ -13,6 +13,7 @@ import path from "path";
 import matter from "gray-matter";
 import { compile } from "@mdx-js/mdx";
 import remarkGfm from "remark-gfm";
+import { fixAndValidateMermaid } from "./lib/mermaid-fix.mjs";
 
 const CONTENT_DIR = path.join(process.cwd(), "content");
 
@@ -46,77 +47,6 @@ function extractMermaidBlocks(content) {
     lastIndex = match.index;
   }
   return blocks;
-}
-
-/**
- * Mermaid 다이어그램의 흔한 syntax 에러 감지 + 자동 수정
- * Mermaid는 node label/subgraph name에 특수문자(괄호, 콜론, 특수기호) 제약이 있음
- */
-function fixAndValidateMermaid(code, filename) {
-  let fixed = code;
-  const errors = [];
-  const lines = fixed.split("\n");
-
-  // AUTO-FIX: 노드 라벨의 괄호를 따옴표로 감싸기
-  // 패턴: A[label (with parens)] → A["label (with parens)"]
-  // ⚠️ 이미 따옴표가 있는 라벨은 건너뛰어야 함 (negative lookahead `(?!")`).
-  //    안 그러면 매 실행마다 따옴표가 누적: D["x"] → D[""x""] → D["""x"""] ...
-  fixed = fixed.replace(/([A-Z]\d*)\[(?!")([^\[\]"]*\([^\[\]"]*\)[^\[\]"]*)\]/g, '$1["$2"]');
-
-  const fixedLines = fixed.split("\n");
-  const fixedContent = fixed;
-
-  // 수정된 내용이 원본과 다르면 기록
-  if (fixedContent !== code) {
-    // 자동 수정 로그 (콘솔 출력만, 에러로 처리하지 않음)
-    return { fixed: fixedContent, autoFixed: true, errors: [] };
-  }
-
-  // 수정 후 유효성 검증 (남은 에러만)
-  fixedLines.forEach((line, i) => {
-    const trimmed = line.trim();
-    const lineNum = i + 1;
-
-    // 1. subgraph 검증
-    const subgraphMatch = trimmed.match(/^subgraph\s+(.+)$/);
-    if (subgraphMatch) {
-      const rest = subgraphMatch[1];
-      const bracketLabelForm = /^\w+\s*\[".+"\]\s*$/;
-      const quotedForm = /^".+"\s*$/;
-      const idOnlyForm = /^[\w-]+\s*$/;
-      if (!bracketLabelForm.test(rest) && !quotedForm.test(rest) && !idOnlyForm.test(rest)) {
-        if (/[()\[\]{}:;&]/.test(rest) || /\s/.test(rest)) {
-          errors.push({
-            line: lineNum,
-            message: `subgraph 형식 오류: "${rest}". 유효 형식: "subgraph id", 'subgraph id ["label"]', 'subgraph "name"'`,
-          });
-        }
-      }
-    }
-
-    // 2. 노드 라벨 검증 (자동 수정 후 남은 문제)
-    const nodeBracketMatches = trimmed.matchAll(/\[([^\]]+)\]/g);
-    for (const m of nodeBracketMatches) {
-      const label = m[1];
-      if (/[()]/.test(label) && !label.startsWith('"') && !label.endsWith('"')) {
-        errors.push({
-          line: lineNum,
-          message: `노드 라벨에 괄호 사용: "${label}". 수정: ["${label}"]`,
-        });
-      }
-    }
-
-    // 3. 화살표 라벨 검증
-    const arrowLabelMatch = trimmed.match(/\|([^|]+)\|/);
-    if (arrowLabelMatch && /[()]/.test(arrowLabelMatch[1])) {
-      errors.push({
-        line: lineNum,
-        message: `화살표 라벨에 괄호: "${arrowLabelMatch[1]}". 괄호 제거하거나 따옴표 사용`,
-      });
-    }
-  });
-
-  return { fixed: fixedContent, autoFixed: false, errors };
 }
 
 async function main() {

@@ -484,12 +484,15 @@ cd /Users/jominho/Develop/ai-study && rtk npm run build
    - 이번 세션에서 발견한 **두 번째 validate-content.mjs 버그** (첫 번째는 slicing offset, 두 번째는 regex 누적). 자동 수정 도구 신뢰 0.
 
 **다음 큐 (NEW)**:
-- 🔴 **회사 프로젝트명 grep 가드를 PreToolUse 훅으로** — Edit/Write 시 금지 패턴 감지 → 차단 (메모리 참조)
-- 🔴 **`/cross-session-review` 슬래시 커맨드 신설** — Journal 019의 5단 프로토콜 자동화
-- 🟡 **validate-content.mjs 자동 수정 도구 자체 검증** — 자동 수정 후 git diff stat 출력 + 누적 손상 검출 (test fixture로)
-- 🟡 **다른 mermaid 블록 누적 손상 grep** — 따옴표 5+ 매치 패턴으로 다른 파일 검증
+- ✅ **회사 프로젝트명 grep 가드 PreToolUse 훅** — `.claude/hooks/no-company-names.sh` 신설 + settings.json Edit|Write matcher
+- ✅ **`/cross-session-review` 슬래시 커맨드** — Journal 019의 5단 프로토콜 자동화 + CLAUDE.md routing
+- ✅ **다른 mermaid 누적 손상 grep** — 0건 (apple-intelligence-api.mdx만 손상이었고 이미 fix)
+- 🟡 **validate-content.mjs vitest fixture test** — Agent B 진행 중 (`scripts/lib/mermaid-fix.mjs` 추출 + `__tests__/`)
+- 🟡 **`compound-engineering-philosophy` 신규 작성** — Agent A 진행 중 (12 incoming dangling references 해소)
+- ✅ **`rag/vector-search-basics` 신규 스텁** — Agent C 완료 (120줄, dangling 1건 해소)
+- 🟡 **stale worktree `sweet-napier`** — 정찰 결과: stale 아닌 valuable WIP (schema.ts에 series 필드 + content.ts subGroups refactor, 2 uncommitted 파일). 사용자 결정 필요 — cherry-pick / 폐기 / 재분기.
 
-**사고 재발률 (수정)**: 1건 — 본인이 메모리 룰 위반. 즉시 발견 + 정정 + 메모리 강화.
+**사고 재발률 (수정)**: 1건 — 본인이 메모리 룰 위반 (회사 프로젝트명 노출). 즉시 발견 + 정정 + 메모리 강화 + PreToolUse 훅으로 행동 레벨 차단까지 도달.
 
 ---
 
