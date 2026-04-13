@@ -490,9 +490,72 @@ cd /Users/jominho/Develop/ai-study && rtk npm run build
 - 🟡 **validate-content.mjs vitest fixture test** — Agent B 진행 중 (`scripts/lib/mermaid-fix.mjs` 추출 + `__tests__/`)
 - 🟡 **`compound-engineering-philosophy` 신규 작성** — Agent A 진행 중 (12 incoming dangling references 해소)
 - ✅ **`rag/vector-search-basics` 신규 스텁** — Agent C 완료 (120줄, dangling 1건 해소)
-- 🟡 **stale worktree `sweet-napier`** — 정찰 결과: stale 아닌 valuable WIP (schema.ts에 series 필드 + content.ts subGroups refactor, 2 uncommitted 파일). 사용자 결정 필요 — cherry-pick / 폐기 / 재분기.
+- 🟡 **`sweet-napier` worktree (deferred)** — 정찰 결과: stale 아닌 valuable WIP. 사용자 결정 = **옵션 C (defer)** — 다음 세션에 cherry-pick. 변경 내용:
+  - `src/lib/schema.ts`: `series: z.string().optional()` 필드 추가 ← *이미 main에 있음 (이전 세션이 별도로 적용)*
+  - `src/lib/content.ts`: `getSidebarData()` refactor — `subGroups` 추가, series 기반 자동 그룹화 ← *main에 미적용, valuable refactor*
+  - 다음 세션에서 fresh로 다시 작성 권장 (worktree branch는 18 commits behind라 cherry-pick 충돌 가능성)
+  - sidebar.tsx도 함께 update 필요 — 현재 `harness-journal-` 슬러그 hardcoded → series 기반 일반화 (iOS Journal 시리즈도 자동 그룹화)
 
 **사고 재발률 (수정)**: 1건 — 본인이 메모리 룰 위반 (회사 프로젝트명 노출). 즉시 발견 + 정정 + 메모리 강화 + PreToolUse 훅으로 행동 레벨 차단까지 도달.
+
+---
+
+### 2026-04-13 (terminal 세션 5차) — Compound Philosophy 박제 + Vector Search 스텁 + validate 회귀 테스트
+
+**작업 트리거**: 사용자 *"쭉쭉 진행해줘"* — 자율 모드 큐 처리.
+
+**3 에이전트 병렬 산출**:
+
+| Agent | 결과 | 줄 수 | 소요 |
+|---|---|---|---|
+| A | `compound-engineering-philosophy.mdx` | 275줄 | ~208s |
+| B | `validate-content.mjs` 함수 추출 + 6 vitest 회귀 테스트 | scripts/lib/mermaid-fix.mjs + scripts/__tests__/*.test.mjs | ~130s |
+| C | `rag/vector-search-basics.mdx` 스텁 | 120줄 | ~60s |
+
+**Dangling Connections 13건 → 0건**:
+- 12건 (`compound-engineering-philosophy`): Agent A 신규 엔트리로 해소
+- 1건 (`vector-search-basics`): Agent C 신규 스텁으로 해소
+
+**`compound-engineering-philosophy` 핵심 박제**:
+- 12 referencing entries에서 추출한 **12 원칙**
+- **4단계 루프**: Plan → Work → Review → Compound
+- **5단계 ladder**: stage 3+ 권장
+- 원문 인용: *"each unit of engineering work should make subsequent units easier—not harder"*
+- 12 엔트리 × 원칙 매핑 테이블 + 자가 점검 체크리스트 12문항
+
+**`validate-content.mjs` 자가 손상 회귀 방지 시스템**:
+- 함수 추출: `scripts/lib/mermaid-fix.mjs`
+- 테스트: 13 passed (기존 7 + 신규 6)
+- 6 케이스: 슬라이싱 / 정규식 idempotent / 정상 라벨 / 다중 블록 / 5-quote 누적 잔재 / 추가 손상 방지
+- vitest config 업데이트: `scripts/__tests__/**/*.test.mjs` include
+
+**worktree 정찰 (사용자 결정 = defer)**:
+- `.claude/worktrees/sweet-napier`: stale 아닌 valuable WIP 확인
+- ahead 2 (이미 main에 squash merge로 들어감) / behind 18 (이번 세션 작업)
+- uncommitted: schema.ts series 필드 (이미 main 적용) + content.ts subGroups refactor (main 미적용)
+- 결정: **옵션 C** — 다음 세션 fresh refactor로 처리, worktree는 그대로 보존
+
+**커밋**: 5차 push (`689 ins / 78 del`, 7 파일)
+
+---
+
+## 🎯 다음 세션 시작 큐 (2026-04-13 세션 마지막 기준)
+
+### 🔴 우선순위 높음 (이번 세션의 정직한 디버트)
+1. **Sidebar series-based 그룹화 refactor** (worktree 작업 fresh 재현)
+   - `src/lib/content.ts`의 `getSidebarData()`를 `subGroups` 지원하도록 일반화
+   - `src/components/sidebar.tsx`의 `harness-journal-` 슬러그 hardcoded subgroup 로직 → frontmatter `series` 필드 기반으로
+   - 효과: iOS Journal 시리즈도 자동으로 사이드바 sub-group 처리됨
+   - worktree `sweet-napier` 참조 가능 (단 cherry-pick 충돌 위험으로 fresh 권장)
+2. **`/cross-session-review` 첫 dogfooding** — 다음 맥앱 세션 결과물에 실제 적용
+
+### 🟡 우선순위 중간
+3. **학습 히트맵 캘린더/년 토글** — 12주 → 1년 view 옵션 추가
+4. **iOS Journal 006+ (라이브 트리거 대기)** — Persistent 모듈 / async 전환 / iOS CI/CD / Xcode 타겟 멤버십 함정
+
+### 🟢 대기
+5. **LLM-as-Judge 데이터 분석** — quality_score 며칠 축적 후
+6. **Tokenomics 새 레버 탐색** — Anthropic/Claude Code 업데이트 트래킹
 
 ---
 
