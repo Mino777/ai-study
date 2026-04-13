@@ -565,28 +565,154 @@ cd /Users/jominho/Develop/ai-study && rtk npm run build
 
 ---
 
+---
+
+### 2026-04-13 (terminal 세션 진짜 마무리) — `/curate-inbound` 파이프라인 + Journal 020 dogfooding + 버그 fix
+
+**작업 트리거**: 사용자 *"머니플로우에서 뭐 하네스로 올리고싶어하는거 있는 것 같은데 다른 플젝에서 피알오면 너가 잘 정리해서 올릴 수 있는 파이프라인 만들 수 있나?"*
+
+**3 commits (compound 이후 추가됨)**:
+
+1. **`284d83f` — `/curate-inbound` 슬래시 커맨드 + `patterns/` 컨벤션 신설**
+   - `.claude/commands/curate-inbound.md` (~380줄) — 5 Phase (원본 수집 → 분류 → curation → 검증 → 머지)
+   - 6 카테고리 분류: reject / tips / solution / journal / pattern-entry / needs-review
+   - `dev-setup-tips-log.mdx`에 `patterns/` 컨벤션 섹션 추가 (tips/ vs patterns/ 구분 기준)
+   - CLAUDE.md skill routing 등록
+
+2. **`3634db2` — Harness Journal 020 Promise 타임아웃 래퍼 (`/curate-inbound` 첫 dogfooding)**
+   - moneyflow #114 (`5aeefa6`) + #115 (`b521b4e`) 자가 fix 사이클 박제
+   - 3 래퍼 함수 (`withTimeout` / `allSettledWithTimeout` / `raceWithTimeout`) + 15 API routes 적용
+   - 자가 fix 4 버그 해부 (구조 붕괴 1 + 타입 붕괴 3) + 5 메타 교훈
+   - connections 5개 (ai-call-patterns / ai-output-zod / inline-test-gate / journal-019 / fixture-silent-failure-trap)
+   - 378줄, quiz 3문항
+
+3. **`f87a49e` — ai-review.yml `patterns/` 브랜치 감지 (파이프라인 버그 fix)**
+   - 버그: `branches-ignore: main`만 써서 `patterns/`도 `tips/`처럼 auto-merge됨 (curation 건너뛰기)
+   - 수정: `startsWith(github.ref_name, 'patterns/')` 감지 → 라벨 부착 + auto-merge skip
+   - `patterns` + `needs-curation` 라벨 자동 부착 + 코멘트로 `/curate-inbound` 실행 안내
+   - Test Gate는 여전히 돌아서 구문 검증은 됨
+
+**파이프라인 전체 흐름** (이제 완성):
+```
+워커 push patterns/<slug>
+  → ai-review.yml 자동 PR + Test Gate + 라벨 부착 + auto-merge SKIP
+  → [허브] /curate-inbound #<num>
+  → curate/<slug> 브랜치로 push
+  → ai-review.yml 자동 PR + Test Gate + squash merge + Vercel deploy
+  → [허브] 원본 patterns/ PR 닫기
+```
+
+**파이프라인 발견 사항 (실전 메타)**:
+- 허브 pull 방식이 워커 push 방식보다 편한 경우 있음 (Journal 020 이번 dogfooding)
+- Connections grep이 효과적 (키워드 4개 → 관련 엔트리 4개 자동 발견)
+- Curation이 raw 재료의 *압축*이 아니라 *확장*이 되는 경우 있음 → user review 필수 정당
+
+---
+
+## 🎯 다음 세션 시작 체크리스트 (집 / 다른 기기 에이전트용 bootstrap)
+
+새 세션 시작 시 **반드시** 이 순서로:
+
+### Phase 1 — 컨텍스트 로드 (4분)
+```bash
+# 1. 필수 4 파일 읽기 (순서 중요)
+cat CLAUDE.md           # 프로젝트 계약서 + skill routing
+cat SPEC.md             # 엔티티 + 데이터 흐름 + AI Agent Contract
+cat content/harness-engineering/ai-agent-start-here.mdx  # 상황별 라우팅
+cat NEXT.md             # 이 파일 (현재 상태 + 다음 큐)
+```
+
+### Phase 2 — 인프라 상태 확인 (2분)
+```bash
+# Git 상태
+git status                                   # clean인지 확인
+git log --oneline -10                        # 최근 commits
+git worktree list                            # stale worktree 검출 (Journal 019 §5)
+
+# 다른 세션 activity
+gh pr list --search "patterns:" -R Mino777/ai-study  # patterns/ 대기 큐
+gh pr list --label patterns -R Mino777/ai-study      # curation 대기
+gh pr list --search "tips:" -R Mino777/ai-study      # tips 최근
+```
+
+### Phase 3 — 작업 시작 조건 (2분)
+- `patterns/` 라벨 PR 있으면 → `/curate-inbound #<num>` 우선 처리
+- `tips/` PR 대기 중이면 → `ai-review.yml`이 자동 처리되니 사후 검토만
+- 둘 다 없으면 → 아래 "다음 큐" 순서대로
+
+---
+
 ## 🎯 다음 세션 시작 큐 (2026-04-13 세션 종료 기준)
 
 ### 🔴 우선순위 높음
-1. **`/cross-session-review` 첫 dogfooding** — 다음 맥앱/외부 세션 결과물에 실제 적용
+1. **tarosaju에 Promise 타임아웃 래퍼 이식** — `fortune/ai` / `tarot-chat` Anthropic 호출에 `withTimeout` 적용. Journal 020 패턴 박제 전이성 6회째 사이클 후보
+2. **`/cross-session-review` 첫 dogfooding** — 다음 맥앱/외부 세션 결과물에 실제 적용
+3. **`/curate-inbound` 워커 push 방식 dogfooding** — 이번 세션은 허브 pull 방식. 실전에서 워커가 `patterns/` 브랜치 push하는 플로우 검증 필요
 
 ### 🟡 우선순위 중간
-2. **학습 히트맵 캘린더/년 토글** — 12주 → 1년 view 옵션 추가
-3. **iOS Journal 006+ (라이브 트리거 대기)** — Persistent 모듈 / async 전환 / iOS CI/CD / Xcode 타겟 멤버십 함정
+4. **`promise-helpers.ts`를 ai-study lib로 export** — 3 프로젝트 공통 사용 인프라 + 스텁 엔트리 `harness-engineering/promise-timeout-helpers.mdx`
+5. **워커 CLAUDE.md에 `patterns:` 컨벤션 안내** (moneyflow / tarosaju 각 한 줄씩 추가) — 워커 세션이 자발적으로 patterns/ 쏘도록
+6. **학습 히트맵 캘린더/년 토글** — 12주 → 1년 view 옵션 추가
+7. **iOS Journal 006+ (라이브 트리거 대기)** — Persistent 모듈 / async 전환 / iOS CI/CD / Xcode 타겟 멤버십 함정
 
 ### 🟢 대기
-4. **LLM-as-Judge 데이터 분석** — quality_score 며칠 축적 후
-5. **Tokenomics 새 레버 탐색** — Anthropic/Claude Code 업데이트 트래킹
+8. **LLM-as-Judge 데이터 분석** — quality_score 며칠 축적 후
+9. **Tokenomics 새 레버 탐색** — Anthropic/Claude Code 업데이트 트래킹
+10. **`/cross-session-review` → 허브 routine에 `gh pr list --label patterns` 추가** — session 시작 체크리스트 자동화
 
-### 정리 완료 (이번 세션에 처리됨)
-- ~~Sidebar series-based 그룹화 refactor~~ ✅
+### 정리 완료 (이번 세션 10 push에 처리됨)
+- ~~Sidebar series-based 그룹화 refactor~~ ✅ (`7b84a1a`)
 - ~~sweet-napier worktree 정리~~ ✅
-- ~~validate-content.mjs 회귀 테스트~~ ✅
+- ~~validate-content.mjs 회귀 테스트~~ ✅ (`d06c658`)
 - ~~compound-engineering-philosophy 박제~~ ✅
 - ~~vector-search-basics 스텁~~ ✅
-- ~~회사 프로젝트명 PreToolUse 가드~~ ✅
+- ~~회사 프로젝트명 PreToolUse 가드~~ ✅ (`ee7f310`)
 - ~~/cross-session-review 슬래시 커맨드~~ ✅
-- ~~Harness Journal 019 박제~~ ✅
+- ~~Harness Journal 019 박제~~ ✅ (`9f30c70`)
+- ~~tokenomics 카탈로그 재구조화 + applied-log 분리~~ ✅
+- ~~iOS Harness Journal 000~005 사실 정정~~ ✅
+- ~~validate-content.mjs 두 자가손상 버그 fix (slicing + regex)~~ ✅
+- ~~/compound 실행 (CHANGELOG / retro / solutions / CLAUDE.md / memory)~~ ✅ (`8516505`)
+- ~~/curate-inbound 슬래시 커맨드 + patterns/ 컨벤션~~ ✅ (`284d83f`)
+- ~~Harness Journal 020 — Promise 타임아웃 래퍼 (파이프라인 첫 dogfooding)~~ ✅ (`3634db2`)
+- ~~ai-review.yml patterns/ 브랜치 감지 버그 fix~~ ✅ (`f87a49e`)
+
+---
+
+## 📦 다른 기기 에이전트를 위한 정보 위치 (리모트 확인)
+
+**모두 git에 있음** — 집에서 `git pull` 후 다음 파일들 읽으면 전체 context 확보:
+
+| 정보 | 파일 경로 | 비고 |
+|---|---|---|
+| 프로젝트 계약서 + skill routing | `CLAUDE.md` | 13+ 슬래시 커맨드 목록 포함 |
+| 엔티티 + AI Agent Contract | `SPEC.md` | 데이터 흐름 |
+| 현재 상태 + 다음 큐 | `NEXT.md` (이 파일) | 세션 로그 append-only |
+| 금일 변경 요약 | `CHANGELOG.md` `[2026-04-13]` 엔트리 | wave 1 + 추가 3 commits는 git log로 |
+| 금일 회고 | `docs/retros/2026-04-13.md` | 잘된 것 / 아쉬운 것 / Compound Assets 7 |
+| 자가손상 validator 버그 | `docs/solutions/workflow/2026-04-13-self-modifying-validator-bugs.md` | 회귀 방지 체크리스트 |
+| 크로스 세션 리뷰 프로토콜 | `docs/solutions/workflow/2026-04-13-cross-session-review-protocol.md` | 5단 + 6 함정 |
+| 파이프라인 첫 dogfooding | `content/harness-engineering/harness-journal-020-promise-timeout-wrapper.mdx` | |
+| 맥앱 부산물 사례 | `content/harness-engineering/harness-journal-019-mcapp-cross-session-cleanup.mdx` | 6 함정 + 5단 프로토콜 |
+| 철학적 토대 | `content/harness-engineering/compound-engineering-philosophy.mdx` | 12 원칙 + 4단계 루프 |
+| curate-inbound 슬래시 커맨드 | `.claude/commands/curate-inbound.md` | 6 카테고리 분류 룰 |
+| cross-session-review 슬래시 커맨드 | `.claude/commands/cross-session-review.md` | Journal 019 자동화 |
+| 회사명 PreToolUse 가드 | `.claude/hooks/no-company-names.sh` | 행동 레벨 차단 |
+
+### ⚠️ 리모트에 **없는** 것 (로컬 전용)
+
+**Claude Code 메모리 파일** — device-specific path이라 리모트 동기화 안 됨:
+- `~/.claude/projects/-Users-jominho-Develop-ai-study/memory/feedback_company_project_names.md`
+- `~/.claude/projects/-Users-jominho-Develop-ai-study/memory/feedback_self_modifying_tools.md`
+- `~/.claude/projects/-Users-jominho-Develop-ai-study/memory/feedback_memory_vs_behavior_guard.md`
+- `~/.claude/projects/-Users-jominho-Develop-ai-study/memory/MEMORY.md`
+
+**하지만 핵심 lessons는 committed docs에 중복 박제되어 있음**:
+- `feedback_company_project_names` 교훈 → `dev-setup-tips-log.mdx` patterns 섹션 + `.claude/hooks/no-company-names.sh`
+- `feedback_self_modifying_tools` 교훈 → `docs/solutions/workflow/2026-04-13-self-modifying-validator-bugs.md` "일반화" 섹션
+- `feedback_memory_vs_behavior_guard` 교훈 → Journal 019 §6 + 이번 세션의 회사명 위반 사례 박제
+
+→ 집 에이전트가 위 파일들 읽으면 *메모리 파일 없어도 동일 lesson 확보*. 단, 새 사이클에서 위반 감지 시 즉시 행동 레벨로 escalate 원칙 기억 필요.
 
 ---
 
