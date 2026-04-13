@@ -166,6 +166,7 @@ Key routing rules:
 - 새 작업 시작, 안전한 브랜치 분기 (squash merge 함정 회피) → invoke wt-branch
 - 워커 프로젝트(moneyflow/tarosaju) 상태 확인, 다른 세션 작업 흔적 감지, 충돌 사전 탐지 → invoke projects-sync
 - 다른 Claude 세션(맥앱/웹/다른 터미널) PR/커밋 검증, 크로스 세션 리뷰 → invoke cross-session-review
+- 워커 프로젝트(moneyflow/tarosaju 등)가 `patterns:` prefix로 쏜 PR을 하네스로 박제 → invoke curate-inbound
 
 ## .claude/ 인프라
 
