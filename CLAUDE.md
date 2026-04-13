@@ -94,7 +94,8 @@ src/generated/     → content-manifest.json (gitignored, entries + graph + stre
 - `MermaidDiagram` — mermaid 코드 블록 자동 렌더링
 - `EntryNav` — 이전/다음 엔트리 (같은 카테고리 내)
 - `MobileNav` — 모바일 하단 탭 바
-- `LearningHeatmap` — GitHub 스타일 학습 히트맵 (12주, dailyEntries 기반)
+- `LearningHeatmap` — GitHub 스타일 학습 히트맵 (12주, dailyEntries 기반, 일~토 행 정렬)
+- `Sidebar` — 카테고리 트리. `SeriesSubGroup`이 frontmatter `series` 필드 기반으로 generic하게 그룹화 (📓 Harness Journal / 📱 iOS Journal). 새 시리즈는 `SERIES_LABELS` (schema.ts) 한 줄 추가
 - `Quiz` — frontmatter quiz 배열 기반 객관식 자가 점검 (즉시 채점 + 해설 + localStorage 저장)
 - `QuizWidget` — 대시보드용 퀴즈 통계 + Spaced Repetition 큐 ("오늘 복습할 엔트리"). `lib/quiz-storage.ts`의 SM-2 단순화 알고리즘 사용 (간격 1→3→7→14→30→60일)
 
@@ -165,6 +166,13 @@ Key routing rules:
 - 새 작업 시작, 안전한 브랜치 분기 (squash merge 함정 회피) → invoke wt-branch
 - 워커 프로젝트(moneyflow/tarosaju) 상태 확인, 다른 세션 작업 흔적 감지, 충돌 사전 탐지 → invoke projects-sync
 - 다른 Claude 세션(맥앱/웹/다른 터미널) PR/커밋 검증, 크로스 세션 리뷰 → invoke cross-session-review
+
+## .claude/ 인프라
+
+- `.claude/hooks/no-company-names.sh` — PreToolUse(Edit/Write) 가드. `gma-ios|GreenCar|LOTTIMS` 패턴 grep → 차단. 메모리 룰 보강용 행동 레벨 가드. 화이트리스트: `.claude/projects/.../memory/`, 훅 자체
+- `.claude/commands/cross-session-review.md` — Journal 019 5단 프로토콜 슬래시 커맨드
+- `scripts/lib/mermaid-fix.mjs` — `validate-content.mjs`에서 추출한 자동 수정 함수. 두 과거 버그(slicing offset / regex 누적) docstring 박제
+- `scripts/__tests__/validate-content.test.mjs` — mermaid-fix 6 회귀 테스트 (`npm test`로 vitest 실행)
 
 <!-- rtk-instructions v2 -->
 # RTK (Rust Token Killer) - Token-Optimized Commands

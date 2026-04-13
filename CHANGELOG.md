@@ -2,6 +2,75 @@
 
 모든 주목할 만한 변경사항을 이 파일에 기록합니다.
 
+## [2026-04-13] — terminal 복귀 세션: 8 push 사이클 + 4 신규 콘텐츠 + 5 인프라 + 2 자가손상 버그 fix
+
+사용자가 맥앱 Claude 세션 결과물에 불만 표명 → 터미널로 복귀 → 3 프로젝트(`ai-study` + `mino-moneyflow` + `mino-tarosaju`) 동시 발생 부산물을 전수 검증 + 정리. 7회 에이전트 병렬(2 사이클: 4 + 3) 활용.
+
+### Added — 신규 콘텐츠 4
+- **`harness-engineering/harness-journal-019-mcapp-cross-session-cleanup.mdx`** — 맥앱 Claude 세션 부산물 6 함정 + 5단 크로스 세션 리뷰 프로토콜 박제
+- **`harness-engineering/compound-engineering-philosophy.mdx`** (275줄) — 12 referencing entries에서 추출한 12 원칙 + 4단계 루프(Plan→Work→Review→Compound) + 5단계 ladder + 12 엔트리 × 원칙 매핑 테이블 + 자가 점검 체크리스트 12문항. dangling connection 12건 해소
+- **`tokenomics/claude-code-token-levers-applied-log.mdx`** — 카탈로그에서 메타 분리. 4 조건 / 적용 로그 5건 / 실측 결과 표 / append-only live document
+- **`rag/vector-search-basics.mdx`** (120줄) — 임베딩 / 코사인 / k-NN / ANN(HNSW/IVF/LSH) / 모델 선택 / Recall@k / 벡터 DB 7 개념. dangling connection 1건 해소
+
+### Added — 신규 인프라 5
+- **`.claude/hooks/no-company-names.sh`** — Edit/Write 직전 `gma-ios|GreenCar|LOTTIMS` grep → 발견 시 차단. settings.json `Edit|Write` matcher로 등록. 메모리 의존을 못 믿겠어서 행동 레벨로
+- **`.claude/commands/cross-session-review.md`** — Journal 019의 5단 프로토콜 자동화 슬래시 커맨드. CLAUDE.md skill routing 등록
+- **`scripts/lib/mermaid-fix.mjs`** — `validate-content.mjs`에서 `fixAndValidateMermaid` 함수 추출. 두 과거 버그(슬라이싱 / regex 누적) docstring 박제
+- **`scripts/__tests__/validate-content.test.mjs`** — 6 회귀 테스트 (슬라이싱 idempotent / regex idempotent / 정상 라벨 / 다중 블록 / 5-quote 누적 잔재 / 추가 손상 방지). 13 passed (기존 7 + 신규 6)
+- **vitest.config.ts** — `scripts/__tests__/**/*.test.mjs` include
+
+### Changed — 사이드바 series-based 일반화 refactor
+- **`src/lib/schema.ts`**: `SERIES_LABELS` 매핑 추가 — 시리즈 키 → label/icon. 새 시리즈 추가 시 한 줄로 자동 그룹화
+- **`src/lib/content.ts`**: `SidebarEntry` / `SidebarCategory` 타입 export. `getSidebarData()`가 `entries + subGroups` 반환
+- **`src/components/sidebar.tsx`**: 'harness-journal-' 슬러그 hardcoded → 제네릭 `SeriesSubGroup` 컴포넌트. CategoryBody가 entries + 모든 subGroups 렌더
+- **17 frontmatter 추가**: `harness-journal-000~018` + `bootstrap-guide` 모두 `series: harness-journal` 추가
+- 결과: 사이드바에서 `📓 Harness Journal (18)` + `📱 iOS Journal (6)` 모두 자동 sub-group 처리
+
+### Changed — 콘텐츠 사실 정정 8
+- **iOS Harness Journal 000~005 전면 재작성** (4 에이전트 병렬) — 이전 세션의 가짜 코드 / 잘못된 카운트 / 허구 스킬 전부 폐기:
+  - Ep.000: "스킬 5종" → 7종 (compound + ios-arch + ios-bugfix + ios-investigate + ios-review + ios-ship + ios-triage). RIBs Swift 코드 80줄 삭제
+  - Ep.001: 제목 "PreToolUse 훅" → "git pre-commit 훅으로 코드 규칙 차단". 가짜 `swift-pre-write.sh` 전면 삭제. 진짜는 `.githooks/` + `setup.sh`
+  - Ep.002: "5종" → "7종 (병렬 Agent 패턴 포함)". 가짜 .md 통째 인용 삭제
+  - Ep.003: 가상 .claudeignore → 실제 21줄 + `**/.build/` 글로브 패턴 필수성 강조
+  - Ep.004: "가설 3개" → "5 Round 인터뷰 + 5 체크리스트" (실제 source 반영)
+  - Ep.005: "/ios-compound" → "/compound" 정정. 카테고리 8개 정정 (`appstore` 삭제, `architecture` 추가)
+- **tokenomics 카탈로그 재구조화** — 503 → 443줄. 적용 로그/메타 → applied-log entry로 분리. 본문 순서 정비
+- **`apple-intelligence-api.mdx` §3 손상 복구** — mermaid 블록이 Swift 코드 블록 시작부에 잘못 끼어들어가 acorn 파서 에러
+
+### Changed — 회사 프로젝트명 익명화 (메모리 룰 위반 정정)
+- 4 에이전트가 iOS Journal 재작성 시 회사 프로젝트 식별자(`gma-ios` / `GreenCar.xcodeproj` / `LOTTIMS-SPM`)를 노출 — 본인 책임 (에이전트 prompt에 익명화 지시 누락)
+- 9건 grep + 치환:
+  - `gma-ios` → `moneyflow-ios` (5건)
+  - `GreenCar` → `MoneyFlow` (1건)
+  - `LOTTIMS-SPM/` → `external-spm/` (3건, 두 번째 발견)
+  - 메모리 경로도 익명화
+- 메모리 강화: 위반 사례 박제 + grep 가드 프로토콜 + 에이전트 위임 시 익명화 지시 룰 + PreToolUse 훅으로 행동 레벨 차단까지
+
+### Fixed — `validate-content.mjs` 자가 손상 두 버그
+- **버그 1 — 슬라이싱 오프셋**: mermaid 자동 수정 시 `content`(frontmatter 제거 후) 기준 검색 + `raw`(frontmatter 포함) 슬라이싱 → frontmatter 길이만큼 어긋나서 파일 다른 부분 손상. **apple-intelligence-api.mdx §3 손상의 진짜 원인**. fix: `raw.indexOf(...)`
+- **버그 2 — 정규식 누적 매치**: regex가 이미 따옴표로 감싸진 라벨도 매치 → 매 실행마다 따옴표 1쌍씩 누적 (5-quote 발견 흔적). fix: negative lookahead `(?!")` + 라벨 내부 `"` 제외 (`[^\[\]"]*`)
+
+### Fixed — 학습 히트맵
+- **요일 정렬 X 였던 sequential 7-day 블록** → GitHub 스타일 일/월/.../토 행 기반 그리드. 미래 셀 투명. 월/수/금 라벨
+- **iOS Journal 000~005 가짜 화요일 backdate** — 이전 세션이 1/20부터 매주 화요일에 분산 → 실제 작성일 2026-04-13으로 정정. 결과: 5개 화요일 사라지고 월(오늘) 8 entries
+
+### Fixed — 기타
+- `/harness-journal` 탭 라벨: `🌐 Web` → `🌐 Web + Backend`, `📱 iOS Harness Journal` → `📱 iOS` (Stats 섹션 동기화)
+
+### Removed
+- **`.claude/worktrees/sweet-napier`** — sidebar refactor가 fresh로 같은 작업 재현 → 정리. branch `claude/sweet-napier`는 보존 (필요 시 복구 가능)
+
+### Metrics
+- **8 push 사이클** (1차 → 8차)
+- **에이전트 병렬 7회** (2 사이클: 4 + 3, 외부 fetch 0)
+- **dangling connections**: 13 → 0
+- **테스트**: 13 passed (기존 7 + 신규 6 mermaid-fix)
+- **빌드**: 84 static pages
+- **MDX 파일**: 63 → 66 (+3 신규 콘텐츠)
+- **사고 재발률**: 1건 (회사명 노출, 즉시 발견 + 행동 레벨 차단까지 도달)
+
+---
+
 ## [2026-04-12 wave 5] — LLM-as-a-Judge 3 프로젝트 + Tokenomics 실측
 
 ### Added
