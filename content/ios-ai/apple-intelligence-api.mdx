@@ -177,23 +177,12 @@ Task {
     // (여기서는 가상의 이벤트 ID와 타입 사용)
     let meetingID = UUID() // 실제 앱의 이벤트 ID
     let suggestedActionsResult = try await agent.requestIntelligentAction(
-        .suggestFollowUpActions(forContextIdentifier: meetingID.uuidString, contextType: "com.myapp.meeting_event")
-    )
-    if let actions = suggestedActionsResult.arrayValue(ofType: String.self) {
-        print("Suggested Actions for Meeting: \(actions.joined(separator: ", "))")
-    }
-}
-*/
-```
-
-### Apple Intelligence API 상호작용 흐름 다이어그램
-
-```mermaid
+        .suggestFollowUpActions```mermaid
 graph TD
     A[iOS 앱 개발자] --> B{IntelligenceKit API};
     B --> C{Apple Intelligence Layer};
     C --> D[온디바이스 모델];
-    C --> E["Private Cloud Compute (PCC)"];
+    C --> E[""Private Cloud Compute (PCC)""];
     D --> F[시스템 컨텍스트 저장소];
     E --> F;
     F --> C;
@@ -214,6 +203,12 @@ graph TD
     style C fill:#9cf,stroke:#333,stroke-width:2px;
     style B fill:#ffd,stroke:#333,stroke-width:1px;
     style I fill:#ffd,stroke:#333,stroke-width:1px;
+    style D fill:#afa,stroke:#333,stroke-width:1px;
+    style E fill:#fca,stroke:#333,stroke-width:1px;
+    style F fill:#add,stroke:#333,stroke-width:1px;
+    style G fill:#dee,stroke:#333,stroke-width:1px;
+    style H fill:#eef,stroke:#333,stroke-width:1px;
+```tyle I fill:#ffd,stroke:#333,stroke-width:1px;
     style D fill:#afa,stroke:#333,stroke-width:1px;
     style E fill:#fca,stroke:#333,stroke-width:1px;
     style F fill:#add,stroke:#333,stroke-width:1px;
