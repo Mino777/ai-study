@@ -92,6 +92,7 @@ export const frontmatterSchema = z.object({
   status: z.enum(["draft", "in-progress", "complete"]).default("draft"),
   description: z.string(),
   type: z.enum(["entry", "til"]).default("entry"),
+  series: z.string().optional(),
   quiz: z.array(quizQuestionSchema).optional(),
 });
 

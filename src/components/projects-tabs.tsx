@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-export type ProjectCategory = "all" | "methodology" | "infrastructure" | "learning";
+export type ProjectCategory = "moneyflow" | "tarosaju" | "ai-study-wiki";
 
 interface ProjectTabsProps {
   categories: ProjectCategory[];
@@ -16,10 +16,9 @@ export function ProjectTabs({
   currentCategory,
 }: ProjectTabsProps) {
   const categoryLabels: Record<ProjectCategory, string> = {
-    all: "모든 프로젝트",
-    methodology: "🛠️ AI 엔지니어링 방법론",
-    infrastructure: "⚙️ 인프라 & 도구",
-    learning: "📚 학습 플랫폼",
+    moneyflow: "MoneyFlow",
+    tarosaju: "TaroSaju",
+    "ai-study-wiki": "AI Study",
   };
 
   return (

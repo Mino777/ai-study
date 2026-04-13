@@ -117,7 +117,7 @@ const FOUNDATION_HARNESS = [
 const PROJECTS = [
   {
     name: "Mino MoneyFlow",
-    category: "methodology" as const,
+    category: "moneyflow" as const,
     url: "https://mino-moneyflow.vercel.app/",
     color: "#10b981",
     period: "2026.04 ~",
@@ -183,7 +183,7 @@ const PROJECTS = [
   },
   {
     name: "Mino TaroSaju",
-    category: "infrastructure" as const,
+    category: "tarosaju" as const,
     url: "https://mino-tarosaju.vercel.app/",
     color: "#8b5cf6",
     period: "2026.04 ~",
@@ -254,7 +254,7 @@ const PROJECTS = [
   },
   {
     name: "AI Study Wiki",
-    category: "learning" as const,
+    category: "ai-study-wiki" as const,
     url: "https://ai-study-wheat.vercel.app/",
     color: "#f59e0b",
     period: "2026.04 ~",
