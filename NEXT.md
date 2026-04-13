@@ -539,23 +539,54 @@ cd /Users/jominho/Develop/ai-study && rtk npm run build
 
 ---
 
-## 🎯 다음 세션 시작 큐 (2026-04-13 세션 마지막 기준)
+### 2026-04-13 (terminal 세션 마지막) — Sidebar 일반화 + worktree 정리
 
-### 🔴 우선순위 높음 (이번 세션의 정직한 디버트)
-1. **Sidebar series-based 그룹화 refactor** (worktree 작업 fresh 재현)
-   - `src/lib/content.ts`의 `getSidebarData()`를 `subGroups` 지원하도록 일반화
-   - `src/components/sidebar.tsx`의 `harness-journal-` 슬러그 hardcoded subgroup 로직 → frontmatter `series` 필드 기반으로
-   - 효과: iOS Journal 시리즈도 자동으로 사이드바 sub-group 처리됨
-   - worktree `sweet-napier` 참조 가능 (단 cherry-pick 충돌 위험으로 fresh 권장)
-2. **`/cross-session-review` 첫 dogfooding** — 다음 맥앱 세션 결과물에 실제 적용
+**작업 트리거**: 사용자 *"오케이 급한거 두개까지만 딱하고 마무리하자"*.
+
+**Item 1 — Sidebar series-based 일반화 refactor (commit `7b84a1a`)**:
+- `src/lib/schema.ts`: `SERIES_LABELS` 추가 (시리즈 키 → label/icon 매핑, 새 시리즈 추가 시 한 줄로 자동 그룹화)
+- `src/lib/content.ts`: `SidebarEntry`/`SidebarCategory` 타입 export, `getSidebarData()`가 `entries + subGroups` 반환
+- `src/components/sidebar.tsx`: 'harness-journal-' 슬러그 hardcoded → 제네릭 `SeriesSubGroup` 컴포넌트
+- **17 frontmatter 추가**: harness-journal-000~018 + bootstrap-guide 모두 `series: harness-journal` 필드 추가
+- 결과: harness-journal 18 + ios-ai-journal 6 모두 사이드바에 자동 sub-group 처리
+
+**Item 2 — `sweet-napier` worktree 정리**:
+- WIP가 Item 1의 fresh refactor로 fully captured → worktree obsolete
+- 안전 절차: branch에 commit-stash → `git worktree remove`
+- branch `claude/sweet-napier` **보존**됨 (필요 시 복구 가능)
+- `.claude/worktrees/` 디렉터리 비워짐
+- `git worktree list` = main만
+
+**최종 검증**:
+- 빌드: 84 static pages, dangling 0
+- 테스트: 13 passed
+- Manifest series count: `{ harness-journal: 18, ios-ai-journal: 6 }`
+- 회사 프로젝트명 노출: 0 (PreToolUse 훅이 차단 대기)
+
+---
+
+## 🎯 다음 세션 시작 큐 (2026-04-13 세션 종료 기준)
+
+### 🔴 우선순위 높음
+1. **`/cross-session-review` 첫 dogfooding** — 다음 맥앱/외부 세션 결과물에 실제 적용
 
 ### 🟡 우선순위 중간
-3. **학습 히트맵 캘린더/년 토글** — 12주 → 1년 view 옵션 추가
-4. **iOS Journal 006+ (라이브 트리거 대기)** — Persistent 모듈 / async 전환 / iOS CI/CD / Xcode 타겟 멤버십 함정
+2. **학습 히트맵 캘린더/년 토글** — 12주 → 1년 view 옵션 추가
+3. **iOS Journal 006+ (라이브 트리거 대기)** — Persistent 모듈 / async 전환 / iOS CI/CD / Xcode 타겟 멤버십 함정
 
 ### 🟢 대기
-5. **LLM-as-Judge 데이터 분석** — quality_score 며칠 축적 후
-6. **Tokenomics 새 레버 탐색** — Anthropic/Claude Code 업데이트 트래킹
+4. **LLM-as-Judge 데이터 분석** — quality_score 며칠 축적 후
+5. **Tokenomics 새 레버 탐색** — Anthropic/Claude Code 업데이트 트래킹
+
+### 정리 완료 (이번 세션에 처리됨)
+- ~~Sidebar series-based 그룹화 refactor~~ ✅
+- ~~sweet-napier worktree 정리~~ ✅
+- ~~validate-content.mjs 회귀 테스트~~ ✅
+- ~~compound-engineering-philosophy 박제~~ ✅
+- ~~vector-search-basics 스텁~~ ✅
+- ~~회사 프로젝트명 PreToolUse 가드~~ ✅
+- ~~/cross-session-review 슬래시 커맨드~~ ✅
+- ~~Harness Journal 019 박제~~ ✅
 
 ---
 
