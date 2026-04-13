@@ -1,0 +1,73 @@
+---
+title: "iOS AI Journal 003 — Function Calling으로 실시간 컨텍스트 업데이트"
+category: ios-ai
+series: ios-ai-journal
+date: "2026-04-13"
+tags: [ios, function-calling, real-time-updates]
+confidence: 4
+connections: [ios-ai/ios-ai-journal-002-context-compression]
+status: complete
+type: entry
+description: "Function Calling으로 AI가 필요한 데이터를 실시간으로 조회하여 최신 정보 유지"
+---
+
+## iOS AI Journal 003: Function Calling으로 실시간 컨텍스트 업데이트
+
+Journal 002에서 압축한 컨텍스트는 여전히 **정적(snapshot)**이다.
+
+사용자가 대화 중에 새 메시지를 받거나, 위치가 바뀌거나, 일정이 추가되면?
+
+### 문제: 컨텍스트가 금방 낡는다
+
+```
+AI 응답 생성 시작: 14:00
+  (컨텍스트 스냅샷: 14:00)
+  
+사용자 새 액션 발생: 14:05
+  (컨텍스트는 여전히 14:00)
+  
+AI 응답 완료: 14:10
+  (5분 뒤의 정보로 답변)
+```
+
+### 해결: Function Calling으로 필요할 때만 조회
+
+```swift
+// 1. AI에 function을 정의
+let tools = [
+    Tool(
+        name: "get_latest_location",
+        description: "사용자의 최신 위치 조회",
+        handler: { await getLatestLocation() }
+    ),
+    Tool(
+        name: "get_recent_messages",
+        description: "최근 메시지 3개 조회",
+        handler: { await getRecentMessages(count: 3) }
+    )
+]
+
+// 2. AI가 필요한 정보를 요청
+// AI: "사용자의 최신 위치를 확인해야 근처 추천이 가능합니다"
+// → get_latest_location 호출
+// → 최신 정보 획득
+// → 업데이트된 정보로 응답 생성
+```
+
+### 성능: 스냅샷 vs 동적 조회
+
+**스냅샷 방식**:
+- 초기 로딩: 빠름
+- 정보 신선도: 낮음 (5분 이상 낡을 수 있음)
+
+**Function Calling 방식**:
+- 초기 로딩: 약간 느림 (추가 함수 호출)
+- 정보 신선도: 높음 (필요할 때만 최신 조회)
+
+### 언제 어떤 방식?
+
+- 빠른 응답 필요 → 스냅샷 사용
+- 정확성 중요 → Function Calling 사용
+- 균형 → 하이브리드 (초기: 스냅샷, 필요시: 동적 조회)
+
+다음 Journal에서는 이 모든 것을 **사용자 경험과 리소스 비용 관점**에서 최적화한다.
