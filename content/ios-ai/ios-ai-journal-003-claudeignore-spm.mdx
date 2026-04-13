@@ -1,0 +1,93 @@
+---
+title: "iOS AI Journal 003 — .claudeignore와 SPM 멀티모듈 함정"
+category: ios-ai
+series: ios-ai-journal
+date: "2026-04-13"
+tags: [ios, claudeignore, spm, multimodule, tokenomics]
+confidence: 5
+connections: [ios-ai/ios-ai-journal-002-ios-slash-commands, harness-engineering/wt-branch-structural-safety]
+status: complete
+type: entry
+description: ".build/ 폴더가 130GB를 차지하는 SPM 멀티모듈 프로젝트에서 .claudeignore로 컨텍스트 폭발을 차단한 실제 경험"
+---
+
+## iOS AI Journal 003: .claudeignore와 SPM 멀티모듈 함정
+
+직접 겪은 사고다. SPM 멀티모듈 프로젝트에서 Claude Code에게 코드를 보여줬더니 **컨텍스트 창이 즉각 초과**됐다.
+
+### 원인: .build/ 폴더의 실체
+
+```bash
+$ du -sh .build/
+130G    .build/
+```
+
+SPM(Swift Package Manager)은 빌드 아티팩트를 `.build/` 폴더에 저장한다. 멀티모듈 프로젝트에서는:
+- 각 모듈의 중간 빌드 파일
+- Debug/Release 두 벌
+- 시뮬레이터 + 디바이스 각각
+
+합치면 100GB는 기본이다.
+
+### Claude Code가 이걸 읽으면?
+
+AI가 프로젝트를 파악하려고 Glob이나 Read를 쓸 때, `.build/` 안의 수천 개 Swift 파일도 포함된다. 이건 전부 **컴파일된 바이너리 + 임시 파일**이라 읽을 필요가 전혀 없다.
+
+결과:
+- 컨텍스트 창 초과 → 응답 불가
+- 토큰 낭비 → 비용 폭증
+- AI가 소스 코드 대신 빌드 아티팩트를 분석하는 상황
+
+### 해결: .claudeignore 작성
+
+```gitignore
+# .claudeignore
+
+# SPM 빌드 아티팩트 (반드시 제외!)
+.build/
+.swiftpm/
+*.o
+*.d
+
+# CocoaPods (소스 포함되어 있어도 제외)
+Pods/
+
+# Xcode 빌드 아티팩트
+DerivedData/
+*.xcuserstate
+*.xcworkspace/xcuserdata/
+
+# 자동 생성 파일
+R.generated.swift
+Generated/
+
+# 테스트 결과
+TestResults/
+*.xcresult
+```
+
+### 적용 전후 비교
+
+| | 적용 전 | 적용 후 |
+|---|---------|---------|
+| 프로젝트 컨텍스트 크기 | ~130GB (측정 불가) | ~50MB |
+| 첫 응답까지 시간 | 컨텍스트 초과로 불가 | 2-3초 |
+| 토큰 소비 | 측정 불가 | 정상 |
+
+### SPM 멀티모듈 프로젝트 추가 설정
+
+```markdown
+## CLAUDE.md 추가 내용
+
+### 모듈 구조
+- Core: 공통 유틸리티 (수정 주의 - 전체 영향)
+- Feature/: 각 기능 모듈 (독립적 수정 가능)
+- App: 최상위 앱 타겟 (가능한 건드리지 않음)
+
+### 모듈 추가 시 반드시 사람이 할 일
+- Package.swift에 모듈 등록
+- Xcode 타겟에 의존성 추가
+→ AI가 놓치는 단계, 반드시 직접 확인
+```
+
+**배운 것**: `.claudeignore`는 선택이 아니라 iOS 프로젝트에서 **생존 필수품**이다.

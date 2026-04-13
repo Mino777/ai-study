@@ -1,0 +1,99 @@
+---
+title: "iOS AI Journal 002 — iOS 특화 슬래시 커맨드 시스템"
+category: ios-ai
+series: ios-ai-journal
+date: "2026-04-13"
+tags: [ios, slash-commands, ios-review, ios-investigate, ios-bugfix]
+confidence: 4
+connections: [ios-ai/ios-ai-journal-001-swift-lint-hook, harness-engineering/skill-system-introduction]
+status: complete
+type: entry
+description: "iOS 프로젝트에 특화된 슬래시 커맨드 3종 설계 — ios-review, ios-investigate, ios-bugfix의 작동 방식과 실제 적용"
+---
+
+## iOS AI Journal 002: iOS 특화 슬래시 커맨드 시스템
+
+일반 `/review`, `/investigate`로는 iOS 특유의 문제를 잡기 어렵다. **RIBs 레이어 위반**, **메모리 리크**, **시뮬레이터 환경 차이** 같은 것들은 iOS 전용 체크리스트가 필요하다.
+
+### ios-review
+
+```markdown
+# .claude/commands/ios-review.md
+
+## iOS 코드 리뷰 체크리스트
+
+### RIBs 레이어 검사
+- [ ] Interactor가 UIKit import하고 있지 않은지
+- [ ] Router가 비즈니스 로직을 갖고 있지 않은지
+- [ ] Builder 외부에서 의존성 주입이 일어나고 있지 않은지
+
+### 메모리 관리
+- [ ] Closure capture list에 [weak self] 누락 없는지
+- [ ] delegate 프로퍼티가 weak으로 선언되어 있는지
+- [ ] Timer, NotificationCenter 해제 코드 있는지
+
+### Swift 코드 품질
+- [ ] force unwrap (!) 사용 여부
+- [ ] guard let / if let 대신 ! 남용 여부
+- [ ] async/await에서 MainActor 적절히 사용하는지
+
+### 테스트
+- [ ] Interactor 로직에 대한 유닛 테스트 존재하는지
+- [ ] Mock 객체가 프로토콜 기반인지
+```
+
+### ios-investigate
+
+```markdown
+# .claude/commands/ios-investigate.md
+
+## iOS 버그 조사 프로토콜
+
+1. **크래시 리포트 분석** (있는 경우)
+   - Stack trace에서 첫 번째 앱 코드 라인 찾기
+   - 해당 시점의 메모리 상태 추론
+
+2. **RIBs 흐름 추적**
+   - 어떤 RIB에서 발생했는지 특정
+   - attach/detach 순서 확인
+
+3. **재현 조건 특정**
+   - 항상 발생 vs 간헐적 발생
+   - 특정 iOS 버전에서만 발생 여부
+   - 디바이스 vs 시뮬레이터 차이
+
+4. **가설 목록 작성** (최대 3개)
+   → ios-bugfix로 이관
+```
+
+### ios-bugfix
+
+```markdown
+# .claude/commands/ios-bugfix.md
+
+## iOS 버그 수정 브리프
+
+ios-investigate 결과를 입력받아 수정 계획 수립:
+
+1. 영향 범위 확인 (이 RIB만 or 전체 흐름)
+2. 테스트 먼저 작성 (버그 재현 테스트)
+3. 수정 → 테스트 통과 확인
+4. 회귀 가능성 있는 주변 코드 ios-review 실행
+5. docs/solutions/ios/ 에 기록
+```
+
+### 3개 커맨드의 흐름
+
+```
+버그 발견
+  ↓
+/ios-investigate  ← 원인 분석
+  ↓
+/ios-bugfix       ← 수정 계획 + 실행
+  ↓
+/ios-review       ← 수정 코드 검증
+  ↓
+docs/solutions/ios/ 기록
+```
+
+이 흐름을 거치면 같은 버그가 다시 나왔을 때 과거 해결책을 바로 찾을 수 있다.

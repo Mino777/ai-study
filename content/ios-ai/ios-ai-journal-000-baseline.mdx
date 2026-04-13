@@ -1,71 +1,77 @@
 ---
-title: "iOS AI Journal 000 — 온디바이스 동적 컨텍스트 주입 기초"
+title: "iOS AI Journal 000 — iOS AI 하네스 베이스라인"
 category: ios-ai
 series: ios-ai-journal
 date: "2026-04-13"
-tags: [ios, ai, context-injection, dynamic-context]
+tags: [ios, harness-engineering, ribs, claude-code, baseline]
 confidence: 4
-connections: [context-engineering/dynamic-context-injection, ios-ai/apple-intelligence-api]
+connections: [harness-engineering/harness-engineering-overview, ios-ai/apple-intelligence-api]
 status: complete
 type: entry
-description: "iOS 앱에서 AI를 효과적으로 활용하기 위해 동적 컨텍스트를 주입하는 기초 패턴과 필요성"
+description: "iOS 프로젝트에서 AI 에이전트가 안전하게 작동할 수 있는 하네스 베이스라인 설계 — RIBs 아키텍처, 컨텍스트 주입, CLAUDE.md 원칙"
 ---
 
-## iOS AI Journal 000: 온디바이스 동적 컨텍스트 주입 기초
+## iOS AI Journal 000: iOS AI 하네스 베이스라인
 
-iOS 앱에서 AI를 활용할 때 가장 핵심은 **올바른 시점에 올바른 컨텍스트를 제공하는 것**이다.
+모든 iOS 프로젝트에 AI 에이전트를 붙이기 전에 먼저 **환경 설계**를 해야 한다. 에이전트가 코드를 잘못 건드리지 않도록 울타리를 치는 것이 핵심.
 
-### 왜 동적 컨텍스트가 필요한가?
+### 왜 iOS는 별도 하네스가 필요한가?
 
-정적 프롬프트는 앱의 현재 상태를 알 수 없다:
-- 사용자가 지금 보고 있는 화면
-- 현재 활성화된 세션의 정보
-- 최근 사용자 인터랙션 히스토리
-- 디바이스의 환경 정보 (위치, 네트워크, 배터리)
+웹 프로젝트와 iOS 프로젝트는 AI 에이전트 관점에서 다르다:
 
-동적 컨텍스트 주입이 해결하는 문제:
-1. **관련성(Relevance)**: 사용자의 현재 상황에 맞는 응답
-2. **정확성(Accuracy)**: 최신 데이터를 기반으로 한 판단
-3. **반응성(Responsiveness)**: 실시간으로 변화하는 환경에 대응
+| 구분 | 웹 | iOS |
+|------|-----|-----|
+| 아키텍처 | 자유로움 | RIBs / VIPER / Clean 강제 |
+| 빌드 | npm run build (수초) | xcodebuild (수분) |
+| 의존성 | node_modules | SPM + CocoaPods 혼재 |
+| 테스트 | 즉각적 | 시뮬레이터 필요 |
+| 컨텍스트 크기 | 보통 | .build/ 폴더가 130GB+ |
 
-### iOS에서 컨텍스트 수집의 3가지 레이어
+에이전트가 iOS 프로젝트를 그냥 읽으면 빌드 아티팩트까지 다 삼켜버린다.
+
+### RIBs 아키텍처에서 AI 에이전트의 역할 범위
+
+RIBs 구조에서 AI가 건드려도 되는 곳과 건드리면 안 되는 곳을 명확히 한다:
 
 ```
-┌─────────────────────────────────────┐
-│  Layer 1: 앱 내부 상태               │
-│  (View State, User Input, Session)  │
-├─────────────────────────────────────┤
-│  Layer 2: iOS System Context        │
-│  (Location, Contacts, Calendar)     │
-├─────────────────────────────────────┤
-│  Layer 3: 네트워크/외부 데이터       │
-│  (API 응답, 실시간 정보)             │
-└─────────────────────────────────────┘
+✅ 건드려도 되는 곳
+├── Interactor (비즈니스 로직)
+├── Presenter (뷰 로직)
+├── Builder (의존성 조립)
+└── Tests/
+
+❌ 건드리면 안 되는 곳
+├── .build/           ← SPM 캐시, 130GB+
+├── Pods/             ← CocoaPods 의존성
+├── *.xcodeproj       ← Xcode 프로젝트 파일
+└── DerivedData/      ← 빌드 아티팩트
 ```
 
-이번 시리즈에서는 이 3가지 레이어를 각각 어떻게 안전하고 효율적으로 수집하고, AI에 주입할 것인지를 다룬다.
+### CLAUDE.md 핵심 원칙
 
-### Baseline: 가장 단순한 형태
+```markdown
+## iOS 프로젝트 AI 에이전트 규약
 
-```swift
-// 가장 기본적인 동적 컨텍스트 주입
-struct AIContext {
-    let currentScreenName: String
-    let userSessionId: String
-    let recentActions: [String]
-    let timestamp: Date
-}
+### 절대 금지
+- .build/, Pods/, DerivedData/ 파일 수정
+- xcodeproj 파일 직접 수정
+- 시뮬레이터 없이 UI 코드 "완성됐다" 주장
 
-func askAI(query: String, context: AIContext) {
-    let prompt = """
-    사용자가 현재 \(context.currentScreenName) 화면에서 
-    \(query)를 요청했습니다.
-    
-    최근 액션: \(context.recentActions.joined(separator: ", "))
-    시간: \(context.timestamp)
-    """
-    // API 호출
-}
+### 필수 확인
+- PR 전 swiftlint 실행
+- RIBs 레이어 경계 침범 여부 확인
+- 새 파일 추가 시 타겟 멤버십 확인 (AI가 놓치는 부분)
+
+### 컨텍스트 주입
+- 현재 작업 중인 RIB 이름 명시
+- 연관된 Interactor/Router/Builder 파일 미리 열기
 ```
 
-이것이 Journal 001~005에서 발전할 기초다.
+### 베이스라인 체크리스트
+
+- [ ] .claudeignore로 빌드 아티팩트 제외
+- [ ] CLAUDE.md에 RIBs 레이어 설명 추가
+- [ ] SwiftLint 룰 AI가 이해할 수 있게 주석 처리
+- [ ] 테스트 실행 커맨드 명시
+
+다음 Journal에서는 SwiftLint + SwiftFormat을 **PreToolUse 훅으로 자동 강제**하는 방법을 다룬다.
