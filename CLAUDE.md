@@ -164,6 +164,7 @@ Key routing rules:
 - 외부 URL(유튜브/블로그/논문/스레드) 정리, 학습 엔트리로 가공 → invoke ingest
 - 새 작업 시작, 안전한 브랜치 분기 (squash merge 함정 회피) → invoke wt-branch
 - 워커 프로젝트(moneyflow/tarosaju) 상태 확인, 다른 세션 작업 흔적 감지, 충돌 사전 탐지 → invoke projects-sync
+- 다른 Claude 세션(맥앱/웹/다른 터미널) PR/커밋 검증, 크로스 세션 리뷰 → invoke cross-session-review
 
 <!-- rtk-instructions v2 -->
 # RTK (Rust Token Killer) - Token-Optimized Commands

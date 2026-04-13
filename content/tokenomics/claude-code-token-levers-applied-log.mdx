@@ -91,7 +91,7 @@ type: entry
 - **함정**: 루트의 `.build/`만 보면 99% 놓침 → **`**/.build/` 패턴 필수**
 - **추가 배제**:
   - `vendor/` (CocoaPods 63MB)
-  - `LOTTIMS-SPM/` (SPM 패키지 디렉토리)
+  - `external-spm/` (외부 SPM 패키지 미러 디렉토리)
   - `*.xcodeproj/` (Xcode XML — generated)
 
 > 자세한 SPM 함정 해부: [iOS Harness Journal 003 — .claudeignore + SPM 멀티모듈 함정](/wiki/ios-ai/ios-ai-journal-003-claudeignore-spm)

@@ -2,13 +2,13 @@
 title: "iOS Harness Journal 003 — .claudeignore와 SPM 멀티모듈 함정"
 category: ios-ai
 series: ios-ai-journal
-date: "2026-02-10"
+date: "2026-04-13"
 tags: [ios-harness-journal, ios, claudeignore, spm, multimodule, tokenomics, context-engineering]
 confidence: 5
 connections: [ios-ai/ios-ai-journal-002-ios-slash-commands, harness-engineering/wt-branch-structural-safety, tokenomics/claude-code-token-levers-applied-log]
 status: complete
 type: entry
-description: "SPM 멀티모듈 iOS에서 .claudeignore 없이 Claude를 쓰면 컨텍스트 130GB 폭발. .build/만 ignore하면 99% 놓친다. **/.build/ 글로브 패턴이 필수이고, vendor/ · LOTTIMS-SPM/ · *.xcodeproj/까지 함께 차단해야 한다."
+description: "SPM 멀티모듈 iOS에서 .claudeignore 없이 Claude를 쓰면 컨텍스트 130GB 폭발. .build/만 ignore하면 99% 놓친다. **/.build/ 글로브 패턴이 필수이고, vendor/ · external-spm/ · *.xcodeproj/까지 함께 차단해야 한다."
 ---
 
 ## 한 줄 요약
@@ -114,7 +114,7 @@ Claude가 Glob을 돌리면 여전히 `Bridge/.build/`, `Common/.build/`, `Accou
 vendor/
 
 # SPM package sources (3.7MB)
-LOTTIMS-SPM/
+external-spm/
 
 # Xcode project XML — Claude가 직접 편집하지 않는 generated 파일
 MoneyFlow.xcodeproj/
@@ -133,7 +133,7 @@ Gemfile.lock
 
 - `**/.build/` — SPM 멀티모듈 `.build/` 전부 (130GB)
 - `vendor/` — CocoaPods 벤더 디렉토리 (63MB, AI가 편집 불필요)
-- `LOTTIMS-SPM/` — 외부 SPM 소스 미러 (3.7MB, AI가 편집 불필요)
+- `external-spm/` — 외부 SPM 패키지 소스 미러 디렉토리 (수 MB, AI가 편집 불필요)
 - `*.xcodeproj/` (여기선 `MoneyFlow.xcodeproj/` 등 프로젝트별 이름) — Xcode generated XML, AI가 직접 편집하지 않음
 
 ---

@@ -10,6 +10,16 @@
             "timeout": 300000
           }
         ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /Users/jominho/Develop/ai-study/.claude/hooks/no-company-names.sh",
+            "timeout": 5000
+          }
+        ]
       }
     ],
     "PostToolUse": [

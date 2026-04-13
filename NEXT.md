@@ -472,9 +472,9 @@ cd /Users/jominho/Develop/ai-study && rtk npm run build
    - 처방: 크로스 세션 리뷰 5단 프로토콜 (`/cross-session-review` 슬래시 커맨드 후보)
 
 2. **회사 프로젝트명 위반 즉시 정정** ⚠️
-   - 사용자가 발견 — 4 에이전트가 iOS Journal 재작성 시 *"gma-ios"*, *"GreenCar.xcodeproj"* 등 회사 프로젝트명을 그대로 노출
+   - 사용자가 발견 — 4 에이전트가 iOS Journal 재작성 시 회사 프로젝트 식별자를 그대로 노출
    - 메모리 `feedback_company_project_names.md`에 명시되어 있던 룰을 본인이 위반 (에이전트 prompt에 익명화 지시 누락)
-   - 5건 grep + 치환: `gma-ios` → `moneyflow-ios`, `GreenCar` → `MoneyFlow`, 메모리 경로도 익명화
+   - 5건 grep + 치환 (자세한 매핑은 메모리 파일 참조)
    - 메모리 강화: 위반 사례 박제 + grep 가드 프로토콜 추가 + 에이전트 위임 시 익명화 지시 명시 룰 추가
 
 3. **validate-content.mjs regex 누적 손상 버그 fix**
@@ -484,7 +484,7 @@ cd /Users/jominho/Develop/ai-study && rtk npm run build
    - 이번 세션에서 발견한 **두 번째 validate-content.mjs 버그** (첫 번째는 slicing offset, 두 번째는 regex 누적). 자동 수정 도구 신뢰 0.
 
 **다음 큐 (NEW)**:
-- 🔴 **회사 프로젝트명 grep 가드를 PreToolUse 훅으로** — Edit/Write 시 `gma|GreenCar|LOTTIMS` 패턴 감지 → 차단
+- 🔴 **회사 프로젝트명 grep 가드를 PreToolUse 훅으로** — Edit/Write 시 금지 패턴 감지 → 차단 (메모리 참조)
 - 🔴 **`/cross-session-review` 슬래시 커맨드 신설** — Journal 019의 5단 프로토콜 자동화
 - 🟡 **validate-content.mjs 자동 수정 도구 자체 검증** — 자동 수정 후 git diff stat 출력 + 누적 손상 검출 (test fixture로)
 - 🟡 **다른 mermaid 블록 누적 손상 grep** — 따옴표 5+ 매치 패턴으로 다른 파일 검증
