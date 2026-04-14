@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 
 const NAV_ITEMS = [
   { href: "/", label: "홈", icon: "◆" },
+  { href: "/harness-journal", label: "저널", icon: "📓" },
   { href: "/wiki", label: "Wiki", icon: "📚" },
   { href: "/dashboard", label: "대시보드", icon: "📊" },
   { href: "/projects", label: "Vibe", icon: "🚀" },
@@ -27,7 +28,7 @@ export function MobileNav() {
               href={item.href}
               aria-current={isActive ? "page" : undefined}
               aria-label={item.label}
-              className={`flex flex-col items-center gap-0.5 px-3 py-1 text-xs transition-colors ${
+              className={`flex flex-col items-center gap-0.5 px-2 py-1 text-xs transition-colors ${
                 isActive ? "text-accent" : "text-muted"
               }`}
             >
