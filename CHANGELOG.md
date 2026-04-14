@@ -46,6 +46,21 @@
 - 영향 받은 mermaid 블록: 18파일 22블록
 - 신규 엔트리: 1 (frontend-ai/mdx-mermaid-shiki-coexistence)
 
+### Added — validate-content JSX 사전 탐지 + Gemini 가드 (밤 세션 후반)
+- **`scripts/validate-content.mjs`** — `detectJsxTraps()` 함수 추가. 3패턴 사전 경고: `{중괄호}` JSX 파싱, `<숫자` JSX 태그 파싱, HTML void 태그 self-closing 누락. 컴파일 전에 경고하여 에러 원인 즉시 파악
+- **`scripts/generate-lesson.mjs`** — Gemini 프롬프트에 MDX 문법 제약 4항목 추가 (void 태그, 중괄호, 꺾쇠 숫자, mermaid subgraph). AI 생성 시점에 빌드 에러 사전 방지
+
+### Changed — Tokenomics 실측 갱신
+- **`tokenomics/claude-code-token-levers-applied-log.mdx`** — ccusage 30일 베이스라인 2차: $4,316 / 7.33B tokens / cache read 98.6%. 이전 베이스라인 대비 일평균 $211→$180 (15% 감소)
+
+### Metrics (최종)
+- 이 세션 전체 커밋: 15+
+- Mermaid 수정 시도: 4회 (v1~v4)
+- JSX 함정 탐지 패턴: 3개 추가
+- ccusage 30일 총비용: $4,316
+- 신규 엔트리: 1 (frontend-ai/mdx-mermaid-shiki-coexistence)
+- 신규 인프라: 3 (rehypeMermaid + MermaidRenderer + detectJsxTraps)
+
 ## [2026-04-13] — terminal 복귀 세션: 8 push 사이클 + 4 신규 콘텐츠 + 5 인프라 + 2 자가손상 버그 fix
 
 사용자가 맥앱 Claude 세션 결과물에 불만 표명 → 터미널로 복귀 → 3 프로젝트(`ai-study` + `mino-moneyflow` + `mino-tarosaju`) 동시 발생 부산물을 전수 검증 + 정리. 7회 에이전트 병렬(2 사이클: 4 + 3) 활용.
