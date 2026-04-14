@@ -1,0 +1,265 @@
+---
+title: "MDX에서 Mermaid와 Shiki가 공존하는 법 — 4번의 삽질과 최종 해법"
+category: frontend-ai
+date: "2026-04-14"
+tags: [frontend-ai, mdx, mermaid, shiki, rehype, next-js, ssr]
+confidence: 5
+connections:
+  - frontend-ai/crash-safe-error-boundary
+  - frontend-ai/frontend-ai-patterns
+status: complete
+description: "Shiki(코드 하이라이팅)와 Mermaid(다이어그램)를 MDX에서 동시에 쓰면 Shiki가 mermaid 코드 블록의 language 클래스를 먹어서 다이어그램이 raw 코드로 렌더링된다. 4번의 실패를 거쳐 도달한 최종 해법: rehype에서 추출 + 클라이언트 DOM 직접 렌더링."
+type: entry
+quiz:
+  - question: "Shiki가 mermaid 코드 블록을 처리하면 어떤 문제가 발생하는가?"
+    choices:
+      - "mermaid 구문을 올바른 프로그래밍 언어로 하이라이팅한다"
+      - "코드 블록의 language-mermaid 클래스를 제거해서 프론트엔드 컴포넌트가 mermaid를 감지할 수 없게 된다"
+      - "mermaid 라이브러리와 충돌해서 빌드가 실패한다"
+      - "코드 블록이 페이지에서 완전히 사라진다"
+    answer: 1
+    explanation: "Shiki는 코드 블록을 처리하면서 code 요소의 className을 자신의 것으로 교체한다. language-mermaid 클래스가 사라지면 프론트엔드의 mermaid 감지 로직이 작동하지 않아 raw 텍스트가 그대로 노출된다."
+  - question: "MDX의 components.pre 오버라이드가 rehype 플러그인이 수정한 속성을 감지하지 못하는 근본 원인은?"
+    choices:
+      - "rehype 플러그인이 빌드 시점에 실행되지 않아서"
+      - "Shiki가 rehype 플러그인보다 먼저 실행되어 속성을 덮어쓰기 때문"
+      - "compileMDX의 component override가 rehype 수정 속성을 React props로 전달하지 않거나, Shiki가 pre 요소의 properties를 덮어쓰기 때문"
+      - "Next.js SSG가 data 속성을 제거하기 때문"
+    answer: 2
+    explanation: "rehypeMermaid를 Shiki보다 먼저 실행해도 Shiki가 코드 블록을 다시 처리하면서 pre 요소의 속성을 덮어쓴다. 또한 MDX의 component override가 rehype에서 추가한 커스텀 속성을 React props로 완전히 전달하지 않는 경우도 있다."
+  - question: "최종 해법에서 MermaidRenderer가 MDX component override 대신 DOM 직접 조작을 선택한 이유는?"
+    choices:
+      - "DOM 조작이 React보다 성능이 좋아서"
+      - "MDX component override(pre, div)가 rehype 플러그인이 생성한 요소에 안정적으로 적용되지 않았기 때문"
+      - "Mermaid 라이브러리가 React를 지원하지 않아서"
+      - "SSR 환경에서 React 컴포넌트를 사용할 수 없어서"
+    answer: 1
+    explanation: "pre override는 Shiki가 속성을 덮어쓰고, div override는 MDX가 적용하지 않았다. 4번의 시도 끝에 MDX 파이프라인과 완전히 독립된 클라이언트 DOM 직접 렌더링이 유일한 안정적 해법이었다."
+---
+
+## 한 줄 요약
+
+Shiki(코드 하이라이팅)와 Mermaid(다이어그램)를 MDX에서 동시에 쓰면, **Shiki가 mermaid 코드 블록의 `language-mermaid` 클래스를 먹는다.** 4번의 실패를 거쳐 최종 해법에 도달: rehype에서 mermaid 블록을 `<div>`로 추출하고, 클라이언트 컴포넌트가 DOM을 직접 스캔해서 렌더링.
+
+---
+
+## 문제의 모양
+
+Next.js + MDX + Shiki + Mermaid 조합에서, mermaid 다이어그램이 SVG 대신 **raw 텍스트**로 노출:
+
+```
+graph TD
+    A[E2E & Human-in-the-Loop] --> B[UI & Snapshot Testing]
+    style A fill:#f9f,stroke:#333,stroke-width:2px
+```
+
+GitHub 프리뷰에서는 정상 렌더링 (GitHub은 자체 mermaid 렌더러가 있다). 하지만 **Next.js 프로덕션 사이트에서는 코드 블록**으로 표시.
+
+---
+
+## 왜 이런 일이 생기나
+
+MDX 파이프라인에서 코드 블록이 처리되는 순서:
+
+1. **Markdown 파서** — mermaid 블록을 `pre > code.language-mermaid` 로 변환
+2. **rehype 플러그인들** — HTML AST 수정
+3. **rehypeShiki** — `code.language-*` 를 찾아서 구문 하이라이팅 적용
+4. **React 컴포넌트** — `components.pre` 오버라이드로 최종 렌더링
+
+**3단계가 문제다.** Shiki가 mermaid 코드 블록을 처리하면서:
+- `code.language-mermaid` 의 클래스를 **자기 것으로 교체**
+- `pre` 에 `shiki github-dark-default` 같은 클래스 추가
+- 내부 텍스트를 `span` 으로 감쌈
+
+4단계에서 `CustomPre` 컴포넌트가 `child.props.className === "language-mermaid"` 로 감지하려 해도, **이미 클래스가 사라진 뒤**라 감지 불가.
+
+---
+
+## 4번의 시도와 각 실패 이유
+
+### 시도 1: `pre` 컴포넌트에 className 감지 (실패)
+
+rehype 플러그인을 Shiki 전에 실행, `<pre>` 에 `className="mermaid-raw"` 부여:
+
+```ts
+// rehype plugin
+node.properties.className = ["mermaid-raw"];
+code.properties.className = []; // language-mermaid 제거 → Shiki 스킵
+```
+
+```tsx
+// CustomPre
+if (className === "mermaid-raw") return <MermaidDiagram chart={...} />;
+```
+
+**실패 이유**: Shiki가 code 요소에 언어 클래스가 없어도 pre 요소를 처리하면서 **className을 덮어씀**. `mermaid-raw` 가 사라짐.
+
+### 시도 2: `data-mermaid-chart` 속성 (실패)
+
+className 대신 HTML data 속성으로 차트 텍스트를 전달:
+
+```ts
+node.properties["data-mermaid-chart"] = chart;
+```
+
+```tsx
+const mermaidChart = props["data-mermaid-chart"];
+```
+
+**실패 이유**: DOM에는 `data-mermaid-chart` 속성이 **존재**하지만, MDX의 `compileMDX` → React 컴포넌트 props 전달 과정에서 data 속성이 **컴포넌트 props로 도달하지 않음**. `CodeBlock`으로 pass-through되어 최종 `<pre>` 에 data 속성만 남음.
+
+### 시도 3: `div` 컴포넌트 오버라이드 (실패)
+
+`<pre>` 대신 `<div class="mermaid-block">` 으로 변환해 Shiki를 완전 우회:
+
+```tsx
+export const mdxComponents = {
+  pre: CustomPre,
+  div: MermaidBlockDiv,  // div 오버라이드 추가
+};
+```
+
+**실패 이유**: MDX의 `compileMDX`가 **rehype 플러그인이 생성한 `div` 요소에 component override를 적용하지 않음**. 원래 마크다운에서 나온 요소(`pre`, `h1`, `p` 등)만 오버라이드 대상.
+
+### 시도 4: 독립 클라이언트 DOM 렌더링 (성공)
+
+MDX 파이프라인과 **완전히 분리**:
+
+1. rehype 플러그인이 mermaid 블록을 `<div class="mermaid-block">` 으로 변환 (Shiki 우회)
+2. 독립 클라이언트 컴포넌트 `MermaidRenderer`가 마운트 시 DOM에서 `.mermaid-block` 을 찾아 mermaid SVG 렌더링
+
+---
+
+## 최종 구조
+
+### rehypeMermaid (서버, Shiki 전)
+
+```ts
+// src/lib/remark-mermaid.ts
+import { visit } from "unist-util-visit";
+
+export function rehypeMermaid() {
+  return (tree) => {
+    visit(tree, "element", (node, index, parent) => {
+      if (node.tagName !== "pre" || !parent) return;
+      const code = node.children?.[0];
+      if (!code || code.tagName !== "code") return;
+      const classes = code.properties?.className;
+      if (!Array.isArray(classes) || !classes.includes("language-mermaid")) return;
+
+      // 차트 텍스트 추출
+      const chart = code.children?.map(c => c.value || "").join("") || "";
+
+      // <pre><code> → <div class="mermaid-block"><script type="application/mermaid">
+      parent.children[index] = {
+        type: "element",
+        tagName: "div",
+        properties: { className: ["mermaid-block"] },
+        children: [{
+          type: "element",
+          tagName: "script",
+          properties: { type: "application/mermaid" },
+          children: [{ type: "text", value: chart }],
+        }],
+      };
+    });
+  };
+}
+```
+
+**왜 `<script type="application/mermaid">`인가?** 브라우저가 `type="application/mermaid"` 스크립트를 실행하지 않고 텍스트로만 보관한다. 차트 텍스트를 안전하게 전달하는 컨테이너.
+
+### MermaidRenderer (클라이언트)
+
+```tsx
+// src/components/mermaid-renderer.tsx
+"use client";
+import { useEffect } from "react";
+
+export function MermaidRenderer() {
+  useEffect(() => {
+    async function renderAll() {
+      const blocks = document.querySelectorAll(".mermaid-block");
+      if (blocks.length === 0) return;
+
+      const mermaid = (await import("mermaid")).default;
+      mermaid.initialize({ startOnLoad: false, theme: "dark" });
+
+      for (const block of blocks) {
+        const script = block.querySelector('script[type="application/mermaid"]');
+        const chart = script?.textContent?.trim();
+        if (!chart) continue;
+
+        const id = `mermaid-${Math.random().toString(36).slice(2, 8)}`;
+        const { svg } = await mermaid.render(id, chart);
+        block.innerHTML = svg;
+        block.classList.replace("mermaid-block", "mermaid-rendered");
+      }
+    }
+    renderAll();
+  }, []);
+
+  return null; // 렌더링 출력 없음 — DOM 직접 조작
+}
+```
+
+### 위키 페이지에 삽입
+
+```tsx
+// src/app/wiki/[...slug]/page.tsx
+import { rehypeMermaid } from "@/lib/remark-mermaid";
+import { MermaidRenderer } from "@/components/mermaid-renderer";
+
+// compileMDX 설정
+rehypePlugins: [
+  rehypeMermaid,          // ← Shiki보다 먼저
+  [rehypeShiki, { theme: "github-dark-default" }],
+],
+
+// 렌더링
+<div className="prose-custom">{content}</div>
+<MermaidRenderer />
+```
+
+---
+
+## 이 패턴이 작동하는 이유
+
+| 단계 | 역할 | Shiki 영향 |
+|---|---|---|
+| rehypeMermaid | mermaid `<pre>` → `<div>` 변환 | Shiki가 `<div>` 는 처리 안 함 |
+| rehypeShiki | 나머지 코드 블록 하이라이팅 | mermaid 블록은 이미 `<div>` 라 무시 |
+| SSG 프리렌더 | `<div class="mermaid-block">` HTML 출력 | 정적 HTML에 차트 텍스트 보존 |
+| MermaidRenderer | 클라이언트에서 DOM 스캔 → SVG 렌더 | Shiki와 무관하게 독립 동작 |
+
+**핵심**: MDX component override 체인에 의존하지 않고, **DOM 직접 조작**으로 렌더링. 이렇게 하면 Shiki의 속성 덮어쓰기, MDX의 선택적 override 적용 등 모든 파이프라인 이슈를 우회한다.
+
+---
+
+## 다른 환경에 이식할 때
+
+이 패턴은 **"rehype 파이프라인의 한 플러그인이 다른 플러그인의 출력을 방해하는"** 모든 상황에 적용 가능:
+
+1. **추출 대상을 Shiki 전에 `<div>` 로 변환** — Shiki는 `<pre>` 만 처리하므로
+2. **차트/데이터를 `<script type="application/*">` 에 보관** — 브라우저가 실행하지 않는 안전한 컨테이너
+3. **클라이언트 컴포넌트가 DOM 직접 조작** — MDX override 체인과 독립
+
+KaTeX, PlantUML, D2 등 다른 다이어그램 도구에도 동일한 구조로 적용 가능.
+
+---
+
+## 자기 점검
+
+1. rehypeMermaid가 Shiki **앞에** 실행되어야 하는 이유는?
+2. `<script type="application/mermaid">` 가 브라우저에서 실행되지 않는 이유는?
+3. MDX의 `components.div` 오버라이드가 rehype 생성 `<div>` 에 적용되지 않는 이유는?
+4. MermaidRenderer가 `useEffect` 안에서 실행되는 이유는? SSR에서 실행되면 어떻게 되는가?
+5. (열린 질문) 이 패턴을 KaTeX 수식 렌더링에 적용한다면, rehype 플러그인에서 어떤 `type` 값을 사용하겠는가?
+
+### 실습 과제
+
+자신의 Next.js + MDX 프로젝트에서:
+1. rehypeShiki 설정 확인 (어떤 테마/언어를 사용하는지)
+2. mermaid 코드 블록이 있는 페이지에서 개발자 도구로 `<pre>` 요소의 `className` 확인
+3. `language-mermaid` 가 남아있으면 Shiki가 mermaid를 스킵하는 것 (이 패턴 불필요)
+4. 사라져있으면 이 패턴 적용
