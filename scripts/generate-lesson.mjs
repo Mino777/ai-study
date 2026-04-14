@@ -193,6 +193,7 @@ ${existingTitles || "(없음)"}
 요구사항:
 - 첫 번째 줄에 반드시 TITLE: 정제된 제목 을 작성하세요 (예: "TITLE: Compound Engineering 기초 — 복리형 AI 개발 방법론"). 사용자 요청을 기술 블로그에 어울리는 전문적인 제목으로 변환하세요. 구어체/요청문("~하고싶어", "~에 대해" 등)은 제거하고, 핵심 키워드 + 부제 형식으로 작성.
 - 그 다음 줄에 DESC: 한 줄 설명 을 작성하세요 (예: "DESC: 모든 작업이 다음 작업을 더 쉽게 만드는 복리형 개발 워크플로우.").
+- 그 다음 줄에 TAGS: 쉼표로 구분된 영문 태그 3~6개 를 작성하세요 (예: "TAGS: circuit-breaker, fallback, error-handling, resilience"). 핵심 기술 키워드만, 한국어 금지, 카테고리명은 자동 추가되므로 생략.
 - 그 다음부터 본문을 작성하세요.
 - 핵심 개념 설명 (왜 중요한지부터 시작)
 - 실제 동작하는 코드 예제 포함 (카테고리에 맞는 언어: Swift, TypeScript, Python 등)
@@ -240,14 +241,18 @@ ${existingTitles || "(없음)"}
     content = retryResult.response.text();
   }
 
-  // Extract TITLE and DESC from generated content
+  // Extract TITLE, DESC, TAGS from generated content
   const titleMatch = content.match(/^TITLE:\s*(.+)$/m);
   const descMatch = content.match(/^DESC:\s*(.+)$/m);
+  const tagsMatch = content.match(/^TAGS:\s*(.+)$/m);
   const refinedTitle = titleMatch ? titleMatch[1].trim() : topic.title.split(" ").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
   const refinedDesc = descMatch ? descMatch[1].trim() : `${topic.title} 개념 정리 및 실전 적용`;
+  const refinedTags = tagsMatch
+    ? tagsMatch[1].split(",").map((t) => t.trim().toLowerCase()).filter((t) => t.length > 1)
+    : [];
 
-  // Remove TITLE/DESC lines from content body
-  content = content.replace(/^TITLE:.*\n?/m, "").replace(/^DESC:.*\n?/m, "").replace(/^\n+/, "");
+  // Remove TITLE/DESC/TAGS lines from content body
+  content = content.replace(/^TITLE:.*\n?/m, "").replace(/^DESC:.*\n?/m, "").replace(/^TAGS:.*\n?/m, "").replace(/^\n+/, "");
 
   // Update topic title for output
   topic.title = refinedTitle;
@@ -264,8 +269,9 @@ ${existingTitles || "(없음)"}
   }
 
   // Build frontmatter
-  const tags = topic.topicSlug.split("-").filter((t) => t.length > 2);
-  tags.push(topic.category);
+  const tags = refinedTags.length > 0
+    ? [...refinedTags, topic.category]
+    : [...topic.topicSlug.split("-").filter((t) => t.length > 2 && /^[a-z0-9-]+$/.test(t)), topic.category];
 
   const frontmatter = [
     "---",
@@ -458,6 +464,46 @@ async function generate(slug) {
   }
 }
 
+// ─── Slug generation helpers ───────────────────────────────────
+
+// 한글 제목 → 영문 slug 생성을 Gemini에게 위임
+async function generateSlugFromTitle(model, title) {
+  const prompt = `Convert this Korean/mixed title into a short English kebab-case slug for a URL.
+Rules:
+- Use only lowercase English letters, numbers, and hyphens
+- Maximum 60 characters
+- Extract the core concept, not a literal translation
+- Examples:
+  "iOS에서 AI가 작업한 코드를 어떤식으로 보장할 수 있는지" → "ios-ai-code-quality-assurance"
+  "프롬프트 엔지니어링 기초 — 시스템 프롬프트 설계" → "prompt-engineering-system-prompt-design"
+  "Circuit Breaker 패턴으로 AI 호출 안정화" → "circuit-breaker-ai-call-stabilization"
+
+Title: ${title}
+
+Reply with ONLY the slug, nothing else.`;
+
+  const result = await model.generateContent(prompt);
+  let slug = result.response.text().trim();
+  // Sanitize: only allow [a-z0-9-]
+  slug = slug.toLowerCase().replace(/[^a-z0-9-]/g, "").replace(/-+/g, "-").replace(/^-|-$/g, "");
+  // Enforce max length
+  if (slug.length > 60) slug = slug.substring(0, 60).replace(/-$/, "");
+  return slug;
+}
+
+// Fallback: title → slug without Gemini (영문만 추출)
+function titleToSlugFallback(title) {
+  return title
+    .toLowerCase()
+    .replace(/[가-힣]+/g, "") // 한글 제거
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .substring(0, 60)
+    .replace(/-$/, "") || "untitled";
+}
+
 // Mode 3: generate from custom free-text topic
 async function generateCustom(topicText) {
   const { manifest } = await initManifest();
@@ -484,24 +530,43 @@ async function generateCustom(topicText) {
     if (score > bestScore) { bestScore = score; bestCat = cat; }
   }
 
-  const topicSlug = topicText
-    .toLowerCase()
-    .replace(/[^a-z0-9가-힣\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .trim();
-
-  const slug = `${bestCat}/${topicSlug}`;
   const relatedSlugs = manifest.entries
     .filter((e) => e.frontmatter.category === bestCat)
     .map((e) => e.slug)
     .slice(0, 3);
 
-  const topic = { slug, category: bestCat, topicSlug, title: topicText, connections: relatedSlugs };
+  // Temporary topic for MDX generation (slug will be set after TITLE is known)
+  const tempSlug = titleToSlugFallback(topicText);
+  const topic = { slug: `${bestCat}/${tempSlug}`, category: bestCat, topicSlug: tempSlug, title: topicText, connections: relatedSlugs };
 
   console.log(`\n🎓 커스텀 주제 생성: ${topic.title} (${CATEGORY_LABELS[topic.category] || topic.category})\n`);
 
   const mdxContent = await generateMDX(topic, manifest);
+
+  // After generateMDX, topic.title is updated to the refined title from Gemini.
+  // Now generate a proper English slug from the refined title.
+  const apiKey = process.env.GEMINI_API_KEY;
+  const genAI = new GoogleGenerativeAI(apiKey);
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+  let finalSlug;
+  try {
+    finalSlug = await generateSlugFromTitle(model, topic.title);
+    console.log(`📎 Generated slug: ${finalSlug}`);
+  } catch (err) {
+    console.warn(`⚠️  Slug generation failed: ${err.message}. Using fallback.`);
+    finalSlug = titleToSlugFallback(topic.title);
+  }
+
+  // Check for collision
+  const existingSlugs = new Set(manifest.entries.map((e) => e.slug));
+  if (existingSlugs.has(`${bestCat}/${finalSlug}`)) {
+    finalSlug = `${finalSlug}-${Date.now().toString(36).slice(-4)}`;
+  }
+
+  topic.topicSlug = finalSlug;
+  topic.slug = `${bestCat}/${finalSlug}`;
+
   const filePath = writeMDX(topic, mdxContent);
 
   const relativePath = path.relative(process.cwd(), filePath);
