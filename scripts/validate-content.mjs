@@ -17,6 +17,64 @@ import { fixAndValidateMermaid } from "./lib/mermaid-fix.mjs";
 
 const CONTENT_DIR = path.join(process.cwd(), "content");
 
+/**
+ * MDX JSX 함정 사전 탐지 — 컴파일 에러 원인이 되는 패턴을 미리 경고.
+ * AI 생성 콘텐츠에서 반복되는 패턴:
+ * - 본문 텍스트의 {중괄호} → JSX expression으로 파싱
+ * - 본문 텍스트의 <숫자 또는 <영문자 → JSX 태그 시작으로 파싱
+ * - HTML void 태그 self-closing 누락 (<br>, <hr>, <img>)
+ */
+function detectJsxTraps(content, filePath) {
+  const warnings = [];
+  const lines = content.split("\n");
+  let inCodeBlock = false;
+  let inFrontmatter = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const lineNum = i + 1;
+
+    // frontmatter 영역 스킵
+    if (i === 0 && line.trim() === "---") { inFrontmatter = true; continue; }
+    if (inFrontmatter && line.trim() === "---") { inFrontmatter = false; continue; }
+    if (inFrontmatter) continue;
+
+    // 코드 블록 영역 스킵
+    if (line.trim().startsWith("```")) { inCodeBlock = !inCodeBlock; continue; }
+    if (inCodeBlock) continue;
+
+    // 패턴 1: 본문 텍스트의 {중괄호} (인라인 코드 밖)
+    // 인라인 코드(backtick) 안은 안전하므로 제거 후 체크
+    const withoutInlineCode = line.replace(/`[^`]+`/g, "");
+    const curlyMatch = withoutInlineCode.match(/\{[^}]*[a-zA-Z가-힣][^}]*\}/);
+    if (curlyMatch) {
+      warnings.push({
+        line: lineNum,
+        message: `{중괄호} JSX 파싱 위험: "${curlyMatch[0]}" → 인라인 코드(\`)로 감싸거나 괄호()로 교체`,
+      });
+    }
+
+    // 패턴 2: 본문 텍스트의 <숫자 (예: <3, <10)
+    const angleBracketNum = withoutInlineCode.match(/<(\d)/);
+    if (angleBracketNum) {
+      warnings.push({
+        line: lineNum,
+        message: `<${angleBracketNum[1]} JSX 태그 파싱 위험 → "< ${angleBracketNum[1]}" (공백) 또는 인라인 코드로 감싸기`,
+      });
+    }
+
+    // 패턴 3: HTML void 태그 self-closing 누락
+    const voidTag = withoutInlineCode.match(/<(br|hr|img)(?:\s[^>]*)?(?<!\/)>/i);
+    if (voidTag) {
+      warnings.push({
+        line: lineNum,
+        message: `<${voidTag[1]}> self-closing 누락 → <${voidTag[1]} /> 로 변경`,
+      });
+    }
+  }
+  return warnings;
+}
+
 function findMdxFiles(dir) {
   const results = [];
   if (!fs.existsSync(dir)) return results;
@@ -74,12 +132,23 @@ async function main() {
 
     const { content } = matter(raw);
 
-    // 1. MDX 컴파일 검증 (모든 파일)
+    // 1. MDX JSX 함정 사전 탐지 (컴파일 전 경고)
+    const jsxWarnings = detectJsxTraps(content, rel);
+    if (jsxWarnings.length > 0) {
+      for (const w of jsxWarnings) {
+        console.warn(`⚠️  ${rel} Line ~${w.line}: ${w.message}`);
+      }
+    }
+
+    // 2. MDX 컴파일 검증 (모든 파일)
     try {
       await compile(content, { remarkPlugins: [remarkGfm] });
     } catch (err) {
       console.error(`❌ ${rel} (MDX 컴파일 에러)`);
       console.error(`   ${err.message}`);
+      if (jsxWarnings.length > 0) {
+        console.error(`   💡 위 JSX 함정 경고가 원인일 수 있음`);
+      }
       console.error("");
       mdxErrors++;
       totalErrors++;
