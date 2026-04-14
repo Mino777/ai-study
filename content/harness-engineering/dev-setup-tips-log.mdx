@@ -572,3 +572,32 @@ gh run list --workflow "🚀 Deploy to Vercel" --limit 1 --json status,conclusio
 ---
 
 > **📌 append 규칙**: 새 팁은 이 구분선 *위*가 아니라 *아래*에 새 섹션을 추가한다. 기존 섹션은 건드리지 않는다.
+
+## 2026-04-14 — `grep -c "error TS"`가 Next.js Turbopack 빌드 에러를 못 잡음
+
+**환경**: Next.js 16 + Turbopack + Claude Code 서브에이전트 위임 워크플로우
+
+**증상**: `npm run build` 후 `grep -c "error TS"` 결과 `0` → 빌드 통과로 판단 → 커밋/푸시 → Vercel 빌드 실패. Supabase `PromiseLike` 타입의 `.then().catch()` 체이닝 에러가 있었는데 로컬에서 못 잡음.
+
+**근본 원인**: Next.js Turbopack 빌드는 TypeScript 에러를 `"error TS2345:"` 포맷이 아닌 `"Type error: ..."` 포맷으로 출력한다. `grep -c "error TS"`는 이 포맷을 매칭하지 못한다. 두 번째로, 에이전트에 코드 수정을 위임한 후 빌드 검증을 생략하고 에이전트의 "성공" 보고만 믿고 커밋한 것이 직접적 원인.
+
+**수정**:
+```bash
+# AS-IS (틀림 — Turbopack "Type error:" 못 잡음)
+npm run build 2>&1 | grep -c "error TS"
+
+# TO-BE (맞음 — 종료 코드로 판단)
+npm run build
+# $? == 0 이면 통과, 아니면 실패
+
+# 또는 grep 패턴 확장
+npm run build 2>&1 | grep -E "error TS|Type error|Failed to"
+```
+
+핵심: **빌드 성공 판단은 grep 패턴이 아닌 종료 코드(`$?`)로 해야 한다.** grep 패턴은 프레임워크/번들러마다 출력 포맷이 달라서 false negative가 발생한다. 그리고 **서브에이전트가 수정한 코드도 반드시 직접 `vitest run` + `npm run build` 를 실행해서 검증**해야 한다. 에이전트는 타입 체크를 실행하지 않는다.
+
+**검증**: `cron-helpers.ts`의 `.then().catch()` → `try/catch await` 패턴으로 수정 후 `npm run build` 종료 코드 0 확인. Vercel 배포 성공.
+
+**Related**:
+- moneyflow `feedback_agent_build_verify.md` 메모리: 서브에이전트 위임 후 빌드 검증 필수 규칙
+- moneyflow `feedback_build_verify.md` 메모리: vitest + build 둘 다 통과해야 커밋 (이번 사건의 상위 규칙)
