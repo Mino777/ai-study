@@ -15,7 +15,30 @@ const MermaidDiagram = dynamic(
   }
 );
 
-// Recursively extract text content from React children (handles shiki spans)
+// Mermaid block: rehypeMermaid가 <pre><code class="language-mermaid"> 를
+// <div class="mermaid-block"><script type="application/mermaid">chart</script></div>
+// 로 변환. 이 컴포넌트가 div를 감지해 MermaidDiagram을 렌더.
+function MermaidBlockDiv({
+  className,
+  children,
+  ...props
+}: React.ComponentProps<"div">) {
+  if (className === "mermaid-block") {
+    // children은 <script type="application/mermaid">chart</script>
+    // React에서 script의 children을 추출
+    const chart = extractText(children).trim();
+    if (chart) {
+      return <MermaidDiagram chart={chart} />;
+    }
+  }
+  return (
+    <div className={className} {...props}>
+      {children}
+    </div>
+  );
+}
+
+// Recursively extract text content from React children
 function extractText(node: React.ReactNode): string {
   if (typeof node === "string") return node;
   if (typeof node === "number") return String(node);
@@ -28,18 +51,8 @@ function extractText(node: React.ReactNode): string {
   return "";
 }
 
-function CustomPre({
-  children,
-  className,
-  ...props
-}: React.ComponentProps<"pre">) {
-  // rehypeMermaid가 주입한 mermaid-raw 클래스 감지
-  if (className === "mermaid-raw") {
-    const chart = extractText(children).trim();
-    return <MermaidDiagram chart={chart} />;
-  }
-
-  // Fallback: 기존 language-mermaid className 감지 (shiki 미적용 환경)
+function CustomPre({ children, ...props }: React.ComponentProps<"pre">) {
+  // Fallback: language-mermaid className 감지 (rehypeMermaid 미적용 환경)
   const child = children as React.ReactElement<{
     className?: string;
     children?: string;
@@ -57,13 +70,10 @@ function CustomPre({
     return <MermaidDiagram chart={chart} />;
   }
 
-  return (
-    <CodeBlock className={className} {...props}>
-      {children}
-    </CodeBlock>
-  );
+  return <CodeBlock {...props}>{children}</CodeBlock>;
 }
 
 export const mdxComponents = {
   pre: CustomPre,
+  div: MermaidBlockDiv,
 };
