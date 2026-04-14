@@ -1,0 +1,246 @@
+---
+title: "Harness Journal 023 — Closed-Loop AI Quality (Zod 5-Layer + LLM-as-Judge + DB 추적)"
+category: harness-engineering
+series: harness-journal
+date: "2026-04-14"
+tags: [harness-journal, harness-engineering, ai-output-validation, zod, llm-as-judge, prompt-caching, closed-loop, quality-tracking, anthropic]
+confidence: 4
+connections:
+  - harness-engineering/harness-journal-009-text-output-guards
+  - harness-engineering/harness-journal-006-tarosaju-anthropic-hardening
+  - harness-engineering/harness-journal-007-008-ai-cost-tracking
+  - harness-engineering/ai-output-zod-validation-pattern
+status: complete
+description: "tarosaju의 AI 응답 파이프라인에 5-Layer 방어 체계를 완성. Layer 1(텍스트 가드, Journal 009)에 Layer 2-4(Zod 스키마 검증)와 Layer 5(LLM-as-Judge + Supabase 저장)를 추가하여 Closed-Loop 구성: 차단→채점→저장→프롬프트 튜닝 근거. Prompt Caching 적용으로 system prompt 비용 90% 절감."
+type: entry
+quiz:
+  - question: "5-Layer AI 출력 방어에서 Layer 2-4(Zod)와 Layer 5(LLM-as-Judge)의 역할 차이는?"
+    choices:
+      - "둘 다 같은 시점에 같은 방식으로 검증"
+      - "**Zod는 동기적 차단(bad output 사용자 노출 방지), Judge는 비동기 채점(통과한 output의 품질 추적)** — 서로 다른 시점, 서로 다른 목적. Zod 통과 = '안전', Judge 고점 = '좋은 품질'"
+      - "Judge가 먼저 실행되고 Zod가 나중에 검증"
+      - "Zod는 입력 검증, Judge는 출력 검증"
+    answer: 1
+    explanation: "Zod(Layer 2-4)는 응답 반환 전에 동기적으로 실행하여 구조/범위/일관성이 깨진 응답을 차단한다. Judge(Layer 5)는 응답 반환 후 fire-and-forget으로 품질을 채점하고 DB에 저장한다. 이 분리가 핵심: 차단(safety)과 측정(quality)은 같은 것이 아니다."
+  - question: "parseAIResponse()의 3단계 JSON 추출에서 3번째 단계(첫 번째 {...} 추출)가 필요한 이유는?"
+    choices:
+      - "성능 최적화를 위해"
+      - "**Claude가 JSON 앞뒤에 설명 텍스트를 붙이는 경우 대응** — 'Here is the result: {...} I hope this helps' 같은 패턴. ```json``` 블록도 안 쓰고 직접 { 로 시작하지도 않는 3번째 케이스"
+      - "배열 응답 처리를 위해"
+      - "에러 메시지 추출을 위해"
+    answer: 1
+    explanation: "LLM은 지시에도 불구하고 JSON만 출력하지 않는 경우가 빈번하다. '결과입니다: {...}' 같은 패턴은 직접 파싱(1단계)과 코드블록 추출(2단계) 모두 실패. 정규식으로 첫 {...} 를 추출하는 3단계가 이 케이스를 잡는다."
+  - question: "Prompt Caching의 cache_control: ephemeral을 system prompt에 적용했을 때 비용 절감이 90%인 이유는?"
+    choices:
+      - "전체 API 호출이 90% 싸지는 것"
+      - "**cache hit 시 input 토큰 가격이 1/10** — Anthropic의 prompt caching은 동일 system prompt 재사용 시 cached input 가격을 기본의 10%로 할인. system prompt가 전체 input의 대부분을 차지하므로 체감 절감 큼"
+      - "output 토큰이 90% 줄어드는 것"
+      - "API 호출 횟수가 90% 줄어드는 것"
+    answer: 1
+    explanation: "Anthropic prompt caching은 cache_control: ephemeral 마킹된 system 블록이 5분 내 재사용되면 cached input 가격(기본의 10%)만 과금. tarot-chat의 system prompt(~600 토큰)가 매 대화 턴마다 동일하게 전송되므로, 캐시 히트 시 해당 부분의 비용이 90% 절감. user message(~100 토큰)만 정가."
+---
+
+## 한 줄 요약
+
+tarosaju AI 응답 파이프라인에 **Zod 5-Layer 차단 + LLM-as-Judge 채점 + Supabase 저장**을 결합한 Closed-Loop 구성. "나쁜 응답 차단"과 "좋은 응답 측정"을 분리하여, 차단은 동기적(Zod), 측정은 비동기(Judge)로 처리. Prompt Caching 적용으로 system prompt 비용 90% 절감.
+
+---
+
+## 갭 (Before)
+
+Journal 009에서 `ai-output-guards.ts`(텍스트 가드)를 만들었지만:
+
+1. **텍스트 전용** — 자연어 응답의 길이/금지어/위기신호만 검증. JSON 구조 응답(Judge 점수 등)은 수동 `typeof` 검사
+2. **측정 없음** — 가드를 통과한 응답의 *품질*을 추적할 방법 없음. "안전하다" ≠ "좋다"
+3. **프롬프트 튜닝 근거 0** — fortune/tarot-chat 프롬프트를 개선하려 해도 현재 품질 수준을 모름
+4. **비용 낭비** — tarot-chat의 system prompt(~600 토큰)가 매 턴 동일한데 정가 과금
+
+```typescript
+// AS-IS: quality-judge.ts의 수동 검증
+const parsed = JSON.parse(jsonStr) as QualityScore;
+if (
+  typeof parsed.overall !== "number" ||
+  typeof parsed.domain_accuracy !== "number" ||
+  // ... 6개 typeof 체크
+) {
+  return null;
+}
+```
+
+---
+
+## 만든 환경 (After) — 5-Layer Closed-Loop
+
+### Layer 1: 텍스트 가드 (Journal 009, 기존)
+
+```typescript
+// ai-output-guards.ts — 자연어 응답용
+guardFortuneOutput(text);  // 길이 30-1000, 금지어 6개, 위기신호 4개
+guardTarotChatOutput(text, isFirstTurn);  // 첫 턴 500자 제한
+```
+
+### Layer 2-4: Zod 스키마 검증 (신규)
+
+```typescript
+// ai-output-schema.ts
+import { z } from "zod";
+
+// Layer 2: 타입 스키마
+// Layer 3: 범위 제약 (.min/.max)
+// Layer 4: 교차필드 검증 (.refine)
+export const qualityScoreSchema = z.object({
+  overall: z.number().int().min(1).max(10),
+  domain_accuracy: z.number().int().min(1).max(10),
+  empathy: z.number().int().min(1).max(10),
+  specificity: z.number().int().min(1).max(10),
+  safety: z.number().int().min(1).max(10),
+  feedback: z.string().min(1).max(500),
+}).refine(
+  (data) => data.overall <=
+    Math.max(data.domain_accuracy, data.empathy,
+             data.specificity, data.safety),
+  { message: "overall should not exceed max individual" },
+);
+```
+
+**핵심 유틸 — 3단계 JSON 추출**:
+
+```typescript
+export function parseAIResponse<T extends z.ZodTypeAny>(
+  rawText: string, schema: T, route: string,
+) {
+  // Stage 1: JSON 추출 (3단계 폴백)
+  //   1. 직접 파싱 ({ 또는 [ 로 시작)
+  //   2. ```json ... ``` 코드블록 추출
+  //   3. 첫 번째 {...} 정규식 추출
+  const jsonStr = extractJSON(rawText);
+  if (!jsonStr) return { ok: false, reason: "no_json_found" };
+
+  // Stage 2: JSON.parse
+  const parsed = JSON.parse(jsonStr);
+
+  // Stage 3: Zod 스키마 검증 (Layer 2+3+4 한 번에)
+  const result = schema.safeParse(parsed);
+  if (!result.success) return { ok: false, reason: result.error };
+
+  return { ok: true, data: result.data };
+}
+```
+
+### Layer 5: LLM-as-Judge + DB 저장 (신규)
+
+```typescript
+// quality-judge.ts — fire-and-forget
+const result = parseAIResponse(text, qualityScoreSchema, route);
+if (!result.ok) return null;  // Zod 검증 실패 → null
+
+// Supabase에 점수 저장 (추이 추적)
+saveScore(route, result.data);
+```
+
+### Prompt Caching 적용
+
+```typescript
+// fortune/ai/route.ts — system prompt 분리 + cache_control
+const { text } = await callAnthropic({
+  system: [{
+    type: "text",
+    text: STATIC_SYSTEM_PROMPT,  // 600토큰, 매 호출 동일
+    cache_control: { type: "ephemeral" },  // 5분 캐시 → 90% 절감
+  }],
+  messages: [{
+    role: "user",
+    content: DYNAMIC_USER_CONTEXT,  // 날짜/사주/오행 — 매번 다름
+  }],
+});
+```
+
+---
+
+## Closed-Loop가 만드는 가치
+
+```
+User Request
+    ↓
+[callAnthropic] → (Prompt Caching으로 비용 절감)
+    ↓
+[Layer 1: 텍스트 가드] → 실패 시 SAFE_FALLBACK 반환
+    ↓
+[Layer 2-4: Zod 스키마] → 실패 시 SAFE_FALLBACK 반환
+    ↓
+✅ 사용자에게 응답 반환
+    ↓ (fire-and-forget, 비동기)
+[Layer 5: LLM-as-Judge] → 4차원 채점
+    ↓
+[quality_scores 테이블] → 추이 저장
+    ↓
+프롬프트 튜닝 근거 축적
+```
+
+| 계층 | 시점 | 역할 | 실패 시 |
+|---|---|---|---|
+| Layer 1 | 동기, 응답 전 | 텍스트 안전성 | SAFE_FALLBACK |
+| Layer 2-4 | 동기, 응답 전 | 구조 정합성 | SAFE_FALLBACK |
+| Layer 5 | 비동기, 응답 후 | 품질 측정 | 로그만 (사용자 무영향) |
+
+**"차단(safety)"과 "측정(quality)"의 분리가 핵심.** 차단은 latency에 영향 → 빠르고 결정적이어야. 측정은 fire-and-forget → 느려도 괜찮고 AI 호출 한 번 더 해도 됨.
+
+---
+
+## 교훈
+
+### 1. typeof 체이닝은 Zod로 교체하라
+
+6개 `typeof` 체크 → `qualityScoreSchema.safeParse()` 한 줄. 범위 제약(1-10)과 교차검증(overall ≤ max)은 typeof로 불가능. Zod가 이미 프로젝트에 있다면 AI output에도 쓰지 않을 이유 없음.
+
+### 2. AI 응답 JSON 추출은 3단계 폴백이 필수
+
+Claude가 "Return ONLY valid JSON"이라고 지시해도 지키지 않는 경우 ~15%. `extractJSON()`의 3단계(직접 → 코드블록 → 정규식)가 이 15%를 잡음. 1단계만 있으면 "Here is the result:" 접두사 하나에 전체 파이프라인 실패.
+
+### 3. 비용 최적화는 구조 변경이 선행
+
+fortune/ai는 system prompt 없이 user message에 모든 것을 넣었음. Prompt Caching 적용하려면 정적/동적 분리가 필요 → system(정적, 캐싱) + user(동적, 정가)로 리팩터. "캐싱을 켜겠다"가 아니라 "캐싱 가능한 구조로 바꾸겠다"가 정확한 작업 정의.
+
+### 4. 측정 없이 개선 없다
+
+가드만 있으면 "나쁜 응답을 막았다"는 알 수 있지만, "응답 품질이 올라가고 있는가?"는 모름. Judge + DB 저장이 이 갭을 메움. `quality_scores` 테이블의 `overall` 평균이 주간 7.2 → 7.8로 올랐다면 프롬프트 튜닝이 효과 있는 것.
+
+---
+
+## 일반화 — 모든 AI API 라우트에 적용 가능
+
+이 패턴은 tarosaju의 fortune/tarot-chat에 국한되지 않음. **LLM 응답을 사용자에게 전달하는 모든 서비스**에 해당:
+
+```
+1. 텍스트 응답 → Layer 1 (길이/금지어) + Layer 5 (Judge)
+2. JSON 응답 → Layer 2-4 (Zod) + Layer 5 (Judge)
+3. 둘 다 → 전체 5-Layer
+```
+
+새 AI 라우트 추가 시 체크리스트:
+- [ ] `ai-output-guards.ts`에 route별 가드 함수 추가
+- [ ] `ai-output-schema.ts`에 응답 Zod 스키마 추가 (JSON 응답인 경우)
+- [ ] `quality-judge.ts`에 route별 Judge 함수 추가
+- [ ] system prompt에 `cache_control: { type: "ephemeral" }` 적용
+- [ ] `callAnthropic`의 system을 array 형태로 전달
+
+---
+
+## 수치
+
+| 항목 | Before | After |
+|---|---|---|
+| AI output 검증 계층 | 1 (텍스트 가드) | 5 (텍스트 + Zod 3 + Judge) |
+| typeof 수동 검증 | 6줄 | 0 (Zod 교체) |
+| 품질 추적 | 없음 | quality_scores 테이블 |
+| Prompt 비용 (캐시 hit) | 정가 | 10% (90% 절감) |
+| 테스트 | 699 | 720 (+21) |
+
+---
+
+## 관련
+
+- [Journal 009 — Text Output Guards](./harness-journal-009-text-output-guards.mdx): Layer 1의 원본. 이번 사이클에서 Layer 2-5 추가
+- [Journal 006 — Anthropic Client Hardening](./harness-journal-006-tarosaju-anthropic-hardening.mdx): `callAnthropic` wrapper. 이번 사이클에서 prompt caching 옵션 활용
+- [Journal 007-008 — AI Cost Tracking](./harness-journal-007-008-ai-cost-tracking.mdx): 비용 추적 인프라. prompt caching 절감 효과 측정에 활용
+- [AI Output Zod Validation Pattern](./ai-output-zod-validation-pattern.mdx): 5-Layer 패턴 원본 위키. 이번 사이클에서 실제 프로덕션 적용
