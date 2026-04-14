@@ -169,7 +169,7 @@ async function generateMDX(topic, manifest) {
   }
 
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
 
   const existingTitles = manifest.entries.map((e) => `- ${e.frontmatter.title}`).join("\n");
 
@@ -553,7 +553,7 @@ async function generateCustom(topicText) {
   // Now generate a proper English slug from the refined title.
   const apiKey = process.env.GEMINI_API_KEY;
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
 
   let finalSlug;
   try {
