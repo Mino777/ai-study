@@ -1,0 +1,449 @@
+---
+title: "레거시 iOS 프로젝트를 AI-Ready로 — pbxproj 지옥에서 에이전트 천국까지"
+category: ios-ai
+date: "2026-04-14"
+tags: [ios, ai-ready, tuist, spm, modular, claude-code, legacy, migration, ios-ai]
+confidence: 4
+connections:
+  - ios-ai/ios-ai-journal-000-baseline
+  - ios-ai/ios-ai-journal-003-claudeignore-spm
+  - ios-ai/ios-ai-code-quality-test-strategy
+  - harness-engineering/ai-agent-start-here
+  - harness-engineering/shell-pipe-exit-code-trap
+status: complete
+description: "회사 iOS 프로젝트에 AI 에이전트를 도입하려면 프로젝트 구조부터 바꿔야 한다. pbxproj는 AI의 적, Tuist/SPM은 AI의 친구. 4단계 AI Readiness 스펙트럼과 Day 1~Week 4 실행 로드맵."
+type: entry
+quiz:
+  - question: "AI 에이전트가 iOS 프로젝트에서 가장 큰 실패를 겪는 원인은?"
+    choices:
+      - "Swift 문법이 복잡해서"
+      - "pbxproj 파일이 수천 줄의 불투명한 XML이라 AI가 정확히 수정할 수 없어서"
+      - "Xcode가 느려서"
+      - "시뮬레이터가 불안정해서"
+    answer: 1
+    explanation: "pbxproj는 Xcode가 내부적으로 관리하는 복잡한 포맷이다. AI가 이 파일을 직접 수정하면 프로젝트가 열리지 않는 치명적 손상이 발생한다. 이것이 AI 도입의 가장 큰 장벽."
+  - question: "SPM 기반 모듈화가 AI 토큰 절감에 기여하는 이유는?"
+    choices:
+      - "SPM이 빌드 속도가 빨라서"
+      - "모듈 단위로 컨텍스트를 제한할 수 있고, Package.swift가 pbxproj보다 작고 읽기 쉬워서"
+      - "SPM이 더 최신 기술이라서"
+      - "Apple이 권장하기 때문에"
+    answer: 1
+    explanation: "에이전트가 FeatureA 모듈만 작업할 때 FeatureB~Z의 코드가 컨텍스트에 포함될 필요가 없다. 모듈 단위 .claudeignore + 모듈 단위 작업 스코프로 토큰 사용량을 크게 줄일 수 있다."
+  - question: "Tuist가 AI 개발에서 pbxproj의 대안으로 적합한 이유는?"
+    choices:
+      - "Tuist가 무료라서"
+      - "Tuist가 Swift로 선언적 프로젝트 정의를 제공하고, xcodeproj를 자동 생성하므로 AI가 pbxproj를 직접 건드릴 필요가 없어서"
+      - "Tuist가 Apple 공식 도구라서"
+      - "Tuist가 빌드를 빠르게 해서"
+    answer: 1
+    explanation: "Tuist는 Project.swift, Workspace.swift 같은 선언적 Swift 파일로 프로젝트를 정의한다. 이 파일은 AI가 읽고 수정하기 쉽다. 실제 pbxproj는 tuist generate가 자동 생성하므로 AI가 건드리지 않는다."
+---
+
+## 한 줄 요약
+
+레거시 iOS 프로젝트에 AI를 도입하려면 *프로젝트 구조*부터 바꿔야 한다.
+pbxproj는 AI의 적, Tuist와 SPM은 AI의 친구.
+
+---
+
+## 왜 레거시 iOS 프로젝트에서 AI가 고전하는가
+
+AI 에이전트에게 "이 화면에 버튼 하나 추가해줘"라고 시키면 웹 프로젝트에서는 30초면 끝난다.
+iOS에서는? 3가지 구조적 장벽 때문에 실패 확률이 압도적으로 높다.
+
+### 1. pbxproj 불투명성 — AI의 최대 적
+
+`project.pbxproj`는 수천 줄의 Xcode 전용 포맷이다.
+Swift 파일 하나를 추가하려면 AI가 동시에 수정해야 하는 것들:
+
+- **PBXFileReference** — 파일 참조 UUID 생성
+- **PBXBuildFile** — 빌드 파일 UUID 생성
+- **PBXGroup** — 그룹 트리에 파일 참조 삽입
+- **PBXSourcesBuildPhase** — 빌드 페이즈에 빌드 파일 추가
+- **Target Membership** — 올바른 타겟에 연결
+
+UUID 하나라도 틀리면 프로젝트가 열리지 않는다.
+AI가 이걸 정확히 해낼 확률? 사실상 0%에 가깝다.
+
+### 2. Storyboard/XIB XML — 시각적 도구의 함정
+
+Storyboard는 내부적으로 XML이지만, Auto Layout constraint 하나가 이렇게 생겼다:
+
+```xml
+<constraint firstItem="abc-de-fgh" firstAttribute="leading"
+  secondItem="ijk-lm-nop" secondAttribute="leading"
+  constant="16" id="qrs-tu-vwx" />
+```
+
+AI가 이 ID들을 정확히 참조하고, 기존 constraint와 충돌 없이 새 constraint를 추가하는 건 극히 어렵다.
+SwiftUI라면 `.padding(.leading, 16)` 한 줄이면 끝난다.
+
+### 3. 빌드 디렉토리 폭발 — 컨텍스트 오염
+
+SPM 멀티모듈 프로젝트의 `.build/` 디렉토리는 모듈당 6-7GB에 달한다.
+DerivedData까지 합치면 수십 GB의 바이너리/캐시가 프로젝트 트리에 존재한다.
+
+AI 에이전트가 파일 탐색을 시작하면 이 디렉토리들을 스캔하며 토큰을 낭비한다.
+`.claudeignore`가 없으면 에이전트의 첫 작업이 "파일 목록 파악"에서 이미 실패한다.
+
+---
+
+## AI Readiness 4단계 스펙트럼
+
+| 단계 | 프로젝트 구조 | AI 생산성 | 특징 |
+|------|-------------|----------|------|
+| **Level 0: AI-Hostile** | 단일 xcodeproj + Storyboard + CocoaPods | 10-20% | pbxproj 충돌, Storyboard XML 난독화 |
+| **Level 1: AI-Tolerable** | xcodeproj + SwiftUI + SPM 일부 | 35-40% | SwiftUI 새 화면은 AI 가능, 기존 코드는 수동 |
+| **Level 2: AI-Friendly** | Tuist/SPM 모듈화 + SwiftUI 주력 | 50-60% | 모듈 단위 작업, Package.swift로 의존성 관리 |
+| **Level 3: AI-Native** | 완전 SPM + CLAUDE.md + Hooks + CI Gate | 60%+ | 에이전트가 독립적으로 기능 구현 가능 |
+
+대부분의 회사 프로젝트는 Level 0-1에 머물러 있다.
+목표는 **점진적으로 Level 2로 이동**하는 것이다. 한 번에 Level 3을 노리면 실패한다.
+
+---
+
+## 실전 로드맵: Day 1 에서 Week 4
+
+### Day 1 — 즉시 적용 (코드 변경 없음)
+
+**핵심 원칙**: Day 1에는 프로젝트 코드를 한 줄도 바꾸지 않는다. 도구만 세팅한다.
+
+#### 1. CLAUDE.md 작성 (10분)
+
+프로젝트 루트에 `CLAUDE.md`를 만든다. 반드시 포함할 내용:
+
+```markdown
+# MyApp iOS Project
+
+## Architecture
+- MVVM + Coordinator
+- Swift 5.9, iOS 16+, Xcode 15.4
+
+## Module Structure
+- MyApp (main target)
+- MyAppTests
+- MyAppUITests
+
+## Forbidden Patterns
+- pbxproj 직접 수정 금지
+- Storyboard constraint 수정 금지
+- Core Data 마이그레이션 금지
+- 프로비저닝 프로파일/인증서 관련 작업 금지
+
+## Build & Run
+- `xcodebuild -scheme MyApp -sdk iphonesimulator build`
+- SwiftLint: `swiftlint lint --strict`
+```
+
+500줄 이하를 유지한다. AI 에이전트가 매 세션 처음에 읽는 파일이므로 길면 컨텍스트를 낭비한다.
+
+#### 2. .claudeignore 생성 (5분)
+
+```text
+**/.build/
+DerivedData/
+*.xcodeproj/
+Pods/
+vendor/
+*.xcassets/
+Gemfile.lock
+```
+
+이것만으로 수십~수백 GB의 파일이 에이전트 탐색 범위에서 제외된다.
+Journal 003에서 검증한 SPM `.build/` 함정을 처음부터 차단한다.
+
+#### 3. settings.json 보호 규칙 (5분)
+
+`.claude/settings.json`에 pbxproj 수정을 원천 차단한다:
+
+```json
+{
+  "permissions": {
+    "deny": [
+      "Edit(*.pbxproj)",
+      "Write(*.pbxproj)",
+      "Read(*.env*)",
+      "Read(Secrets.swift)"
+    ]
+  }
+}
+```
+
+이 설정이 없으면 AI가 "도움을 주려고" pbxproj를 수정해서 프로젝트를 망가뜨릴 수 있다.
+
+#### 4. XcodeBuildMCP 설치 (2분)
+
+```bash
+claude mcp add XcodeBuildMCP -s user -- npx -y xcodebuildmcp@latest mcp
+```
+
+XcodeBuildMCP를 연결하면 AI 에이전트가 xcodebuild 출력을 구조화된 형태로 받아볼 수 있다.
+빌드 에러 파싱, 테스트 결과 확인이 자동화된다.
+
+### Week 1 — git hooks + 슬래시 커맨드
+
+#### 1. pre-commit hook 설정
+
+`.githooks/pre-commit`에 SwiftLint + SwiftFormat 게이트를 건다:
+
+```bash
+#!/bin/bash
+set -euo pipefail
+
+# SwiftLint
+if command -v swiftlint &> /dev/null; then
+  swiftlint lint --strict --quiet
+fi
+
+# SwiftFormat (check only)
+if command -v swiftformat &> /dev/null; then
+  swiftformat --lint .
+fi
+```
+
+#### 2. iOS 슬래시 커맨드 배치
+
+`.claude/commands/` 디렉토리에 7개 커맨드를 만든다:
+
+- `build.md` — xcodebuild 빌드 실행
+- `test.md` — 유닛 테스트 실행 + 결과 요약
+- `lint.md` — SwiftLint 실행 + 자동 수정
+- `new-view.md` — SwiftUI 뷰 생성 템플릿
+- `new-viewmodel.md` — ViewModel 생성 템플릿
+- `analyze.md` — 레거시 코드 분석 (책임 분해 제안)
+- `triage.md` — 버그 리포트 분석 + 관련 코드 탐색
+
+#### 3. PostToolUse 자동 린트 훅
+
+`.claude/settings.json`에 추가:
+
+```json
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "command": "swiftlint lint --path $FILEPATH --quiet 2>/dev/null || true"
+      }
+    ]
+  }
+}
+```
+
+AI가 파일을 수정할 때마다 자동으로 린트가 돌아간다.
+
+#### 4. 첫 /compound 실행
+
+Week 1이 끝나면 `/compound`를 실행해서 베이스라인 문서를 생성한다.
+이후 진행 상황을 비교할 기준점이 된다.
+
+### Week 2 — SPM 모듈화 시작
+
+**원칙**: 기존 코드는 건드리지 않는다. 새 feature만 SPM 패키지로 만든다.
+
+#### 1. Modules 디렉토리 생성
+
+```text
+MyApp/
+  Modules/
+    FeatureNewScreen/
+      Package.swift
+      Sources/
+        FeatureNewScreen/
+          NewScreenView.swift
+          NewScreenViewModel.swift
+      Tests/
+        FeatureNewScreenTests/
+          NewScreenViewModelTests.swift
+```
+
+#### 2. Package.swift 정의
+
+```swift
+// swift-tools-version: 5.9
+import PackageDescription
+
+let package = Package(
+    name: "FeatureNewScreen",
+    platforms: [.iOS(.v16)],
+    products: [
+        .library(name: "FeatureNewScreen", targets: ["FeatureNewScreen"]),
+    ],
+    targets: [
+        .target(name: "FeatureNewScreen"),
+        .testTarget(name: "FeatureNewScreenTests",
+                    dependencies: ["FeatureNewScreen"]),
+    ]
+)
+```
+
+#### 3. 기존 xcodeproj에서 참조
+
+Xcode에서 File 에서 Add Package Dependencies로 로컬 패키지를 추가한다.
+이 작업은 사람이 Xcode UI로 한다. AI에게 시키지 않는다.
+
+### Week 3-4 — 점진적 모듈 이관
+
+1. **CommonKit** — 공유 유틸리티 (Extensions, Helpers) 추출
+2. **NetworkKit** — 네트워킹 레이어 추출
+3. 각 모듈에 `.testTarget` 추가
+4. CI에 `swift test` 게이트 추가
+
+```bash
+# CI 스크립트에 추가
+for module in Modules/*/; do
+  pushd "$module"
+  swift test
+  popd
+done
+```
+
+모듈이 분리될수록 AI 에이전트의 작업 스코프가 좁아지고, 토큰 효율이 올라간다.
+
+---
+
+## Tuist — pbxproj 해방자
+
+Tuist는 pbxproj 문제를 근본적으로 해결한다.
+AI 개발에서 가장 큰 가치를 제공하는 4가지 이유:
+
+### 1. 선언적 프로젝트 정의
+
+`Project.swift`로 타겟, 의존성, 설정을 Swift로 선언한다. AI가 읽고 수정할 수 있다.
+
+```swift
+import ProjectDescription
+
+let project = Project(
+    name: "MyApp",
+    targets: [
+        .target(name: "MyApp", destinations: .iOS, product: .app,
+                bundleId: "com.company.app", sources: ["Sources/**"],
+                dependencies: [
+                    .project(target: "FeatureA", path: "../FeatureA"),
+                ]),
+    ]
+)
+```
+
+### 2. pbxproj 자동 생성
+
+`tuist generate`가 xcodeproj를 만든다. AI가 pbxproj를 건드릴 일이 없다.
+pbxproj는 `.gitignore`에 추가하고, Swift 파일만 커밋한다.
+
+### 3. 모듈 그래프 최적화
+
+불필요한 타겟 제거, 바이너리 캐시로 빌드 속도가 향상된다.
+`tuist graph`로 의존성 그래프를 시각화할 수 있다.
+
+### 4. Git 충돌 제거
+
+pbxproj merge conflict는 iOS 개발자의 일상적 고통이다.
+Tuist를 쓰면 Swift 파일만 커밋하므로 merge conflict가 격감한다.
+
+**주의**: Tuist 도입은 팀 합의가 필요하다. Day 1에 하지 말 것.
+Week 4 이후, 팀이 SPM 모듈화에 익숙해진 뒤 검토한다.
+
+---
+
+## 토큰 절감 실측 데이터
+
+실제 프로젝트에서 측정한 수치:
+
+| 최적화 | 절감량 | 측정 방법 |
+|--------|--------|----------|
+| .claudeignore (SPM .build/) | 약 130GB 파일 탐색 차단 | du 실측 |
+| .claudeignore (DerivedData) | 수십 GB 차단 | du 실측 |
+| CLAUDE.md 500줄 제한 | 컨텍스트 희석 방지 | 정성적 |
+| 모듈 단위 작업 스코프 | 컨텍스트 50-70% 축소 | /context 비교 |
+| XcodeBuildMCP | xcodebuild 출력 파싱 자동화 | 정성적 |
+| RTK (Rust Token Killer) | CLI 출력 99.5% 필터링 | rtk gain 실측 |
+
+가장 임팩트가 큰 것은 `.claudeignore`다. 설정에 5분, 효과는 영구적.
+
+---
+
+## 레거시 코드 AI 활용 전략
+
+### UIKit에서 SwiftUI로 점진적 마이그레이션
+
+1. **새 화면은 100% SwiftUI로 만든다**
+2. `UIHostingController`로 SwiftUI 뷰를 기존 UIKit 네비게이션에 삽입한다
+3. 기존 UIKit 화면은 AI로 리팩터링하되 전체 재작성은 금지한다 (점진적)
+4. AI 생산성 비교: SwiftUI 단독 60% vs UIKit+SwiftUI 혼합 35-40%
+
+```swift
+let swiftUIView = NewFeatureView(viewModel: viewModel)
+let hostingController = UIHostingController(rootView: swiftUIView)
+navigationController?.pushViewController(hostingController, animated: true)
+```
+
+기존 UIKit 네비게이션 스택을 유지하면서 새 화면만 SwiftUI로 들어간다.
+팀 입장에서 리스크가 최소화된다.
+
+### AI에게 레거시 코드 분석 시키기
+
+**Claude Code가 잘하는 것:**
+
+- 레거시 Manager 클래스의 책임 분해 제안
+- 미사용 코드 식별, 중복 로직 탐지
+- 아키텍처 경계 위반 식별, 테스트 커버리지 갭 분석
+
+**Claude Code에게 맡기면 안 되는 것:**
+
+- Core Data 마이그레이션 (프로덕션 데이터 위험)
+- 인증서/프로비저닝 프로파일 관리
+- pbxproj 직접 수정
+- Storyboard constraint 수정
+
+규칙은 단순하다: **AI가 텍스트로 표현 가능한 작업은 맡기고, 바이너리/불투명 포맷은 사람이 한다.**
+
+---
+
+## For AI Agents
+
+**Trigger**: 회사 iOS 프로젝트에 AI 에이전트 도입 요청, 또는 레거시 프로젝트 현대화 요청 시
+
+**Prerequisites**:
+- Xcode 프로젝트 존재 (xcodeproj 또는 xcworkspace)
+- 최소 1개 Swift 소스 파일
+
+**Actionable Steps**:
+1. 프로젝트의 AI Readiness Level 판단 (0-3)
+2. Day 1 체크리스트 즉시 실행 (CLAUDE.md, .claudeignore, settings.json, XcodeBuildMCP)
+3. Week 1 인프라 설정 (hooks, commands)
+4. Week 2 이후 점진적 모듈화 (새 feature부터 SPM)
+5. 기존 코드는 분석만, 전체 재작성 금지
+
+**Anti-patterns**:
+- pbxproj 직접 수정 시도
+- "전체 리팩터링" 먼저 하기 (Day 1은 코드 변경 없이 도구만 세팅)
+- Storyboard를 AI로 수정하려는 시도
+- 모든 모듈을 한 번에 SPM으로 이관
+
+---
+
+## 자기 점검
+
+1. 현재 프로젝트의 AI Readiness Level은? (0-3)
+2. Day 1에 코드 변경 없이 할 수 있는 것 4가지는?
+3. SPM 모듈화를 시작할 때 첫 번째로 분리할 모듈은? (가장 의존성이 적은 것)
+4. Tuist 도입 시점은? (팀이 SPM에 익숙해진 후)
+5. AI에게 맡기면 안 되는 iOS 작업 4가지는?
+
+---
+
+## 출처
+
+**위키 내부**:
+- [AI Agent Start Here -- iOS 하네스 구축](/wiki/harness-engineering/ai-agent-start-here)
+- [iOS Journal 003 -- .claudeignore SPM 함정](/wiki/ios-ai/ios-ai-journal-003-claudeignore-spm)
+- [iOS AI 코드 품질 보증 전략](/wiki/ios-ai/ios-ai-code-quality-test-strategy)
+
+**외부 (2026-04-14 검증)**:
+- Tuist + xcsift + Claude Code Guide -- buczel.com/blog/tuist-xcsift-claude-ios
+- XcodeBuildMCP -- getsentry/XcodeBuildMCP (GitHub)
+- Claude in Xcode 26 -- claudelab.net
+- UIKit to SwiftUI Migration -- medium.com/reversebits
+- Legacy Code Modernization with Claude Code -- siliconvalleysjournal.com
