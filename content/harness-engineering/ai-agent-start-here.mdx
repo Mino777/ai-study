@@ -236,6 +236,125 @@ echo "Git hooks activated"
 
 상세: [iOS AI 코드 품질 보증 전략](/wiki/ios-ai/ios-ai-code-quality-test-strategy)
 
+### iOS 하네스 고급 — 딥리서치 베스트 프랙티스 (2026)
+
+커뮤니티와 공식 문서에서 검증된 iOS + Claude Code 꿀팁. 우리 프로젝트 경험과 외부 리서치를 결합.
+
+#### `.pbxproj` 절대 수정 금지 (가장 중요한 규칙)
+
+Xcode 프로젝트 파일(`.pbxproj`)은 수천 줄의 복잡한 XML이다. AI가 이 파일을 직접 수정하면 **프로젝트가 열리지 않는** 치명적 손상이 발생한다. 반드시 CLAUDE.md에 명시:
+
+```
+## 절대 금지
+- *.pbxproj 파일 직접 수정 금지. 파일은 Claude가 생성하되, Xcode에서 수동으로 Add Files to Project.
+- SPM Package.swift는 수정 가능하나, pbxproj는 절대 불가.
+```
+
+대안: SPM 기반 프로젝트 구조를 채택하면 `Package.swift`로 모든 의존성을 관리할 수 있어 AI 친화적.
+
+#### XcodeBuildMCP — 빌드/테스트/시뮬레이터 자동화 (59+ 도구)
+
+Sentry가 만든 MCP 서버. Claude Code에서 `xcodebuild` 대신 MCP 도구로 빌드/테스트/디바이스 관리를 자동화한다.
+
+설치 (글로벌, 모든 프로젝트에서 사용 가능):
+
+```bash
+claude mcp add XcodeBuildMCP -s user -- npx -y xcodebuildmcp@latest mcp
+```
+
+주요 도구:
+- `mcp__xcodebuildmcp__build_sim_name_proj` — 시뮬레이터 빌드
+- `mcp__xcodebuildmcp__test_sim_name_proj` — 테스트 실행
+- `mcp__xcodebuildmcp__build_run_sim_name_proj` — 빌드 + 실행
+
+Xcode 26.3+에서는 Apple 네이티브 MCP(`xcrun mcpbridge`, 20개 도구)와 병용 가능. XcodeBuildMCP(59개)는 Xcode 프로세스 없이 독립 실행, Apple MCP는 Xcode 프로세스에 브릿지.
+
+#### CLAUDE.md 500줄 이하 유지
+
+CLAUDE.md는 **매 턴마다** 컨텍스트에 로드된다. 500줄을 넘으면 중요한 지시가 희석된다. 핵심만 남기고, 상세 가이드는 `.claude/commands/` 슬래시 커맨드나 별도 문서로 분리.
+
+```
+# CLAUDE.md 크기 기준
+- 이상적: 100-300줄 (핵심 규칙만)
+- 허용: 300-500줄 (상세 포함)
+- 위험: 500줄 초과 (지시 희석 + 토큰 낭비)
+```
+
+#### `settings.json` `permissions.deny` — `.claudeignore`보다 강력한 보호
+
+`.claudeignore`는 자동 파일 탐색에서 제외하지만, 명시적 검색으로는 여전히 접근 가능하다. 진짜 민감한 파일은 `settings.json`의 `permissions.deny`로 **읽기 자체를 차단**:
+
+```json
+{
+  "permissions": {
+    "deny": [
+      "Read(*.env*)",
+      "Read(Secrets.swift)",
+      "Edit(*.pbxproj)",
+      "Write(*.pbxproj)"
+    ]
+  }
+}
+```
+
+이렇게 하면 Claude가 해당 파일을 읽으려고 시도하면 에러가 반환된다.
+
+#### PostToolUse 자동 린트 훅
+
+`Write`/`Edit` 후 자동으로 SwiftLint를 실행하면 에이전트가 *수정 즉시* 규칙 위반을 인지한다. pre-commit 훅과 다른 레이어 — pre-commit은 커밋 시점이지만 PostToolUse는 *파일 수정 직후*.
+
+```json
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [{
+          "type": "command",
+          "command": "f=$(echo $CLAUDE_TOOL_INPUT | jq -r '.file_path // empty'); [ -n \"$f\" ] && [[ \"$f\" == *.swift ]] && swiftlint lint --path \"$f\" --quiet; exit 0"
+        }]
+      }
+    ]
+  }
+}
+```
+
+`; exit 0`이 중요 — PostToolUse 실패가 에이전트 워크플로우를 중단시키지 않도록.
+
+#### SwiftUI 프로젝트가 AI와 가장 궁합이 좋다
+
+외부 벤치마크에 따르면:
+- **SwiftUI only**: ~60% 개발 시간 단축
+- **UIKit + SwiftUI 혼합**: ~35-40% 단축
+- **UIKit + Storyboard**: AI가 `.storyboard` XML을 정확하게 수정하기 어려워 효과 제한적
+
+신규 화면은 가능하면 SwiftUI로 작성하도록 CLAUDE.md에 명시하면 AI 생산성이 극대화된다.
+
+#### Swift 버전 + 최소 배포 타겟 명시
+
+Swift 6의 strict concurrency는 기존 코드와 호환성 이슈를 만든다. CLAUDE.md에 반드시:
+
+```
+## 환경
+- Swift: 5.9 (Swift 6 strict concurrency 미적용)
+- 최소 배포: iOS 16.0
+- Xcode: 16.2
+```
+
+이것만 써도 에이전트가 `@Sendable` 강제, `nonisolated` 요구 등 Swift 6 전용 패턴을 추가하는 실수를 방지한다.
+
+#### `swift package show-dependencies` — 1초 그래프 검증
+
+SPM 모듈 의존성 수정 후 **빌드를 돌리지 않고** 의존 그래프를 즉시 검증:
+
+```bash
+cd Modules/Common
+swift package show-dependencies --format flatlist 2>/dev/null | sort -u
+# 여기에 제거하려는 모듈이 없으면 성공
+```
+
+빌드는 수 분 걸리지만 이 명령은 1초. 특히 transitive dependency 제거 작업에서 **대체 불가능한 검증 도구**.
+
 ### iOS AI 에이전트 5대 함정 (실전 검증)
 
 | 함정 | 증상 | 수정 |
@@ -388,12 +507,20 @@ Web은 *배포가 push = 즉시 반영*이므로 pre-commit 게이트가 더 중
 
 ## 출처
 
+**위키 내부**:
 - [SPEC.md](../../SPEC.md) — 위키의 spec + AI Agent Contract
 - [CLAUDE.md](../../CLAUDE.md) — 프로젝트 규약
 - [LLM-First Wiki 설계 원칙](/wiki/harness-engineering/llm-first-wiki-principles) — 메타 엔트리
 - [iOS AI 코드 품질 보증 전략](/wiki/ios-ai/ios-ai-code-quality-test-strategy) — 테스트 하네스 상세
 - [Shell Pipe Exit Code 함정](/wiki/harness-engineering/shell-pipe-exit-code-trap) — QA 게이트 우회 방지
+- [iOS Harness Journal 000~006](/harness-journal) — iOS 하네스 실전 사이클 기록
 - 상황별 라우팅에 링크된 모든 엔트리는 *이 위키의 실제 파일*
+
+**외부 리서치 (iOS 고급 섹션 출처, 2026-04-14 검증)**:
+- XcodeBuildMCP — getsentry/XcodeBuildMCP (GitHub, 59+ 도구 MCP 서버)
+- Claude Code iOS Dev Guide — keskinonur/claude-code-ios-dev-guide (GitHub, PRD-driven workflow)
+- Claude Code Hooks 공식 문서 — code.claude.com/docs/en/hooks
+- Claude Code Settings 공식 문서 — code.claude.com/docs/en/settings
 
 ### 검증 메모
 
