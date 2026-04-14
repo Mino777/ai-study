@@ -96,20 +96,38 @@ type: entry
 
 > 자세한 SPM 함정 해부: [iOS Harness Journal 003 — .claudeignore + SPM 멀티모듈 함정](/wiki/ios-ai/ios-ai-journal-003-claudeignore-spm)
 
+### 2026-04-14 — ccusage 30일 분석 (베이스라인 2차)
+
+- **기간**: 2026-03-21 ~ 2026-04-14 (24일간 데이터)
+- **총 비용**: **$4,316** (30일 환산 ~$5,395)
+- **총 토큰**: **7.33B tokens**
+- **일일 평균**: ~305M tokens / ~$180
+- **cache read 비율**: **98.6%** (7.22B / 7.33B) — 이전 베이스라인(98%+)과 일관
+- **피크일**: 04-08 $639, 04-12 $555, 03-29 $488
+- **저사용일**: 03-21 $7, 03-22 $3, 04-13 $4
+- **모델 믹스**: opus-4-6 (메인) + haiku-4-5 (서브에이전트/Judge) + sonnet-4-6 (병렬 에이전트)
+
+**변동성 관찰**: 일일 비용이 $3~$639로 200배 차이. 피크일은 Journal 다중 사이클 + 병렬 에이전트 투입일. 저사용일은 세션 미사용 또는 단일 작업.
+
+**이전 베이스라인(2026-04-12)과 비교**:
+- 일평균: $211 → $180 (15% 감소)
+- cache read: 98%+ → 98.6% (유지)
+- 해석: `.claudeignore` + RTK 효과가 지속 중. 감소분은 세션 빈도 차이일 수 있어 추가 관찰 필요.
+
 ---
 
-## 실측 결과 요약 (2026-04-12 기준)
+## 실측 결과 요약 (2026-04-14 기준)
 
 | 레버 | 측정 방법 | 절감량 | 비고 |
 |---|---|---|---|
 | **RTK (Rust Token Killer)** | `rtk gain` | **47.4M tokens / 2,234 commands (99.5%)** | grep 43.7M (최대 기여), vitest 3.2M, read 154K. 누적 |
 | **`.claudeignore` (ai-study)** | du + 토큰 추정 | **~194K tokens / 세션 context (~50%)** | package-lock.json 117K + src/generated 48K + docs/* 29K |
 | **`.claudeignore` (moneyflow iOS)** | du 실측 | **~130GB 파일 탐색 차단** | 각 SPM 모듈 `.build/` 6~7GB × N + vendor/ 63MB |
-| **Prompt Caching (자동)** | ccusage | **cache read 98%+ (7.1B / 7.2B)** | Anthropic 자동 캐싱. 실비용이 총 토큰 대비 낮은 핵심 이유 |
+| **Prompt Caching (자동)** | ccusage | **cache read 98.6% (7.22B / 7.33B)** | Anthropic 자동 캐싱. 실비용이 총 토큰 대비 낮은 핵심 이유 |
 
-**종합**: RTK가 CLI 출력의 99.5%를 필터링하고, `.claudeignore`가 세션 context를 50% 축소하며, API cache read가 98%로 비용을 극적으로 낮춤. 3 레버가 서로 다른 레이어(CLI 출력 / context prefix / API 비용)에서 **독립적으로** 작동하여 중복 없이 누적 효과.
+**종합**: RTK가 CLI 출력의 99.5%를 필터링하고, `.claudeignore`가 세션 context를 50% 축소하며, API cache read가 98.6%로 비용을 극적으로 낮춤. 3 레버가 서로 다른 레이어(CLI 출력 / context prefix / API 비용)에서 **독립적으로** 작동하여 중복 없이 누적 효과.
 
-**일일 비용 베이스라인**: ~360M tokens / ~$211 (최근 20일 평균). 이 수치는 위 3 레버가 *이미 적용된* 상태. 레버 없이는 추정 2-3배 이상.
+**일일 비용 베이스라인 (2026-04-14)**: ~305M tokens / ~$180 (24일 평균). 이전 베이스라인 대비 15% 감소. 3 레버가 *이미 적용된* 상태.
 
 ---
 
