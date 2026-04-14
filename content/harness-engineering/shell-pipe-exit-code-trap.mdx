@@ -1,0 +1,179 @@
+---
+title: "Shell Pipe Exit Code 함정 — $? 는 파이프 마지막 명령의 종료 코드다"
+category: harness-engineering
+date: "2026-04-14"
+tags: [shell, bash, ci-cd, qa-gate, exit-code, pipe, harness-engineering]
+confidence: 5
+connections:
+  - harness-engineering/fixture-silent-failure-trap
+  - harness-engineering/harness-journal-002-inline-test-gate
+  - harness-engineering/ai-testing-strategies
+status: complete
+description: "cmd1 | cmd2 | cmd3 후 $? 는 cmd3의 종료 코드. 빌드 실패(cmd1)가 grep/tail(cmd3)에 가려져 QA gate를 통과하는 silent failure. 실전 사례와 3가지 수정 패턴."
+type: entry
+quiz:
+  - question: "npm run build | grep error | tail -5 실행 후 $? 가 0이라면 무엇을 의미하는가?"
+    choices:
+      - "npm run build가 성공했다"
+      - "빌드에 error 문자열이 없다"
+      - "tail -5 명령이 성공했다 (빌드 성공 여부와 무관)"
+      - "파이프라인 전체가 성공했다"
+    answer: 2
+    explanation: "Shell에서 $? 는 파이프라인의 마지막 명령(tail -5)의 종료 코드만 반환한다. tail은 입력이 있든 없든 거의 항상 0을 반환하므로, 빌드가 실패해도 $? 는 0이다."
+  - question: "PIPESTATUS를 사용하지 않고 파이프 첫 번째 명령의 종료 코드를 안전하게 캡처하는 방법은?"
+    choices:
+      - "set -o pipefail을 파이프 전에 설정"
+      - "명령 출력을 파일로 리다이렉트 후 종료 코드를 변수에 저장"
+      - "파이프 대신 &&로 연결"
+      - "A와 B 모두 유효한 방법"
+    answer: 3
+    explanation: "set -o pipefail은 파이프 내 어느 명령이든 실패하면 파이프 전체 종료 코드를 non-zero로 만든다. 또는 파일 리다이렉트(cmd > log.txt; EXIT=$?)로 파이프를 완전히 제거할 수 있다. 둘 다 유효하다."
+  - question: "이 함정이 AI 에이전트 환경에서 특히 위험한 이유는?"
+    choices:
+      - "AI가 shell 스크립트를 잘 못 작성해서"
+      - "AI가 생성한 코드의 빌드 에러가 QA gate를 무시하고 프로덕션에 도달할 수 있어서"
+      - "AI가 exit code를 이해하지 못해서"
+      - "shell pipe가 AI에게 불필요해서"
+    answer: 1
+    explanation: "AI 에이전트가 수정한 코드는 타입 에러 등 미묘한 빌드 실패를 유발할 수 있다. QA gate가 pipe exit code 함정으로 이를 통과시키면, 사람이 검토하지 않은 AI 코드가 프로덕션에 배포된다."
+---
+
+## 한 줄 요약
+
+Shell 파이프에서 `$?`는 마지막 명령의 종료 코드만 반환한다. 빌드 명령을 grep/tail에 파이프하면 빌드 실패를 감지할 수 없다.
+
+---
+
+## 라이브 사고 사례 — moneyflow 2026-04-14
+
+moneyflow cron-helpers.ts에서 `PromiseLike` 타입 불일치 에러가 발생했다. 해당 코드는 AI 에이전트가 수정한 파일이었고, QA gate pre-commit 훅이 빌드를 검증하도록 설계되어 있었다.
+
+그런데 훅이 통과했다. Vercel 배포까지 에러가 흘러들어갔다.
+
+원인은 훅 스크립트였다:
+
+```bash
+# AS-IS (문제 있는 코드)
+npm run build | grep -E "(error|Error)" | tail -5
+if [ $? -ne 0 ]; then
+  echo "Build failed"
+  exit 1
+fi
+```
+
+`npm run build`가 타입 에러로 exit code 1을 반환했다. 하지만 `$?`가 잡은 것은 `tail -5`의 종료 코드 — 항상 0이다. 게이트가 실패를 보지 못했다.
+
+---
+
+## 왜 이런 일이 생기나
+
+Shell 파이프 `cmd1 | cmd2 | cmd3`에서 각 명령은 병렬로 실행된다. `$?`는 파이프라인의 **마지막 명령**(`cmd3`) 종료 코드만 반영한다.
+
+`cmd1`이 exit code 1로 실패해도, `cmd2`와 `cmd3`이 정상 종료하면 `$?`는 0이다. `tail`은 표준 입력만 읽고 항상 성공하므로, 앞에서 무슨 일이 벌어지든 0을 반환한다.
+
+---
+
+## 수정 3패턴
+
+### 패턴 A — 파일 리다이렉트 (가장 명확)
+
+파이프를 완전히 없애고 종료 코드를 바로 캡처한다.
+
+```bash
+npm run build > /tmp/build.log 2>&1
+BUILD_EXIT=$?
+cat /tmp/build.log | grep -E "(error|Error)" | tail -5
+if [ $BUILD_EXIT -ne 0 ]; then
+  echo "Build failed (exit $BUILD_EXIT)"
+  exit 1
+fi
+```
+
+종료 코드와 출력 필터링을 분리한다. 가장 읽기 쉽고 오해가 없다.
+
+### 패턴 B — `set -o pipefail` (가장 간결)
+
+파이프 내 어느 명령이든 실패하면 파이프 전체가 non-zero를 반환하도록 설정한다.
+
+```bash
+set -o pipefail
+npm run build | grep -E "(error|Error)" | tail -5
+if [ $? -ne 0 ]; then
+  echo "Build failed"
+  exit 1
+fi
+```
+
+단, `grep`이 매칭 결과를 찾지 못하면 exit code 1을 반환하므로, 에러가 없는 성공 빌드도 실패로 판정될 수 있다. grep에 `|| true`를 붙이거나 패턴 A를 권장한다.
+
+### 패턴 C — `PIPESTATUS` 배열 (bash 전용)
+
+bash는 파이프 내 각 명령의 종료 코드를 `PIPESTATUS` 배열에 저장한다.
+
+```bash
+npm run build | grep -E "(error|Error)" | tail -5
+BUILD_EXIT=${PIPESTATUS[0]}
+if [ $BUILD_EXIT -ne 0 ]; then
+  echo "Build failed (exit $BUILD_EXIT)"
+  exit 1
+fi
+```
+
+`${PIPESTATUS[0]}`은 파이프 첫 번째 명령(`npm run build`)의 종료 코드다. bash 전용 — `sh`나 `zsh`에서는 동작이 다를 수 있다.
+
+---
+
+## 실전 수정 — moneyflow Before / After
+
+```bash
+# Before
+npm run build | grep -E "(error|Error)" | tail -5
+if [ $? -ne 0 ]; then exit 1; fi
+
+# After
+npm run build > /tmp/build.log 2>&1
+BUILD_EXIT=$?
+tail -20 /tmp/build.log
+if [ $BUILD_EXIT -ne 0 ]; then exit 1; fi
+```
+
+---
+
+## 이 함정이 자주 발생하는 곳
+
+| 위치 | 패턴 |
+|------|------|
+| CI 게이트 | `npm run build \| grep error; if [ $? -ne 0 ]` |
+| pre-commit 훅 | `tsc \| tail -10; exit $?` |
+| health check 스크립트 | `curl ... \| jq '.status'; if [ $? -eq 0 ]` |
+| 로그 파싱 | `docker logs app \| grep FATAL; if [ $? -ne 0 ]` |
+
+공통점: 실제 검증 대상 명령의 종료 코드를 파이프 뒤 명령이 덮어쓴다.
+
+---
+
+## For AI Agents
+
+**Trigger**: shell 스크립트에서 빌드/테스트 결과를 파이프로 필터링한 후 `$?`로 성공 여부를 판단하는 코드를 발견했을 때.
+
+**Actionable**:
+1. 파이프를 제거하고 출력을 파일로 리다이렉트한 뒤 종료 코드를 변수에 저장 (패턴 A)
+2. 또는 스크립트 상단에 `set -o pipefail` 추가 후 grep 결과 처리에 주의 (패턴 B)
+3. bash 확정 환경이면 `${PIPESTATUS[0]}` 사용 (패턴 C)
+
+**Anti-pattern**:
+```bash
+# 절대 이렇게 쓰지 말 것
+cmd | grep | tail
+if [ $? -ne 0 ]; then ...  # $? 는 tail의 코드. cmd 실패를 감지 못함
+```
+
+**AI 에이전트 환경에서 특히 위험한 이유**: AI가 생성하거나 수정한 코드는 미묘한 타입 에러나 빌드 실패를 포함할 수 있다. QA gate가 이 함정으로 인해 통과시키면, 검토되지 않은 코드가 프로덕션에 배포된다. 하네스의 신뢰도가 코드 자체의 신뢰도를 결정한다.
+
+---
+
+## 자기 점검
+
+1. `cmd1 | cmd2` 에서 `$?` 가 반환하는 값은 어느 명령의 종료 코드인가?
+2. `set -o pipefail` 이 설정된 상태에서 `cmd1 | cmd2` 중 cmd1만 실패하면 `$?` 는?
+3. CI 게이트에서 빌드 결과를 grep으로 파싱하는 대신 사용해야 하는 방법은?

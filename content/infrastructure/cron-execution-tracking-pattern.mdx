@@ -1,0 +1,171 @@
+---
+title: "Cron 실행 추적 패턴 — withCronTracking 래퍼로 silent failure 제거"
+category: infrastructure
+date: "2026-04-14"
+tags: [cron, monitoring, vercel, supabase, silent-failure, wrapper, infrastructure]
+confidence: 4
+connections:
+  - harness-engineering/fixture-silent-failure-trap
+  - harness-engineering/ai-api-cost-tracking-pattern
+  - infrastructure/vercel-hobby-cron-silent-failure
+status: complete
+description: "Vercel Cron이 실패해도 알림이 없다. withCronTracking 래퍼가 모든 cron route의 인증 + 실행 이력(시작/완료/실패/duration) + 에러 메시지를 DB에 자동 기록. 11개 route를 한 줄로 래핑."
+type: entry
+quiz:
+  - question: "Vercel Cron에서 silent failure가 발생하는 근본 원인은?"
+    choices:
+      - "Vercel이 cron 실행 로그를 제공하지 않아서"
+      - "cron route가 에러를 catch하고 200을 반환하거나, 로그가 Vercel의 짧은 보존 기간 후 사라져서 사후 확인 불가"
+      - "Cron이 비동기로 실행되어서"
+      - "Supabase가 느려서"
+    answer: 1
+    explanation: "Vercel은 cron 실행 로그를 제공하지만 보존 기간이 짧다. 더 큰 문제는 route가 에러를 catch하고 200을 반환하면 Vercel 입장에서는 성공으로 기록된다는 것이다. DB에 실행 이력을 남겨야 사후 분석이 가능하다."
+  - question: "withCronTracking의 이력 저장 자체가 실패하면 어떻게 되는가?"
+    choices:
+      - "cron handler도 함께 실패한다"
+      - "500 에러를 반환한다"
+      - "이력 저장은 graceful하게 실패하고, cron handler는 정상 실행된다"
+      - "retry 로직이 작동한다"
+    answer: 2
+    explanation: "withCronTracking은 이력 저장 실패를 try/catch로 감싸서 로그만 남기고 handler 실행을 계속한다. 이력 테이블이 아직 생성 안 된 환경에서도 cron 자체는 정상 동작해야 하기 때문이다."
+  - question: "11개 route에 withCronTracking을 적용한 후, cron이 어제 실행됐는지 확인하는 가장 빠른 방법은?"
+    choices:
+      - "Vercel 대시보드에서 Function Logs 검색"
+      - "SELECT * FROM cron_execution_history WHERE job_name = X ORDER BY created_at DESC LIMIT 5"
+      - "GitHub Actions 실행 이력 확인"
+      - "에러가 없으면 실행됐다고 가정"
+    answer: 1
+    explanation: "cron_execution_history 테이블에서 job_name으로 조회하면 실행 시각, 성공/실패, duration_ms, 에러 메시지까지 한 눈에 볼 수 있다."
+---
+
+## 한 줄 요약
+
+Cron이 조용히 실패하면 아무도 모른다. `withCronTracking`이 모든 실행을 DB에 기록한다.
+
+---
+
+## 문제 — Vercel Cron의 silent failure
+
+Vercel Cron은 route가 `200`을 반환하면 성공으로 간주한다. 문제는 이렇다.
+
+- route 내부에서 에러를 `catch`하고 `200`을 반환 → Vercel 대시보드에는 "성공" 표시
+- Vercel 함수 로그는 보존 기간이 짧아 며칠 후에는 확인 자체가 불가
+- "어제 환율 갱신 cron이 돌았나?" 확인하려면 Vercel 로그를 직접 뒤져야 했음
+- 11개 route 각각이 인증 + `try/catch`를 복붙 구현 → 일부는 에러를 삼키고 있었음
+
+---
+
+## Before / After
+
+**Before** — 각 route마다 인증 + try/catch 복붙 (15줄 반복)
+
+```ts
+export async function GET(req: Request) {
+  const secret = req.headers.get("authorization");
+  if (!timingSafeEqual(secret, process.env.CRON_SECRET)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  try {
+    await refreshExchangeRates();
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    console.error(e);
+    return NextResponse.json({ error: "failed" }, { status: 500 });
+  }
+}
+```
+
+**After** — `withCronTracking` 한 줄 래핑 (5줄)
+
+```ts
+import { withCronTracking } from "@/lib/cron-tracking";
+
+const handler = withCronTracking("exchange-rate-refresh", async () => {
+  await refreshExchangeRates();
+  return { processed: 1 };
+});
+
+export { handler as GET, handler as POST };
+```
+
+---
+
+## 래퍼가 자동으로 하는 5가지
+
+1. **CRON_SECRET 인증** — `timingSafeEqual`로 타이밍 공격 방어
+2. **실행 시작 기록** — `cron_execution_history`에 `status: 'running'` + `started_at` INSERT
+3. **완료 후 UPDATE** — `status: 'success' | 'failed'` + `duration_ms` + `metadata` (handler 반환값)
+4. **에러 메시지 저장** — `error_message` 컬럼에 1000자 제한으로 저장
+5. **30일 이상 이력 자동 정리** — 완료 시점에 오래된 레코드 DELETE
+
+---
+
+## DB 스키마
+
+```sql
+CREATE TABLE cron_execution_history (
+  id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  job_name      text NOT NULL,
+  status        text NOT NULL CHECK (status IN ('running', 'success', 'failed')),
+  started_at    timestamptz NOT NULL DEFAULT now(),
+  completed_at  timestamptz,
+  duration_ms   integer,
+  error_message text,
+  metadata      jsonb,
+  created_at    timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_cron_history_job_name ON cron_execution_history (job_name, created_at DESC);
+```
+
+---
+
+## 적용 범위 — 11개 route
+
+`exchange-rate-refresh`, `portfolio-snapshot`, `dividend-alert`, `price-update`, `news-fetch`, `market-open-check`, `watchlist-notify`, `streak-reset`, `dead-holding-alert`, `index-sync`, `cleanup-old-snapshots`
+
+---
+
+## 핵심 설계 결정
+
+**이력 저장 실패 시 handler는 계속 실행** — `cron_execution_history` INSERT가 실패해도 handler는 정상 실행된다. 이력 테이블이 아직 없는 환경이나 DB 일시 장애에서도 cron 본 기능은 멈추지 않아야 하기 때문이다.
+
+```ts
+// 이력 저장 실패는 삼키고 handler 계속 진행
+try {
+  await supabase.from("cron_execution_history").insert({ ... });
+} catch (trackingError) {
+  console.warn("[CronTracking] history insert failed:", trackingError);
+}
+```
+
+**handler는 `CronResult`만 반환** — `NextResponse` 생성은 래퍼가 담당한다. handler가 HTTP를 직접 다루지 않으므로 단위 테스트가 쉬워진다.
+
+```ts
+type CronResult = Record<string, unknown> | void;
+type CronHandler = (req: Request) => Promise<CronResult>;
+```
+
+**GET / POST 둘 다 export** — Vercel Cron은 GET으로 호출하지만, 수동 테스트나 외부 트리거에서 POST가 올 수 있다. `export { handler as GET, handler as POST }`로 대응.
+
+---
+
+## 다른 프로젝트에 이식할 때
+
+- [ ] `cron_execution_history` 테이블 마이그레이션 먼저 실행 (`created_at` 인덱스 포함)
+- [ ] `CRON_SECRET` 환경변수 설정 확인 (Vercel + 로컬 `.env.local`)
+- [ ] handler 반환값을 `metadata`로 쓰려면 직렬화 가능한 객체만 반환 (`Error` 객체 직접 반환 금지)
+
+---
+
+## For AI Agents
+
+- `withCronTracking(jobName, handler)` 시그니처. `jobName`은 `cron_execution_history.job_name`과 일치해야 조회 가능
+- 실행 이력 조회: `SELECT * FROM cron_execution_history WHERE job_name = 'job-name' ORDER BY created_at DESC LIMIT 10`
+- 실패율 확인: `SELECT status, COUNT(*) FROM cron_execution_history WHERE job_name = 'job-name' GROUP BY status`
+- 새 cron route 추가 시 패턴: `withCronTracking` 래핑 + `export { handler as GET, handler as POST }` + `vercel.json`에 schedule 등록
+- silent failure 의심 시: `status = 'running'`인 레코드가 오래 남아있으면 handler가 exception 없이 멈춘 것
+
+---
+
+## 자기 점검
