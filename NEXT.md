@@ -884,3 +884,24 @@ gh pr list --search "tips:" -R Mino777/ai-study      # tips 최근
 | 메모리 파일 생성 | **4** (hub_worker + realtime_constraint + tokenomics + session_length) |
 
 ---
+
+### 2026-04-14 (낮 세션) — LLM-First 현행화 + Mermaid 렌더링 근본 수정 + STRATEGY.md
+
+**작업 산출**:
+- LLM-First 위키 엔트리 6개 현행화 (36→70 엔트리, 4→7 슬래시 커맨드, Journal 021 기준)
+- iOS Journal 004/006 클래스명 익명화 12건
+- 모바일 하단 탭 저널 추가 (5탭)
+- STRATEGY.md 신설 (4대 무기 + Tier별 우선순위)
+- AI 과외 파이프라인 slug 근본 수정 (한글→영문 자동 변환)
+- **Mermaid 다이어그램 렌더링 근본 수정** — rehypeMermaid + MermaidRenderer 독립 클라이언트 컴포넌트. 18개 파일 mermaid 블록 전부 정상 렌더링
+
+**🔴 오늘 밤 세션 큐**:
+1. **`frontend-ai/mdx-mermaid-shiki-coexistence.mdx` 신규** — Mermaid + Shiki 공존 패턴 엔트리. rehypeMermaid(shiki 전 추출) + MermaidRenderer(DOM 직접 렌더) 구조를 frontend-ai 카테고리에 박제. 삽질 4회 과정(pre className, data-attr, div override, DOM 직접)과 각 실패 이유 포함
+2. Compound 문서화 (CHANGELOG/retro/solution에 Mermaid 수정 추가)
+
+**🟡 다음 세션 후보 (기존 유지)**:
+- LLM-as-a-Judge 품질 데이터 분석
+- Tokenomics 새 레버 탐색
+- STRATEGY.md Tier 1 항목 착수
+
+---
