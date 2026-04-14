@@ -91,7 +91,8 @@ src/generated/     → content-manifest.json (gitignored, entries + graph + stre
 - `Sidebar` — 카테고리 트리 (접이식, confidence dots, harness-engineering 내 Journal 서브그룹)
 - `SummaryCard` — 엔트리 요약 (카테고리 배지, confidence, 읽기 시간, GitHub 편집)
 - `CodeBlock` — 코드 블록 + 복사 버튼
-- `MermaidDiagram` — mermaid 코드 블록 자동 렌더링
+- `MermaidRenderer` — 클라이언트 DOM 직접 렌더링. `.mermaid-block` div를 스캔 → mermaid SVG 변환. `rehypeMermaid` 플러그인과 쌍으로 동작 (Shiki 간섭 우회)
+- `MermaidDiagram` — 단독 mermaid 렌더 컴포넌트 (MermaidRenderer가 페이지 레벨에서 대체)
 - `EntryNav` — 이전/다음 엔트리 (같은 카테고리 내)
 - `MobileNav` — 모바일 하단 탭 바
 - `LearningHeatmap` — GitHub 스타일 학습 히트맵 (12주, dailyEntries 기반, 일~토 행 정렬)

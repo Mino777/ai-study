@@ -24,14 +24,27 @@
   - Slug 충돌 시 timestamp suffix 자동 추가
 - **기존 문제 파일 rename** — `ios에서-ai가-작업한-코드를-...` (114자) → `ios-ai-code-quality-test-strategy.mdx` (37자)
 
+### Fixed — Mermaid 다이어그램 렌더링 근본 수정 (4회 시도)
+- **`src/lib/remark-mermaid.ts`** — rehypeMermaid 플러그인 신설. Shiki 전에 실행되어 mermaid 코드 블록을 `<div class="mermaid-block">` 으로 변환. Shiki가 mermaid를 건드리지 못하게 함
+- **`src/components/mermaid-renderer.tsx`** — 독립 클라이언트 컴포넌트. 페이지 마운트 시 `.mermaid-block` div를 DOM에서 직접 스캔 → mermaid.render()로 SVG 변환
+- **`src/components/mdx-components.tsx`** — MermaidDiagram dynamic import 및 div override 제거. CustomPre 단순화
+- 시도 1(pre className 감지) → 시도 2(data-attr prop) → 시도 3(div component override) → 시도 4(DOM 직접 렌더) 최종 성공
+- 영향 범위: 18개 파일의 22개 mermaid 블록 전부 정상 렌더링
+
+### Added — 신규 엔트리
+- **`frontend-ai/mdx-mermaid-shiki-coexistence.mdx`** (265줄) — Mermaid + Shiki 공존 패턴. 4번의 삽질 과정과 각 실패 이유 + 최종 해법 구조 박제. quiz 3문항
+
 ### Fixed — iOS Journal 익명화
 - **Journal 004** — `NotificationRouter`→`AlertRouter`, `HomeViewController`→`MainViewController`
 - **Journal 006** — `Oneway*`→`ServiceA*`, `AZoneHistoryEntity`→`AHistoryEntity`, `TransportApproachType`→`ServiceApproachType`, `AddressSearch`→`CSearch`, `SharedStateManager`→`AppStateManager` 등 12개 도메인 특정 네이밍 제거
 
 ### Metrics
-- 커밋: 5 (이 세션)
+- 커밋: 12 (이 세션 전체)
 - 파일 변경: 12+ (6 현행화 + 2 익명화 + 1 파이프라인 fix + 1 rename + 1 UI + 1 전략)
 - 재발 방지: AI 과외 파이프라인 slug 생성 구조 근본 변경
+- Mermaid 수정 시도: 4회 (최종 v4 성공)
+- 영향 받은 mermaid 블록: 18파일 22블록
+- 신규 엔트리: 1 (frontend-ai/mdx-mermaid-shiki-coexistence)
 
 ## [2026-04-13] — terminal 복귀 세션: 8 push 사이클 + 4 신규 콘텐츠 + 5 인프라 + 2 자가손상 버그 fix
 
