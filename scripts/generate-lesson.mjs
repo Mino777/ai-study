@@ -169,7 +169,24 @@ async function generateMDX(topic, manifest) {
   }
 
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
+  // Pro 우선, 503 시 Flash 폴백
+  const MODELS = ["gemini-2.5-pro", "gemini-2.5-flash"];
+  let model;
+  for (const modelName of MODELS) {
+    try {
+      model = genAI.getGenerativeModel({ model: modelName });
+      // 연결 테스트 (짧은 프롬프트)
+      await model.generateContent("ping");
+      console.log(`🤖 Using model: ${modelName}`);
+      break;
+    } catch (err) {
+      console.warn(`⚠️  ${modelName} unavailable: ${err.message?.slice(0, 80)}`);
+      if (modelName === MODELS[MODELS.length - 1]) {
+        console.error("❌ All models unavailable");
+        process.exit(1);
+      }
+    }
+  }
 
   const existingTitles = manifest.entries.map((e) => `- ${e.frontmatter.title}`).join("\n");
 
@@ -553,11 +570,12 @@ async function generateCustom(topicText) {
   // Now generate a proper English slug from the refined title.
   const apiKey = process.env.GEMINI_API_KEY;
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
+  // slug 생성은 가벼운 작업이므로 Flash로 충분
+  const slugModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
   let finalSlug;
   try {
-    finalSlug = await generateSlugFromTitle(model, topic.title);
+    finalSlug = await generateSlugFromTitle(slugModel, topic.title);
     console.log(`📎 Generated slug: ${finalSlug}`);
   } catch (err) {
     console.warn(`⚠️  Slug generation failed: ${err.message}. Using fallback.`);
