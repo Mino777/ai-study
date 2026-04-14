@@ -2,14 +2,18 @@
 title: "AI Agent Start Here — 이 위키를 처음 만난 에이전트를 위한 부트스트랩"
 category: harness-engineering
 date: "2026-04-12"
-tags: [harness-engineering, ai-agent, bootstrap, routing, llm-first, meta]
+tags: [harness-engineering, ai-agent, bootstrap, routing, llm-first, meta, ios, web]
 confidence: 5
 connections:
   - harness-engineering/llm-first-wiki-principles
   - harness-engineering/harness-journal-000-baseline
   - harness-engineering/ai-ops-environment-diagnosis-checklist
+  - ios-ai/ios-ai-journal-000-baseline
+  - ios-ai/ios-ai-code-quality-test-strategy
+  - harness-engineering/shell-pipe-exit-code-trap
+  - infrastructure/cron-execution-tracking-pattern
 status: complete
-description: "이 위키를 처음 만난 AI 에이전트가 가장 먼저 읽을 엔트리. 상황별 라우팅 표 + 기본 계약 + 주의사항. CLAUDE.md / SPEC.md와 함께 세션 시작 시 반드시 로드."
+description: "이 위키를 처음 만난 AI 에이전트가 가장 먼저 읽을 엔트리. 상황별 라우팅 표 + iOS/Web 플랫폼별 하네스 구축 가이드 + 기본 계약 + 주의사항. CLAUDE.md / SPEC.md와 함께 세션 시작 시 반드시 로드."
 type: entry
 quiz:
   - question: "AI 에이전트가 이 위키에서 *세션 시작 시 가장 먼저* 읽어야 하는 3개 파일은?"
@@ -38,7 +42,7 @@ quiz:
     explanation: "2026-04-11에 실제로 발생한 사고 — 영상을 시청하지 않은 채로 \"영상에서 ~라는 비유\" 같은 프레임으로 가짜 인용구를 박았던 사례. hotfix로 6개 인용구 제거 + 정보 출처 고지 박스 추가. 이게 `/ingest` 슬래시 커맨드가 *원본 직접 확인*을 강제하게 된 계기."
 ---
 
-## 🛑 먼저 읽으세요
+## 먼저 읽으세요
 
 안녕하세요. 당신이 *AI 에이전트*라면 지금 읽고 있는 이 엔트리가 **위키의 시작점**입니다. Jominho의 *LLM-First Wiki*에 방문해 주셔서 감사합니다.
 
@@ -65,7 +69,7 @@ quiz:
 
 가장 자주 마주치는 상황들과 *먼저 읽어야 하는 엔트리*입니다.
 
-### 🔰 새 프로젝트의 AI 환경을 구축해야 함
+### 새 프로젝트의 AI 환경을 구축해야 함
 
 순서:
 
@@ -73,8 +77,9 @@ quiz:
 2. [Harness Journal 시작 가이드](/wiki/harness-engineering/harness-journal-bootstrap-guide) — 베이스라인 박는 법
 3. [Compound Engineering Philosophy](/wiki/harness-engineering/compound-engineering-philosophy) — 4단계 루프 + 5단계 ladder
 4. [Harness Engineering Overview](/wiki/harness-engineering/harness-engineering-overview) — AI 하네스의 기본
+5. 아래 **플랫폼별 하네스 구축 가이드** (iOS / Web) — Day 1 체크리스트 포함
 
-### 🚀 Harness Journal 시리즈 작성/갱신
+### Harness Journal 시리즈 작성/갱신
 
 순서:
 
@@ -82,25 +87,25 @@ quiz:
 2. [Harness Journal 000 — 베이스라인](/wiki/harness-engineering/harness-journal-000-baseline) — 시리즈 운영 규칙 + 큐 구조
 3. 가장 최근 Harness Journal 엔트리 — 현재 큐 상태 파악
 
-### 🧰 슬래시 커맨드 도입/이식
+### 슬래시 커맨드 도입/이식
 
 순서:
 
 1. [Compound 자동화 슬래시 커맨드 정리](/wiki/harness-engineering/compound-automation-slash-commands) — `/compound`, `/autoceo`, `/wt-branch`, `/ingest` 매핑 표
 2. [Skill 시스템 도입](/wiki/harness-engineering/skill-system-introduction) — 슬래시 커맨드 vs Skill 경계
 
-### 🔌 AI 호출 코드 개선
+### AI 호출 코드 개선
 
 순서:
 
 1. [AI 호출 패턴 — Circuit Breaker, 폴백, 캐싱](/wiki/harness-engineering/ai-call-patterns-circuit-breaker-fallback) — moneyflow ai-client.ts 6가지 패턴
 2. [AI 출력 Zod 검증 패턴 5 layer](/wiki/harness-engineering/ai-output-zod-validation-pattern) — 환각 차단
 
-### 💰 AI 비용 관리
+### AI 비용 관리
 
 1. [AI API 비용 추적 패턴](/wiki/harness-engineering/ai-api-cost-tracking-pattern) — 모델별 단가 + 로깅 + `/cost-check`
 
-### ⚠️ 사고 발생 (rebase 충돌, 머지 게이트 우회 등)
+### 사고 발생 (rebase 충돌, 머지 게이트 우회 등)
 
 순서:
 
@@ -108,30 +113,183 @@ quiz:
 2. [Harness Journal 004 — `/wt-branch` 슬래시 커맨드](/wiki/harness-engineering/harness-journal-004-wt-branch-command) — 회피 메커니즘
 3. [Multi-Session AI Ops 패턴](/wiki/harness-engineering/multi-session-ai-ops-patterns) — 여러 세션 동시 작업의 함정과 회피
 
-### 📚 외부 URL을 위키 엔트리로 박제
+### 외부 URL을 위키 엔트리로 박제
 
 1. `.claude/commands/ingest.md` (슬래시 커맨드 정의) — `/ingest <URL>` 호출
 2. 메모리: `feedback_external_source_verification` — 날조 방지 5단계
 
-### 🔁 사이클 끝 박제
+### 사이클 끝 박제
 
 1. `.claude/commands/compound.md` (슬래시 커맨드 정의) — `/compound` 호출
 2. [Compound Engineering Philosophy](/wiki/harness-engineering/compound-engineering-philosophy) — 4단계 루프의 Compound 단계
 
-### 🔄 다른 세션 결과물 검증
+### 다른 세션 결과물 검증
 
 1. `.claude/commands/cross-session-review.md` (슬래시 커맨드 정의) — `/cross-session-review` 호출
 2. [Harness Journal 019 — 맥앱 크로스 세션 정리](/wiki/harness-engineering/harness-journal-019-mcapp-cross-session-cleanup) — 6 함정 패턴 + 5단 프로토콜
 
-### 📥 워커 프로젝트에서 온 PR 큐레이션
+### 워커 프로젝트에서 온 PR 큐레이션
 
 1. `.claude/commands/curate-inbound.md` (슬래시 커맨드 정의) — `/curate-inbound #<PR번호>` 호출
 2. [Harness Journal 014 — 허브 자동 머지 + 인바운드 팁](/wiki/harness-engineering/harness-journal-014-hub-auto-merge-inbound-tips) — 양방향 기여 인프라
 
-### 🔍 워커 프로젝트 상태 진단
+### 워커 프로젝트 상태 진단
 
 1. `.claude/commands/projects-sync.md` (슬래시 커맨드 정의) — `/projects-sync` 호출
 2. [Harness Journal 011 — 동시 세션 안전](/wiki/harness-engineering/harness-journal-011-concurrent-session-safety) — 4층 방어 모델
+
+---
+
+## iOS 하네스 환경 구축 — 실전 베스트 프랙티스
+
+회사 iOS 프로젝트에 AI 에이전트 하네스를 처음 도입할 때의 **실전 가이드**. ai-study 위키와 3개 워커 프로젝트에서 검증된 패턴만 수록.
+
+### iOS 하네스 5대 구성요소
+
+#### 1. CLAUDE.md — 프로젝트 컨텍스트 (최우선)
+
+iOS 프로젝트의 CLAUDE.md에 반드시 포함할 항목:
+
+- **아키텍처 패턴**: RIBs, MVVM, TCA, Clean Architecture 등. 에이전트가 새 파일을 만들 때 *어디에 어떤 레이어로* 배치할지 결정하는 기준
+- **모듈 구조**: SPM multi-module인지, CocoaPods인지, 혼합인지. 모듈 간 의존 방향 명시
+- **금지 패턴**: force unwrap 정책(`!` 사용 범위), Rx vs `async`/`await` 혼용 규칙, `@objc` 남용 금지 등
+- **배포 흐름**: fastlane인지 Xcode Cloud인지, TestFlight 배포 단계, 인증서 관리 방식
+- **핵심 의존성과 용도**: `"Moya — 네트워크 추상화"`, `"SnapKit — Auto Layout DSL"` 같은 1줄 설명
+- **이 프로젝트에서 AI가 절대 하면 안 되는 것** 섹션: 예) `"Podfile 직접 수정 금지"`, `"Core Data 마이그레이션 자율 실행 금지"`, `"인증서/프로비저닝 프로파일 건드리지 말 것"`
+
+CLAUDE.md가 없으면 에이전트는 *아키텍처를 추측*한다. 추측은 반드시 실패한다.
+
+#### 2. `.claudeignore` — 컨텍스트 오염 차단
+
+iOS 프로젝트에서 필수로 제외할 패턴:
+
+```
+**/.build/          # SPM 모듈별 빌드 캐시 (모듈당 6-7GB)
+vendor/             # CocoaPods vendor
+*.xcodeproj/        # Xcode XML (generated, 수천 줄)
+Pods/               # CocoaPods dependencies
+DerivedData/        # Xcode derived data
+.bundle/            # Ruby bundler
+external-spm/       # 외부 SPM 패키지 미러
+Gemfile.lock        # Ruby lockfile
+```
+
+`**/.build/`가 `.build/`가 아닌 이유: SPM multi-module 프로젝트에서는 *각 모듈 디렉토리 안에* `.build/`가 생긴다. 루트의 `.build/`만 제외하면 `Modules/FeatureA/.build/`, `Modules/FeatureB/.build/` 등이 전부 컨텍스트에 유입된다. 모듈이 20개면 120GB 이상이 컨텍스트를 오염시킨다. glob 패턴 `**/.build/`는 *모든 깊이의* `.build/` 디렉토리를 재귀적으로 제외한다.
+
+#### 3. `.githooks/pre-commit` — 코드 규칙 자동 게이트
+
+에이전트가 작성한 코드가 팀 규칙을 통과하는지 *커밋 시점에* 자동 검증:
+
+```bash
+#!/bin/bash
+# SwiftFormat: 자동 교정 + 재스테이지
+swift run swiftformat . --swiftversion 5.9
+git diff --name-only --cached -- '*.swift' | xargs git add
+
+# SwiftLint: 에러 0 + 경고 100 이하
+LINT_ERRORS=$(swift run swiftlint lint --quiet 2>/dev/null | grep "error:" | wc -l)
+LINT_WARNINGS=$(swift run swiftlint lint --quiet 2>/dev/null | grep "warning:" | wc -l)
+if [ "$LINT_ERRORS" -gt 0 ]; then
+  echo "SwiftLint errors: $LINT_ERRORS"
+  exit 1
+fi
+if [ "$LINT_WARNINGS" -gt 100 ]; then
+  echo "SwiftLint warnings: $LINT_WARNINGS (max 100)"
+  exit 1
+fi
+```
+
+팀에 맞게 `setup.sh`를 만들어 온보딩 시 한 번 실행:
+
+```bash
+#!/bin/bash
+git config core.hooksPath .githooks
+chmod +x .githooks/*
+echo "Git hooks activated"
+```
+
+이 훅이 없으면 에이전트는 SwiftLint 위반을 *무한 반복*한다. 훅이 커밋을 차단하면 에이전트가 *스스로 교정*한다.
+
+#### 4. 슬래시 커맨드 7종 — 워크플로우 구조화
+
+`.claude/commands/` 디렉토리에 배치하는 iOS 전용 커맨드:
+
+| 커맨드 | 역할 | 핵심 |
+|---|---|---|
+| `/ios-triage` | 5 라운드 탐정식 인터뷰 | 라운드당 최대 3 질문, 브리프 생성 |
+| `/ios-investigate` | 4단계 근본 원인 추적 | 재현 - 격리 - 식별 - 수정 |
+| `/ios-bugfix` | 5 Phase 버그 수정 | 티켓 - 분석 - 수정 - 리뷰 - 테스트 |
+| `/ios-review` | 2 Agent 병렬 리뷰 | Reviewer + Defender 동시 실행 |
+| `/ios-arch` | 3 Agent 아키텍처 토론 | A옹호 + B옹호 + Judge |
+| `/ios-ship` | TestFlight 배포 6 Phase | 버전 - CHANGELOG - fastlane |
+| `/compound` | 3 Agent 지식 축적 | CHANGELOG + 솔루션 + 회고 |
+
+각 커맨드는 `.claude/commands/ios-*.md` 파일로 정의한다. 단순 프롬프트가 아니라 **Phase를 정의**하는 것이 핵심 — 에이전트에게 "분석해줘"가 아니라 "Phase 1에서 재현, Phase 2에서 격리, Phase 3에서 근본 원인 식별"처럼 *구조화된 사고 흐름*을 강제한다.
+
+#### 5. 테스트 하네스 — 5단계 체크리스트
+
+1. **SwiftLint/SwiftFormat pre-commit 훅** (위 3번) — 코드 스타일 자동 교정
+2. **XCTest 유닛** — Protocol 기반 DI + `async`/`await` 테스트
+3. **SPM 모듈 간 계약 테스트** — 모듈 경계의 public API가 변경되면 테스트 실패
+4. **Snapshot 테스트** — `swift-snapshot-testing`으로 UI 회귀 탐지
+5. **CI 게이트** — GitHub Actions에서 `xcodebuild test` 실행, exit code 직접 검사
+
+상세: [iOS AI 코드 품질 보증 전략](/wiki/ios-ai/ios-ai-code-quality-test-strategy)
+
+### iOS AI 에이전트 5대 함정 (실전 검증)
+
+| 함정 | 증상 | 수정 |
+|---|---|---|
+| SPM `**/.build/` 누락 | 컨텍스트 130GB 이상 폭발 | `.claudeignore`에 `**/.build/` 추가 |
+| Xcode 타겟 멤버십 누락 | 파일 추가 후 빌드 성공, 테스트 타겟에서 실패 | `pbxproj` 타겟 멤버십 확인 자동화 |
+| `@MainActor` 누락 | UI 업데이트 코드 런타임 크래시 | UI 바인딩 코드에 `@MainActor` 필수 규칙 |
+| prefix grep으로 미사용 import 판단 | `Manager`/`State` 같은 공통 접미사 이름 놓침 | AST 기반 분석 또는 빌드 후 경고 확인 |
+| Shell pipe exit code 함정 | `$?`가 파이프 마지막 명령만 반환, 빌드 실패를 못 잡음 | `set -o pipefail` 또는 exit code 직접 검사 |
+
+5번 함정의 상세: [Shell Pipe Exit Code 함정](/wiki/harness-engineering/shell-pipe-exit-code-trap)
+
+### iOS 하네스 Day 1 체크리스트 (30분)
+
+새 iOS 프로젝트에 하네스를 세팅할 때 에이전트가 순서대로 실행:
+
+1. **`CLAUDE.md` 작성** — 아키텍처 + 모듈 구조 + 금지 패턴 + 배포 흐름 (10분)
+2. **`.claudeignore` 생성** — `**/.build/` 필수, 위 패턴 목록 복사 (2분)
+3. **`.githooks/pre-commit` + `setup.sh`** — SwiftLint/SwiftFormat 게이트 (5분)
+4. **`.claude/commands/`에 7개 슬래시 커맨드 복사** — `ios-*.md` 파일 배치 (5분)
+5. **`.claude/settings.json` hooks 설정** — pre-commit 훅 경로 지정 (3분)
+6. **첫 `/compound` 실행으로 베이스라인 문서 생성** — 현 상태 스냅샷 (5분)
+7. **`swift package show-dependencies`로 모듈 그래프 확인** — 즉시
+
+7단계 완료 후 에이전트는 *구조화된 환경*에서 작업을 시작한다. 구조 없이 시작하면 위 5대 함정에 *반드시* 빠진다.
+
+---
+
+## Web 하네스 환경 구축 (Next.js 기준)
+
+이 위키 자체가 Web(Next.js) 프로젝트이므로 간결하게 핵심만 정리.
+
+### 핵심 구성요소
+
+1. **`CLAUDE.md`** — Tech stack, 페이지 목록, API routes, 배포 흐름. 이 위키의 CLAUDE.md가 *레퍼런스 구현*
+2. **`.claudeignore`** — `node_modules/`, `package-lock.json`, `.next/`, `src/generated/` 등 생성 파일
+3. **`ai-review.yml`** — Push 시 자동 PR + Test Gate + Squash Merge. 3개 프로젝트에서 운용 중
+4. **`validate-content.mjs`** — MDX/Mermaid 문법 사전 검증 + JSX 함정 탐지 (중괄호, void tag 등)
+5. **`vitest` + `npm run build`** — CI 게이트. exit code *직접* 검사, pipe 금지 (Shell pipe 함정 참조)
+
+### Web 하네스 핵심 차이점 (vs iOS)
+
+| 차이점 | Web (Next.js) | iOS (Swift/SPM) |
+|---|---|---|
+| 빌드 검증 | `npm run build` (SSG 프리렌더) | `xcodebuild test` (시뮬레이터) |
+| 린트 게이트 | ESLint + Prettier | SwiftLint + SwiftFormat |
+| 배포 | Vercel auto-deploy (push = 배포) | fastlane + TestFlight |
+| 모듈 시스템 | npm packages | SPM multi-module |
+| 컨텍스트 폭발 원인 | `node_modules/` (거대하지만 단일) | `**/.build/` (모듈당 6-7GB, 분산) |
+| 콘텐츠 검증 | MDX 문법 + JSX 함정 | Swift 컴파일러가 대부분 잡음 |
+
+Web은 *배포가 push = 즉시 반영*이므로 pre-commit 게이트가 더 중요하다. iOS는 TestFlight 리뷰 단계가 있어 *빌드 실패를 한 번 더 잡을 기회*가 있지만, Web은 그 기회가 없다.
+
+---
 
 ## 기본 계약 — 10가지
 
@@ -156,7 +314,7 @@ quiz:
 | 코드 의도 결정이 필요한 충돌 해결 (cherry-pick conflict 등) | 사용자 판단 필요 |
 | 보호 파일 수정 | 모든 세션 공유 룰 |
 | 외부 서비스 설정 (GitHub branch protection 등) | 사용자 GitHub UI 작업 필요 |
-| 민감 데이터 접근 (.env 값) | 보안 경계 |
+| 민감 데이터 접근 (`.env` 값) | 보안 경계 |
 
 *내가 처리할 수 없는 것*을 *사용자에게 알리는 것*도 자율의 일부.
 
@@ -164,10 +322,11 @@ quiz:
 
 | 항목 | 값 |
 |---|---|
-| 총 엔트리 | 70 |
+| 총 엔트리 | 75 |
 | 카테고리 | 11개 (prompt/context/harness/tokenomics/rag/agents/fine-tuning/evaluation/infrastructure/ios-ai/frontend-ai) |
 | 주 시리즈 | Harness Journal (000~021, 21 에피소드) + iOS Journal (000~006, 7 에피소드) |
 | 슬래시 커맨드 | 7개 (`/compound`, `/autoceo`, `/wt-branch`, `/ingest`, `/cross-session-review`, `/curate-inbound`, `/projects-sync`) |
+| 플랫폼별 가이드 | Web (Next.js) + iOS (Swift/SPM) |
 | 허브-워커 모델 | ai-study(허브) + moneyflow/tarosaju(워커) — 양방향 기여 인프라 확립 |
 | Runtime Validator | moneyflow 10/10 에이전트 Layer 1-4 완료 |
 | LLM-as-a-Judge | 3 프로젝트 적용 (moneyflow/tarosaju/ai-study) |
@@ -187,16 +346,19 @@ quiz:
 3. 이 엔트리의 상황별 라우팅에서 *현재 작업 상황*에 해당하는 섹션 찾기
 4. 해당 섹션의 엔트리 목록을 *순서대로* 읽기
 5. 각 엔트리의 `For AI Agents` 섹션이 있으면 *체크리스트*로 사용
-6. 기본 계약 10가지 + 자율 모드 경계 확인
-7. 작업 진행 중 의사결정이 필요한 순간마다 *관련 엔트리*를 다시 참조
-8. 결과를 박제 (Harness Journal 또는 새 엔트리 또는 기존 엔트리 갱신 로그)
+6. iOS 프로젝트면 **iOS 하네스 5대 구성요소** + **Day 1 체크리스트** 참조
+7. Web 프로젝트면 **Web 하네스 환경 구축** 참조
+8. 기본 계약 10가지 + 자율 모드 경계 확인
+9. 작업 진행 중 의사결정이 필요한 순간마다 *관련 엔트리*를 다시 참조
+10. 결과를 박제 (Harness Journal 또는 새 엔트리 또는 기존 엔트리 갱신 로그)
 
 **Anti-patterns**:
-- ❌ 이 엔트리만 읽고 CLAUDE.md / SPEC.md 생략
-- ❌ 상황에 맞지 않는 라우팅 임의 선택
-- ❌ 자율 모드 경계를 무시하고 *모든 것*을 자율 처리
-- ❌ 박제 없이 작업 끝내기 (다음 에이전트가 학습 불가)
-- ❌ 이 엔트리를 *한 번만* 읽고 잊기 (새 세션마다 반드시 재방문)
+- 이 엔트리만 읽고 CLAUDE.md / SPEC.md 생략
+- 상황에 맞지 않는 라우팅 임의 선택
+- 자율 모드 경계를 무시하고 *모든 것*을 자율 처리
+- 박제 없이 작업 끝내기 (다음 에이전트가 학습 불가)
+- 이 엔트리를 *한 번만* 읽고 잊기 (새 세션마다 반드시 재방문)
+- iOS 하네스에서 `.claudeignore` 없이 시작 (컨텍스트 폭발 보장)
 
 ## 이 엔트리가 *살아있는 문서*입니다
 
@@ -229,11 +391,14 @@ quiz:
 - [SPEC.md](../../SPEC.md) — 위키의 spec + AI Agent Contract
 - [CLAUDE.md](../../CLAUDE.md) — 프로젝트 규약
 - [LLM-First Wiki 설계 원칙](/wiki/harness-engineering/llm-first-wiki-principles) — 메타 엔트리
+- [iOS AI 코드 품질 보증 전략](/wiki/ios-ai/ios-ai-code-quality-test-strategy) — 테스트 하네스 상세
+- [Shell Pipe Exit Code 함정](/wiki/harness-engineering/shell-pipe-exit-code-trap) — QA 게이트 우회 방지
 - 상황별 라우팅에 링크된 모든 엔트리는 *이 위키의 실제 파일*
 
 ### 검증 메모
 
-- 상황별 라우팅 10개 섹션은 *현 시점 위키 상태*. 새 엔트리 추가 시 갱신 필요.
+- 상황별 라우팅 12개 섹션은 *현 시점 위키 상태*. 새 엔트리 추가 시 갱신 필요.
+- iOS 하네스 구축 가이드는 ai-study + moneyflow + tarosaju 3개 프로젝트에서 검증된 패턴만 수록.
 - 기본 계약 10가지는 *이 위키 운영 경험*에서 추출. 다른 환경에선 조정 필요.
 - 자율 모드 경계 5가지는 [Journal 003 (Multi-session)](/wiki/harness-engineering/multi-session-ai-ops-patterns)에서 직접 입증된 것만 기록.
 - 위키 상태 스냅샷(총 엔트리 수 등)은 2026-04-12 기준. 실제 상태와 차이 발생 시 `/harness-journal` 인덱스 페이지가 진짜 소스.
