@@ -61,6 +61,29 @@
 - 신규 엔트리: 1 (frontend-ai/mdx-mermaid-shiki-coexistence)
 - 신규 인프라: 3 (rehypeMermaid + MermaidRenderer + detectJsxTraps)
 
+### Added — 신규 엔트리 3 + iOS 고급 (심야~새벽 세션)
+- **`ios-ai/ios-legacy-to-ai-ready.mdx`** (449줄) — 레거시 iOS→AI-Ready 4단계 스펙트럼 + Day1~Week4 로드맵 + Tuist/SPM 전략 + 토큰 절감 실측
+- **`harness-engineering/shell-pipe-exit-code-trap.mdx`** — Shell pipe `$?` 함정. QA gate가 빌드 실패를 통과시킨 실전 사고 + 수정 3패턴
+- **`infrastructure/cron-execution-tracking-pattern.mdx`** — withCronTracking 래퍼. 11 cron route 인증+이력+에러 DB 자동 추적
+- **`ai-agent-start-here.mdx` iOS 고급 섹션** — 딥리서치 8가지: pbxproj 금지, XcodeBuildMCP 59+ 도구, CLAUDE.md 500줄, permissions.deny, PostToolUse 자동 린트, SwiftUI 궁합, Swift 버전 명시, SPM show-dependencies
+
+### Fixed — AI 과외 파이프라인 3건
+- **Gemini 2.5 Pro 503 폴백** — Pro 불가 시 Flash 자동 전환
+- **PR 생성 백틱 shell injection** — Gemini 제목에 백틱 포함 시 command substitution 실행 → env 주입 + tr 치환
+- **Squash merge Vercel 배포 갭** — GITHUB_TOKEN merge가 Vercel webhook 미발동 → Deploy Hook 트리거 스텝 추가
+
+### Changed
+- **Gemini 모델 업그레이드** — 2.5 Flash → 2.5 Pro (Pro 우선, Flash 폴백)
+- **iOS 코드 테스트 전략 전면 재작성** — 580줄 Gemini 튜토리얼 → 404줄 에이전트 실행 가이드
+- **dev-setup-tips-log +3건** — Zod datetime 함정, select 필드 누락, withCronTracking
+
+### Metrics (이 세션 전체 — 2026-04-14~15 심야)
+- 커밋: 25+
+- 신규 엔트리: 5 (mermaid-shiki, shell-pipe, cron-tracking, ios-legacy, ios-test-strategy 재작성)
+- 위키 총 엔트리: 76
+- 파이프라인 버그 수정: 3 (503 폴백, 백틱 injection, 배포 갭)
+- 딥리서치 외부 소스: 8+ (XcodeBuildMCP, Tuist, Claude Lab, etc.)
+
 ## [2026-04-13] — terminal 복귀 세션: 8 push 사이클 + 4 신규 콘텐츠 + 5 인프라 + 2 자가손상 버그 fix
 
 사용자가 맥앱 Claude 세션 결과물에 불만 표명 → 터미널로 복귀 → 3 프로젝트(`ai-study` + `mino-moneyflow` + `mino-tarosaju`) 동시 발생 부산물을 전수 검증 + 정리. 7회 에이전트 병렬(2 사이클: 4 + 3) 활용.
