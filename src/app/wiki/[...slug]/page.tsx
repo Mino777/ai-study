@@ -11,6 +11,7 @@ import { EntryNav } from "@/components/entry-nav";
 import { TableOfContents } from "@/components/toc";
 import { ScrollProgress } from "@/components/scroll-progress";
 import { Quiz } from "@/components/quiz";
+import { MermaidRenderer } from "@/components/mermaid-renderer";
 import Link from "next/link";
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -186,6 +187,7 @@ export default async function WikiEntryPage({
       <SummaryCard frontmatter={entry.frontmatter} slug={slug} readingTime={readingTime} />
 
       <div className="prose-custom">{content}</div>
+      <MermaidRenderer />
       <TableOfContents />
 
       {/* Self-check quiz */}
