@@ -1,0 +1,153 @@
+---
+title: "Harness Journal 022 — QA Gate 파이프라인 종료 코드 함정 (빌드 실패가 통과한 라이브 사고)"
+category: harness-engineering
+series: harness-journal
+date: "2026-04-14"
+tags: [harness-journal, harness-engineering, qa-gate, exit-code, pipe, claude-code-hooks, build-verification, silent-failure]
+confidence: 5
+connections:
+  - harness-engineering/harness-journal-020-promise-timeout-wrapper
+  - harness-engineering/harness-journal-019-mcapp-cross-session-cleanup
+  - harness-engineering/harness-journal-021-github-token-deploy-chain-gap
+  - harness-engineering/dev-setup-tips-log
+status: complete
+description: "Claude Code hooks의 pre-commit QA gate가 `npm run build | grep | tail; if [ $? -ne 0 ]` 패턴을 사용 — 파이프라인 마지막 명령(tail)의 종료 코드만 검사하므로 빌드 실패를 100% 놓침. Supabase PromiseLike 타입 에러 + Turbopack 'Type error:' 포맷이 겹쳐 3중 방어(hook + 수동 grep + 에이전트 위임) 모두 실패. 수정: 종료 코드 직접 캡처 패턴."
+type: entry
+quiz:
+  - question: "`npm run build 2>&1 | grep 'error' | tail -3; if [ $? -ne 0 ]`에서 `$?`가 검사하는 것은?"
+    choices:
+      - "npm run build의 종료 코드"
+      - "grep의 종료 코드"
+      - "**tail의 종료 코드** — 파이프라인에서 `$?`는 마지막 명령의 종료 코드만 반환. tail은 입력이 있으면 항상 0. 따라서 빌드가 실패해도 gate는 항상 통과"
+      - "전체 파이프라인의 종료 코드"
+    answer: 2
+    explanation: "POSIX 쉘에서 `$?`는 *마지막 파이프라인 요소*의 종료 코드만 반환. `set -o pipefail`을 설정하지 않는 한 앞쪽 명령의 실패는 전파되지 않는다. `tail -3`은 stdin에 데이터가 있으면 항상 exit 0. 이 함정은 쉘 스크립팅 초보자부터 10년차까지 반복적으로 빠지는 고전적 버그."
+  - question: "이 사고에서 방어 계층이 3중으로 실패한 이유는?"
+    choices:
+      - "테스트가 부족해서"
+      - "**(1) Hook의 파이프 종료 코드 함정 (2) 수동 grep 패턴이 Turbopack 포맷 불일치 (3) 서브에이전트가 타입 체크를 실행하지 않음** — 3개의 독립적 실패가 동시에 발생하여 모든 방어선이 뚫림"
+      - "Vercel 측 버그"
+      - "TypeScript 설정 문제"
+    answer: 1
+    explanation: "Layer 1(Hook): 파이프 종료 코드 함정. Layer 2(수동 검증): `grep -c 'error TS'`가 Turbopack의 'Type error:' 포맷 불일치. Layer 3(에이전트 위임): 서브에이전트는 코드 수정만 하고 tsc/build를 실행하지 않음. 어느 하나만 정상이었어도 빌드 실패를 잡았지만, 3개가 동시에 실패하면서 false sense of safety 발생."
+  - question: "수정된 패턴의 핵심 원칙은?"
+    choices:
+      - "더 많은 grep 패턴 추가"
+      - "**종료 코드 직접 캡처** — `cmd > log 2>&1; EXIT=$?; if [ $EXIT -ne 0 ]` 패턴. grep 패턴은 프레임워크마다 달라서 false negative 발생. 종료 코드는 프레임워크 불문 universal truth"
+      - "set -o pipefail 추가"
+      - "빌드를 두 번 실행"
+    answer: 1
+    explanation: "grep 패턴 기반 검증은 도구 체인(tsc/turbopack/webpack/esbuild)마다 에러 출력 포맷이 다르므로 유지보수 비용이 높다. 종료 코드는 모든 빌드 도구가 실패 시 non-zero를 반환하는 universal convention. `set -o pipefail`도 좋지만, Claude Code hooks는 단일 명령 실행이라 파이프라인을 아예 피하는 것이 더 안전."
+---
+
+## 한 줄 요약
+
+Claude Code pre-commit hook의 `npm run build | grep | tail; if [ $? -ne 0 ]` 패턴에서 `$?`가 `tail`의 종료 코드(항상 0)를 검사하므로 빌드 실패를 100% 놓침. Turbopack의 `"Type error:"` 포맷과 수동 `grep "error TS"` 불일치, 서브에이전트 미검증까지 겹쳐 **3중 방어 전부 실패** → Vercel 배포 실패.
+
+---
+
+## 갭 (Before)
+
+moneyflow `.claude/settings.json`의 pre-commit hook:
+
+```bash
+# AS-IS (3가지 버그)
+npm run build 2>&1 | grep -E 'error|Error|✓ Compiled' | tail -3
+if [ $? -ne 0 ]; then exit 1; fi
+```
+
+**버그 1 — 파이프 종료 코드 함정**: `$?`는 파이프라인 마지막 명령(`tail -3`)의 종료 코드. `tail`은 입력이 있으면 항상 exit 0. 빌드가 실패해도 gate 통과.
+
+**버그 2 — grep 패턴 false match**: `grep -E 'error|Error'`는 빌드 성공 시에도 정상 로그에 "error" 단어가 포함되면 매칭하고, 실패 시에도 다른 포맷이면 놓침.
+
+**버그 3 — Turbopack 포맷 불일치**: Next.js Turbopack은 `"error TS2345:"` 대신 `"Type error: ..."` 포맷 사용. 수동 `grep -c "error TS"` 검증도 실패.
+
+### 사고 타임라인
+
+1. `cron-helpers.ts` 작성 — Supabase `PromiseLike`에 `.then().catch()` 체이닝 (타입 에러)
+2. Hook 실행 → `npm run build | grep | tail` → `$?` = 0 (tail의 코드) → ✅ PASSED (거짓양성)
+3. 수동 검증 → `npm run build | grep -c "error TS"` → 0 (Turbopack "Type error:" 포맷) → ✅ PASSED (거짓양성)
+4. 서브에이전트에 15개 cron route 수정 위임 → 빌드 재검증 생략 → 커밋/푸시
+5. Vercel 빌드 실패 → 사용자가 발견
+
+---
+
+## 만든 환경 (After) — 종료 코드 직접 캡처
+
+```bash
+# TO-BE (종료 코드 직접 검사)
+npm run build > /tmp/moneyflow-build.log 2>&1
+BUILD_EXIT=$?
+if [ $BUILD_EXIT -ne 0 ]; then
+  echo '❌ QA_GATE FAILED: 빌드 실패 (exit code '$BUILD_EXIT')'
+  grep -E 'Type error|error TS|Failed to' /tmp/moneyflow-build.log | head -5
+  exit 1
+fi
+```
+
+**핵심 변경**: 파이프라인 제거 → 파일 리다이렉트 + 종료 코드 변수 캡처.
+
+### 왜 이 패턴이 안전한가
+
+| 방식 | 빌드 성공 시 | 빌드 실패 시 | 안전? |
+|---|---|---|---|
+| `build \| grep \| tail; $?` | tail=0 ✅ | tail=0 ✅ | ❌ 항상 통과 |
+| `build \| grep; $?` | grep match=0 ✅ | grep match=0 ✅ | ❌ grep 패턴 의존 |
+| `build > log; $?` | exit=0 ✅ | exit=1 ❌ | ✅ universal |
+| `set -o pipefail; build \| grep; $?` | grep=0 ✅ | build≠0 → ❌ | ⚠️ 쉘 의존 |
+
+**종료 코드 직접 캡처가 유일하게 프레임워크/쉘 독립적인 방법.**
+
+---
+
+## 교훈
+
+### 1. 파이프라인의 `$?`는 마지막 명령만 본다
+
+POSIX 쉘의 기본 동작. `set -o pipefail`은 bash/zsh에서만 작동하고 sh에서는 미지원. Claude Code hooks는 실행 환경을 보장하지 않으므로 **파이프라인 자체를 피하는 것이 최선**.
+
+### 2. grep 패턴 기반 빌드 검증은 프레임워크 종속
+
+| 도구 | 에러 포맷 |
+|---|---|
+| tsc | `error TS2345: ...` |
+| Turbopack (Next.js) | `Type error: ...` |
+| Webpack | `ERROR in ./src/...` |
+| esbuild | `✘ [ERROR] ...` |
+
+grep 패턴을 모든 도구에 맞추려면 유지보수 지옥. **종료 코드는 universal convention.**
+
+### 3. 서브에이전트는 타입 체크를 실행하지 않는다
+
+Agent 도구로 코드 수정을 위임하면, 에이전트는 Edit/Write만 수행하고 `tsc`나 `npm run build`를 실행하지 않음. "에이전트가 성공 보고했으니 괜찮겠지"는 **기억에 의존하는 가드** — 행동에 박는 가드(hook)가 올바르게 작동해야 하는 이유.
+
+### 4. 방어 계층 독립성 검증이 필요하다
+
+3개 방어 계층(hook / 수동 검증 / 에이전트)이 **모두 같은 실패 모드**(grep 패턴 의존)를 공유하면 독립적 방어가 아님. 진정한 다층 방어는 **서로 다른 메커니즘**(종료 코드 + grep + 실행)으로 구성해야 함.
+
+---
+
+## 일반화 — 모든 프로젝트에 적용 가능
+
+이 패턴은 moneyflow에 국한되지 않음. **빌드 검증을 파이프라인으로 하는 모든 CI/hook**에 해당:
+
+```bash
+# ❌ 절대 이렇게 하지 말 것
+some_build_command 2>&1 | grep 'error' | tail; if [ $? -ne 0 ]; then ...
+
+# ✅ 항상 이렇게
+some_build_command > /tmp/build.log 2>&1
+if [ $? -ne 0 ]; then
+  cat /tmp/build.log | tail -20
+  exit 1
+fi
+```
+
+---
+
+## 관련
+
+- [Journal 020 — Promise 타임아웃 래퍼](./harness-journal-020-promise-timeout-wrapper.mdx): 이번 사고에서 수정한 cron-helpers.ts는 Journal 020의 타임아웃 래퍼를 적용하는 과정에서 발생
+- [Journal 021 — GITHUB_TOKEN deploy chain gap](./harness-journal-021-github-token-deploy-chain-gap.mdx): 같은 주에 발생한 또 다른 "통과한 것처럼 보이지만 실패" 패턴
+- [Dev Setup Tips Log — 2026-04-14](./dev-setup-tips-log.mdx): 이 사건의 환경 팁 버전 (grep 패턴 불일치 단독)
+- moneyflow `feedback_agent_build_verify.md`: 서브에이전트 위임 후 검증 필수 규칙
