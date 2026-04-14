@@ -2,6 +2,37 @@
 
 모든 주목할 만한 변경사항을 이 파일에 기록합니다.
 
+## [2026-04-14] — LLM-First 위키 현행화 + AI 과외 파이프라인 slug 근본 수정 + STRATEGY.md
+
+### Added
+- **`STRATEGY.md`** — 포트폴리오 4대 무기(Harness/Tokenomics/온보딩/Compound) 정의 + Tier별 개발 우선순위 + 외부 소개 워딩 가이드. Gemini 외부 평가 기반
+- **모바일 하단 탭에 저널 추가** — 홈/저널/Wiki/대시보드/Vibe 5탭 (`mobile-nav.tsx`)
+
+### Changed — LLM-First 위키 엔트리 6개 현행화
+- **`ai-agent-start-here.mdx`** — 스냅샷 전면 갱신 (36+→70 엔트리, 4→7 슬래시 커맨드, Journal 006→021) + 상황별 라우팅 3섹션 추가 (cross-session/curate-inbound/projects-sync)
+- **`llm-first-wiki-principles.mdx`** — 엔트리 수 36→70
+- **`compound-automation-slash-commands.mdx`** — 4→7 커맨드 전면 갱신 (mermaid, 세부 섹션, 이식 가이드, 중첩 표)
+- **`skill-system-introduction.mdx`** — 슬래시 커맨드 2→7 갱신
+- **`harness-journal-000-baseline.mdx`** — 4번째 갱신 로그 추가 (10 갭 중 7개 완료)
+- **`compound-engineering-philosophy.mdx`** — 커맨드 4→7 반영
+
+### Fixed — AI 과외 파이프라인 slug 근본 수정
+- **`generate-lesson.mjs` generateCustom()** — 한글 질문 텍스트가 그대로 파일명(slug)으로 사용 → URL 인코딩 시 404 발생하는 근본 원인 수정
+  - Gemini에게 TITLE→영문 slug 변환 위임 (max 60자, `generateSlugFromTitle()`)
+  - TAGS 지시 추가 (영문 키워드 3~6개, 한글 단어 분할 태그 제거)
+  - Fallback: 한글 제거 + 영문만 추출하는 `titleToSlugFallback()`
+  - Slug 충돌 시 timestamp suffix 자동 추가
+- **기존 문제 파일 rename** — `ios에서-ai가-작업한-코드를-...` (114자) → `ios-ai-code-quality-test-strategy.mdx` (37자)
+
+### Fixed — iOS Journal 익명화
+- **Journal 004** — `NotificationRouter`→`AlertRouter`, `HomeViewController`→`MainViewController`
+- **Journal 006** — `Oneway*`→`ServiceA*`, `AZoneHistoryEntity`→`AHistoryEntity`, `TransportApproachType`→`ServiceApproachType`, `AddressSearch`→`CSearch`, `SharedStateManager`→`AppStateManager` 등 12개 도메인 특정 네이밍 제거
+
+### Metrics
+- 커밋: 5 (이 세션)
+- 파일 변경: 12+ (6 현행화 + 2 익명화 + 1 파이프라인 fix + 1 rename + 1 UI + 1 전략)
+- 재발 방지: AI 과외 파이프라인 slug 생성 구조 근본 변경
+
 ## [2026-04-13] — terminal 복귀 세션: 8 push 사이클 + 4 신규 콘텐츠 + 5 인프라 + 2 자가손상 버그 fix
 
 사용자가 맥앱 Claude 세션 결과물에 불만 표명 → 터미널로 복귀 → 3 프로젝트(`ai-study` + `mino-moneyflow` + `mino-tarosaju`) 동시 발생 부산물을 전수 검증 + 정리. 7회 에이전트 병렬(2 사이클: 4 + 3) 활용.

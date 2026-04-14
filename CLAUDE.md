@@ -63,7 +63,7 @@ src/generated/     → content-manifest.json (gitignored, entries + graph + stre
 - `npm run new-entry` — interactive CLI to create new MDX entry
 - `npm run generate-lesson` — AI 과외 선생님: 주제 3개 추천
 - `npm run generate-lesson generate <slug>` — 특정 주제로 콘텐츠 생성
-- `npm run generate-lesson generate-custom <텍스트>` — 커스텀 주제로 생성
+- `npm run generate-lesson generate-custom <텍스트>` — 커스텀 주제로 생성 (Gemini가 영문 slug 자동 생성, 한글 slug 금지)
 
 ## Content System
 - All content in `content/` as MDX files with frontmatter
