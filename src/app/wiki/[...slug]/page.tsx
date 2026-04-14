@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { compileMDX } from "next-mdx-remote/rsc";
 import remarkGfm from "remark-gfm";
+import { rehypeMermaid } from "@/lib/remark-mermaid";
 import rehypeShiki from "@shikijs/rehype";
 import { getEntry, getAllSlugs, getManifest } from "@/lib/content";
 import { SummaryCard } from "@/components/summary-card";
@@ -145,6 +146,7 @@ export default async function WikiEntryPage({
         mdxOptions: {
           remarkPlugins: [remarkGfm],
           rehypePlugins: [
+            rehypeMermaid as never,
             [rehypeShiki as never, { theme: "github-dark-default" }],
           ],
         },

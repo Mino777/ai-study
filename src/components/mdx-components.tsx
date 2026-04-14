@@ -15,7 +15,18 @@ const MermaidDiagram = dynamic(
   }
 );
 
-function CustomPre({ children, ...props }: React.ComponentProps<"pre">) {
+interface CustomPreProps extends React.ComponentProps<"pre"> {
+  "data-mermaid-chart"?: string;
+}
+
+function CustomPre({ children, ...props }: CustomPreProps) {
+  // rehypeMermaid가 주입한 data-mermaid-chart 속성 감지
+  const mermaidChart = props["data-mermaid-chart"];
+  if (mermaidChart) {
+    return <MermaidDiagram chart={mermaidChart} />;
+  }
+
+  // Fallback: 기존 language-mermaid className 감지 (shiki 미적용 환경)
   const child = children as React.ReactElement<{
     className?: string;
     children?: string;
