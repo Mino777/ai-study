@@ -15,15 +15,28 @@ const MermaidDiagram = dynamic(
   }
 );
 
-interface CustomPreProps extends React.ComponentProps<"pre"> {
-  "data-mermaid-chart"?: string;
+// Recursively extract text content from React children (handles shiki spans)
+function extractText(node: React.ReactNode): string {
+  if (typeof node === "string") return node;
+  if (typeof node === "number") return String(node);
+  if (!node) return "";
+  if (Array.isArray(node)) return node.map(extractText).join("");
+  if (typeof node === "object" && "props" in node) {
+    const el = node as React.ReactElement<{ children?: React.ReactNode }>;
+    return extractText(el.props.children);
+  }
+  return "";
 }
 
-function CustomPre({ children, ...props }: CustomPreProps) {
-  // rehypeMermaid가 주입한 data-mermaid-chart 속성 감지
-  const mermaidChart = props["data-mermaid-chart"];
-  if (mermaidChart) {
-    return <MermaidDiagram chart={mermaidChart} />;
+function CustomPre({
+  children,
+  className,
+  ...props
+}: React.ComponentProps<"pre">) {
+  // rehypeMermaid가 주입한 mermaid-raw 클래스 감지
+  if (className === "mermaid-raw") {
+    const chart = extractText(children).trim();
+    return <MermaidDiagram chart={chart} />;
   }
 
   // Fallback: 기존 language-mermaid className 감지 (shiki 미적용 환경)
@@ -37,11 +50,18 @@ function CustomPre({ children, ...props }: CustomPreProps) {
     "props" in child &&
     child.props?.className === "language-mermaid"
   ) {
-    const chart = child.props.children?.trim() || "";
+    const chart =
+      typeof child.props.children === "string"
+        ? child.props.children.trim()
+        : extractText(child.props.children).trim();
     return <MermaidDiagram chart={chart} />;
   }
 
-  return <CodeBlock {...props}>{children}</CodeBlock>;
+  return (
+    <CodeBlock className={className} {...props}>
+      {children}
+    </CodeBlock>
+  );
 }
 
 export const mdxComponents = {

@@ -1,11 +1,14 @@
 /**
  * Rehype plugin: mermaid 코드 블록을 shiki 처리 전에 추출.
  *
- * rehypeShiki보다 먼저 실행되어야 한다.
- * <pre><code class="language-mermaid">chart</code></pre> 에서
- * language-mermaid 클래스를 제거하고 <pre data-mermaid-chart="chart"> 로 변환.
- * 이렇게 하면 shiki가 이 블록을 건드리지 않고,
- * CustomPre가 data-mermaid-chart 속성으로 mermaid를 감지할 수 있다.
+ * rehypeShiki보다 먼저 실행되어야 한다 (rehypePlugins 배열에서 shiki 앞에 배치).
+ *
+ * 변환: <pre><code class="language-mermaid">chart</code></pre>
+ *     → <pre class="mermaid-raw"><code>chart</code></pre>
+ *
+ * - language-mermaid 클래스를 제거해 shiki가 이 블록을 무시하게 함
+ * - pre에 mermaid-raw 클래스를 추가해 CustomPre가 감지할 수 있게 함
+ * - code 자식의 텍스트 내용은 그대로 보존 (CustomPre가 추출)
  */
 import { visit } from "unist-util-visit";
 
@@ -31,17 +34,11 @@ export function rehypeMermaid() {
       )
         return;
 
-      // Extract raw text from code children
-      const chart =
-        code.children
-          ?.map((c: HastNode) => c.value || "")
-          .join("") || "";
-
-      // Store chart text as data attribute on <pre>
+      // Mark pre with mermaid-raw class for CustomPre detection
       node.properties = node.properties || {};
-      node.properties["data-mermaid-chart"] = chart;
+      node.properties.className = ["mermaid-raw"];
 
-      // Remove language class so shiki skips this block
+      // Remove language-mermaid from code so shiki skips this block
       code.properties!.className = [];
     });
   };
