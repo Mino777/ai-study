@@ -601,3 +601,92 @@ npm run build 2>&1 | grep -E "error TS|Type error|Failed to"
 **Related**:
 - moneyflow `feedback_agent_build_verify.md` 메모리: 서브에이전트 위임 후 빌드 검증 필수 규칙
 - moneyflow `feedback_build_verify.md` 메모리: vitest + build 둘 다 통과해야 커밋 (이번 사건의 상위 규칙)
+
+---
+
+## 2026-04-14 — Zod `datetime()` vs Supabase 타임스탬프 포맷 불일치
+
+**발견 프로젝트**: moneyflow
+
+**증상**: Supabase에서 읽어온 데이터가 Zod 검증에서 실패 → API 500 에러. 로그: `"Expected string matching ISO datetime, received ..."`
+
+**원인**: Supabase는 타임스탬프를 `2026-04-14T12:30:00.123456+00:00` 포맷으로 반환한다. 하지만 Zod의 `.datetime()`은 **`Z` 접미사만 허용** (`2026-04-14T12:30:00.123Z`). `+00:00` 오프셋이나 마이크로초 6자리가 포함되면 검증 실패.
+
+**수정**:
+
+```typescript
+// Before (깨짐)
+created_at: z.string().datetime()
+
+// After (안전)
+created_at: z.string()
+```
+
+타임스탬프 형식 검증이 필요하면 `.datetime()` 대신 `.regex()` 사용:
+
+```typescript
+created_at: z.string().regex(/^\d{4}-\d{2}-\d{2}T/)
+```
+
+**추가 발견**: 같은 맥락에서 `currency` 필드가 DB에서 `null` 가능한데 Zod 스키마에 `.nullable()` 누락 → 추가 500 에러. DB 컬럼의 nullable 여부와 Zod 스키마를 반드시 대조할 것.
+
+**교훈**: Zod 스키마를 DB 응답에 적용할 때, **Supabase/PostgreSQL이 반환하는 실제 포맷을 `console.log`로 먼저 확인** 후 스키마 작성. 특히 `datetime()`, `uuid()`, `email()` 같은 strict validator는 DB 반환값과 미묘하게 다를 수 있다.
+
+---
+
+## 2026-04-14 — select 쿼리 필드 누락 → Zod 검증 실패
+
+**발견 프로젝트**: moneyflow
+
+**증상**: portfolio API에서 Zod 검증 실패. 에러: `"Required at user_id"`
+
+**원인**: Supabase `.select()` 쿼리에서 `user_id` 필드를 빼먹음. Zod 스키마에는 `user_id: z.string()` 으로 필수 선언되어 있지만, select에 포함 안 되어 응답에 `user_id`가 아예 없음.
+
+**수정**: `.select('symbol, name, ..., user_id, ...')` 에 누락 필드 추가.
+
+**교훈**: Zod 검증을 DB 응답에 적용하면 **select 쿼리와 Zod 스키마의 필드가 정확히 일치**해야 한다. 새 필드를 스키마에 추가하면 select도 같이 수정. 이 둘이 분리되어 있으면 한쪽만 수정하고 다른 쪽을 놓치는 함정이 반복된다.
+
+---
+
+## 2026-04-14 — withCronTracking: Cron 실행 이력 자동 추적 래퍼
+
+**발견 프로젝트**: moneyflow
+
+**문제**: 11개 cron route가 각각 인증 로직을 복붙하고, 실행 성공/실패를 로깅만 하고 있었음. "어제 cron이 돌았는지?" 확인하려면 Vercel 로그를 뒤져야 했음.
+
+**해결**: `withCronTracking(jobName, request, handler)` 래퍼 도입.
+
+```typescript
+// Before — 각 route마다 인증 + try/catch 반복
+export async function POST(request: NextRequest) {
+  const auth = request.headers.get('authorization')
+  if (auth !== 'Bearer ' + process.env.CRON_SECRET) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+  try {
+    const result = await doWork()
+    return NextResponse.json({ ok: true, ...result })
+  } catch (e) {
+    return NextResponse.json({ error: e.message }, { status: 500 })
+  }
+}
+
+// After — 래퍼가 인증 + 이력 + 에러를 전부 처리
+export async function POST(request: NextRequest) {
+  return withCronTracking('alerts-check', request, async () => {
+    const checked = await processAlerts()
+    return { success: true, metadata: { checked } }
+  })
+}
+```
+
+**래퍼가 자동으로 하는 것**:
+1. `CRON_SECRET` 인증 (safeCompare로 타이밍 공격 방지)
+2. `cron_execution_history` 테이블에 실행 시작 기록
+3. handler 완료 후 성공/실패 + `duration_ms` + metadata 기록
+4. 에러 시 `error_message` 저장 (1000자 제한)
+5. 30일 이상 이력 자동 정리 (admin cleanup cron에 포함)
+
+**11개 route 적용**: admin-cleanup, portfolio-snapshot, trading-outcomes, signal-watch, newsletter-daily, digest-morning, monitor-intraday, alerts-market-move, social-tweet, email-drip, scanner-cron
+
+**효과**: "어제 cron이 돌았나?" → `SELECT * FROM cron_execution_history WHERE job_name = 'X' ORDER BY created_at DESC LIMIT 5` 한 줄로 확인. silent failure 감지 가능.
