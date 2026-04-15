@@ -172,14 +172,15 @@ Journal 003에서 검증한 SPM `.build/` 함정을 처음부터 차단한다.
 
 이 설정이 없으면 AI가 "도움을 주려고" pbxproj를 수정해서 프로젝트를 망가뜨릴 수 있다.
 
-#### 4. XcodeBuildMCP 설치 (2분)
+#### 4. XcodeBuildMCP — 선택 사항 (프로젝트 규모에 따라 판단)
+
+소규모 프로젝트(SPM 모듈 5개 이하)에서 AI가 독립적으로 빌드를 돌려야 한다면 설치:
 
 ```bash
 claude mcp add XcodeBuildMCP -s user -- npx -y xcodebuildmcp@latest mcp
 ```
 
-XcodeBuildMCP를 연결하면 AI 에이전트가 xcodebuild 출력을 구조화된 형태로 받아볼 수 있다.
-빌드 에러 파싱, 테스트 결과 확인이 자동화된다.
+**대규모 프로젝트(30+ 모듈)에서는 설치 비권장** — 빌드 가속 기능이 없고, MCP 래퍼 오버헤드(JSON-RPC + 메타 조회)로 오히려 느려진다. "개발자가 수동으로 빌드하고 결과를 AI에 전달"하는 정책이 더 효율적.
 
 ### Week 1 — git hooks + 슬래시 커맨드
 
@@ -357,7 +358,7 @@ Week 4 이후, 팀이 SPM 모듈화에 익숙해진 뒤 검토한다.
 | .claudeignore (DerivedData) | 수십 GB 차단 | du 실측 |
 | CLAUDE.md 500줄 제한 | 컨텍스트 희석 방지 | 정성적 |
 | 모듈 단위 작업 스코프 | 컨텍스트 50-70% 축소 | /context 비교 |
-| XcodeBuildMCP | xcodebuild 출력 파싱 자동화 | 정성적 |
+| XcodeBuildMCP | xcodebuild 출력 파싱 자동화 (소규모 프로젝트만 권장) | 정성적 |
 | RTK (Rust Token Killer) | CLI 출력 99.5% 필터링 | rtk gain 실측 |
 
 가장 임팩트가 큰 것은 `.claudeignore`다. 설정에 5분, 효과는 영구적.
@@ -411,7 +412,7 @@ navigationController?.pushViewController(hostingController, animated: true)
 
 **Actionable Steps**:
 1. 프로젝트의 AI Readiness Level 판단 (0-3)
-2. Day 1 체크리스트 즉시 실행 (CLAUDE.md, .claudeignore, settings.json, XcodeBuildMCP)
+2. Day 1 체크리스트 즉시 실행 (CLAUDE.md, .claudeignore, settings.json)
 3. Week 1 인프라 설정 (hooks, commands)
 4. Week 2 이후 점진적 모듈화 (새 feature부터 SPM)
 5. 기존 코드는 분석만, 전체 재작성 금지
