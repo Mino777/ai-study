@@ -923,24 +923,28 @@ gh pr list --search "tips:" -R Mino777/ai-study      # tips 최근
 
 ## 🎯 다음 세션 계획 (2026-04-15 기준)
 
+### ✅ 완료
+
+1. ~~회사 iOS 하네스 도입~~ → **iOS Journal 007** (Claude Code 훅 무음 실패) + **008** (첫 풀셋업 후기) 완료
+
 ### 🔴 우선순위 높음
 
-1. **회사 iOS 프로젝트 하네스 도입 결과 박제** — 오늘 회사에서 ai-agent-start-here + ios-legacy-to-ai-ready 기반으로 실전 적용. 결과를 iOS Journal 007로 박제 (성공/실패/조정 사항)
 2. **Vercel Deploy Hook 설정** — VERCEL_DEPLOY_HOOK secret 추가 (수동 `vercel deploy --prod` 대체). 또는 현재 수동 방식 유지 결정
 3. **tarosaju quality_scores migration 적용** — 프로덕션 Supabase에 테이블 생성 → LLM-as-a-Judge 데이터 분석 블로커 해제
+4. **iOS Journal 007/008에서 발견된 교훈을 ai-agent-start-here에 반영** — 훅 무음 실패 패턴, 풀셋업 조정 사항 등
 
 ### 🟡 우선순위 중간
 
-4. **LLM-as-a-Judge 품질 데이터 분석** — tarosaju migration 적용 후 데이터 축적 → 평균/분포/시계열 분석
-5. **STRATEGY.md Tier 2 항목** — AI-Ready Starter Kit 정의, 검증 대시보드, Context Engineering 확장
-6. **학습 히트맵 캘린더/년 토글** — 12주 → 1년 view 옵션
-7. **iOS Journal 007+** — 회사 프로젝트 적용 경험에서 라이브 트리거
+5. **LLM-as-a-Judge 품질 데이터 분석** — tarosaju migration 적용 후 데이터 축적 → 평균/분포/시계열 분석
+6. **STRATEGY.md Tier 2 항목** — AI-Ready Starter Kit 정의, 검증 대시보드, Context Engineering 확장
+7. **학습 히트맵 캘린더/년 토글** — 12주 → 1년 view 옵션
+8. **iOS Journal 009+** — 회사 프로젝트 추가 사이클에서 라이브 트리거
 
 ### 🟢 대기
 
-8. **비용 추적 DB (Supabase)** — migration 승인 필요
-9. **프롬프트 A/B 테스트 인프라** — quality_score 데이터 기반
-10. **RAG 파이프라인 (tarosaju)** — domain_accuracy 점수 낮으면 트리거
+9. **비용 추적 DB (Supabase)** — migration 승인 필요
+10. **프롬프트 A/B 테스트 인프라** — quality_score 데이터 기반
+11. **RAG 파이프라인 (tarosaju)** — domain_accuracy 점수 낮으면 트리거
 
 ---
 
@@ -948,8 +952,8 @@ gh pr list --search "tips:" -R Mino777/ai-study      # tips 최근
 
 1. `git pull` — 최신 상태 동기화
 2. NEXT.md 읽기 — 이 섹션 확인
-3. 회사 iOS 적용 결과가 있으면 → Journal 007 작성 우선
-4. 없으면 → 큐 3번(tarosaju migration) 또는 6번(히트맵) 진행
+3. iOS Journal 007/008 교훈 → ai-agent-start-here 반영 여부 확인
+4. 큐 순서대로 진행
 5. 작업 완료 → `/compound`
 
 ---
