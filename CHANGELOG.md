@@ -2,6 +2,22 @@
 
 모든 주목할 만한 변경사항을 이 파일에 기록합니다.
 
+## [2026-04-15] — iOS Journal 007/008 교훈 반영 + Context Engineering 확장 + 히트맵 토글
+
+### Added — 신규 엔트리 2
+- **`context-engineering/claudeignore-context-hygiene.mdx`** — .claudeignore 실전 가이드. iOS/Web 플랫폼별 템플릿 + 3 프로젝트 실측 + permissions.deny 비교
+- **`context-engineering/claude-md-design-patterns.mdx`** — CLAUDE.md 설계 패턴. 500줄 규칙 + 필수 6섹션 + progressive disclosure
+
+### Changed
+- **`ai-agent-start-here.mdx`** — iOS 5대 함정→6대 함정 (훅 4중 wiring 추가), Day 1 체크리스트 8단계 (훅 진단), 스냅샷 78→82 entries
+- **`learning-heatmap.tsx`** — 12주/6개월/1년 3단계 토글. 셀 크기 반응형 (13px/10px/8px)
+- **`dev-setup-tips-log.mdx`** — +3건 (React hydration, Zod transitive dep, 수익화 보안)
+
+### Metrics
+- 위키 총 엔트리: 82
+- Context Engineering: 3→5 엔트리
+- iOS Journal: 6→8 에피소드
+
 ## [2026-04-14] — LLM-First 위키 현행화 + AI 과외 파이프라인 slug 근본 수정 + STRATEGY.md
 
 ### Added
