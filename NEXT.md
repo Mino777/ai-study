@@ -905,3 +905,51 @@ gh pr list --search "tips:" -R Mino777/ai-study      # tips 최근
 - STRATEGY.md Tier 1 항목 착수
 
 ---
+
+### 2026-04-14~15 (심야 세션) — iOS 집대성 + 엔트리 5건 + 파이프라인 수정 3건
+
+**작업 산출**:
+- 신규 엔트리 5건: mermaid-shiki 공존, shell-pipe exit code, cron 추적, ios-legacy-to-ai-ready, ios-test-strategy 재작성
+- AI Agent Start Here iOS 고급 섹션 추가 (딥리서치 8가지, 531줄)
+- AI 과외 파이프라인 수정 3건: Gemini Pro 폴백, 백틱 injection, Vercel 배포 갭
+- Gemini 모델 Flash → Pro 업그레이드 (폴백 포함)
+- validate-content JSX 탐지 3패턴 + Gemini 프롬프트 가드 4항목
+- ccusage 30일 베이스라인 2차 ($4,316 / 98.6% cache)
+- dev-setup-tips +6건 (Zod datetime, select 누락, withCronTracking, React hydration, Zod transitive, 보안 체크리스트)
+- XcodeBuildMCP 권장→조건부 판단 수정 (대규모 프로젝트 오버헤드)
+- 위키 총 엔트리: **78**
+
+---
+
+## 🎯 다음 세션 계획 (2026-04-15 기준)
+
+### 🔴 우선순위 높음
+
+1. **회사 iOS 프로젝트 하네스 도입 결과 박제** — 오늘 회사에서 ai-agent-start-here + ios-legacy-to-ai-ready 기반으로 실전 적용. 결과를 iOS Journal 007로 박제 (성공/실패/조정 사항)
+2. **Vercel Deploy Hook 설정** — VERCEL_DEPLOY_HOOK secret 추가 (수동 `vercel deploy --prod` 대체). 또는 현재 수동 방식 유지 결정
+3. **tarosaju quality_scores migration 적용** — 프로덕션 Supabase에 테이블 생성 → LLM-as-a-Judge 데이터 분석 블로커 해제
+
+### 🟡 우선순위 중간
+
+4. **LLM-as-a-Judge 품질 데이터 분석** — tarosaju migration 적용 후 데이터 축적 → 평균/분포/시계열 분석
+5. **STRATEGY.md Tier 2 항목** — AI-Ready Starter Kit 정의, 검증 대시보드, Context Engineering 확장
+6. **학습 히트맵 캘린더/년 토글** — 12주 → 1년 view 옵션
+7. **iOS Journal 007+** — 회사 프로젝트 적용 경험에서 라이브 트리거
+
+### 🟢 대기
+
+8. **비용 추적 DB (Supabase)** — migration 승인 필요
+9. **프롬프트 A/B 테스트 인프라** — quality_score 데이터 기반
+10. **RAG 파이프라인 (tarosaju)** — domain_accuracy 점수 낮으면 트리거
+
+---
+
+## 📋 다음 세션 시작 체크리스트
+
+1. `git pull` — 최신 상태 동기화
+2. NEXT.md 읽기 — 이 섹션 확인
+3. 회사 iOS 적용 결과가 있으면 → Journal 007 작성 우선
+4. 없으면 → 큐 3번(tarosaju migration) 또는 6번(히트맵) 진행
+5. 작업 완료 → `/compound`
+
+---
