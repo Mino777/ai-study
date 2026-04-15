@@ -1,0 +1,223 @@
+---
+title: ".claudeignore 실전 가이드 — 컨텍스트 오염을 막는 파일 위생"
+category: context-engineering
+date: "2026-04-15"
+tags: [context-engineering, claudeignore, context-window, token-optimization, ios, nextjs]
+confidence: 5
+connections:
+  - context-engineering/context-engineering-fundamentals
+  - tokenomics/claude-code-token-levers-catalog
+  - ios-ai/ios-ai-journal-003-claudeignore-spm
+  - harness-engineering/ai-agent-start-here
+status: complete
+description: ".claudeignore로 불필요한 파일을 컨텍스트에서 제외하는 실전 패턴. iOS(SPM .build/ 130GB), Web(node_modules, package-lock), 공통(DerivedData, .next). 3 프로젝트 실측 데이터 포함."
+type: entry
+quiz:
+  - question: "SPM 멀티모듈 iOS 프로젝트에서 .claudeignore에 .build/ 대신 **/.build/ 를 써야 하는 이유는?"
+    choices:
+      - ".build/ 패턴이 작동하지 않아서"
+      - "루트의 .build/만 제외되고 각 모듈 디렉토리 안의 .build/는 제외되지 않아서"
+      - "glob 문법이 다르기 때문에"
+      - "빌드 속도가 달라져서"
+    answer: 1
+    explanation: "SPM 멀티모듈에서 각 모듈(Modules/FeatureA/, Modules/FeatureB/ 등)마다 독립 .build/ 디렉토리가 생긴다. .build/만 쓰면 루트의 것만 제외되고 20+ 모듈의 .build/ (모듈당 6-7GB)가 컨텍스트에 유입된다."
+  - question: ".claudeignore와 settings.json permissions.deny의 차이점은?"
+    choices:
+      - "둘 다 동일한 기능이다"
+      - ".claudeignore는 자동 탐색에서 제외, permissions.deny는 읽기 자체를 차단한다"
+      - ".claudeignore가 더 강력하다"
+      - "permissions.deny는 쓰기만 차단한다"
+    answer: 1
+    explanation: ".claudeignore는 자동 파일 탐색에서 제외하지만 명시적 검색으로는 접근 가능. permissions.deny는 Read/Edit/Write 자체를 차단하므로 진짜 민감 파일(.env, Secrets.swift)에 적합."
+  - question: "ai-study 프로젝트에서 .claudeignore로 약 50% 컨텍스트를 축소한 주요 원인은?"
+    choices:
+      - "src/ 디렉토리가 너무 커서"
+      - "package-lock.json(117K tokens) + src/generated/(48K) + docs/*(29K)를 제외해서"
+      - "node_modules/를 제외해서"
+      - "이미지 파일을 제외해서"
+    answer: 1
+    explanation: "package-lock.json 하나만 117K tokens. src/generated/와 docs/* 합쳐서 약 194K tokens를 절감. 프로젝트 텍스트 전체 약 384K tokens 대비 50% 축소."
+---
+
+## 한 줄 요약
+
+"AI 에이전트의 컨텍스트 윈도우는 유한하다. .claudeignore로 불필요한 파일을 제외하지 않으면 정작 중요한 코드가 밀려난다."
+
+## 왜 컨텍스트 위생이 중요한가
+
+- `package-lock.json` 하나가 117K tokens를 소모하면, 실제 애플리케이션 코드가 컨텍스트에서 밀린다
+- 에이전트가 `DerivedData/`나 `.build/` 바이너리를 "프로젝트 코드"로 착각하고 탐색을 시작하면 세션 전체가 오염된다
+- 토큰 비용이 직접 증가한다 — 탐색하는 파일 수만큼 input tokens가 쌓인다
+- 컨텍스트 오염은 에이전트 판단의 질도 낮춘다: 노이즈가 많으면 시그널이 묻힌다
+
+---
+
+## 플랫폼별 .claudeignore 템플릿
+
+### iOS (SPM 멀티모듈)
+
+```
+**/.build/
+DerivedData/
+*.xcodeproj/
+*.xcworkspace/
+Pods/
+vendor/
+.bundle/
+*.xcassets/
+Gemfile.lock
+external-spm/
+```
+
+**핵심 포인트: `.build/` vs `**/.build/`**
+
+SPM 멀티모듈 프로젝트에서 각 모듈은 독립 `.build/` 디렉토리를 가진다.
+
+```
+MyApp/
+  .build/            ← 루트 (이것만 제외하면 안 됨)
+  Modules/
+    FeatureAuth/
+      .build/        ← 모듈 A (6-7GB)
+    FeatureHome/
+      .build/        ← 모듈 B (6-7GB)
+    FeaturePayment/
+      .build/        ← 모듈 C (6-7GB)
+```
+
+`.build/`만 쓰면 루트 하나만 제외되고, 20개 모듈의 `.build/`가 그대로 컨텍스트에 유입된다. `**/.build/`를 써야 모든 depth의 `.build/`가 제외된다.
+
+---
+
+### Web (Next.js)
+
+```
+node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+.next/
+src/generated/
+docs/retros/
+docs/solutions/
+.vercel/
+```
+
+`package-lock.json`은 단독으로 117K tokens를 차지한다. 의존성 버전 잠금 파일은 에이전트가 읽어야 할 이유가 없다.
+
+`src/generated/`는 prebuild 스크립트가 자동 생성하는 파일이다. 에이전트가 수정해선 안 되고, 읽을 필요도 없다.
+
+---
+
+### 공통 (모든 프로젝트)
+
+```
+*.env
+*.env.*
+.env.local
+.git/
+*.log
+coverage/
+dist/
+build/
+tmp/
+```
+
+`.env` 파일은 `.claudeignore`만으로 보호하면 안 된다 (아래 비교 참고).
+
+---
+
+## 실측 데이터 — 3 프로젝트
+
+| 프로젝트 | 제외 대상 | 절감 규모 | 측정 방법 |
+|---|---|---|---|
+| ai-study (Next.js) | package-lock.json + src/generated/ + docs/ | ~194K tokens (~50%) | du + 토큰 추정 |
+| moneyflow-ios (SPM) | `**/.build/` + vendor/ + xcodeproj/ | ~130GB 파일 탐색 차단 | du 실측 |
+| tarosaju (Next.js) | node_modules/ + .next/ | 수십 GB 탐색 차단 | du 추정 |
+
+ai-study 기준 세부 내역:
+
+| 파일/디렉토리 | 토큰 추정 |
+|---|---|
+| package-lock.json | ~117K |
+| src/generated/ | ~48K |
+| docs/ (retros + solutions) | ~29K |
+| **합계** | **~194K** |
+
+프로젝트 전체 텍스트가 약 384K tokens일 때, 이 세 항목만 제외해도 약 50%를 절감한다.
+
+---
+
+## .claudeignore vs settings.json permissions.deny
+
+두 메커니즘은 역할이 다르다. 함께 써야 완전한 보호가 된다.
+
+| 항목 | .claudeignore | permissions.deny |
+|---|---|---|
+| 역할 | 자동 탐색에서 제외 | 읽기/쓰기 자체 차단 |
+| 명시적 접근 | 가능 (검색으로 찾을 수 있음) | 불가 (에러 반환) |
+| 용도 | 빌드 산출물, 생성 파일, 락 파일 | 비밀 키, 인증서, pbxproj |
+| 설정 위치 | 프로젝트 루트 `.claudeignore` | `.claude/settings.json` |
+
+`settings.json` 예시:
+
+```json
+{
+  "permissions": {
+    "deny": [
+      "Read(.env*)",
+      "Read(Secrets.swift)",
+      "Edit(*.pbxproj)",
+      "Write(*.plist)"
+    ]
+  }
+}
+```
+
+**권장 전략**: `.claudeignore`로 대량 제외 + `permissions.deny`로 민감 파일 잠금. 레이어가 다르므로 중복 설정해도 문제없다.
+
+---
+
+## 흔한 실수 3가지
+
+**1. `.build/` vs `**/.build/` 혼동 — SPM 멀티모듈의 치명적 함정**
+
+`.build/`만 쓰면 루트의 `.build/`만 제외된다. 20개 모듈 각각의 `.build/` (모듈당 6-7GB)가 그대로 에이전트 탐색 범위에 들어온다. 총 130GB+ 파일 목록이 컨텍스트를 채운다.
+
+**2. `node_modules/`를 빼먹기 — 가장 흔한 Web 실수**
+
+npm 프로젝트에서 `node_modules/`는 수십만 개의 파일로 구성된다. `.claudeignore`를 만들면서 `node_modules/`를 빠뜨리는 경우가 놀랍도록 자주 발생한다. 항상 첫 줄에 넣어두는 습관이 필요하다.
+
+**3. `.claudeignore`만으로 `.env` 보호**
+
+`.claudeignore`는 자동 탐색 제외다. 에이전트가 명시적으로 `.env`를 검색하거나 읽으려 하면 막히지 않는다. `.env` 파일은 반드시 `permissions.deny`로 별도 차단해야 한다.
+
+---
+
+## For AI Agents
+
+**Trigger**: 새 프로젝트 세팅 시, 또는 에이전트가 빌드 디렉토리를 탐색하기 시작하거나 컨텍스트가 비정상적으로 큰 경우
+
+**Actionable Steps**:
+
+1. 프로젝트 타입 판단 (iOS SPM / Web Next.js / 기타)
+2. 위 플랫폼별 템플릿에서 해당 패턴 복사
+3. 프로젝트 루트에 `.claudeignore` 생성
+4. 민감 파일은 추가로 `.claude/settings.json`의 `permissions.deny` 설정
+5. 적용 후 `/context`로 토큰 변화 확인
+
+**Anti-patterns**:
+
+- `.claudeignore` 없이 프로젝트 세팅을 완료했다고 판단하기
+- `.env`를 `.claudeignore`로만 보호하기 (`permissions.deny` 필수)
+- 프로젝트 초기에만 만들고 이후 갱신하지 않기 — 새 빌드 디렉토리나 생성 파일 추가 시 반드시 갱신
+
+---
+
+## 자기 점검
+
+1. 현재 프로젝트 루트에 `.claudeignore`가 존재하는가?
+2. SPM 프로젝트라면 `**/.build/` 패턴(글로벌)을 사용하고 있는가?
+3. `.env` 파일이 `permissions.deny`로 차단되어 있는가?
+4. `package-lock.json` 또는 `yarn.lock`이 제외 목록에 있는가?
+5. 생성 파일 디렉토리(`src/generated/`, `dist/`, `.next/`)가 포함되어 있는가?

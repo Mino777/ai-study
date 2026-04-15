@@ -1,0 +1,253 @@
+---
+title: "CLAUDE.md 설계 패턴 — 에이전트에게 프로젝트를 가르치는 법"
+category: context-engineering
+date: "2026-04-15"
+tags: [context-engineering, claude-md, project-context, onboarding, best-practices]
+confidence: 5
+connections:
+  - context-engineering/context-engineering-fundamentals
+  - context-engineering/claudeignore-context-hygiene
+  - harness-engineering/ai-agent-start-here
+  - harness-engineering/llm-first-wiki-principles
+status: complete
+description: "CLAUDE.md는 매 턴 로드되는 프로젝트의 뇌. 500줄 이하로 핵심만, 상세는 슬래시 커맨드로 분리. 3개 프로젝트에서 검증된 구조 템플릿 + 안티패턴."
+type: entry
+quiz:
+  - question: "CLAUDE.md를 500줄 이하로 유지해야 하는 이유는?"
+    choices:
+      - "파일 크기 제한이 있어서"
+      - "매 턴 컨텍스트에 로드되므로 과도하면 중요한 지시가 희석되고 토큰이 낭비되어서"
+      - "Git diff가 커져서"
+      - "읽기 어려워서"
+    answer: 1
+    explanation: "Claude Code는 매 턴마다 CLAUDE.md 전체를 컨텍스트에 로드한다. 1000줄짜리 CLAUDE.md는 매 턴 수천 토큰을 소비하면서 핵심 지시를 희석시킨다."
+  - question: "CLAUDE.md에 '절대 금지' 섹션이 필요한 이유는?"
+    choices:
+      - "에이전트가 반항하지 않도록"
+      - "에이전트가 '도움을 주려고' 위험한 파일(pbxproj, .env, migration)을 수정하는 것을 사전 차단하기 위해"
+      - "법적 요구사항이라서"
+      - "코드 스타일 통일을 위해"
+    answer: 1
+    explanation: "AI 에이전트는 기본적으로 '도움이 되려는' 경향이 있어서 pbxproj 수정, migration 실행 등 위험한 작업도 시도할 수 있다. 명시적 금지 목록이 이를 차단한다."
+  - question: "CLAUDE.md에 넣지 말아야 하는 것은?"
+    choices:
+      - "아키텍처 패턴"
+      - "배포 흐름"
+      - "모든 API 엔드포인트의 상세 스펙과 파라미터 목록"
+      - "금지 패턴"
+    answer: 2
+    explanation: "API 상세 스펙은 코드 자체에서 읽을 수 있는 정보다. CLAUDE.md에는 코드에서 읽을 수 없는 것(아키텍처 결정의 이유, 금지 패턴, 배포 절차)만 넣는다."
+---
+
+## 한 줄 요약
+
+"CLAUDE.md는 매 턴 로드되는 프로젝트의 뇌다. 코드에서 읽을 수 없는 것만 넣고, 500줄 이하로 유지하라."
+
+## CLAUDE.md가 하는 일
+
+- Claude Code가 세션 시작 시 자동 로드하는 프로젝트 컨텍스트
+- 매 턴 컨텍스트에 포함되므로 토큰 비용에 직접 영향
+- 에이전트에게 "이 프로젝트에서 어떻게 행동해야 하는지"를 알려주는 유일한 수단
+
+## 500줄 규칙
+
+| 범위 | 상태 |
+|------|------|
+| 100–300줄 | 이상적 (핵심만) |
+| 300–500줄 | 허용 (상세 포함) |
+| 500줄 초과 | 위험 (지시 희석 + 토큰 낭비) |
+
+상세 가이드는 `.claude/commands/` 슬래시 커맨드로 분리한다. 이것이 **progressive disclosure** 원칙이다. CLAUDE.md는 항상 알아야 하는 것, 슬래시 커맨드는 필요할 때만 알면 되는 것.
+
+## 필수 포함 항목
+
+### 1. Tech Stack (5–10줄)
+
+프레임워크, 언어 버전, 핵심 라이브러리. 에이전트가 코드 생성 시 올바른 API를 사용하게 된다.
+
+```markdown
+## Tech Stack
+- Swift 5.9, iOS 16.0+, Xcode 16.2
+- Architecture: RIBs + ReactorKit
+- Networking: Moya + async/await wrapper
+- UI: SwiftUI (신규) + UIKit (레거시)
+```
+
+### 2. 프로젝트 구조 (10–15줄)
+
+디렉토리 트리. 에이전트가 새 파일을 올바른 위치에 생성하도록 안내한다.
+
+### 3. 절대 금지 (5–10줄)
+
+**가장 중요한 섹션.** 에이전트는 기본적으로 "도움이 되려는" 경향이 있어서 pbxproj 수정, migration 실행 등 위험한 작업도 시도한다. 명시적 금지 목록이 이를 사전 차단한다.
+
+```markdown
+## 절대 금지
+- *.pbxproj 직접 수정 금지
+- Core Data migration 자율 실행 금지
+- .env 파일 읽기/수정 금지
+- main 브랜치 직접 push 금지
+```
+
+### 4. 빌드/테스트 명령 (5줄)
+
+```markdown
+## Key Commands
+- npm run dev — 개발 서버
+- npm run build — 프로덕션 빌드
+- npm test — vitest 실행
+```
+
+### 5. 배포 흐름 (5줄)
+
+push가 곧 배포인지, fastlane이 있는지, 수동 승인이 필요한지. 에이전트가 push 전에 멈출지 판단하는 기준이 된다.
+
+### 6. 코딩 컨벤션 (10줄)
+
+force unwrap 정책, naming convention, import 순서 등 코드 리뷰 시 반복되는 지적 사항.
+
+## 넣지 말아야 하는 것
+
+1. **코드에서 읽을 수 있는 것** — API 상세 스펙, 함수 시그니처, 타입 정의. 에이전트가 코드를 직접 읽으면 된다.
+2. **자주 변하는 것** — 현재 작업 중인 이슈, 오늘의 TODO. NEXT.md나 이슈 트래커가 더 적합하다.
+3. **장황한 설명** — 아키텍처 결정의 히스토리 전체. 핵심 결론만 남긴다.
+4. **다른 문서의 복사** — README 내용 중복. 링크로 참조한다.
+
+## 실전 템플릿 — iOS 프로젝트
+
+```markdown
+# [프로젝트명] — AI Agent 운영 규약
+
+## Tech Stack
+- Swift X.X, iOS XX.0+, Xcode XX.X
+- Architecture: [패턴]
+- UI: [SwiftUI/UIKit/혼합]
+
+## 프로젝트 구조
+Modules/ — SPM 멀티모듈
+  ├── Common/ — 공유 유틸리티
+  ├── FeatureA/ — 기능 A
+  └── ...
+
+## 절대 금지
+- *.pbxproj 직접 수정 금지
+- [프로젝트별 추가]
+
+## Key Commands
+- [빌드 명령]
+- [테스트 명령]
+
+## 배포
+- [배포 흐름]
+
+## 코딩 규칙
+- [핵심 컨벤션]
+```
+
+## 실전 템플릿 — Web (Next.js) 프로젝트
+
+```markdown
+# [프로젝트명] — AI Agent 운영 규약
+
+## Tech Stack
+- Next.js 15 (App Router, TypeScript)
+- Styling: Tailwind CSS 4
+- DB: [ORM + DB]
+- Deploy: Vercel (push = 자동 배포)
+
+## 프로젝트 구조
+src/app/       — App Router 페이지
+src/components/ — 공유 컴포넌트
+src/lib/       — 유틸리티 + 스키마
+content/       — MDX 콘텐츠
+
+## 절대 금지
+- 환경변수 하드코딩 금지
+- main 직접 push 금지
+- [프로젝트별 추가]
+
+## Key Commands
+- npm run dev   — 개발 서버
+- npm run build — 프로덕션 빌드
+- npm test      — 테스트 실행
+
+## 배포
+- push → GitHub Actions → Vercel 자동 배포
+- 배포 전 npm run build 로컬 확인 필수
+
+## 코딩 규칙
+- Server Component 기본, Client는 'use client' 명시
+- Tailwind 클래스 직접 사용 (styled-components 금지)
+```
+
+## 계층형 CLAUDE.md — progressive disclosure
+
+```
+프로젝트 루트/CLAUDE.md          ← 전체 프로젝트 규약 (매 턴 로드)
+.claude/commands/ios-triage.md   ← 특정 워크플로우 (호출 시만 로드)
+.claude/commands/compound.md     ← 복리형 회고 (호출 시만 로드)
+.claude/commands/ship.md         ← 배포 워크플로우 (호출 시만 로드)
+```
+
+CLAUDE.md 500줄 제한을 지키면서 기능을 확장하는 방법이 바로 이 계층 구조다. 메인 파일이 비대해지면 슬래시 커맨드로 잘라내면 된다.
+
+## 3개 프로젝트 CLAUDE.md 비교
+
+| 프로젝트 | 줄 수 | 핵심 특징 |
+|---------|------|---------|
+| ai-study | 약 350줄 | Tech stack + 11 카테고리 + skill routing + RTK |
+| moneyflow-ios | 약 255줄 | 아키텍처(RIBs) + 모듈 구조 + 금지 패턴 + deploy |
+| tarosaju | 약 150줄 | 간결. Stack + commands + deploy만 |
+
+세 프로젝트 모두 500줄 이하를 유지한다. ai-study가 가장 큰 이유는 11개 카테고리 + skill routing 테이블이 있기 때문이다.
+
+## 안티패턴 사례
+
+**안티패턴 1: README 전체 복사**
+
+```markdown
+# 안 좋은 예시 — CLAUDE.md에 README 내용 그대로 붙여넣기
+이 프로젝트는 2023년에 시작된 결제 플랫폼으로...
+(500줄 설명)
+```
+
+에이전트는 README를 직접 읽을 수 있다. CLAUDE.md에 링크 한 줄이면 충분하다.
+
+**안티패턴 2: 모든 API 문서화**
+
+```markdown
+# 안 좋은 예시 — API 스펙 전체 나열
+GET /api/users — 사용자 목록 반환 (param: page, limit, sort...)
+POST /api/users — 사용자 생성 (body: name, email, role...)
+```
+
+코드와 타입에서 읽을 수 있다. CLAUDE.md에 넣으면 코드가 바뀔 때마다 두 곳을 업데이트해야 한다.
+
+**안티패턴 3: 오늘의 TODO**
+
+```markdown
+# 안 좋은 예시 — 현재 작업 상태 포함
+## 현재 작업
+- [x] 로그인 페이지 완료
+- [ ] 결제 모듈 진행 중
+```
+
+NEXT.md나 이슈 트래커가 적합하다. CLAUDE.md는 세션과 무관하게 유효해야 한다.
+
+## For AI Agents
+
+**Trigger**: 새 프로젝트 세팅, CLAUDE.md 작성 또는 리뷰 요청
+
+**Actionable Steps**:
+1. 현재 CLAUDE.md 줄 수 확인. 500줄 초과 시 다이어트 계획 제안
+2. 필수 6개 섹션(Tech Stack, 구조, 절대 금지, Key Commands, 배포 흐름, 컨벤션) 존재 여부 확인
+3. "코드에서 읽을 수 있는 것"이 포함돼 있으면 제거 제안
+4. 금지 패턴 섹션 없으면 프로젝트 특성에 맞게 추가 제안
+5. 자주 변하는 TODO/이슈 현황이 포함되어 있으면 NEXT.md로 이동 제안
+
+## 자기 점검
+
+1. 현재 프로젝트의 CLAUDE.md가 500줄 이하인가?
+2. "절대 금지" 섹션이 있는가?
+3. 코드에서 읽을 수 있는 정보가 중복 포함되어 있지 않은가?
+4. 자주 변하는 내용(현재 TODO, 진행 중인 이슈)이 CLAUDE.md에 있다면 NEXT.md로 옮겨라.
