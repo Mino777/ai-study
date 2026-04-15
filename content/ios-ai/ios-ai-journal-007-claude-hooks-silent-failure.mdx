@@ -1,0 +1,171 @@
+---
+title: "iOS Harness Journal 007 — '훅 복구 완료'는 거짓말이었다: Claude Code 훅 4중 wiring 무음 실패"
+category: ios-ai
+series: ios-ai-journal
+date: "2026-04-15"
+tags: [ios-harness-journal, ios, claude-code, hooks, git-hooks, silent-failure, compound-engineering, self-diagnostic]
+confidence: 5
+connections: [ios-ai/ios-ai-journal-001-swift-lint-hook, ios-ai/ios-ai-journal-006-spm-cycle-break, harness-engineering/harness-journal-022-qa-gate-exit-code-trap]
+status: complete
+type: entry
+description: "Journal 001에서 '설정 완료'라고 선언한 pre-commit 훅이 수개월 동안 한 번도 실행된 적이 없었다. 이번 AI Harness 재감사에서 드러난 이유는 단 하나의 이유가 아니라 네 가지 조건이 동시에 꺼져 있었기 때문. 파일 존재 / 실행권한 / settings.json wiring / core.hooksPath — 네 레이어 중 하나만 빠져도 훅 시스템은 비명을 지르지 않고 그냥 skip한다. 복구 과정과, 다음 세션에서 즉시 드러나게 만든 self-diagnostic 방어막을 박제한다."
+---
+
+## 한 줄 요약
+
+Journal 001에서 "`./setup.sh`로 훅 걸어뒀다"고 선언했던 pre-commit 훅이 **수개월 동안 단 한 번도 실행된 적이 없었다.** 이번 AI Harness 재감사에서 드러난 이유는 단일 버그가 아니라 **4개 레이어의 무음 실패**. 파일 존재 / `chmod +x` / `.claude/settings.json` wiring / `git config core.hooksPath` — 넷 중 하나만 빠져도 훅은 비명 없이 건너뛴다. Journal 006이 "3일 전 회고가 실전 복리로 작동한다"를 증명했다면, 이 글은 그 반대 면 — "검증 자동화 없는 'done' 체크는 썩는다"를 증명한다.
+
+---
+
+## 이 글의 각도
+
+Journal 001(2026-04-13)의 마지막 문단은 이렇게 끝났다.
+
+> `./setup.sh`가 `git config core.hooksPath .githooks`를 한 번 걸어두면, 이후 모든 `git commit`은 SwiftFormat → SwiftLint 게이트를 통과해야 한다.
+
+**틀렸다.** 이번 스프린트에서 위키 체크리스트를 다시 돌려보다가 훅이 전혀 돌지 않고 있다는 걸 발견했다. "한 번 걸어두면 끝"이라는 가정이 깨진 이유는 단순히 `setup.sh`를 실행 안 해서가 아니다. 훅 시스템 자체가 **4단계 indirection**을 요구하고 있었고, 그 네 조건이 모두 동시에 충족되는 건 생각보다 어렵다.
+
+이 글은 그 재감사 기록이자, 다시는 이런 무음 실패가 며칠 이상 숨어있지 못하게 만든 방어막의 박제다.
+
+---
+
+## 무음 실패의 구조 — 훅 4중 wiring
+
+iOS 프로젝트에서 훅을 "제대로 작동 중"으로 만들려면 **네 가지 레이어**가 모두 켜져 있어야 한다. 셋 중 어느 하나라도 빠지면 훅 시스템은 에러 로그를 남기지 않고 그냥 skip한다.
+
+| 레이어 | 확인 방법 | 빠지면 |
+|---|---|---|
+| 1. 스크립트 파일 존재 | `ls -la .claude/hooks/*.sh` | 당연히 안 돌아감 |
+| 2. 실행 권한 | `stat -f "%Sp" file` → `rwx` 포함 | Claude Code가 silent skip |
+| 3. `settings.json` wiring | `.claude/settings.json`의 `hooks.*` 필드에 command 등록 | Claude Code가 파일 존재 자체를 모름 |
+| 4. `core.hooksPath` (git hooks의 경우) | `git config --get core.hooksPath` → `.githooks` | git이 `.git/hooks/`만 쳐다봄 |
+
+핵심은 **스크립트 파일은 payload일 뿐이고, wiring은 별도 레이어**라는 점이다. `.claude/hooks/post-swift-edit.sh`를 만들어 넣는 것만으로는 Claude Code가 그 파일의 존재 자체를 알 방법이 없다. `settings.json`의 `hooks.PostToolUse` 배열에 등록해 줘야 비로소 훅 시스템에 "이런 놈이 있습니다"가 전달된다.
+
+git 훅은 한 단계 더 악랄하다. 저장소에 `.githooks/pre-commit` 파일을 두고 `chmod +x`까지 걸어도, git은 **자기 기본값인 `.git/hooks/`만 바라본다.** `git clone` 직후에는 `core.hooksPath`가 비어 있어서, 저장소에 커밋된 훅 파일들은 존재하지만 누구도 참조하지 않는 유령 상태가 된다.
+
+이 구조 때문에 "파일이 있으면 작동한다"는 **개발자 직관이 반대로 동작한다.** 파일을 멀쩡히 만들어두고 커밋까지 한 상태에서, 아무도 눈치채지 못한 채 훅이 수개월 동안 자고 있을 수 있다.
+
+---
+
+## 발견 경로 — 위키 재감사가 아니었으면 못 찾았다
+
+이번 스프린트의 발단은 평범했다. AI Harness 체크리스트를 다시 훑어보면서 "우리 프로젝트는 지금 어디까지 적용돼 있지?"를 점검 중이었다. 그 중에 이 항목이 있었다.
+
+> `.githooks/pre-commit`이 SwiftFormat/SwiftLint를 돌리고 있는가?
+
+위키에 박제된 이 한 줄을 실제로 **테스트해봤다.** 일부러 린트 규칙을 깨는 코드를 한 줄 추가하고 `git commit`을 때렸다. 당연히 차단될 거라 예상했는데 — **통과해버렸다.** 커밋 성공.
+
+이 지점에서 숨이 턱 막혔다. Journal 001이 "설정 완료"라고 선언한 훅이, 그 이후 모든 커밋을 전부 그냥 통과시키고 있었다는 뜻이기 때문이다.
+
+전수 조사 결과, 네 조건 중 **세 개가 동시에 꺼져 있었다.**
+
+1. ✅ 파일 존재 — `.githooks/pre-commit` 있음
+2. ❌ 실행 권한 — `chmod +x` 빠져있었음
+3. ❌ `settings.json` wiring — `.claude/hooks/*.sh`가 settings.json에 등록 안 돼 있었음 (이전 세션 에이전트가 파일만 만들고 rate limit으로 끊김)
+4. ❌ `core.hooksPath` — `git config --get core.hooksPath` 결과 빈 값
+
+즉 `setup.sh`는 **한 번도 실행되지 않은 채 커밋만 돼 있던** 상태였다. Journal 001의 "한 번 걸어두면 끝" 선언은 `./setup.sh` 실행이 **실제로 있었다는 전제**를 기반으로 했는데, 그 전제가 깨져 있었던 것.
+
+더 나쁜 건, 이걸 발견하기 전까지 **아무도 비명을 지르지 않았다.** `git commit`은 매번 성공했고, Claude의 post-edit 훅도 "안 돌고 있는" 표시를 남기지 않았다. 오히려 모든 게 정상으로 보였다. 이게 무음 실패의 본질이다 — 성공과 구분할 수 없는 실패.
+
+---
+
+## 복구 — 4 레이어 동시 닫기
+
+복구 자체는 단순했다. 한 번에 네 레이어를 모두 닫아서 커밋했다.
+
+```bash
+# 1. 실행 권한
+chmod +x .claude/hooks/*.sh
+chmod +x .githooks/*
+
+# 2. core.hooksPath 활성화
+git config core.hooksPath .githooks
+
+# 3. settings.json wiring 확인
+python3 -c "import json; print(json.load(open('.claude/settings.json'))['hooks'])"
+# → PreToolUse / PostToolUse / SessionStart 필드에 모든 스크립트 등록 확인
+
+# 4. 각 훅 개별 dry run
+bash .claude/hooks/session-start.sh
+bash .githooks/pre-commit
+```
+
+문제는 "이걸 다음 세션에 또 잊어버리면?"이다. clone을 새로 뜨거나, 다른 머신으로 옮기거나, `core.hooksPath`가 어쩌다 풀리면 그 순간부터 다시 무음 실패 상태로 돌아간다. 복구 커밋 하나로는 부족하다.
+
+---
+
+## 방어막 — self-diagnostic을 `session-start.sh`에 박제
+
+이번 스프린트의 핵심 산출물은 훅 복구 그 자체가 아니라, **"다음에 또 이렇게 되면 즉시 드러나게 만드는 장치"**다. 두 개를 넣었다.
+
+### 1. `.githooks/setup.sh` — 팀 온보딩 활성화 스크립트
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+git config core.hooksPath .githooks
+chmod +x .githooks/*
+
+# 검증 출력
+if [ "$(git config --get core.hooksPath)" = ".githooks" ]; then
+  echo "✓ core.hooksPath = .githooks"
+else
+  echo "✗ core.hooksPath 설정 실패" >&2
+  exit 1
+fi
+```
+
+clone 직후 1회 실행. 실패하면 exit 1로 소리 내게 했다. "조용한 성공" 대신 "시끄러운 실패"를 선택한다.
+
+### 2. `session-start.sh`에 경고 블록 내장
+
+```bash
+HOOKS_PATH=$(git config --get core.hooksPath 2>/dev/null)
+if [ "$HOOKS_PATH" != ".githooks" ]; then
+  echo "⚠️  WARNING: git hooks 미활성화" >&2
+  echo "   실행: bash .githooks/setup.sh" >&2
+fi
+```
+
+이제 매 세션 시작마다 `core.hooksPath`가 풀려있으면 Claude가 첫 화면에서 경고를 본다. 무음 실패는 첫 턴 안에 발견된다. **검증 코드를 시스템 안에 박아넣어서, 검증을 사람이 기억할 필요가 없게 만든 것**이 이 글의 핵심이다.
+
+다음 스프린트에서 "훅이 돌고 있는가?"는 Claude가 세션 시작 때 자동으로 대답한다. 문서에 체크리스트로 적어두고 "기억해주세요"라고 부탁하는 것보다 훨씬 강하다.
+
+---
+
+## Journal 006과의 대비 — 복리는 양방향이다
+
+Journal 006은 **"3일 전 회고가 실전 복리로 작동했다"**를 증명했다. 3일 전 `/compound`가 박제한 "다음에 적용" 체크박스 한 줄이 이번 스프린트의 방향을 10초 만에 결정해줬다는 이야기.
+
+이 글은 정확히 그 반대면을 보여준다.
+
+| Journal 006 | Journal 007 |
+|---|---|
+| 3일 전 회고 → 오늘의 진입점 | 3개월 전 "done" → 오늘의 거짓말 |
+| 검증된 자산이 다음 스프린트에 복리 | 검증 안 된 "완료" 선언이 다음 스프린트에 부채 |
+| "작동 중"을 문서로 박제한 것이 효과 | "작동 중"을 문서로만 박제한 것이 함정 |
+
+복리는 **양방향**이다. 회고가 다음 스프린트에 플러스로 작동하려면, 회고에 박제된 "완료 체크박스"가 **실제로 검증 가능한 상태**여야 한다. 검증 자동화 없는 "완료"는 시간이 지나면 거짓말이 된다. Journal 001이 선언한 "훅 설정 완료"가 수개월 만에 거짓말로 드러난 것처럼.
+
+그래서 이번 스프린트의 방어막은 문서가 아니라 **스크립트**에 박제됐다. `session-start.sh`가 실패 상태를 소리 내게 만드는 것. 이게 Journal 001이 빠뜨렸던 조각이다.
+
+---
+
+## 교훈
+
+1. **파일 존재 ≠ 활성화.** Claude Code 훅도, git 훅도, 파일은 payload일 뿐이고 wiring은 별도 레이어다. 파일만 만들고 커밋하면 아무것도 안 돌아갈 수 있다. 네 레이어(존재/실행권한/settings wiring/`core.hooksPath`)가 모두 닫혀야 한다.
+2. **무음 실패는 성공과 구분 불가능하다.** 훅이 안 돌면 `git commit`은 매번 성공한다. 이상 신호가 없다. 사람이 의도적으로 "일부러 깨진 코드를 커밋해보기" 같은 테스트를 돌리지 않으면 평생 모를 수 있다.
+3. **검증을 시스템에 박아넣어라.** 체크리스트로 "세션 시작 시 훅 확인하기"를 문서에 적는 건 의미 없다. `session-start.sh` 안에 `git config --get core.hooksPath` 체크를 넣어서, 풀려 있으면 자동으로 경고가 뜨게 해야 한다. 사람의 기억력에 의존하지 않는다.
+4. **복리는 양방향이다.** 회고에 박제한 "완료" 체크는 검증 가능한 상태일 때만 복리로 작동한다. 검증 자동화 없는 "done"은 다음 스프린트의 부채가 된다.
+5. **PR 리뷰 체크리스트:** `.claude/hooks/` 또는 `.githooks/` 파일이 변경됐으면 **wiring(`settings.json` + `core.hooksPath` + `chmod`)이 같이 바뀌었는지**까지 확인. 파일만 보는 리뷰는 이 클래스의 버그를 놓친다.
+
+---
+
+## 연결
+
+- **Journal 001 — Swift Lint Hook**: 이 글이 뒤집는 대상. Journal 001의 "한 번 걸어두면 끝" 선언이 수개월 만에 깨진 기록.
+- **Journal 006 — SPM Cycle Break**: 복리 루프의 플러스 면. 이 글은 마이너스 면.
+- **Harness Journal 022 — QA Gate Exit Code Trap**: 친척 클래스. "exit 0이 실패를 숨긴다"도 무음 실패 패턴.
