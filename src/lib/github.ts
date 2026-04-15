@@ -39,7 +39,8 @@ export async function createFile(
   });
   if (!res.ok) {
     const err = await res.json();
-    throw new Error(`GitHub create failed: ${err.message}`);
+    console.error("[GitHub] create failed:", err.message);
+    throw new Error("파일 생성에 실패했습니다.");
   }
   const data = await res.json();
   return { sha: data.content.sha };
@@ -62,7 +63,8 @@ export async function updateFile(
   });
   if (!res.ok) {
     const err = await res.json();
-    throw new Error(`GitHub update failed: ${err.message}`);
+    console.error("[GitHub] update failed:", err.message);
+    throw new Error("파일 수정에 실패했습니다.");
   }
   const data = await res.json();
   return { sha: data.content.sha };
@@ -80,6 +82,7 @@ export async function deleteFile(
   });
   if (!res.ok) {
     const err = await res.json();
-    throw new Error(`GitHub delete failed: ${err.message}`);
+    console.error("[GitHub] delete failed:", err.message);
+    throw new Error("파일 삭제에 실패했습니다.");
   }
 }

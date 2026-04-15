@@ -107,11 +107,18 @@ src/generated/     → content-manifest.json (gitignored, entries + graph + stre
 - `/api/admin/entries` — 엔트리 목록(GET) + 생성(POST)
 - `/api/admin/entries/[...slug]` — 조회(GET) + 수정(PUT) + 삭제(DELETE)
 
-## Admin / Auth
+## Admin / Auth & Security
 - 쿠키 기반 HMAC-SHA256 인증 (middleware.ts)
-- 환경변수: ADMIN_PASSWORD, ADMIN_SECRET, GITHUB_TOKEN, GITHUB_REPO
+- 환경변수: ADMIN_PASSWORD (최소 8자), ADMIN_SECRET (최소 16자), GITHUB_TOKEN, GITHUB_REPO — **default fallback 없음**, 미설정 시 런타임 throw
+- Timing-safe 비교: Web Crypto HMAC 기반 constant-time (Edge Runtime 호환)
+- Rate Limiting: 로그인 15분/5회 IP 기반 (`src/lib/rate-limit.ts`)
+- Security Headers: CSP, HSTS, X-Frame-Options, Permissions-Policy (`next.config.ts`)
+- Error 정보 누출 차단: GitHub API 에러 → 서버 로깅 + 클라이언트 generic 메시지
+- Body 크기 제한: MDX 콘텐츠 100KB 초과 시 413
+- npm audit CI: `--audit-level=high` (ci.yml)
 - GitHub Contents API로 MDX 파일 CRUD → Vercel 자동 재배포
 - 에디터: @uiw/react-md-editor (다크 테마, 실시간 프리뷰)
+- 보안 패턴 참조: `content/harness-engineering/security-hardening-checklist.mdx`
 
 ## Roadmap
 - See TODOS.md for deferred items and backlog

@@ -1,0 +1,186 @@
+---
+title: "Next.js 프로젝트 보안 강화 체크리스트"
+category: harness-engineering
+date: "2026-04-15"
+tags: [security, next-js, csp, auth, rate-limiting, hardening, checklist]
+confidence: 4
+connections:
+  - harness-engineering/dev-setup-tips-log
+  - harness-engineering/compound-engineering-philosophy
+status: complete
+description: "ai-study 보안 감사에서 발견한 취약점 7건과 수정 패턴. Default Secret 제거, Timing-Safe 비교, Security Headers(CSP/HSTS), Rate Limiting, Error 정보 누출 차단, Body 크기 제한, npm audit CI 통합. 허브에서 검증 후 워커 프로젝트에 이식하는 패턴."
+type: entry
+---
+
+## 한 줄 요약
+
+> **"Default 값이 있는 시크릿은 시크릿이 아니다."** Next.js 프로젝트 보안 감사 7건 수정 + 재사용 패턴.
+
+## 배경
+
+ai-study 허브의 보안 전수 조사 결과 **Critical 4건 + High 3건** 발견. moneyflow/tarosaju는 이미 CSP, Rate Limiting, Timing-Safe 비교가 있었으나, **허브가 가장 취약**한 아이러니한 상황이었다.
+
+## 체크리스트
+
+### 1. Default Secret 제거 (Critical)
+
+**안티패턴**:
+```typescript
+// ❌ 토큰 위조 가능 — 프로덕션에서 env 미설정 시 누구나 admin
+const SECRET = process.env.ADMIN_SECRET || "dev-secret-change-me";
+const PASSWORD = process.env.ADMIN_PASSWORD || "";
+```
+
+**수정 패턴**:
+```typescript
+// ✅ 런타임에 환경변수 검증 — 없으면 즉시 throw
+function getEnv(name: string, minLength: number): string {
+  const value = process.env[name];
+  if (!value || value.length < minLength) {
+    throw new Error(`환경변수 ${name} 미설정 또는 최소 길이 미충족`);
+  }
+  return value;
+}
+
+// 빌드 시점이 아닌 호출 시점에 검증 (Edge Middleware 호환)
+function getAdminSecret(): string {
+  return getEnv("ADMIN_SECRET", 16);
+}
+```
+
+**주의**: 모듈 최상위에서 `const SECRET = requireEnv(...)` 호출하면 **빌드 시점**에 throw 발생. Next.js Edge Middleware가 import하는 파일은 **함수로 감싸서 lazy evaluation** 필수.
+
+### 2. Timing-Safe 문자열 비교 (Critical)
+
+**안티패턴**:
+```typescript
+// ❌ 타이밍 어택 취약 — 바이트 단위로 시크릿 추론 가능
+return sig === expectedHex;
+```
+
+**수정 패턴 (Edge Runtime 호환)**:
+```typescript
+// ✅ Web Crypto HMAC 기반 constant-time 비교
+async function safeCompare(a: string, b: string): Promise<boolean> {
+  if (a.length !== b.length) return false;
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw", encoder.encode("compare-key"),
+    { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+  );
+  const [sigA, sigB] = await Promise.all([
+    crypto.subtle.sign("HMAC", key, encoder.encode(a)),
+    crypto.subtle.sign("HMAC", key, encoder.encode(b)),
+  ]);
+  const viewA = new Uint8Array(sigA);
+  const viewB = new Uint8Array(sigB);
+  let diff = 0;
+  for (let i = 0; i < viewA.length; i++) {
+    diff |= viewA[i] ^ viewB[i];
+  }
+  return diff === 0;
+}
+```
+
+**Node.js 전용** 환경이면 `crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b))`가 더 간단. Edge Runtime에서는 `crypto` 모듈 import 불가 → Web Crypto API 사용.
+
+### 3. Security Headers (High)
+
+```typescript
+// next.config.ts
+const securityHeaders = [
+  { key: "X-Frame-Options", value: "SAMEORIGIN" },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  { key: "Strict-Transport-Security",
+    value: "max-age=63072000; includeSubDomains; preload" },
+  { key: "Permissions-Policy",
+    value: "camera=(), microphone=(), geolocation=()" },
+  { key: "Content-Security-Policy", value: [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob:",
+    "connect-src 'self' https://api.github.com ...",
+    "frame-ancestors 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+  ].join("; ") },
+];
+```
+
+**CSP `connect-src` 주의**: Vercel Analytics, GitHub API 등 외부 도메인을 빠뜨리면 기능이 깨진다. 배포 후 콘솔에서 CSP 위반 확인 필수.
+
+### 4. Rate Limiting (High)
+
+```typescript
+// src/lib/rate-limit.ts — IP 기반 슬라이딩 윈도우
+const windowMs = 15 * 60 * 1000; // 15분
+const maxAttempts = 5;
+const attempts = new Map<string, { count: number; resetAt: number }>();
+
+export function checkRateLimit(ip: string) {
+  const now = Date.now();
+  const entry = attempts.get(ip);
+  if (!entry || now > entry.resetAt) {
+    attempts.set(ip, { count: 1, resetAt: now + windowMs });
+    return { allowed: true };
+  }
+  entry.count++;
+  if (entry.count > maxAttempts) {
+    return { allowed: false, retryAfter: Math.ceil((entry.resetAt - now) / 1000) };
+  }
+  return { allowed: true };
+}
+```
+
+**한계**: 서버리스 환경에서는 인스턴스별 메모리. 분산 환경에서는 Upstash Redis 권장 (moneyflow 패턴 참조).
+
+### 5. Error 정보 누출 차단 (Medium)
+
+```typescript
+// ❌ GitHub API 에러 메시지를 클라이언트에 그대로 전달
+throw new Error(`GitHub create failed: ${err.message}`);
+
+// ✅ 서버 로깅 + 클라이언트에 generic 메시지
+console.error("[GitHub] create failed:", err.message);
+throw new Error("파일 생성에 실패했습니다.");
+```
+
+### 6. Request Body 크기 제한 (Medium)
+
+```typescript
+// MDX 콘텐츠 100KB 제한
+if (content && typeof content === "string" && content.length > 100_000) {
+  return NextResponse.json(
+    { error: "콘텐츠가 너무 큽니다 (최대 100KB)." },
+    { status: 413 }
+  );
+}
+```
+
+### 7. npm audit CI 통합 (Medium)
+
+```yaml
+# .github/workflows/ci.yml
+- run: npm ci
+- run: npm audit --audit-level=high  # high/critical만 빌드 차단
+- run: npm test
+- run: npm run build
+```
+
+## 프로젝트별 현황
+
+| 항목 | ai-study | moneyflow | tarosaju |
+|------|----------|-----------|----------|
+| Default Secret 제거 | ✅ | ✅ | ✅ |
+| Timing-Safe 비교 | ✅ (Web Crypto) | ✅ (Node crypto) | ✅ |
+| CSP Headers | ✅ | ✅ | ✅ |
+| Rate Limiting | ✅ (in-memory) | ✅ (Upstash Redis) | ✅ (in-memory) |
+| Error 정보 누출 | ✅ | 🟡 감사 필요 | ✅ |
+| Body 크기 제한 | ✅ | - | - |
+| npm audit CI | ✅ | ⏳ 이식 예정 | ⏳ 이식 예정 |
+
+## For AI Agents
+
+이 체크리스트의 7개 항목은 새 Next.js 프로젝트 셋업 시 **1일차에 적용**해야 할 최소 기준. 특히 항목 1(Default Secret)과 2(Timing-Safe)는 코드 리뷰에서 자동 탐지 대상.

@@ -1,10 +1,49 @@
 import { cookies } from "next/headers";
 
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "";
-const ADMIN_SECRET = process.env.ADMIN_SECRET || "dev-secret-change-me";
+function getEnv(name: string, minLength: number): string {
+  const value = process.env[name];
+  if (!value || value.length < minLength) {
+    throw new Error(
+      `환경변수 ${name}이(가) 설정되지 않았거나 최소 길이(${minLength})를 충족하지 않습니다.`
+    );
+  }
+  return value;
+}
 
-export function verifyPassword(password: string): boolean {
-  return password === ADMIN_PASSWORD;
+function getAdminPassword(): string {
+  return getEnv("ADMIN_PASSWORD", 8);
+}
+
+function getAdminSecret(): string {
+  return getEnv("ADMIN_SECRET", 16);
+}
+
+/** Edge-compatible constant-time string comparison using Web Crypto */
+async function safeCompare(a: string, b: string): Promise<boolean> {
+  if (a.length !== b.length) return false;
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode("compare-key"),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const [sigA, sigB] = await Promise.all([
+    crypto.subtle.sign("HMAC", key, encoder.encode(a)),
+    crypto.subtle.sign("HMAC", key, encoder.encode(b)),
+  ]);
+  const viewA = new Uint8Array(sigA);
+  const viewB = new Uint8Array(sigB);
+  let diff = 0;
+  for (let i = 0; i < viewA.length; i++) {
+    diff |= viewA[i] ^ viewB[i];
+  }
+  return diff === 0;
+}
+
+export async function verifyPassword(password: string): Promise<boolean> {
+  return safeCompare(password, getAdminPassword());
 }
 
 export async function createToken(): Promise<string> {
@@ -12,7 +51,7 @@ export async function createToken(): Promise<string> {
   const encoder = new TextEncoder();
   const key = await crypto.subtle.importKey(
     "raw",
-    encoder.encode(ADMIN_SECRET),
+    encoder.encode(getAdminSecret()),
     { name: "HMAC", hash: "SHA-256" },
     false,
     ["sign"]
@@ -22,7 +61,9 @@ export async function createToken(): Promise<string> {
     key,
     encoder.encode(`admin:${timestamp}`)
   );
-  const sig = Buffer.from(signature).toString("hex");
+  const sig = Array.from(new Uint8Array(signature))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
   return `${timestamp}.${sig}`;
 }
 
@@ -38,7 +79,7 @@ export async function verifyToken(token: string): Promise<boolean> {
     const encoder = new TextEncoder();
     const key = await crypto.subtle.importKey(
       "raw",
-      encoder.encode(ADMIN_SECRET),
+      encoder.encode(getAdminSecret()),
       { name: "HMAC", hash: "SHA-256" },
       false,
       ["sign"]
@@ -48,8 +89,10 @@ export async function verifyToken(token: string): Promise<boolean> {
       key,
       encoder.encode(`admin:${timestamp}`)
     );
-    const expectedHex = Buffer.from(expected).toString("hex");
-    return sig === expectedHex;
+    const expectedHex = Array.from(new Uint8Array(expected))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+    return safeCompare(sig, expectedHex);
   } catch {
     return false;
   }

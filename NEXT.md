@@ -921,39 +921,54 @@ gh pr list --search "tips:" -R Mino777/ai-study      # tips 최근
 
 ---
 
-## 🎯 다음 세션 계획 (2026-04-15 기준)
+## 🎯 다음 세션 계획 (2026-04-15 세션 후반 기준)
 
-### ✅ 완료
+### ✅ 완료 (이번 세션)
 
-1. ~~회사 iOS 하네스 도입~~ → **iOS Journal 007** (Claude Code 훅 무음 실패) + **008** (첫 풀셋업 후기) 완료
+1. ~~회사 iOS 하네스 도입~~ → iOS Journal 007 + 008 완료
+2. ~~iOS Journal 007/008 교훈을 ai-agent-start-here에 반영~~ → 훅 4중 wiring 함정 + 풀셋업 조감도 추가 (`40307cc`)
+3. ~~Context Engineering 카테고리 확장~~ → `.claudeignore` 실전 가이드 + `CLAUDE.md` 설계 패턴 2건 신규 (`3727857`)
+4. ~~학습 히트맵 토글~~ → 12주/6개월/1년 전환 + 셀 크기 반응형 (`19a9f58`)
+5. ~~보안 스프린트 1+2~~ → auth.ts 4중 강화 + Security Headers 6종 + Next.js CVE 패치 + Error 누출 차단 + Rate Limiting + Body 제한 + npm audit CI
+6. ~~보안 패턴 Wiki 박제~~ → `security-hardening-checklist.mdx` (7개 패턴 재사용 체크리스트)
+7. ~~n8n 리서치~~ → `docs/n8n-adoption-research.md` (7 워크플로 + 4 Phase 로드맵)
+
+### 📸 현재 스냅샷
+
+- **위키 엔트리**: **83** (11 카테고리)
+- **Harness Journal**: 000~023 (24편)
+- **iOS Journal**: 000~008 (9편)
+- **Context Engineering**: 5편
+- **보안**: auth timing-safe + CSP/HSTS + rate limiting + npm audit CI
+- **Git**: main + uncommitted security sprint
 
 ### 🔴 우선순위 높음
 
-2. **Vercel Deploy Hook 설정** — VERCEL_DEPLOY_HOOK secret 추가 (수동 `vercel deploy --prod` 대체). 또는 현재 수동 방식 유지 결정
-3. **tarosaju quality_scores migration 적용** — 프로덕션 Supabase에 테이블 생성 → LLM-as-a-Judge 데이터 분석 블로커 해제
-4. **iOS Journal 007/008에서 발견된 교훈을 ai-agent-start-here에 반영** — 훅 무음 실패 패턴, 풀셋업 조정 사항 등
+1. **Vercel Deploy Hook 설정** — VERCEL_DEPLOY_HOOK secret 추가 또는 현재 수동 방식 유지 결정
+2. **tarosaju quality_scores migration 적용** — 프로덕션 Supabase 테이블 → LLM-as-a-Judge 블로커 해제
+3. **moneyflow/tarosaju npm audit CI 이식** — ai-study 패턴 포팅
 
 ### 🟡 우선순위 중간
 
-5. **LLM-as-a-Judge 품질 데이터 분석** — tarosaju migration 적용 후 데이터 축적 → 평균/분포/시계열 분석
-6. **STRATEGY.md Tier 2 항목** — AI-Ready Starter Kit 정의, 검증 대시보드, Context Engineering 확장
-7. **학습 히트맵 캘린더/년 토글** — 12주 → 1년 view 옵션
-8. **iOS Journal 009+** — 회사 프로젝트 추가 사이클에서 라이브 트리거
+4. **LLM-as-a-Judge 품질 데이터 분석** — tarosaju migration 후 데이터 축적 → 평균/분포/시계열
+5. **STRATEGY.md Tier 2 항목** — AI-Ready Starter Kit, 검증 대시보드
+6. **n8n Phase 1 로컬 탐색** — Docker 로컬 → AI 과외 파이프라인 재현 (docs/n8n-adoption-research.md 참조)
+7. **iOS Journal 009+** — 라이브 트리거 대기
 
 ### 🟢 대기
 
-9. **비용 추적 DB (Supabase)** — migration 승인 필요
-10. **프롬프트 A/B 테스트 인프라** — quality_score 데이터 기반
-11. **RAG 파이프라인 (tarosaju)** — domain_accuracy 점수 낮으면 트리거
+8. **비용 추적 DB (Supabase)** — migration 승인 필요
+9. **프롬프트 A/B 테스트 인프라** — quality_score 데이터 기반
+10. **RAG 파이프라인 (tarosaju)** — domain_accuracy 낮으면 트리거
+11. **moneyflow AI client error 메시지 정비** — verbose 에러 감사
 
 ---
 
 ## 📋 다음 세션 시작 체크리스트
 
 1. `git pull` — 최신 상태 동기화
-2. NEXT.md 읽기 — 이 섹션 확인
-3. iOS Journal 007/008 교훈 → ai-agent-start-here 반영 여부 확인
-4. 큐 순서대로 진행
-5. 작업 완료 → `/compound`
+2. NEXT.md 읽기 — 이 섹션의 "현재 스냅샷" + "큐" 확인
+3. 큐 순서대로 진행
+4. 작업 완료 → `/compound`
 
 ---
