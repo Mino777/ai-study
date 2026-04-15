@@ -1,18 +1,25 @@
 "use client";
 
+import { useState } from "react";
+
 interface LearningHeatmapProps {
   dailyEntries: Record<string, number>;
 }
 
+const VIEW_OPTIONS = [
+  { label: "12주", weeks: 12 },
+  { label: "6개월", weeks: 26 },
+  { label: "1년", weeks: 52 },
+] as const;
+
 export function LearningHeatmap({ dailyEntries }: LearningHeatmapProps) {
-  const weeks = 12;
+  const [viewIdx, setViewIdx] = useState(0);
+  const weeks = VIEW_OPTIONS[viewIdx].weeks;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
   // 요일 정렬: 일요일(0) ~ 토요일(6) 기반 GitHub 스타일 그리드
-  // 1. 오늘이 속한 주의 토요일을 끝점(endDate)으로 잡는다.
-  // 2. 거기서 12주 × 7일 = 84일 전의 일요일이 시작점(startDate).
-  const todayDow = today.getDay(); // 0 = 일요일
+  const todayDow = today.getDay();
   const endDate = new Date(today);
   endDate.setDate(endDate.getDate() + (6 - todayDow));
   const startDate = new Date(endDate);
@@ -49,35 +56,63 @@ export function LearningHeatmap({ dailyEntries }: LearningHeatmapProps) {
 
   const dayLabels = ["", "월", "", "수", "", "금", ""];
 
+  // 셀 크기: 12주는 13px, 6개월/1년은 작게
+  const cellSize = weeks <= 12 ? 13 : weeks <= 26 ? 10 : 8;
+  const gap = weeks <= 12 ? 3 : 2;
+
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
         <h3 className="font-display text-sm font-bold text-muted">학습 히트맵</h3>
-        <span className="text-xs text-muted">
-          {totalDays}일 · {totalEntries}개 엔트리
-        </span>
+        <div className="flex items-center gap-2">
+          <div className="flex rounded-md border border-border overflow-hidden">
+            {VIEW_OPTIONS.map((opt, i) => (
+              <button
+                key={opt.label}
+                onClick={() => setViewIdx(i)}
+                className={`px-2 py-0.5 text-xs transition-colors ${
+                  viewIdx === i
+                    ? "bg-accent text-white"
+                    : "text-muted hover:text-text"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          <span className="text-xs text-muted">
+            {totalDays}일 · {totalEntries}개
+          </span>
+        </div>
       </div>
-      <div className="flex gap-[3px]">
+      <div className="flex" style={{ gap: `${gap}px` }}>
         {/* 요일 라벨 */}
-        <div className="flex flex-col gap-[3px] mr-1">
+        <div className="flex flex-col mr-1" style={{ gap: `${gap}px` }}>
           {dayLabels.map((label, i) => (
             <div
               key={i}
-              className="h-[13px] text-[9px] text-muted font-code leading-[13px]"
+              className="text-muted font-code"
+              style={{
+                height: `${cellSize}px`,
+                fontSize: cellSize <= 10 ? "7px" : "9px",
+                lineHeight: `${cellSize}px`,
+              }}
             >
               {label}
             </div>
           ))}
         </div>
         {/* 히트맵 그리드 */}
-        <div className="flex gap-[3px] overflow-x-auto">
+        <div className="flex overflow-x-auto" style={{ gap: `${gap}px` }}>
           {columns.map((col, wi) => (
-            <div key={wi} className="flex flex-col gap-[3px]">
+            <div key={wi} className="flex flex-col" style={{ gap: `${gap}px` }}>
               {col.map((cell) => (
                 <div
                   key={cell.date}
-                  className="h-[13px] w-[13px] rounded-[2px]"
+                  className="rounded-[2px]"
                   style={{
+                    height: `${cellSize}px`,
+                    width: `${cellSize}px`,
                     background: cell.isFuture
                       ? "transparent"
                       : getColor(cell.count),
