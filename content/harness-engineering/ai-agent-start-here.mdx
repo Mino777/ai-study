@@ -353,7 +353,7 @@ swift package show-dependencies --format flatlist 2>/dev/null | sort -u
 
 빌드는 수 분 걸리지만 이 명령은 1초. 특히 transitive dependency 제거 작업에서 **대체 불가능한 검증 도구**.
 
-### iOS AI 에이전트 5대 함정 (실전 검증)
+### iOS AI 에이전트 6대 함정 (실전 검증 — Journal 007/008 포함)
 
 | 함정 | 증상 | 수정 |
 |---|---|---|
@@ -362,6 +362,27 @@ swift package show-dependencies --format flatlist 2>/dev/null | sort -u
 | `@MainActor` 누락 | UI 업데이트 코드 런타임 크래시 | UI 바인딩 코드에 `@MainActor` 필수 규칙 |
 | prefix grep으로 미사용 import 판단 | `Manager`/`State` 같은 공통 접미사 이름 놓침 | AST 기반 분석 또는 빌드 후 경고 확인 |
 | Shell pipe exit code 함정 | `$?`가 파이프 마지막 명령만 반환, 빌드 실패를 못 잡음 | `set -o pipefail` 또는 exit code 직접 검사 |
+| **훅 4중 wiring 무음 실패** | 훅 파일은 있는데 한 번도 실행 안 됨 (에러 로그 0) | 4레이어 전부 확인: 파일 존재 + `chmod +x` + `settings.json` 등록 + `core.hooksPath` |
+
+6번 함정 상세: [iOS Journal 007 — 훅 4중 wiring 무음 실패](/wiki/ios-ai/ios-ai-journal-007-claude-hooks-silent-failure)
+
+**훅 4레이어 진단 명령** (Journal 007에서 추출):
+
+```bash
+# 1. 파일 존재
+ls -la .claude/hooks/*.sh .githooks/*
+
+# 2. 실행 권한
+stat -f "%Sp %N" .claude/hooks/*.sh .githooks/*
+
+# 3. settings.json wiring
+cat .claude/settings.json | grep -A2 "hooks"
+
+# 4. git core.hooksPath
+git config --get core.hooksPath
+```
+
+4줄 전부 통과해야 훅이 실제로 작동한다. 하나라도 빠지면 **무음 skip** — 에러 메시지가 없어서 발견이 매우 어렵다.
 
 5번 함정의 상세: [Shell Pipe Exit Code 함정](/wiki/harness-engineering/shell-pipe-exit-code-trap)
 
@@ -377,7 +398,11 @@ swift package show-dependencies --format flatlist 2>/dev/null | sort -u
 6. **첫 `/compound` 실행으로 베이스라인 문서 생성** — 현 상태 스냅샷 (5분)
 7. **`swift package show-dependencies`로 모듈 그래프 확인** — 즉시
 
-7단계 완료 후 에이전트는 *구조화된 환경*에서 작업을 시작한다. 구조 없이 시작하면 위 5대 함정에 *반드시* 빠진다.
+8. **훅 4레이어 진단** — 위 진단 명령 4줄 실행, 전부 통과 확인 (1분)
+
+8단계 완료 후 에이전트는 *구조화된 환경*에서 작업을 시작한다. 구조 없이 시작하면 위 6대 함정에 *반드시* 빠진다. 특히 8번(훅 진단)을 빼먹으면 "설정 완료"라고 생각하지만 훅이 수개월간 무음으로 꺼져 있는 상태가 된다 (Journal 007 실전 사례).
+
+**풀셋업 조감도** (Journal 008 실전 검증): 에이전트 4 / 스킬 5 / 훅 4 / 커맨드 8이 한 저장소에서 맞물리는 전체 모양은 [iOS Journal 008 — 첫 풀셋업 후기](/wiki/ios-ai/ios-ai-journal-008-first-full-harness-setup-retro) 참조.
 
 ---
 
@@ -439,9 +464,9 @@ Web은 *배포가 push = 즉시 반영*이므로 pre-commit 게이트가 더 중
 
 | 항목 | 값 |
 |---|---|
-| 총 엔트리 | 75 |
+| 총 엔트리 | 78 |
 | 카테고리 | 11개 (prompt/context/harness/tokenomics/rag/agents/fine-tuning/evaluation/infrastructure/ios-ai/frontend-ai) |
-| 주 시리즈 | Harness Journal (000~021, 21 에피소드) + iOS Journal (000~006, 7 에피소드) |
+| 주 시리즈 | Harness Journal (000~023, 23 에피소드) + iOS Journal (000~008, 9 에피소드) |
 | 슬래시 커맨드 | 7개 (`/compound`, `/autoceo`, `/wt-branch`, `/ingest`, `/cross-session-review`, `/curate-inbound`, `/projects-sync`) |
 | 플랫폼별 가이드 | Web (Next.js) + iOS (Swift/SPM) |
 | 허브-워커 모델 | ai-study(허브) + moneyflow/tarosaju(워커) — 양방향 기여 인프라 확립 |
