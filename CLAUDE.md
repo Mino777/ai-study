@@ -96,7 +96,7 @@ src/generated/     → content-manifest.json (gitignored, entries + graph + stre
 - `EntryNav` — 이전/다음 엔트리 (같은 카테고리 내)
 - `MobileNav` — 모바일 하단 탭 바
 - `LearningHeatmap` — GitHub 스타일 학습 히트맵 (12주, dailyEntries 기반, 일~토 행 정렬)
-- `Sidebar` — 카테고리 트리. `SeriesSubGroup`이 frontmatter `series` 필드 기반으로 generic하게 그룹화 (📓 Harness Journal / 📱 iOS Journal). 새 시리즈는 `SERIES_LABELS` (schema.ts) 한 줄 추가
+- `Sidebar` — 카테고리 트리. `SeriesSubGroup`이 frontmatter `series` 필드 기반으로 generic하게 그룹화 (📓 Harness Journal / 📱 iOS Journal / 🤖 Multi-Agent Orchestration Journal). 새 시리즈는 `SERIES_LABELS` (schema.ts) 한 줄 추가
 - `Quiz` — frontmatter quiz 배열 기반 객관식 자가 점검 (즉시 채점 + 해설 + localStorage 저장)
 - `QuizWidget` — 대시보드용 퀴즈 통계 + Spaced Repetition 큐 ("오늘 복습할 엔트리"). `lib/quiz-storage.ts`의 SM-2 단순화 알고리즘 사용 (간격 1→3→7→14→30→60일)
 

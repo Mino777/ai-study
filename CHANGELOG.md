@@ -2,6 +2,35 @@
 
 모든 주목할 만한 변경사항을 이 파일에 기록합니다.
 
+## [2026-04-16] — 카테고리 신설 + Multi-Agent Orchestration Journal + 엔트리 6건
+
+### Added — 인프라
+- **카테고리 2개 신설**: `android-ai` (Android + AI), `backend-ai` (Backend + AI) — 응용 그룹 확장, 총 13 카테고리
+- **Multi-Agent Orchestration Journal 시리즈**: `SERIES_LABELS`에 `aidy-journal` (🤖) 등록
+- **Vibe Coding Aidy 프로젝트 탭**: projects-tabs.tsx + page.tsx에 4번째 프로젝트 추가
+
+### Added — 신규 엔트리 7건
+- **`harness-engineering/aidy-journal-000-architect-worker-baseline.mdx`** — Spec-Driven Multi-Agent Orchestration 베이스라인. 4레포 구조, Gate 1+2, WO 시스템, Compound Flywheel
+- **`agents/multi-provider-circuit-breaker.mdx`** — Gemini/Claude/OpenAI 3사 Circuit Breaker 패턴 (moneyflow)
+- **`agents/trading-agent-9phase-pipeline.mdx`** — 13 에이전트 적대적 토론 아키텍처 (moneyflow)
+- **`evaluation/ai-output-5-layer-defense.mdx`** — Text Guard → Zod → Range → Cross-field → LLM-as-Judge 5단계 (tarosaju)
+- **`tokenomics/prompt-caching-cost-reduction.mdx`** — cache_control ephemeral 90% 비용 절감 실전 (tarosaju/moneyflow)
+- **`infrastructure/content-pipeline-dag.mdx`** — 멀티플랫폼 퍼블리싱 DAG 의존성 해소 (moneyflow)
+- **`frontend-ai/react-compiler-starttransition.mdx`** — React Compiler useEffect setState 해결 (tarosaju)
+
+### Changed
+- **CLAUDE.md** — 카테고리 11→13, content 디렉토리 설명 업데이트
+- **SPEC.md** — 카테고리 13개, 시리즈 3개로 업데이트, 현재 상태 갱신
+- **NEXT.md** — 2026-04-16 갱신 로그 추가 (스냅샷 + 큐)
+
+### Metrics
+- 위키 총 엔트리: 83 → **90** (+7)
+- 카테고리: 11 → **13** (+2)
+- 시리즈: 2 → **3** (Multi-Agent Orchestration Journal 신설)
+- 변경: 13 files, +1,587 / -11 lines
+
+---
+
 ## [2026-04-15] — 보안 스프린트 + n8n 리서치 + Context Engineering 확장
 
 ### Added — 보안 강화 7건
