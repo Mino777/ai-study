@@ -1,0 +1,180 @@
+---
+title: "iOS Harness Journal 008 — iOS 하네스 첫 풀셋업 후기: 프로덕션 코드 0, 에이전트 4 + 스킬 5 + 훅 4 + 커맨드 8"
+category: ios-ai
+series: ios-ai-journal
+date: "2026-04-15"
+tags: [ios-harness-journal, ios, claude-code, harness-engineering, onboarding, agents, skills, hooks, slash-commands, retrospective]
+confidence: 4
+connections: [ios-ai/ios-ai-journal-000-baseline, ios-ai/ios-ai-journal-005-ios-compound, ios-ai/ios-ai-journal-006-spm-cycle-break, ios-ai/ios-ai-journal-007-claude-hooks-silent-failure, harness-engineering/ai-agent-start-here]
+status: complete
+type: entry
+description: "Journal 000~007이 조각이라면, 이 글은 그 조각들이 처음으로 한 저장소 안에서 모두 맞물리는 모양을 기록한다. 멀티모듈 SPM iOS 앱(moneyflow-ios)에 AI 하네스를 전면 이식한 하루짜리 스프린트. 에이전트 4 / 스킬 5 / 훅 4 / 커맨드 8 / detect-context 스크립트 / 팀 온보딩용 setup.sh까지 — 프로덕션 코드는 한 줄도 안 바꾸고 오로지 `.claude/` + `.githooks/` + `CLAUDE.md`만 건드린 전면 이식. 무엇을 넣었고, 무엇을 일부러 뺐고, 다시 한다면 어떤 순서로 할지."
+---
+
+## 한 줄 요약
+
+멀티모듈 SPM iOS 앱(`moneyflow-ios`)에 AI 하네스를 **하루 만에 전면 이식**했다. 프로덕션 코드 0줄, 전부 `.claude/` + `.githooks/` + `CLAUDE.md` + 메모리 파일만. 최종 설치물: **전문 에이전트 4 / 프로젝트 스킬 5 / 훅 4 / 슬래시 커맨드 8 + `detect-context.sh` + 팀 온보딩용 `setup.sh` + CLAUDE.md 400→255줄 다이어트.** Journal 000~007이 조각이었다면 이 글은 조각들이 처음으로 한 저장소 안에서 맞물리는 전체 지도이고, "다시 한다면 어떤 순서로 할지"의 역구축 기록이다.
+
+---
+
+## 이 글의 각도
+
+Journal 000은 **베이스라인**이었다. Journal 001~007은 각각 **한 조각씩 따로 박제한 기록**이었다 — SwiftLint 훅, 슬래시 커맨드, `.claudeignore`, `/ios-triage`, `/compound`, SPM 사이클 제거, 훅 무음 실패. 각자 훌륭한 글이지만 **전체 모양을 보여주는 한 장짜리 지도**는 없었다.
+
+이 글은 그 빈칸을 채운다. Journal 000~007을 한 프로젝트에 전부 깔면 실제로 어떤 모양이 나오는지, 어떤 순서로 쌓아야 최소 비용으로 안정적인 하네스가 되는지. **"지금부터 iOS 프로젝트에 Claude Code를 붙이려는 사람"이 한 장만 읽고 전체 그림을 얻게 만드는 후기**가 목표다.
+
+---
+
+## 최종 설치물 조감도
+
+| 레이어 | 수량 | 구성 요소 |
+|---|---|---|
+| 전문 에이전트 | 4 | `ios-architect` / `swift-reviewer` / `ios-researcher` / `swiftui-specialist` |
+| 프로젝트 스킬 | 5 | `swift-style` / `ribs-patterns`(레거시 전용) / `swiftui-patterns` / `ios-testing` / `code-analyzer` |
+| 훅 | 4 | `check-gstack` / `session-start` / `file-protection` / `post-swift-edit` |
+| 슬래시 커맨드 | 8 | `/ios-triage` `/ios-bugfix` `/ios-investigate` `/ios-review` `/ios-arch` `/ios-ship` `/compound` `/wt-branch` |
+| 스크립트 | 2 | `.claude/scripts/detect-context.sh` (136줄) / `.githooks/setup.sh` (36줄) |
+| 프라이머 | 1 | `CLAUDE.md` 400 → 255줄 |
+| 메모리 | 14 파일 | `project_*` / `feedback_*` / `reference_*` 접두 분류 |
+
+**핵심 숫자는 "0"이다.** 이번 스프린트에서 변경된 프로덕션 Swift 코드는 한 줄도 없다. 전부 **하네스 레이어**만 건드렸다. 이게 중요한 이유는, 하네스 변경이 프로덕션 변경과 섞이면 PR 리뷰가 "코드 리뷰 + 하네스 리뷰" 이중 부하를 받기 때문. 이 스프린트는 하네스 전용 브랜치 `chore/claude-setup`에서 진행해서, 리뷰어가 "Swift 변경 0"을 확인하는 것만으로 안심할 수 있게 만들었다.
+
+---
+
+## 에이전트 4 — 역할 분해
+
+iOS는 네 가지 서로 다른 질문이 섞여 들어오는 도메인이다. 한 에이전트에 전부 맡기면 프롬프트가 비대해지고 답변 품질이 떨어진다. 그래서 네 개로 쪼갰다.
+
+- **`ios-architect`** — 아키텍처 결정. "이 모듈을 독립 패키지로 뺄까?", "Domain 레이어에 뭘 올릴까?" 같은 구조 질문. Journal 006의 SPM 사이클 해체가 이 에이전트의 실전 검증이었다.
+- **`swift-reviewer`** — PR 리뷰. Swift 스타일 + 메모리 관리(`weak self`, 캡처 리스트) + 동시성(`@MainActor`, structured concurrency) 체크리스트 전담.
+- **`ios-researcher`** — 외부 자료 조사. WWDC 세션 요약, 서드파티 라이브러리 비교, Apple 공식 문서 크롤링. 프롬프트에 "추측 금지, 근거 인용 필수" 규약 박제.
+- **`swiftui-specialist`** — SwiftUI 전환 대응. 사용자가 "SwiftUI로만 작업할거야"라고 선언한 순간 즉시 생성. MVVM + `ObservableObject` + `@Observable` 매크로 마이그레이션 경로 전담.
+
+**각 에이전트는 자기 역할 밖의 질문이 오면 "내 담당 아님"이라고 거절하게 프롬프트에 박제**했다. 월권하면 품질이 떨어진다.
+
+---
+
+## 스킬 5 — "패턴 저장소" 레이어
+
+에이전트가 "판단자"라면 스킬은 **참조 가능한 패턴 저장소**다. 에이전트가 답변 중에 `.claude/skills/{name}/SKILL.md`를 읽어서 판단 근거로 쓴다.
+
+- **`swift-style`** — 프로젝트 고유 Swift 스타일 가이드. SwiftLint/SwiftFormat 규칙 + 팀 컨벤션.
+- **`ribs-patterns`** — RIBs 아키텍처 패턴 모음. **레거시 보수 전용 배너** 박제. SwiftUI 전환 선언 이후, 새 화면은 여기를 참조하지 않게 명시적으로 차단.
+- **`swiftui-patterns`** — MVVM 템플릿, 상태 관리, 네비게이션 패턴. iOS 14 타겟 기준 `ObservableObject` 중심 + iOS 17+ `@Observable` 마이그레이션 경로.
+- **`ios-testing`** — Protocol Witness 패턴 + `swift-snapshot-testing` + XCTest 조직법. Journal 006의 컴파일 단위 테스트 전략이 여기 박제됨.
+- **`code-analyzer`** — SPM 사이클 해체 플레이북(Option A/B/C) + 의존 그래프 분석법. Journal 006의 실전 산출물을 패턴으로 박제한 것.
+
+**스킬과 에이전트의 차이는 "언제 읽히는가"**이다. 에이전트는 "작업 시작 시" 역할로 선택된다. 스킬은 "작업 도중" 필요할 때 읽힌다. 레이어를 나누니 프롬프트 비대화가 줄었다.
+
+---
+
+## 훅 4 — 자동 가드
+
+- **`check-gstack`** (SessionStart) — 글로벌 gstack 스킬 디렉터리 존재 확인. 없으면 설치 지시 후 종료. Journal 000의 패턴.
+- **`session-start`** (SessionStart) — 세션 시작 배너 + `git config core.hooksPath` 검증. Journal 007의 self-diagnostic 박제 위치.
+- **`file-protection`** (PreToolUse) — 민감 파일(`.env`, `*.p12`, `GoogleService-Info.plist`, 인증서 등) Write/Edit 차단.
+- **`post-swift-edit`** (PostToolUse) — Swift 파일 편집 직후 SwiftFormat 자동 실행 + diff 프리뷰.
+
+**Journal 007의 교훈이 여기 박혀있다.** 훅 파일을 만드는 것만으로는 아무것도 작동하지 않는다. 파일 존재 + `chmod +x` + `settings.json` wiring + (git 훅이면) `core.hooksPath` — 4중 wiring이 모두 닫혀야 한다. `session-start.sh` 안에 self-diagnostic을 넣어서, 어떤 레이어가 풀리면 다음 세션에서 즉시 경고가 뜨게 만들었다.
+
+---
+
+## 슬래시 커맨드 8 — iOS 워크플로 단축키
+
+- **`/ios-triage`** — 버그 리포트에서 심층 인터뷰 모드로 들어가서 재현 조건 + 근본 원인 가설 세우기 (Journal 004)
+- **`/ios-bugfix`** — 트리아지 결과를 받아 실제 수정 + 테스트 추가
+- **`/ios-investigate`** — "왜 이렇게 됐는가" 탐색 모드. 커밋 히스토리 + `git blame` + 관련 PR 추적
+- **`/ios-review`** — 현재 브랜치 diff에 `swift-reviewer` 에이전트 투입
+- **`/ios-arch`** — 아키텍처 결정 모드. `ios-architect` 에이전트 투입
+- **`/ios-ship`** — 빌드 검증 + 커밋 + 푸시 + PR 생성 원샷
+- **`/compound`** — 3 Agent 병렬로 CHANGELOG + 솔루션 + 회고 박제 (Journal 005)
+- **`/wt-branch`** — squash merge 이후 안전하게 새 작업 분기 (harness-journal-004/005)
+
+**8개 중 6개는 iOS 전용이고 2개는 일반 하네스 커맨드(`/compound`, `/wt-branch`)다.** 일반 커맨드가 섞여있는 건 의도적이다. iOS 워크플로의 시작(`/wt-branch`)과 끝(`/compound`)이 하네스 공통 커맨드라는 걸 드러내기 위해서.
+
+---
+
+## 넣지 않은 것들 — 스킵 근거
+
+"뭘 넣었는지"만큼 **"왜 빼기로 했는지"**도 박제 가치가 있다. 이 둘은 Web Fetch로 직접 조사하고 근거 있게 거절했다.
+
+### XcodeBuildMCP — 빌드 가속 0
+
+공식 README 직접 확인 결과, **내부적으로 `xcodebuild`를 그대로 호출하는 순수 래퍼**였다. DerivedData 재사용 / 증분 빌드 / 캐싱 레이어 — 어떤 빌드 가속 claim도 없다. 멀티모듈 SPM 프로젝트의 cold build가 느린 건 **구조적 문제**고, 래퍼를 씌워도 `xcodebuild` 자체가 그대로 도는 이상 속도는 동일하거나 오버헤드만큼 느려진다.
+
+추가로 gma급 프로젝트의 "CLI 빌드 금지, 개발자 수동 빌드" 정책은 MCP가 제공할 수 있는 유일한 효용(구조화된 에러 핸드오프)을 이미 대체하고 있었다. 판단: **순 손해, 설치 안 함.**
+
+### SwiftUI Vision Loop
+
+"Claude가 스냅샷 스크린샷을 보고 UI를 iterate하는 루프"를 twocentstudios가 실험했는데, **저자 본인이 "효과 없음"으로 결론**지었다. 그 글을 직접 읽고 스킵 결정. "좋아 보이는 아이디어"를 검증 없이 넣지 않는 원칙이 이번에 두 번 작동했다.
+
+**공통 교훈**: Harness 이식 스프린트에서 "뭘 넣을까"보다 "뭘 뺄까"가 더 어렵다. 넣기는 쉽고, 빼는 데는 근거 조사가 필요하기 때문.
+
+---
+
+## 3가지 핵심 원칙
+
+설치물 카탈로그와 별개로, 이번 스프린트에서 못 박힌 **행동 원칙**이 세 개 있다.
+
+### 1. `CLAUDE.md` 200줄 목표
+
+`CLAUDE.md`는 매 세션 프롬프트에 박힌다. 500줄이면 매 세션 500줄 비용이 붙는다. 이번에 **400줄 → 255줄로 다이어트**했다. 중복되는 "빠른 판단 가이드" / 방법론 요약 / 안전장치 설명을 압축. 아직 목표 200줄에는 못 미쳐서 다음 스프린트 액션으로 박제.
+
+**핵심 원칙**: `CLAUDE.md`는 "자주 바뀌는 + 추론 안 되는" 정보만. 자주 안 바뀌거나 코드에서 추론 가능한 건 스킬/에이전트 프롬프트로 이동.
+
+### 2. Priming 우선
+
+비자명한 작업은 **무조건 "Read + 요약 + 계획 → 승인 → 구현"** 순서로. `CLAUDE.md`의 최상단 원칙으로 박제. 이 한 줄이 없으면 에이전트가 "파일 찾자마자 Edit"로 직행해서 컨텍스트 부족으로 망친다.
+
+### 3. `detect-context.sh` — 세션 시작 자동 감지
+
+`.claude/scripts/detect-context.sh`(136줄)가 세션 시작 시 자동으로 프로젝트 상태를 감지한다. 스킴 이름, 활성 시뮬레이터, 설치된 툴(SwiftLint/SwiftFormat/xcbeautify), 현재 브랜치, `core.hooksPath` 상태 — 한 번에 출력. 에이전트가 세션 시작 때 "지금 이 프로젝트가 어떤 상태인지" 매번 물어볼 필요가 없어진다.
+
+**`--full` 플래그는 아직 실전 미검증.** `xcodebuild -list -json` 호출부가 실제 스킴 목록을 파싱하는지는 다음 세션에서 확인 예정. 이런 "미검증 기능"은 정직하게 회고에 박제하고 넘어간다 — Journal 007의 교훈대로 "검증 안 된 완료"는 부채가 된다.
+
+---
+
+## 팀 온보딩 관점 — 한 명의 세팅이 팀에 전파되려면
+
+개인 머신에서 잘 돌아가는 하네스는 쉽다. 어려운 건 **팀 전체가 동일 상태로 수렴**하는 것. 이를 위해 두 가지를 박제했다.
+
+1. **`.githooks/setup.sh`** — clone 직후 1회 실행. `git config core.hooksPath` + `chmod` + 검증 출력. Journal 007의 교훈 박제.
+2. **`CLAUDE.md`의 팀 온보딩 섹션** — 3줄. "clone → `bash .githooks/setup.sh` → 검증". 긴 README로 묻히지 않게 `CLAUDE.md` 최상단 근처에 배치.
+
+**의도적으로 자동화하지 않은 것**: `settings.json`의 `env` 블록 기본값. `PROJECT_NAME` / `SCHEME` / `CONFIGURATION` / `SIMULATOR`를 개발자마다 다르게 쓸 수 있어서, 공통값만 repo에 커밋하고 개인 오버라이드는 `.claude/settings.local.json`(gitignored)으로 분리.
+
+---
+
+## 회고 복리 체크 — 이번이 다음 스프린트의 입력이 되는가
+
+Journal 006이 증명한 **"3일 전 회고가 오늘의 진입점이 된다"** 복리를 이번에도 돌려놓았다. 이번 스프린트 회고(`docs/retros/2026-04-15.md`)의 "다음에 적용" 섹션에 6개 체크박스가 박제됐다.
+
+- [ ] 훅 wiring 자동 검증 스크립트 (`verify-hooks.sh`)
+- [ ] `CLAUDE.md` 200줄 다이어트 재시도
+- [ ] SwiftUI iOS 17+ 전환 경로 문서화
+- [ ] 메모리 인덱스 정책 (50개 초과 시 sub-index)
+- [ ] `detect-context.sh --full` 실전 검증
+- [ ] 다음 compound에서 이 6개 중 3개 이상 해결 여부 체크
+
+**이 6개가 다음 스프린트에서 실제로 해결되는지**가 복리 루프의 증거가 된다. Journal 006이 증명한 플러스 면을, Journal 007이 증명한 마이너스 면(검증 없는 "완료"는 부채)을 동시에 인지하면서 적어놓은 목록이다.
+
+---
+
+## 교훈
+
+1. **하네스 전면 이식은 프로덕션 코드 0줄이 최고의 보호막이다.** PR 리뷰어가 "Swift 변경 0"을 확인하면 머지 부담이 급감한다. 하네스와 기능 변경을 같은 브랜치에 섞지 않는다.
+2. **"뭘 넣을까"보다 "뭘 뺄까"가 더 어렵다.** 좋아 보이는 도구일수록 공식 README를 직접 읽고 근거 있게 거절. XcodeBuildMCP와 SwiftUI Vision Loop가 이번 증명.
+3. **에이전트 4 / 스킬 5 / 훅 4 / 커맨드 8의 비율은 우연이 아니다.** 에이전트는 판단자, 스킬은 패턴 저장소, 훅은 자동 가드, 커맨드는 워크플로 단축키 — 각 레이어가 서로 다른 "언제 읽히는가"를 가진다. 역할을 섞으면 프롬프트가 비대해진다.
+4. **`CLAUDE.md` 200줄 원칙**은 매 세션 토큰 비용과 직결된다. 자주 안 바뀌는 건 전부 스킬/에이전트 프롬프트로 내려보낸다. 이번에 400→255줄 달성, 목표 200은 다음 스프린트 액션.
+5. **팀 온보딩은 `setup.sh` + `CLAUDE.md` 3줄 섹션**이 전부여야 한다. 긴 README로 묻히면 아무도 안 읽는다. Clone 직후 1회 실행으로 끝나는 구조.
+6. **검증 안 된 "완료"는 다음 스프린트의 부채다.** Journal 007의 교훈. 완료 체크를 박제할 때는 **검증 자동화가 같이 들어있는가**를 먼저 확인. 없으면 스크립트(`session-start.sh` self-diagnostic)에 박는다.
+
+---
+
+## 연결
+
+- **Journal 000 — Baseline**: 이 글의 "조감도"가 Journal 000 베이스라인 위에 얹힌 것. 처음 시작점이 궁금하면 여기부터.
+- **Journal 005 — /compound**: 8개 커맨드 중 `/compound`의 5 Phase 상세.
+- **Journal 006 — SPM Cycle Break**: `code-analyzer` 스킬과 `ios-architect` 에이전트의 실전 검증.
+- **Journal 007 — Hooks Silent Failure**: 이번 스프린트의 재감사에서 드러난 치명 버그. 4중 wiring 무음 실패와 `session-start.sh` self-diagnostic 박제.
+- **[AI Agent Start Here](/wiki/harness-engineering/ai-agent-start-here)**: 하네스 전반 상황별 라우팅. 이 글은 그 라우팅의 "iOS 전면 이식" 케이스 스터디.
