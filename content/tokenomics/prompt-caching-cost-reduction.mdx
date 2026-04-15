@@ -1,0 +1,166 @@
+---
+title: "Prompt Caching 90% 비용 절감 — cache_control ephemeral 실전 적용"
+category: tokenomics
+date: "2026-04-16"
+tags: [prompt-caching, cost-optimization, claude-api, cache-control, tarosaju, moneyflow]
+confidence: 4
+connections:
+  - tokenomics/tokenomics-catalog
+  - harness-engineering/harness-engineering-overview
+status: complete
+description: "Claude API의 cache_control: ephemeral을 시스템 프롬프트에 적용하여 반복 호출 시 입력 토큰 비용을 90% 절감하는 패턴. tarosaju/moneyflow 실전 데이터 기반."
+type: entry
+quiz:
+  - question: "cache_control: ephemeral이 비용을 90% 절감하는 원리는?"
+    choices:
+      - "시스템 프롬프트를 압축하여 토큰 수 자체를 줄임"
+      - "동일한 시스템 프롬프트가 캐시에 있으면 캐시 읽기 비용(원래의 10%)만 청구되고, 전체 토큰을 다시 처리하지 않음"
+      - "Anthropic이 무료로 제공하는 프로모션"
+      - "출력 토큰만 청구되고 입력 토큰은 무료가 됨"
+    answer: 1
+    explanation: "ephemeral 캐시는 첫 호출 시 시스템 프롬프트를 캐시에 저장하고, 이후 동일 프롬프트 호출 시 cache read 비용(입력 대비 10%)만 청구한다. 출력 토큰은 캐시와 무관하게 동일하게 청구."
+  - question: "Prompt caching이 효과적인 조건은?"
+    choices:
+      - "출력 토큰이 매우 길 때"
+      - "시스템 프롬프트가 크고(1024+ 토큰), 동일 프롬프트로 여러 사용자가 짧은 시간 내에 호출할 때"
+      - "사용자 입력이 항상 동일할 때"
+      - "모델이 빠를 때"
+    answer: 1
+    explanation: "캐시는 동일한 시스템 프롬프트 prefix에 대해 작동한다. 시스템 프롬프트가 작으면 절감 절대액이 작고, 호출 간격이 캐시 TTL(5분)을 넘기면 캐시 미스가 발생한다. 큰 시스템 프롬프트 + 빈번한 호출이 최적."
+  - question: "비용 추적에서 cachedTokens를 별도로 집계하는 이유는?"
+    choices:
+      - "API 응답에 cachedTokens가 포함되지 않아서"
+      - "inputTokens와 cachedTokens의 단가가 다르므로(정가 vs 10%) 분리 계산해야 실제 비용을 정확히 파악할 수 있음"
+      - "cachedTokens는 출력 토큰에 포함되므로"
+      - "디버깅 편의를 위해"
+    answer: 1
+    explanation: "Claude Sonnet 기준 inputTokens는 $3/1M, cachedTokens는 $0.30/1M (10배 차이). 합산하면 실제 비용을 과대 또는 과소 계산하게 된다."
+---
+
+## 갭 / 맥락
+
+AI API 비용의 대부분은 **입력 토큰**에서 발생한다. 특히 시스템 프롬프트가 길고 반복되는 경우(타로 해석 규칙, 사주 해석 원칙 등), 매 호출마다 동일한 수천 토큰을 다시 보내는 건 낭비다.
+
+Anthropic Claude API는 `cache_control: { type: "ephemeral" }` 파라미터로 시스템 프롬프트를 캐시할 수 있고, 캐시 히트 시 **입력 토큰 비용의 10%만** 청구된다.
+
+---
+
+## 핵심 패턴
+
+### 적용 방법
+
+```typescript
+const response = await anthropic.messages.create({
+  model: "claude-haiku-4-5-20251001",
+  max_tokens: 1500,
+  system: [{
+    type: "text" as const,
+    text: systemPrompt,  // 큰 시스템 프롬프트 (역할, 원칙, 포맷 지시)
+    cache_control: { type: "ephemeral" as const },
+  }],
+  messages: [
+    { role: "user", content: userPrompt },  // 사용자별 가변 입력
+  ],
+});
+```
+
+**핵심**: `system` 파라미터를 문자열이 아니라 **배열** 형태로 전달하고, `cache_control`을 붙인다.
+
+### 캐시 동작 조건
+
+| 조건 | 설명 |
+|------|------|
+| **최소 크기** | 시스템 프롬프트 1024+ 토큰 (작으면 캐시 대상 안 됨) |
+| **TTL** | 5분 (마지막 사용 기준, 사용할 때마다 갱신) |
+| **매칭** | prefix 기반 — 시스템 프롬프트가 정확히 동일해야 캐시 히트 |
+| **모델별** | 같은 모델 내에서만 캐시 공유 |
+
+### 비용 구조 (Claude 모델별)
+
+| 모델 | Input (정가) | Cache Write (첫 호출) | Cache Read (히트) | Output |
+|------|------------|---------------------|------------------|--------|
+| Haiku | $0.80/1M | $1.00/1M | $0.08/1M | $4.00/1M |
+| Sonnet | $3.00/1M | $3.75/1M | $0.30/1M | $15.00/1M |
+| Opus | $15.00/1M | $18.75/1M | $1.50/1M | $75.00/1M |
+
+**Cache Write는 첫 호출 시 정가보다 25% 비싸지만**, 이후 모든 히트에서 **90% 절감**이므로 2회 이상 호출하면 즉시 이득.
+
+### 비용 추적 코드
+
+```typescript
+function estimateAnthropicCost(
+  model: string,
+  usage: { inputTokens: number; cachedTokens: number; outputTokens: number }
+): number {
+  const pricing = MODEL_PRICING[model];
+  const inputCost = (usage.inputTokens - usage.cachedTokens) * pricing.input / 1_000_000;
+  const cacheCost = usage.cachedTokens * pricing.cacheRead / 1_000_000;
+  const outputCost = usage.outputTokens * pricing.output / 1_000_000;
+  return inputCost + cacheCost + outputCost;
+}
+```
+
+---
+
+## 적용 사례
+
+### tarosaju — fortune/ai 라우트
+
+시스템 프롬프트 (~2000 토큰): 운세 해석 역할, 명리학 원칙, 응답 포맷, 안전 규칙
+
+```
+사용자 A 요청 → Cache Write ($1.00/1M × 2000 tokens)
+사용자 B 요청 (1분 후) → Cache Read ($0.08/1M × 2000 tokens)  ← 92% 절감
+사용자 C 요청 (3분 후) → Cache Read
+...
+```
+
+### moneyflow — Trading Agent 파이프라인
+
+13개 에이전트의 공통 가드 프롬프트 (~3000 토큰)를 캐시:
+
+```
+에이전트 1 (기술분석) → Cache Write
+에이전트 2 (펀더멘털) → Cache Read  ← 같은 시스템 프롬프트
+에이전트 3 (뉴스) → Cache Read
+...
+```
+
+**1회 분석 요청으로 13회 호출** → 12회가 cache read → 시스템 프롬프트 비용 ~92% 절감.
+
+---
+
+## 운영 데이터
+
+- **tarosaju cache hit rate**: 98%+ (동일 라우트에 같은 시스템 프롬프트)
+- **moneyflow 1회 분석 비용**: 캐시 적용 전 ~$0.15 → 적용 후 ~$0.04 (약 73% 절감, 출력 토큰은 동일하므로)
+- **일일 비용 상한**: moneyflow $5/day, tarosaju ~$1/day
+
+---
+
+## AI Agent Directive
+
+### Trigger
+- Claude API를 사용하고, 시스템 프롬프트가 1024 토큰 이상이며, 동일 프롬프트로 반복 호출이 발생할 때
+
+### Prerequisites
+- [Tokenomics Catalog](/wiki/tokenomics/tokenomics-catalog)
+
+### Actionable Steps
+1. **시스템 프롬프트를 배열 형태로 변환**: `system: string` → `system: [{ type: "text", text: ..., cache_control: { type: "ephemeral" } }]`
+2. **비용 추적에 cachedTokens 분리 집계** 추가
+3. **API 응답의 `usage.cache_read_input_tokens` 로그** 남겨서 실제 캐시 히트율 측정
+4. **시스템 프롬프트를 변수로 분리**: 가변 부분(사용자 이름 등)은 user 메시지로, 고정 부분(규칙/원칙)은 system에 유지
+
+### Anti-patterns
+- **시스템 프롬프트에 타임스탬프 삽입** — 매 호출마다 프롬프트가 달라져 캐시 미스
+- **비용 추적에서 cachedTokens 무시** — 실제 비용과 계산 비용이 10배 차이
+- **1024 토큰 미만 프롬프트에 적용** — 캐시 대상이 안 되므로 코드 복잡도만 증가
+
+---
+
+## 출처 / 검증 메모
+
+- tarosaju 구현: `mino-tarosaju/src/app/api/fortune/ai/route.ts` (lines 76-99)
+- moneyflow 비용 추적: `mino-moneyflow/src/lib/trading/ai-cost-tracker.ts`
+- Anthropic 공식 문서: Prompt Caching (가격은 2026-04 기준, 분기별 재확인 필요)

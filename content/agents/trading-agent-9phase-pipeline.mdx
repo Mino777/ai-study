@@ -1,0 +1,188 @@
+---
+title: "9-Phase Trading Agent Pipeline — 13 에이전트 적대적 토론 아키텍처"
+category: agents
+date: "2026-04-16"
+tags: [multi-agent, trading, adversarial-debate, pipeline, moneyflow]
+confidence: 4
+connections:
+  - agents/multi-agent-pipeline
+  - agents/multi-provider-circuit-breaker
+  - evaluation/ai-output-5-layer-defense
+status: complete
+description: "4 분석가 → Bull/Bear 토론 → Judge → Risk 3단 → Portfolio Manager까지 9단계로 투자 판단을 도출하는 멀티에이전트 파이프라인. moneyflow 운영 기반."
+type: entry
+quiz:
+  - question: "Bull/Bear 토론에서 Steelman 규칙이 필요한 이유는?"
+    choices:
+      - "토론을 길게 만들어 출력 품질을 높이기 위해"
+      - "상대방의 가장 강한 논거를 먼저 제시한 후에만 반박 가능하게 하여, 허수아비 논증(약한 논거만 공격)을 구조적으로 차단"
+      - "토큰 수를 늘려 비용을 정당화하기 위해"
+      - "AI가 양쪽 관점을 모두 학습하도록"
+    answer: 1
+    explanation: "LLM은 지시하지 않으면 상대의 약한 논거만 골라 공격하는 허수아비 논증을 하기 쉽다. '상대의 가장 강한 주장을 먼저 인용하고, 그것에 대해 반박하라'는 규칙이 토론 품질을 구조적으로 보장한다."
+  - question: "Tier별 모델 선택(Free=Gemini, Pro=Sonnet)의 설계 원칙은?"
+    choices:
+      - "무료 사용자에게는 최저 품질을 제공"
+      - "에이전트 역할별로 요구되는 추론 능력이 다르므로, 데이터 분석은 Gemini(비용 효율), 비판적 분석은 Claude(추론 강점)로 라우팅. Tier는 이 라우팅의 범위를 결정"
+      - "Gemini가 항상 Claude보다 빨라서"
+      - "API 키 관리를 단순화하기 위해"
+    answer: 1
+    explanation: "기술 지표 계산 같은 데이터 분석은 Gemini Flash로도 충분하지만, 논증의 논리적 일관성을 판단하는 Judge나 리스크 평가는 추론 능력이 더 강한 Claude Sonnet이 적합하다. Tier는 '몇 개의 에이전트가 고비용 모델을 쓰는가'의 범위."
+  - question: "Devil's Advocate 에이전트의 역할은?"
+    choices:
+      - "모든 분석을 부정하는 것"
+      - "최종 판단 직전에 반대 시나리오를 강제로 제시하여, 확증 편향을 시스템 레벨에서 방지"
+      - "비용을 절감하기 위해 에이전트 수를 줄이는 역할"
+      - "사용자에게 재미있는 반대 의견을 보여주는 역할"
+    answer: 1
+    explanation: "앞선 8개 에이전트가 모두 'BUY'로 수렴해도 Devil's Advocate가 '왜 이 판단이 틀릴 수 있는지'를 강제로 제시한다. 확증 편향은 사람뿐 아니라 LLM 파이프라인에서도 발생하며, 구조적 반대 의견이 유일한 방어책."
+---
+
+## 갭 / 맥락
+
+단일 LLM에게 "이 주식을 분석해줘"라고 하면 자신감 있는 답을 내놓지만, 그 답이 얼마나 신뢰할 수 있는지 알 방법이 없다. LLM은 확증 편향에 취약하고, 자기 답변의 약점을 스스로 인식하지 못한다.
+
+moneyflow의 해법: **단일 에이전트가 결론을 내리는 게 아니라, 13개 에이전트가 적대적으로 토론하는 구조 자체가 환각을 줄인다.**
+
+---
+
+## 핵심 패턴 — 9-Phase Pipeline
+
+```
+Phase 1: DATA COLLECTION (4 병렬 에이전트)
+├── Market Analyst      ← 기술 지표 (RSI, MACD, 볼린저)
+├── Fundamentals Analyst ← 재무제표 (PER, PBR, ROE)
+├── News Analyst        ← 뉴스 감성 분석
+└── Macro Analyst       ← 매크로 경제 지표
+
+Phase 2: ADVERSARIAL DEBATE (2 병렬 에이전트)
+├── Bull Advocate       ← 매수 논거 (Steelman 규칙)
+└── Bear Advocate       ← 매도 논거 (Steelman 규칙)
+
+Phase 3: JUDGMENT (1 에이전트)
+└── Investment Judge    ← 토론 중재, conviction 점수
+
+Phase 4: RISK ASSESSMENT (2 병렬 에이전트)
+├── Risk Analyst        ← 정량적 리스크 평가
+└── Devil's Advocate    ← 반대 시나리오 강제 제시
+
+Phase 5: RISK CALIBRATION (1 에이전트)
+└── Risk Calibrator     ← 리스크 통합 + confidence 보정
+
+Phase 6-9: EXECUTION (후처리)
+├── Portfolio Manager   ← 포지션 사이징 + 실행 계획
+├── CIO Review         ← 최종 검토
+├── Memory Integration ← BM25로 과거 유사 사례 주입
+└── Quality Judge      ← LLM-as-Judge 4차원 채점
+```
+
+### Phase 2 상세: Steelman 규칙
+
+```
+[Bull Advocate 프롬프트]
+규칙: 반박하기 전에 반드시 Bear 측의 가장 강한 논거를
+직접 인용하고 그 강도를 인정한 후에만 반박을 시작하라.
+
+예시:
+"Bear 측이 지적한 부채비율 200% 초과는 실제로 동종 업계 평균(150%)을
+크게 넘어서는 수치이며 이 리스크는 유효합니다.
+그러나 이를 상쇄하는 요인으로..."
+```
+
+### Tier별 에이전트 구성
+
+| Tier | 에이전트 수 | 토론 라운드 | 모델 |
+|------|-----------|-----------|------|
+| Free | 7 (경량) | 1라운드 | Gemini Flash |
+| Pro | 13 (전체) | 3라운드 | Gemini Pro + Claude Sonnet |
+| Premium | 13 + Deep Think | 3라운드 | Claude Sonnet (전체) |
+
+### 각 에이전트의 출력 표준
+
+```typescript
+interface AgentReport {
+  signal: "STRONG_BUY" | "BUY" | "NEUTRAL" | "SELL" | "STRONG_SELL";
+  confidence: number;  // 0-100
+  summary: string;
+  key_points: string[];
+}
+```
+
+모든 에이전트가 동일한 인터페이스를 반환 → 파이프라인 어디서든 조합/비교 가능.
+
+---
+
+## Memory-Based Learning Loop
+
+BM25 검색으로 과거 유사 트레이딩을 찾아 토론에 주입:
+
+```typescript
+// 한국어 + 영어 혼합 토큰화
+// 한글: 1자 토큰 허용 (조사/어미 분리)
+// 영어: 2자 이상 토큰만 (stopwords 제거)
+
+const similar = bm25.search(currentAnalysis, topK: 3);
+// → 과거 유사 분석 3건의 결과(적중/빗나감) + 교훈을 주입
+
+// 앵커링 방지 프롬프트 필수
+"과거 사례는 참고만 하라. 현재 데이터와 상충하면 현재를 우선하라."
+```
+
+---
+
+## Confidence Calibration
+
+```typescript
+// 3 버킷으로 분류 → 실제 alpha와 비교
+type Bucket = "low" | "mid" | "high";
+// low: confidence < 60
+// mid: 60 ≤ confidence < 75
+// high: confidence ≥ 75
+
+// 단조성 검사: high bucket의 적중률이 mid보다 높은가?
+// 아니라면 confidence 계산 로직에 문제 있음
+```
+
+---
+
+## 운영 데이터
+
+- **일일 비용 상한**: $5/day (13 에이전트 × 평균 $0.04/회 × ~30회/day)
+- **토론 3라운드 vs 1라운드**: 논거 다양성 1.8배 증가 (key_points 수 기준)
+- **Devil's Advocate 효과**: 최종 signal 변경률 ~15% (STRONG_BUY → BUY 등 보수적 조정)
+- **BM25 유사 사례**: 평균 2.3건 히트/분석
+
+---
+
+## AI Agent Directive
+
+### Trigger
+- 복잡한 판단이 필요한 AI 파이프라인에서 단일 에이전트의 편향을 줄이고 싶을 때
+- 멀티에이전트 토론 구조를 설계할 때
+
+### Prerequisites
+- [Multi-Agent Pipeline](/wiki/agents/multi-agent-pipeline)
+- [Multi-Provider Circuit Breaker](/wiki/agents/multi-provider-circuit-breaker)
+
+### Actionable Steps
+1. **역할별 에이전트 분리** — 데이터 수집/분석/판단/리스크를 각각 독립 에이전트로
+2. **적대적 토론 구조** — Bull/Bear + Steelman 규칙으로 허수아비 논증 차단
+3. **Devil's Advocate** — 최종 판단 직전에 반대 시나리오 강제
+4. **표준 출력 인터페이스** — signal + confidence + summary + key_points
+5. **Memory Loop** — 과거 사례 주입 + 앵커링 방지 프롬프트
+6. **Confidence Calibration** — 3 버킷 단조성 검사로 자신감 vs 실제 적중률 비교
+
+### Anti-patterns
+- **토론 없는 직렬 파이프라인** — 확증 편향 누적. 앞 에이전트의 결론을 뒤 에이전트가 무비판적으로 수용
+- **Steelman 없는 토론** — LLM이 상대의 약한 주장만 공격하는 허수아비 논증
+- **무제한 토론 라운드** — 비용 폭주. 3라운드가 비용/품질 균형점 (moneyflow 경험칙)
+
+---
+
+## 출처 / 검증 메모
+
+- 파이프라인 구현: `mino-moneyflow/src/lib/trading/pipeline.ts`
+- Tier 설정: `mino-moneyflow/src/lib/trading/tiers.ts`
+- BM25: `mino-moneyflow/src/lib/trading/memory/bm25.ts`
+- Calibration: `mino-moneyflow/src/lib/portfolio/calibration.ts`
+- 운영 데이터: moneyflow 프로덕션 로그 기반 (2026-04 관측)

@@ -1,0 +1,392 @@
+---
+title: "Aidy Journal 000 — Spec-Driven Multi-Agent Orchestration 베이스라인"
+category: harness-engineering
+series: aidy-journal
+date: "2026-04-16"
+tags: [aidy-journal, harness-engineering, multi-repo, architect-worker, gate-validation, compound-engineering]
+confidence: 4
+connections:
+  - harness-engineering/harness-journal-000-baseline
+  - harness-engineering/compound-engineering-philosophy
+  - harness-engineering/harness-engineering-overview
+status: complete
+description: "Aidy Journal 시리즈의 출발점. Spec-Driven Multi-Agent Orchestration으로 4개 레포를 동시 관제하는 Agentic Coding 모델 — api-contract 중심 스펙, Gate 검증, Work Order 라이프사이클, Compound Flywheel 박제."
+type: entry
+quiz:
+  - question: "Aidy Architect-Worker 모델에서 api-contract.md의 역할은?"
+    choices:
+      - "API 문서를 자동 생성하기 위한 템플릿"
+      - "코드가 source of truth이고, 문서는 참고용"
+      - "3개 워커(server/ios/android)가 모두 준수해야 하는 계약이며, 코드가 아니라 이 문서가 source of truth"
+      - "CI/CD 파이프라인이 파싱하는 설정 파일"
+    answer: 2
+    explanation: "일반적인 프로젝트에서는 코드가 source of truth이고 문서가 뒤따라가지만, Aidy 모델에서는 api-contract.md가 계약이다. 워커는 이 계약을 정확히 구현해야 하고, Gate 1에서 라인별로 검증된다. 계약 변경은 Architect만 할 수 있다."
+  - question: "Gate 1과 Gate 2의 차이는?"
+    choices:
+      - "Gate 1은 자동 테스트, Gate 2는 수동 리뷰"
+      - "Gate 1은 스펙 준수(필드/엔드포인트/에러코드 매칭), Gate 2는 통합 검증(빌드+테스트+크로스 플랫폼 필드 동기화)"
+      - "Gate 1은 서버용, Gate 2는 클라이언트용"
+      - "Gate 1은 코드 스타일, Gate 2는 기능 테스트"
+    answer: 1
+    explanation: "Gate 1은 api-contract.md 대비 코드의 라인별 스펙 준수 검증이다. 엔드포인트 URL, HTTP 메서드, 필드명/타입, 에러코드가 정확히 매칭되는지 확인한다. Gate 2는 실제 빌드와 테스트 통과, 그리고 server/ios/android 3개 프로젝트의 DTO/Model 필드가 동일한지 교차 검증한다."
+  - question: "Cross-Session Review에서 커밋 메시지나 PR 설명을 신뢰하지 않는 이유는?"
+    choices:
+      - "커밋 메시지 작성 규칙이 없어서"
+      - "다른 Claude 세션이 작성한 메타데이터는 honest하지만 potentially buggy할 수 있으므로, diff 기반으로 4 Trap(스펙 외 엔드포인트, 데드코드, 계약 외 에러코드, 하드코딩 시크릿)을 직접 검증해야 함"
+      - "PR 설명이 너무 길어서 읽기 어려움"
+      - "GitHub API 제한 때문에 메타데이터 접근이 불안정"
+    answer: 1
+    explanation: "다른 세션의 AI가 honest하더라도 자기 작업의 누락이나 실수를 스스로 발견하기 어렵다. 검증 세션은 메타데이터(커밋 메시지, 코드 주석, PR 설명)를 무시하고 실제 git diff만 추출하여 4가지 트랩을 독립적으로 확인한다."
+---
+
+## 시리즈를 시작하며
+
+Harness Journal(000~023)이 *단일 프로젝트 내 AI 운영 환경 개선*을 박제했다면, Aidy Journal은 한 단계 위 — **멀티레포 멀티플랫폼 AI 오케스트레이션**을 박제하는 시리즈다.
+
+Aidy는 AI 다이어리 앱으로, 4개 레포가 동시에 움직인다:
+
+| 레포 | 역할 | 스택 |
+|------|------|------|
+| `aidy-architect` | 컨트롤 센터 (스펙/WO/게이트/문서) | Claude Code 세션 |
+| `aidy-server` | 백엔드 워커 | Spring Boot 3.5 + Kotlin + PostgreSQL |
+| `aidy-ios` | iOS 워커 | Tuist + TCA + SwiftUI |
+| `aidy-android` | Android 워커 | Jetpack Compose + MVVM + Kotlin |
+
+핵심 질문: **4개 독립 Claude 세션이 동시에 코드를 작성할 때, 어떻게 동기화하고 품질을 보장하는가?**
+
+이 0번 엔트리는 그 답의 베이스라인이다.
+
+---
+
+## 1. 아키텍처 — Spec-First Orchestration
+
+### tmux 4-Pane 레이아웃
+
+```
+┌─────────────────────────────────────────────────────┐
+│ ARCHITECT (pane 0)                                  │
+│ /dispatch, /gate-1, /gate-2, /compound, /autoceo    │
+├─────────────────┬─────────────────┬─────────────────┤
+│ SERVER (pane 1) │ iOS (pane 2)    │ ANDROID (pane 3)│
+│ WO-001 구현     │ WO-002 구현     │ WO-003 구현     │
+└─────────────────┴─────────────────┴─────────────────┘
+```
+
+각 워커는 독립 Claude Code 세션. Architect는 코드를 직접 작성하지 않고, **스펙 관리 + 작업 분배 + 검증 + 문서화**만 수행한다.
+
+### 레포 구조
+
+```
+aidy-architect/
+├── specs/                  ← Source of Truth
+│   ├── api-contract.md     ← THE 계약 (Architect만 수정)
+│   ├── conventions.md      ← 네이밍 규약
+│   └── decisions/          ← ADR (Architecture Decision Records)
+│       ├── ADR-001.md      ← 기술 스택 락인
+│       ├── ADR-002.md      ← Coordinator 패턴
+│       └── ADR-003.md      ← iOS/Android 동기 규칙
+├── work-orders/            ← 작업 큐
+│   ├── backlog/
+│   ├── in-progress/
+│   └── done/
+├── gates/                  ← 검증 리뷰 아카이브
+│   ├── reviews/
+│   └── security-hardening-checklist.md
+├── inbox/                  ← 워커↔Architect 비동기 통신
+├── docs/                   ← 회고 + 솔루션
+└── .claude/commands/       ← 슬래시 커맨드
+    ├── dispatch.md
+    ├── gate-1.md
+    ├── gate-2.md
+    ├── compound.md
+    ├── autoceo.md
+    └── cross-session-review.md
+```
+
+---
+
+## 2. API Contract — 코드가 아니라 문서가 Source of Truth
+
+일반 프로젝트: 코드가 source of truth → 문서가 뒤따라감 (항상 stale)
+Aidy 모델: **api-contract.md가 source of truth** → 코드가 이를 구현 → Gate가 검증
+
+### 계약 내용
+
+- Base URL, 인증 헤더 (v0.1: `X-User-Id`, v0.2: Bearer JWT)
+- 7개 엔드포인트 (Chat 2개, Memory 3개, Health 1개, Categories 1개)
+- Request/Response 스키마: 필드명과 타입 정확히 명시
+- Error Codes 테이블: 8개 (EMPTY_MESSAGE, INVALID_CREDENTIALS, ...)
+- Memory 카테고리 enum: 7개 고정값
+
+### 왜 이게 중요한가
+
+서버가 `memoriesExtracted: MemoryItem[]`로 반환하는데 iOS가 `memories: [Memory]`로 모델링하면? **Gate 1 FAIL**. 이름이 다르면 파싱이 깨지고, 프로덕션에서 크래시가 난다.
+
+계약을 중심에 놓으면 3개 플랫폼이 *동시에 독립적으로* 구현해도 통합 시점에 깨지지 않는다.
+
+---
+
+## 3. Work Order 시스템
+
+### WO 라이프사이클
+
+```
+backlog/ → (Architect /dispatch) → in-progress/ → (Worker 구현)
+    → (Architect /gate-1) → PASS? → (Architect /gate-2) → PASS?
+    → done/ → (Architect /compound) → 회고+솔루션+ADR
+```
+
+### WO 파일 포맷
+
+```markdown
+# WO-{num}: {제목}
+
+**담당**: server | ios | android
+**우선순위**: P0~P3
+**상태**: backlog | in-progress | done
+**의존**: 다른 WO 번호 또는 "없음"
+
+## 목표
+(프로덕트 관점 결과)
+
+## 스펙 참조
+- `specs/api-contract.md` § {섹션}
+
+## 구현 요구사항
+1. ...
+
+## 테스트 요구사항
+- [ ] ...
+
+## 검증 기준
+- [ ] Build passes
+- [ ] Tests pass
+- [ ] Response matches api-contract.md
+
+## 워커 세션 시작 명령
+(워커 Claude에게 복사해서 붙일 프롬프트)
+
+## 완료 보고
+- PR: (워커가 채움)
+- 소요 시간:
+- 특이사항:
+```
+
+---
+
+## 4. Gate 검증 프로토콜
+
+### Gate 1: 스펙 준수 (라인별 코드 리뷰)
+
+Architect가 워커의 git diff를 추출하여 api-contract.md와 **라인별** 대조:
+
+| 체크 항목 | 검증 방법 |
+|-----------|----------|
+| 엔드포인트 URL | `@GetMapping`/`@PostMapping` vs 계약 |
+| HTTP 메서드 | GET/POST/PUT/DELETE 일치 |
+| Request body 필드명/타입 | DTO 필드 vs 계약 스키마 |
+| Response body 필드명/타입 | DTO 필드 vs 계약 스키마 |
+| Error codes | 계약의 Error Codes 테이블에 있는 것만 |
+| 네이밍 컨벤션 | conventions.md 준수 |
+| 시크릿 하드코딩 | grep으로 탐지 |
+
+**결과**: PASS / CONDITIONAL (사소한 이슈) / FAIL (반드시 수정)
+
+실전 예시 — WO-002 iOS 1차 Gate 1 FAIL:
+- categories, health 엔드포인트 미구현
+- 에러 파싱 미구현
+- → 워커 재작업 → commit `6f78358` → 3건 수정 → Gate 1 재통과
+
+### Gate 2: 통합 검증
+
+Gate 1 PASS 후 실행. 3가지 축:
+
+1. **빌드**: `./gradlew clean build` / `tuist build` / `./gradlew assembleDebug`
+2. **테스트**: 각 플랫폼 테스트 스위트 실행
+3. **크로스 플랫폼 필드 동기화**: server DTO vs iOS Model vs Android data class — 필드명 정확히 일치하는지 교차 비교
+
+---
+
+## 5. Cross-Session Review — 메타데이터 불신 원칙
+
+다른 Claude 세션의 작업을 검증할 때, **절대 신뢰하지 않는 것**:
+
+- 커밋 메시지
+- PR 설명
+- 코드 주석 ("I tested this")
+- 타임스탬프
+
+**대신 하는 것**:
+
+1. `git diff HEAD~1` — 실제 diff만 추출
+2. **4 Trap 탐색**:
+   - 스펙에 없는 엔드포인트/필드 추가됨?
+   - 선언만 되고 호출 없는 데드코드?
+   - 계약에 없는 에러코드 사용?
+   - 하드코딩된 시크릿/API 키?
+3. 로컬 빌드+테스트로 CI 누락 잡기
+4. 마크다운 리포트 → `gates/reviews/`에 아카이브
+
+---
+
+## 6. Inbox 비동기 통신
+
+워커가 막히면 `aidy-architect/inbox/{platform}-request.md`에 요청 작성:
+
+```markdown
+# iOS 워커 요청
+**시각**: 14:32
+**유형**: 스펙변경 | 권한 | 터미널명령 | 질문 | 블로커
+**내용**: DELETE /api/memories/{id}의 응답이 200인지 204인지 계약에 명시 안 됨
+**현재상태**: Memory 삭제 구현 중, 이 결정 없이 진행 불가
+```
+
+워커는 요청 작성 후 **작업 중단**. Architect가 `inbox/{platform}-response.md`에 응답을 쓰면 워커가 읽고 재개.
+
+---
+
+## 7. Compound Flywheel — 지식이 순환하는 구조
+
+```
+WO 완료 + Gate 2 PASS
+    ↓
+/compound 실행
+    ↓
+3개 산출물:
+├── docs/retros/WO-{num}-retro.md     ← 회고
+├── docs/solutions/{date}-{slug}.md    ← 재사용 가능한 해결책
+└── specs/decisions/ADR-{num}.md       ← 아키텍처 결정 (해당 시)
+    ↓
+다음 라운드의 /autoceo Research 단계가 이 문서들을 입력으로 읽음
+    ↓
+더 구체적인 Plan → 더 빠른 구현 → 더 나은 Compound
+    ↓
+반복 (라운드마다 품질 향상)
+```
+
+**핵심**: 회고의 "For AI Agents" 섹션은 사람이 아니라 *다음 Claude 세션*을 위한 것. 정확한 명령, 엣지 케이스, 검증된 코드 스니펫을 담아서 다음 세션이 같은 실수를 반복하지 않게 한다.
+
+---
+
+## 8. autoceo — 풀 자동 루프
+
+`/autoceo N`으로 N라운드 자동 실행:
+
+| 단계 | 내용 |
+|------|------|
+| Research | TODOs, 실패한 게이트, 이전 회고 분석 |
+| Plan | 작업 결정, WO 생성, api-contract 변경 필요 시 수정 |
+| Dispatch | 3개 워커에 동시 전송 |
+| QA | /cross-session-review + /gate-1 + 빌드 체크 |
+| Compound | 회고 + 솔루션 생성 |
+
+**안전장치**:
+- 라운드별 git tag 체크포인트 (`autoceo-round-N-before`)
+- 보호 파일: api-contract.md, settings.json, .env (autoceo가 수정 불가)
+- 커밋당 최대 10 파일
+- QA 3회 실패 시 해당 워커 롤백
+- 패키지 설치/의존성 변경 금지
+
+---
+
+## 9. 실전 실행 흔적 (git log 기반)
+
+### WO-001 → WO-002 → WO-003 사이클
+
+```
+# Server (WO-001: Chat API + Memory Pipeline)
+feat: WO-001 채팅 API + 메모리 파이프라인 구현
+→ Gate 1 PASS → Gate 2 PASS → done
+
+# iOS (WO-002: 클라이언트 연동)
+feat: 채팅 화면 서버 연동 — 히스토리 로드 + API 연결
+fix: Gate 1 재작업 — categories·health 엔드포인트 + 에러 파싱
+→ 1차 FAIL → 수정 → Gate 1 PASS → Gate 2 PASS
+
+# Android (WO-003: 클라이언트 연동)
+fix: Gate 1 재작업 — 누락 엔드포인트 추가 및 에러 파싱 구현
+→ 1차 FAIL → 수정 → Gate 1 PASS → Gate 2 PASS
+```
+
+iOS와 Android 모두 1차 Gate 1에서 FAIL. 누락 패턴이 동일(categories, health 엔드포인트 + 에러 파싱). 이 경험이 ADR-003으로 박제됨: **"iOS/Android는 같은 라운드에 같은 화면을 구현해야 드리프트 방지"**
+
+### autoceo Round 1~2
+
+```
+[R1-server] chore: harness 엔지니어링 파일 추가
+[R1-server] test: ChatController 통합 테스트 + MemoryService 단위 테스트 추가
+[R1-ios] feat: 메모리 화면 카테고리 칩 필터 + selectedCategory 상태 추가
+[R1-android] feat: 메모리 탭 구현 — 카테고리 필터 + 리스트 + 스와이프 삭제
+
+[R2-server] feat: AI 타임아웃/에러 핸들링 강화, CORS 설정, 500 에러 로깅 추가
+[R2-android] feat: 설정 화면 구현 — 서버 URL 동적 변경 + 닉네임 저장 + 앱 버전 표시
+```
+
+---
+
+## 10. 일반 CI/CD와의 차이
+
+| 관점 | 일반 CI/CD | Aidy Architect-Worker |
+|------|------------|----------------------|
+| Source of Truth | 코드 | api-contract.md (문서) |
+| 검증 시점 | push 후 (remote) | push 전 (offline, 비차단) |
+| 세션 간 신뢰 | 커밋 메시지 신뢰 | diff만 검증 (메타데이터 불신) |
+| 지식 축적 | PR 아카이브 | 회고 + 솔루션 + ADR → 다음 라운드 입력 |
+| 멀티레포 동기화 | 수동 충돌 해결 | Gate 2에서 필드 동기화 강제 |
+| 워커 자율성 | 자유 설계 | 스펙 정확 구현, 변경은 Architect 결정 |
+
+---
+
+## 배운 것 / 다음 후보
+
+### 이 베이스라인에서 확인한 것
+
+1. **Spec-First가 멀티플랫폼 동기화 문제를 구조적으로 해결한다** — 3개 워커가 독립적으로 작업해도 Gate 2에서 필드 불일치를 잡는다
+2. **Gate 1 1차 FAIL은 정상이다** — iOS, Android 모두 1차에서 누락이 있었고, 이게 오히려 게이트가 작동하는 증거
+3. **ADR이 경험을 구조화한다** — iOS/Android 드리프트 문제가 ADR-003으로 박제되어 이후 라운드에서 재발 방지
+
+### 다음 에피소드 큐
+
+| # | 주제 | 핵심 질문 |
+|---|------|----------|
+| 001 | Gate 검증 실전 딥다이브 | Gate 1 FAIL 패턴 분류 + 자동화 가능성은? |
+| 002 | WO 설계 패턴 | 좋은 WO vs 나쁜 WO, 의존성 그래프 설계 |
+| 003 | Inbox 통신의 병목 | 워커 블로킹 시간 측정 + 개선 방안 |
+| 004 | autoceo 안전성 | 체크포인트/롤백 실전 사례, 보호 파일 전략 |
+| 005 | Compound Flywheel 효과 측정 | 라운드별 WO 완료 시간 추이, 지식 재사용률 |
+
+---
+
+## AI Agent Directive
+
+### Trigger
+- 멀티레포 프로젝트에서 AI 에이전트 간 동기화 문제가 발생할 때
+- 새 멀티플랫폼 프로젝트의 AI 운영 환경을 설계할 때
+- 기존 단일 레포 Harness Journal 패턴을 멀티레포로 확장할 때
+
+### Prerequisites
+- [Harness Journal 000](/wiki/harness-engineering/harness-journal-000-baseline) — 단일 프로젝트 베이스라인 패턴
+- [Compound Engineering Philosophy](/wiki/harness-engineering/compound-engineering-philosophy) — 왜 지식이 순환해야 하는가
+
+### Actionable Steps
+1. **api-contract.md 작성**: 모든 엔드포인트, 필드, 에러코드를 한 문서에 명시. 이 문서가 source of truth
+2. **conventions.md 작성**: URL(kebab), JSON(camelCase), Error(UPPER_SNAKE) 등 플랫폼 공통 규약
+3. **Work Order 템플릿 생성**: backlog/in-progress/done 디렉토리 + WO 파일 포맷
+4. **Gate 체크리스트 정의**: 플랫폼별 검증 항목 (엔드포인트, 필드, 에러코드, 보안)
+5. **Inbox 통신 규약 설정**: request/response 파일 포맷 + 유효한 요청 유형 정의
+6. **Compound 산출물 규약**: 회고/솔루션/ADR 템플릿 + "For AI Agents" 섹션 필수
+
+### Anti-patterns
+- **코드를 source of truth로 두기** — 3개 플랫폼이 각자 "자기 코드가 맞다"고 주장하면 통합 불가
+- **커밋 메시지만으로 검증** — 다른 세션의 AI가 정직해도 누락은 발생. diff 기반 검증 필수
+- **iOS/Android를 다른 라운드에서 다른 화면 구현** — 드리프트 발생, ADR-003의 교훈
+- **회고 생략** — Compound Flywheel이 끊기면 다음 라운드 품질이 올라가지 않음
+
+---
+
+## 출처 / 검증 메모
+
+- 모든 구조와 실행 흔적은 `aidy-architect`, `aidy-server`, `aidy-ios`, `aidy-android` 4개 레포의 실제 파일과 git log에서 추출
+- Gate 리뷰 문서: `aidy-architect/gates/reviews/` 디렉토리
+- ADR: `aidy-architect/specs/decisions/` 디렉토리
+- WO 실행 이력: git commit 메시지의 `[WO-{num}]`, `[R{round}-{worker}]` 태그 기반

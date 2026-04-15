@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Vibe Coding",
-  description: "AI가 자유롭게 달릴 수 있는 환경을 만든다. 코드가 아니라 코드를 만드는 시스템 — Compound / Context / Harness Engineering으로 운영한 세 프로젝트.",
+  description: "AI가 자유롭게 달릴 수 있는 환경을 만든다. 코드가 아니라 코드를 만드는 시스템 — Compound / Context / Harness Engineering으로 운영한 네 프로젝트.",
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -309,6 +309,68 @@ const PROJECTS = [
     ],
     retrospective:
       "이 프로젝트는 세 번 탈바꿈했다.\n\n처음엔 'AI 과외 선생님'이었다. Gemini가 매일 학습 콘텐츠를 만들어주고 내가 읽고 수정하는 학습 위키. 그런데 MoneyFlow와 TaroSaju를 만들면서 '학습 기록'보다 '실전 패턴 기록'이 더 가치 있다는 걸 깨달았다.\n\n두 번째는 '허브-워커 관제 모델'이다. 두 실무 프로젝트를 관찰하고, 거기서 발견한 패턴을 기록하고, 기록된 패턴이 다시 워커로 전이되는 구조. 놀라운 건 내가 직접 이식하지 않아도 다른 세션이 허브의 문서를 읽고 알아서 적용한다는 것이었다. 문서가 곧 전파 채널.\n\n세 번째(현재)는 'LLM-First Wiki + 품질 관제 센터'다. 패턴을 기록만 하는 게 아니라 직접 워커 코드를 개선하고(Runtime Validation 시리즈), AI 출력 품질을 자동 평가하고(LLM-as-a-Judge), 토큰 비용을 실측한다(Tokenomics). 기록 → 관찰 → 평가 → 최적화의 전체 루프가 한 프로젝트 안에서 돈다.\n\n18개 Journal이 기록한 건 '코드를 어떻게 짰나'가 아니라 '환경을 어떻게 조정했나'다. 이게 Harness Engineering의 실체 — AI가 안전하게 달릴 환경을 만드는 일의 기록.",
+  },
+  {
+    name: "Aidy",
+    category: "aidy" as const,
+    url: "",
+    color: "#34d399",
+    period: "2026.04 ~",
+    version: "WO-003 완료 · R2 진행",
+    tagline: "Spec-Driven Multi-Agent Orchestration — 1명이 4개 AI 에이전트(Architect/Server/iOS/Android)를 동시 관제하는 Agentic Coding. api-contract.md가 Agent Fleet을 움직이고, Gate 검증이 3 플랫폼 동기화를 보장한다.",
+    stack: ["Spring Boot 3.5", "Kotlin", "Tuist + TCA", "Jetpack Compose", "PostgreSQL", "Claude Code"],
+    metrics: {
+      repos: 4,
+      workOrders: 3,
+      gates: "Gate 1+2",
+      adrs: 3,
+    },
+    environment: [
+      {
+        title: "Spec-First Architecture — api-contract.md가 계약",
+        detail: "일반 프로젝트에서는 코드가 source of truth이고 문서가 뒤따라가지만, Aidy에서는 api-contract.md가 계약이다. 7개 엔드포인트, Request/Response 스키마, Error Codes 테이블이 명시되고, 3개 워커(server/ios/android)는 이를 정확히 구현해야 한다. 계약 변경은 Architect만 할 수 있다.",
+      },
+      {
+        title: "Gate 1 + Gate 2 — 2단 검증 프로토콜",
+        detail: "Gate 1은 스펙 준수 — 엔드포인트 URL, HTTP 메서드, 필드명/타입, 에러코드를 api-contract.md와 라인별 대조. Gate 2는 통합 검증 — 각 플랫폼 빌드+테스트 통과, server DTO vs iOS Model vs Android data class 필드명 교차 비교. WO-002, WO-003 모두 1차 Gate 1에서 FAIL → 재작업 → PASS.",
+      },
+      {
+        title: "Cross-Session Review — 메타데이터 불신 원칙",
+        detail: "다른 Claude 세션이 작성한 커밋 메시지, PR 설명, 코드 주석을 신뢰하지 않는다. git diff만 추출하여 4 Trap(스펙 외 엔드포인트, 데드코드, 계약 외 에러코드, 하드코딩 시크릿)을 독립 검증. honest하지만 possibly buggy한 AI 출력의 현실을 구조로 대응.",
+      },
+      {
+        title: "Work Order 시스템 — 작업의 생명주기 관리",
+        detail: "backlog → in-progress → done 디렉토리 이동으로 상태 관리. WO 파일에 목표, 스펙 참조, 구현 요구사항, 테스트 요구사항, 검증 기준, 워커 세션 시작 명령까지 명시. 워커는 WO를 읽고 구현만 하면 된다.",
+      },
+      {
+        title: "Inbox 비동기 통신 — 워커가 막히면",
+        detail: "워커가 블로커를 만나면 aidy-architect/inbox/{platform}-request.md에 요청 작성 후 작업 중단. Architect가 response.md로 응답하면 재개. 동기 통신의 블로킹 없이, 비동기로 의사결정 병목을 해소.",
+      },
+      {
+        title: "Compound Flywheel — 지식 순환 구조",
+        detail: "WO 완료 + Gate 2 PASS 후 /compound → 회고(retro) + 솔루션(solution) + ADR 생성. 다음 라운드의 /autoceo Research 단계가 이 문서들을 입력으로 읽어 더 구체적인 Plan을 생성. 라운드마다 품질이 올라가는 복리 구조.",
+      },
+    ],
+    cycles: [
+      {
+        title: "WO-001: Server Chat API + Memory Pipeline",
+        detail: "Spring Boot 백엔드에 6개 엔드포인트 구현. POST /api/chat, GET /api/chat/history, GET/DELETE /api/memories, GET /api/memories/categories, GET /api/health. Gate 1 + Gate 2 모두 1차 통과. 첫 WO로 계약 기반 개발 프로세스 검증.",
+      },
+      {
+        title: "WO-002 + WO-003: iOS/Android 클라이언트 연동",
+        detail: "iOS(TCA + SwiftUI)와 Android(Jetpack Compose + MVVM)에서 서버 API 연동. 둘 다 1차 Gate 1 FAIL — categories, health 엔드포인트 + 에러 파싱 누락. 재작업 후 통과. 이 경험이 ADR-003(iOS/Android 동일 라운드에 동일 화면 구현) 탄생의 계기.",
+      },
+      {
+        title: "autoceo R1: Harness + Memory 화면 완성",
+        detail: "Server에 테스트 인프라(ChatController 통합 + MemoryService 단위), iOS에 메모리 카테고리 칩 필터, Android에 메모리 탭(카테고리 필터 + 리스트 + 스와이프 삭제). 3개 워커 동시 디스패치 → QA → Compound.",
+      },
+      {
+        title: "autoceo R2: 안정성 강화 + 설정 화면",
+        detail: "Server에 AI 타임아웃/에러 핸들링 강화 + CORS + 500 에러 로깅. Android에 설정 화면(서버 URL 동적 변경 + 닉네임 저장 + 앱 버전). 안전성 레이어가 두꺼워지는 단계.",
+      },
+    ],
+    retrospective:
+      "이 프로젝트의 핵심은 *코드*가 아니라 *프로토콜*이다.\n\n4개 독립 Claude 세션이 동시에 코드를 작성하는 상황에서, 동기화 문제를 해결하는 방법은 두 가지다. 하나는 CI/CD 파이프라인에 모든 걸 맡기는 것. 다른 하나는 *코드를 작성하기 전에 계약을 먼저 정의하고, 계약 준수를 코드 레벨에서 검증하는 것*. Aidy는 후자를 택했고, 그 결과가 api-contract.md 중심의 Spec-First Architecture다.\n\nGate 1이 처음부터 통과하는 경우는 드물다. WO-002(iOS)와 WO-003(Android) 모두 1차에서 FAIL했고, 누락 패턴도 동일했다(categories, health 미구현 + 에러 파싱 부재). 이건 실패가 아니라 *게이트가 작동하는 증거*다. 게이트 없이 넘어갔으면 통합 시점에서 3배 더 비싼 디버깅이 필요했을 것.\n\n가장 가치 있는 산출물은 ADR-003이다. 'iOS/Android는 같은 라운드에 같은 화면을 구현해야 한다.' 단순한 규칙이지만, R2에서 각자 다른 화면을 만들었다가 드리프트가 발생한 실전 경험에서 나온 것이다. 이런 경험적 규칙을 ADR로 박제해두면, 다음 프로젝트의 Architect가 같은 실수를 반복하지 않는다.\n\nHarness Journal이 '단일 프로젝트에서 AI가 안전하게 달릴 환경'을 만들었다면, Aidy Journal은 '여러 AI 세션이 협업하는 환경'을 만드는 기록이다. 다음 단계는 이 프로토콜 자체를 다른 멀티레포 프로젝트에 이식할 수 있는지 검증하는 것.",
   },
 ];
 

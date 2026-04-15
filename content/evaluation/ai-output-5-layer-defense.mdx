@@ -1,0 +1,220 @@
+---
+title: "AI Output 5-Layer Defense — LLM 출력 검증 아키텍처"
+category: evaluation
+date: "2026-04-16"
+tags: [ai-output, validation, zod, llm-as-judge, quality-gate, tarosaju]
+confidence: 4
+connections:
+  - harness-engineering/harness-engineering-overview
+  - evaluation/llm-as-judge-overview
+status: complete
+description: "Text Guard → Zod Type → Range Constraint → Cross-field → LLM-as-Judge 5단계로 AI 출력을 검증하는 방어적 아키텍처. tarosaju 실전 기반."
+type: entry
+quiz:
+  - question: "5-Layer 중 Layer 1~4(동기)와 Layer 5(비동기)를 분리하는 이유는?"
+    choices:
+      - "Layer 5가 가장 비싸서 비용 절감"
+      - "Layer 1~4는 응답 전 차단(사용자에게 잘못된 결과 노출 방지), Layer 5는 응답 후 품질 측정(프롬프트 개선 데이터 수집). 목적이 다르므로 실행 시점도 달라야 함"
+      - "Layer 5는 테스트가 어려워서 분리"
+      - "동기/비동기 혼합 시 JavaScript 런타임 이슈"
+    answer: 1
+    explanation: "Layer 1~4는 '이 응답을 사용자에게 보여줘도 되는가?'를 판단하는 게이트(차단). Layer 5는 '보여준 응답의 품질이 어떤가?'를 측정하는 센서(관측). 게이트는 동기, 센서는 비동기(fire-and-forget)가 자연스럽다."
+  - question: "Layer 4(Cross-field Validation)가 잡는 문제의 예시는?"
+    choices:
+      - "JSON 파싱 실패"
+      - "overall_score가 개별 점수 최대값보다 높거나, 긍정적 운세인데 경고 메시지가 포함되는 등 필드 간 논리적 모순"
+      - "응답 길이 초과"
+      - "금칙어 포함"
+    answer: 1
+    explanation: "Layer 2(타입)와 Layer 3(범위)를 통과해도 필드 간 의미적 일관성은 깨질 수 있다. 예: 종합 점수 9/10인데 개별 항목이 모두 3/10이면 모순. Layer 4가 이런 cross-field 논리를 잡는다."
+  - question: "parseAIResponse()의 3-stage JSON 추출이 필요한 이유는?"
+    choices:
+      - "JSON 스키마가 3가지여서"
+      - "LLM이 항상 깨끗한 JSON만 반환하지 않기 때문. 직접 파싱 → 코드 블록 추출 → 중괄호 매칭 순서로 시도하여 다양한 응답 포맷에 대응"
+      - "3개 프로바이더의 응답 포맷이 다르기 때문"
+      - "보안을 위해 3중으로 검증"
+    answer: 1
+    explanation: "Claude가 때로는 순수 JSON을, 때로는 ```json 블록 안에, 때로는 텍스트 + JSON 혼합으로 반환한다. 3-stage 추출은 이 변동성을 흡수하여 어떤 형태로 오든 JSON을 안전하게 꺼내는 defensive 패턴."
+---
+
+## 갭 / 맥락
+
+LLM 출력을 검증 없이 사용자에게 노출하면 두 가지 리스크가 있다:
+
+1. **구조적 오류** — JSON 깨짐, 필드 누락, 타입 불일치 → 프론트 크래시
+2. **의미적 오류** — 점수 모순, 안전하지 않은 조언, 도메인 정확도 저하 → 사용자 불신
+
+tarosaju에서는 타로/사주/운세 AI 응답이 직접 사용자에게 노출되므로, 의료/위기 관련 언어 차단 + 도메인 정확도 보장이 필수.
+
+---
+
+## 핵심 패턴 — 5 Layer Architecture
+
+```
+LLM 응답
+  │
+  ▼ Layer 1: Text Guards (동기, 차단)
+  │ 길이 검증 + 금칙어(의료/위기 언어) + wellness safety
+  │
+  ▼ Layer 2: Zod Type Validation (동기, 차단)
+  │ safeParse()로 구조적 타입 검증
+  │
+  ▼ Layer 3: Range Constraints (동기, 차단)
+  │ 비즈니스 로직 경계 (점수 1-10, 텍스트 50-800자)
+  │
+  ▼ Layer 4: Cross-field Validation (동기, 차단)
+  │ 필드 간 논리적 일관성 + AI 자기참조 탐지
+  │
+  ▼ 사용자에게 응답 반환
+  │
+  ▼ Layer 5: LLM-as-Judge (비동기, 관측)
+    4차원 채점 (domain_accuracy, empathy, specificity, safety)
+    fire-and-forget → DB 저장
+```
+
+### Layer 1: Text Guards
+
+```typescript
+// 응답이 너무 짧거나 길면 차단
+if (text.length < 50 || text.length > 10000) {
+  return { ok: false, error: "LENGTH_OUT_OF_RANGE" };
+}
+
+// 금칙어 차단 (의료/위기 관련)
+const FORBIDDEN_TERMS = [
+  /자살|자해|약물\s*복용/,
+  /진단|처방|치료\s*방법/,
+  // ...
+];
+```
+
+### Layer 2: Zod Type Validation
+
+```typescript
+const FortuneResponseSchema = z.object({
+  overall_score: z.number(),
+  sections: z.array(z.object({
+    title: z.string(),
+    content: z.string(),
+    score: z.number(),
+  })),
+  lucky_items: z.object({
+    color: z.string(),
+    number: z.number(),
+    direction: z.string(),
+  }),
+});
+
+const result = FortuneResponseSchema.safeParse(parsed);
+if (!result.success) {
+  return { ok: false, error: result.error };
+}
+```
+
+### Layer 3: Range Constraints
+
+```typescript
+// 비즈니스 로직 경계
+if (data.overall_score < 1 || data.overall_score > 10) {
+  return { ok: false, error: "SCORE_OUT_OF_RANGE" };
+}
+for (const section of data.sections) {
+  if (section.content.length < 50 || section.content.length > 800) {
+    return { ok: false, error: "CONTENT_LENGTH_VIOLATION" };
+  }
+}
+```
+
+### Layer 4: Cross-field Validation
+
+```typescript
+// 종합 점수 ≤ 개별 점수 최대값 (모순 탐지)
+const maxSectionScore = Math.max(...data.sections.map(s => s.score));
+if (data.overall_score > maxSectionScore + 2) {
+  return { ok: false, error: "SCORE_INCONSISTENCY" };
+}
+
+// AI 자기참조 탐지 ("AI로서", "언어모델로서" 등)
+const AI_SELF_REFERENCES = /AI로서|언어\s*모델|저는\s*AI/;
+if (AI_SELF_REFERENCES.test(JSON.stringify(data))) {
+  return { ok: false, error: "AI_SELF_REFERENCE_DETECTED" };
+}
+```
+
+### Layer 5: LLM-as-Judge (비동기)
+
+```typescript
+// 응답 반환 후 fire-and-forget으로 품질 채점
+void judgeQuality(response, {
+  dimensions: ["domain_accuracy", "empathy", "specificity", "safety"],
+  model: "claude-haiku",  // 저비용 모델로 채점
+}).then(score => {
+  logApiCall({ route, qualityScore: score });
+});
+```
+
+### parseAIResponse — 3-Stage JSON 추출
+
+LLM이 반환하는 다양한 포맷에 대응:
+
+```typescript
+function parseAIResponse(text: string): unknown {
+  // Stage 1: 직접 JSON.parse
+  try { return JSON.parse(text); } catch {}
+
+  // Stage 2: ```json 코드 블록 추출
+  const codeBlockMatch = text.match(/```json\s*([\s\S]*?)\s*```/);
+  if (codeBlockMatch) {
+    try { return JSON.parse(codeBlockMatch[1]); } catch {}
+  }
+
+  // Stage 3: 첫 { ~ 마지막 } 중괄호 매칭
+  const first = text.indexOf("{");
+  const last = text.lastIndexOf("}");
+  if (first !== -1 && last > first) {
+    try { return JSON.parse(text.slice(first, last + 1)); } catch {}
+  }
+
+  throw new Error("JSON_EXTRACTION_FAILED");
+}
+```
+
+---
+
+## 운영 데이터
+
+- **Layer 1~4 차단율**: 전체 AI 호출의 ~3-5%가 최소 1개 Layer에서 차단 (재시도로 복구)
+- **Layer 5 품질 점수**: 평균 domain_accuracy 8.2/10, safety 9.5/10
+- **비용**: Layer 1~4는 0원 (로컬 검증), Layer 5는 Haiku로 fire-and-forget (~$0.001/회)
+
+---
+
+## AI Agent Directive
+
+### Trigger
+- AI 응답을 사용자에게 직접 노출하는 프로덕트에서 품질/안전 보장이 필요할 때
+- "AI가 자신감 있게 틀리는" 상황을 구조적으로 방어하고 싶을 때
+
+### Prerequisites
+- [Harness Engineering Overview](/wiki/harness-engineering/harness-engineering-overview)
+
+### Actionable Steps
+1. **Layer 1 (Text Guards)**: 길이 범위 + 금칙어 리스트 정의 — 도메인별로 커스텀
+2. **Layer 2 (Zod Type)**: 응답 스키마를 Zod로 정의 + `safeParse()`
+3. **Layer 3 (Range)**: 비즈니스 규칙 경계값 코드로 명시
+4. **Layer 4 (Cross-field)**: 필드 간 논리 규칙 + AI 자기참조 탐지
+5. **Layer 5 (Judge)**: 비동기 fire-and-forget으로 품질 채점 → DB 저장
+6. **parseAIResponse()**: 3-stage JSON 추출을 모든 AI 호출에 공통 적용
+
+### Anti-patterns
+- **Layer 2만 적용** — 타입은 맞지만 의미적으로 틀린 응답을 놓침
+- **Layer 5를 동기로 실행** — 응답 지연 증가. 관측은 비동기가 원칙
+- **Layer 1~4 실패 시 에러만 throw** — 재시도 + instruction augmentation(구체적 오류를 프롬프트에 추가)으로 LLM 자기 교정 유도
+
+---
+
+## 출처 / 검증 메모
+
+- 구현 파일: `mino-tarosaju/src/lib/ai-output-schema.ts`, `ai-output-guards.ts`, `quality-judge.ts`
+- 솔루션 문서: `mino-tarosaju/docs/solutions/ai-pipeline/2026-04-14-zod-5-layer-ai-output-validation.md`
+- parseAIResponse: `mino-tarosaju/src/lib/ai-output-schema.ts` 내 유틸리티

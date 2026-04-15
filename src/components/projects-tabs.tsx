@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-export type ProjectCategory = "moneyflow" | "tarosaju" | "ai-study-wiki";
+export type ProjectCategory = "moneyflow" | "tarosaju" | "ai-study-wiki" | "aidy";
 
 interface ProjectTabsProps {
   categories: ProjectCategory[];
@@ -19,6 +19,7 @@ export function ProjectTabs({
     moneyflow: "MoneyFlow",
     tarosaju: "TaroSaju",
     "ai-study-wiki": "AI Study",
+    aidy: "Aidy",
   };
 
   return (

@@ -1,0 +1,184 @@
+---
+title: "Content Pipeline DAG — 멀티플랫폼 퍼블리싱 의존성 해소"
+category: infrastructure
+date: "2026-04-16"
+tags: [dag, content-pipeline, dependency-resolution, multi-platform, moneyflow]
+confidence: 3
+connections:
+  - infrastructure/ci-cd-patterns
+  - harness-engineering/harness-engineering-overview
+status: complete
+description: "블로그 → 유튜브 → 인스타그램 → 뉴스레터 멀티플랫폼 콘텐츠 발행을 DAG(Directed Acyclic Graph)로 의존성 해소하는 패턴. moneyflow Content Pipeline v2 기반."
+type: entry
+quiz:
+  - question: "콘텐츠 파이프라인에 DAG가 필요한 이유는?"
+    choices:
+      - "콘텐츠를 동시에 발행하기 위해"
+      - "플랫폼 간 의존성이 있기 때문. 인스타 릴스는 유튜브 쇼츠가 먼저 있어야 하고, 유튜브 쇼츠는 블로그 원문이 필요. 이 순서를 자동으로 해소하지 않으면 수동 관리 필수"
+      - "DAG가 더 빨라서"
+      - "순환 참조를 만들기 위해"
+    answer: 1
+    explanation: "인스타 릴스를 요청하면 유튜브 쇼츠가 선행 조건이고, 유튜브 쇼츠는 유튜브 스크립트가 선행, 스크립트는 블로그 원문이 선행. getExecutionOrder()가 이 전이적 의존성을 자동으로 풀어준다."
+  - question: "순환 의존성 감지가 빌드 타임에 필요한 이유는?"
+    choices:
+      - "런타임 성능을 위해"
+      - "순환 의존성이 있으면 무한 루프가 발생하여 파이프라인이 영원히 종료되지 않기 때문. 빌드 타임에 감지해야 프로덕션 사고를 예방"
+      - "테스트 작성이 편해서"
+      - "코드가 깔끔해져서"
+    answer: 1
+    explanation: "A→B→C→A 순환이 있으면 A를 만들려면 C가 필요하고, C를 만들려면 B, B를 만들려면 A... 무한 루프. 13개 테스트 중 순환 감지 케이스가 포함된 이유."
+---
+
+## 갭 / 맥락
+
+moneyflow는 투자 분석 콘텐츠를 블로그 → 유튜브 쇼츠 → 인스타그램 릴스 → 뉴스레터로 멀티플랫폼 발행한다. 문제는 플랫폼 간 **의존성**:
+
+- 인스타 릴스는 유튜브 쇼츠를 기반으로 만듦
+- 유튜브 쇼츠는 유튜브 스크립트가 필요
+- 유튜브 스크립트는 블로그 원문에서 파생
+- 뉴스레터는 블로그 요약
+
+수동으로 순서를 관리하면 실수가 발생한다. DAG로 의존성을 선언하고 실행 순서를 자동 계산하면 해결.
+
+---
+
+## 핵심 패턴
+
+### 의존성 그래프 선언
+
+```typescript
+// 8가지 콘텐츠 타입의 의존성
+const DEPENDENCIES: Record<ContentType, ContentType[]> = {
+  blog:            [],                    // 원본 — 의존성 없음
+  youtube_script:  ["blog"],              // 블로그에서 파생
+  youtube_shorts:  ["youtube_script"],    // 스크립트에서 파생
+  ig_reel:         ["youtube_shorts"],    // 쇼츠를 릴스로 변환
+  ig_carousel:     ["blog"],             // 블로그 → 카드 슬라이드
+  newsletter:      ["blog"],             // 블로그 요약
+  thread:          ["blog"],             // X/Twitter 스레드
+  podcast_script:  ["blog"],             // 블로그 → 팟캐스트 대본
+};
+```
+
+### 실행 순서 자동 계산
+
+```typescript
+function getExecutionOrder(requested: ContentType[]): ContentType[] {
+  const result: ContentType[] = [];
+  const visited = new Set<ContentType>();
+
+  function resolve(type: ContentType) {
+    if (visited.has(type)) return;
+    visited.add(type);
+
+    // 전이적 의존성을 먼저 해소
+    for (const dep of DEPENDENCIES[type]) {
+      resolve(dep);
+    }
+    result.push(type);
+  }
+
+  for (const type of requested) {
+    resolve(type);
+  }
+
+  return result; // 중복 제거된 실행 순서
+}
+
+// 예: getExecutionOrder(["ig_reel"])
+// → ["blog", "youtube_script", "youtube_shorts", "ig_reel"]
+//   (4개가 자동으로 추가됨!)
+```
+
+### 발행 스케줄 계산
+
+플랫폼별 최적 발행 시점을 시차:
+
+```typescript
+function calculatePublishSchedule(
+  order: ContentType[],
+  baseTime: Date
+): Map<ContentType, Date> {
+  const DELAYS: Record<ContentType, number> = {
+    blog:            0,      // 즉시
+    youtube_script:  0,      // 블로그와 동시 (내부용)
+    youtube_shorts:  60,     // 1시간 후
+    ig_reel:         180,    // 3시간 후
+    ig_carousel:     360,    // 6시간 후
+    newsletter:      1440,   // 24시간 후
+    thread:          30,     // 30분 후
+    podcast_script:  0,      // 즉시 (내부용)
+  };
+  // ...
+}
+```
+
+### 순환 의존성 감지
+
+```typescript
+function detectCircular(deps: Record<string, string[]>): string[] | null {
+  const visiting = new Set<string>();
+  const visited = new Set<string>();
+
+  function dfs(node: string, path: string[]): string[] | null {
+    if (visiting.has(node)) return [...path, node]; // 순환 발견!
+    if (visited.has(node)) return null;
+
+    visiting.add(node);
+    for (const dep of deps[node] ?? []) {
+      const cycle = dfs(dep, [...path, node]);
+      if (cycle) return cycle;
+    }
+    visiting.delete(node);
+    visited.add(node);
+    return null;
+  }
+
+  for (const node of Object.keys(deps)) {
+    const cycle = dfs(node, []);
+    if (cycle) return cycle;
+  }
+  return null;
+}
+```
+
+---
+
+## 테스트
+
+13개 테스트 케이스:
+
+| 케이스 | 검증 내용 |
+|--------|----------|
+| 단일 타입 요청 | blog만 요청 → [blog] 반환 |
+| 전이적 의존성 | ig_reel 요청 → blog, script, shorts, reel 순서 |
+| 중복 제거 | blog + ig_reel → blog이 한 번만 |
+| 전체 타입 | 8개 모두 → 올바른 순서 |
+| 순환 감지 | A→B→C→A → 에러 |
+| 스케줄 계산 | 시차가 올바르게 적용 |
+| 빈 요청 | [] → [] |
+
+---
+
+## AI Agent Directive
+
+### Trigger
+- 멀티플랫폼 콘텐츠 발행 파이프라인을 설계할 때
+- 작업 간 의존성이 있는 자동화 워크플로를 구축할 때
+
+### Actionable Steps
+1. **의존성 맵 선언** — 각 작업 타입의 선행 조건을 명시적으로 정의
+2. **getExecutionOrder()** — 전이적 의존성을 재귀적으로 해소 + 중복 제거
+3. **순환 감지** — DFS 기반 cycle detection을 빌드/테스트 타임에 실행
+4. **스케줄 계산** — 플랫폼별 발행 시차를 분 단위로 관리
+
+### Anti-patterns
+- **의존성을 암묵적으로 관리** — "블로그 먼저 올려야 해"를 코드가 아니라 사람 기억에 의존
+- **순환 감지 생략** — 프로덕션에서 무한 루프 발생 시 비용 폭주
+
+---
+
+## 출처 / 검증 메모
+
+- 구현: `mino-moneyflow/src/lib/content/pipeline.ts` (lines 26-35)
+- 테스트: `mino-moneyflow/src/__tests__/content-pipeline.test.ts` (13 cases)

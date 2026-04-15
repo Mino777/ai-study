@@ -12,6 +12,8 @@ export const CATEGORIES = [
   "infrastructure",
   "ios-ai",
   "frontend-ai",
+  "android-ai",
+  "backend-ai",
 ] as const;
 
 export type Category = (typeof CATEGORIES)[number];
@@ -28,6 +30,8 @@ export const CATEGORY_LABELS: Record<string, string> = {
   infrastructure: "Infrastructure",
   "ios-ai": "iOS + AI",
   "frontend-ai": "Frontend + AI",
+  "android-ai": "Android + AI",
+  "backend-ai": "Backend + AI",
 };
 
 // 시리즈(frontmatter `series` 필드) 라벨/아이콘. 사이드바 sub-group 헤더에 사용.
@@ -35,6 +39,7 @@ export const CATEGORY_LABELS: Record<string, string> = {
 export const SERIES_LABELS: Record<string, { label: string; icon: string }> = {
   "harness-journal": { label: "Harness Journal", icon: "📓" },
   "ios-ai-journal": { label: "iOS Journal", icon: "📱" },
+  "aidy-journal": { label: "Multi-Agent Orchestration Journal", icon: "🤖" },
 };
 
 export const CATEGORY_COLORS: Record<string, string> = {
@@ -49,6 +54,8 @@ export const CATEGORY_COLORS: Record<string, string> = {
   infrastructure: "#f97316",
   "ios-ai": "#3b82f6",
   "frontend-ai": "#a855f7",
+  "android-ai": "#34d399",
+  "backend-ai": "#f472b6",
 };
 
 // 사이드바용 카테고리 그룹. 엔트리 수가 늘어나면서 10 카테고리가 한꺼번에 펼쳐지면
@@ -76,7 +83,7 @@ export const CATEGORY_GROUPS: Array<{
   {
     key: "applications",
     label: "응용",
-    categories: ["ios-ai", "frontend-ai"],
+    categories: ["ios-ai", "frontend-ai", "android-ai", "backend-ai"],
   },
 ];
 

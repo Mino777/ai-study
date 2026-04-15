@@ -972,3 +972,61 @@ gh pr list --search "tips:" -R Mino777/ai-study      # tips 최근
 4. 작업 완료 → `/compound`
 
 ---
+
+### 2026-04-16 — 카테고리 신설 + Aidy Journal 시리즈 + 엔트리 6건 + 바이브코딩 Aidy 추가
+
+**작업 트리거**: 사용자 *"aidy 프로젝트들 쭉보고 저널이랑 엔트리 만들거 있는지 써치해보자"*
+
+**신규 카테고리 2개**:
+- `android-ai` (Android + AI, #34d399)
+- `backend-ai` (Backend + AI, #f472b6)
+- 응용 그룹에 추가, content 디렉토리 생성, CLAUDE.md/SPEC.md 업데이트
+- 총 카테고리: 11 → **13**
+
+**Aidy Journal 시리즈 신설**:
+- `SERIES_LABELS`에 `aidy-journal` (🤖 Aidy Journal) 등록
+- Harness Journal과 별도 시리즈 — 멀티레포 오케스트레이션 패턴 전문
+- `aidy-journal-000-architect-worker-baseline.mdx` 작성 (카테고리: harness-engineering)
+  - 4레포 구조, Spec-First Architecture, Gate 1+2, WO 시스템
+  - Cross-Session Review, Inbox 통신, Compound Flywheel, autoceo
+  - 실전 git log 흔적 (WO-001~003, R1~R2)
+  - AI Agent Directive + Quiz 3문항
+
+**신규 엔트리 6건** (moneyflow/tarosaju 패턴 박제):
+
+| 엔트리 | 카테고리 | 소스 |
+|--------|---------|------|
+| Multi-Provider Circuit Breaker | agents | moneyflow |
+| AI Output 5-Layer Defense | evaluation | tarosaju |
+| Prompt Caching 90% 비용 절감 | tokenomics | tarosaju/moneyflow |
+| 9-Phase Trading Agent Pipeline | agents | moneyflow |
+| Content Pipeline DAG | infrastructure | moneyflow |
+| React Compiler + startTransition | frontend-ai | tarosaju |
+
+**바이브코딩에 Aidy 추가**:
+- `ProjectCategory` 타입에 `"aidy"` 추가
+- projects-tabs.tsx에 라벨 추가
+- PROJECTS 배열에 Aidy 프로젝트 추가 (environment 6항목, cycles 4항목, retrospective)
+- 키워드: AI Orchestration, 1:N Agent Control, Spec-Driven AI Fleet
+
+**Dangling connections 4건** (추후 작성 후보):
+- `evaluation/llm-as-judge-overview`
+- `frontend-ai/nextjs-app-router-patterns`
+- `infrastructure/ci-cd-patterns`
+- `tokenomics/tokenomics-catalog`
+
+### 📸 현재 스냅샷
+
+- **위키 엔트리**: **90** (13 카테고리)
+- **Harness Journal**: 000~023 (24편)
+- **Aidy Journal**: 000 (1편, 신규 시리즈)
+- **iOS Journal**: 000~008 (9편)
+- **신규 카테고리**: android-ai, backend-ai (엔트리 대기)
+
+### 🔴 다음 큐
+
+1. **android-ai / backend-ai 첫 엔트리** — aidy-server(Spring Boot+Kotlin)와 aidy-android(Jetpack Compose) 실전 패턴
+2. **Aidy Journal 001~005** — Gate 딥다이브 / WO 설계 / Inbox 병목 / autoceo 안전성 / Compound 효과 측정
+3. **기존 큐 유지**: Vercel Deploy Hook, tarosaju quality_scores migration, npm audit 이식
+
+---

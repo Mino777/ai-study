@@ -1,0 +1,179 @@
+---
+title: "Multi-Provider Circuit Breaker — AI 멀티프로바이더 장애 대응 패턴"
+category: agents
+date: "2026-04-16"
+tags: [circuit-breaker, multi-provider, resilience, fallback, moneyflow]
+confidence: 4
+connections:
+  - harness-engineering/harness-engineering-overview
+  - agents/multi-agent-pipeline
+status: complete
+description: "Gemini/Claude/OpenAI 3사 프로바이더에 독립 Circuit Breaker를 적용하여 장애 전파 차단 + 자동 복구하는 패턴. moneyflow 실전 운영 기반."
+type: entry
+quiz:
+  - question: "Circuit Breaker의 half-open 상태는 왜 필요한가?"
+    choices:
+      - "프로바이더가 완전히 복구됐는지 사람이 수동 확인하기 위해"
+      - "쿨다운 후 1회 재시도로 프로바이더 복구 여부를 자동 감지하고, 성공 시 closed로 복귀하기 위해"
+      - "비용 절감을 위해 트래픽을 절반만 보내기 위해"
+      - "로깅을 위해 실패 패턴을 기록하는 중간 단계"
+    answer: 1
+    explanation: "open 상태에서 바로 closed로 돌아가면 아직 복구 안 된 프로바이더에 트래픽이 몰린다. half-open은 쿨다운(2분) 후 1회만 시도해서 성공/실패로 자동 판단하는 안전한 복구 경로."
+  - question: "프로바이더별 독립 Circuit Breaker가 공유 상태보다 나은 이유는?"
+    choices:
+      - "코드가 더 간단해서"
+      - "Claude 429 에러가 Gemini까지 차단하는 장애 전파를 방지. 각 프로바이더의 장애 패턴이 독립적이므로 상태도 독립 관리해야 함"
+      - "프로바이더 수가 적어서 메모리 부담이 없으므로"
+      - "테스트 작성이 쉬워서"
+    answer: 1
+    explanation: "Claude가 피크 시간에 429를 반환해도 Gemini는 정상일 수 있다. 공유 상태로 관리하면 한 프로바이더의 장애가 전체 시스템을 멈추게 된다. 독립 상태 관리가 장애 격리의 핵심."
+  - question: "Circuit Breaker와 단순 retry의 가장 큰 차이는?"
+    choices:
+      - "retry는 같은 프로바이더에 즉시 재시도, Circuit Breaker는 일정 시간 동안 해당 프로바이더 호출 자체를 차단하여 cascade failure를 방지"
+      - "retry는 비동기, Circuit Breaker는 동기"
+      - "retry는 무료, Circuit Breaker는 비용이 듦"
+      - "retry는 서버 사이드, Circuit Breaker는 클라이언트 사이드"
+    answer: 0
+    explanation: "단순 retry는 이미 과부하인 프로바이더에 추가 요청을 보내 상황을 악화시킨다. Circuit Breaker는 threshold(3회 연속 실패) 도달 시 해당 프로바이더 호출을 쿨다운 기간 동안 완전 차단하여, 프로바이더 복구 시간을 확보하고 다른 프로바이더로 트래픽을 유도한다."
+---
+
+## 갭 / 맥락
+
+AI 프로덕트가 단일 프로바이더(예: Claude만)에 의존하면 그 프로바이더의 장애가 곧 서비스 장애다. moneyflow는 13개 에이전트가 Gemini/Claude/OpenAI 3사를 역할별로 사용하는데, 피크 시간대에 Claude 429(Rate Limit)가 10분에 3회 발생하는 상황을 겪었다.
+
+**해결하지 않으면**: 사용자가 분석 요청 → Claude 429 → 전체 파이프라인 중단 → 사용자 이탈.
+
+**해결한 뒤**: Claude 429 → Circuit Breaker가 Claude를 2분간 차단 → 대체 프로바이더로 자동 라우팅 → 사용자는 지연만 느낌.
+
+---
+
+## 핵심 패턴
+
+### Circuit Breaker 상태 머신
+
+```
+CLOSED (정상)
+  │ 연속 3회 실패
+  ▼
+OPEN (차단) ── 2분 쿨다운 ──→ HALF-OPEN (시험)
+  ▲                              │
+  │ 1회 실패                    │ 1회 성공
+  └──────────────────────────────┘
+                                  │
+                                  ▼
+                              CLOSED (복구)
+```
+
+### 프로바이더별 독립 상태
+
+```typescript
+// 각 프로바이더마다 독립 상태 관리
+interface CircuitState {
+  failures: number;      // 연속 실패 횟수
+  openUntil: number;     // open 상태 해제 시각 (ms)
+}
+
+// Gemini 429 ≠ Claude 차단. 독립 관리가 핵심
+const circuitStates: Record<Provider, CircuitState> = {
+  gemini:  { failures: 0, openUntil: 0 },
+  claude:  { failures: 0, openUntil: 0 },
+  openai:  { failures: 0, openUntil: 0 },
+};
+```
+
+### 호출 흐름
+
+```typescript
+async function callWithCircuitBreaker(
+  provider: Provider,
+  fn: () => Promise<Response>
+): Promise<Response> {
+  const state = circuitStates[provider];
+  const now = Date.now();
+
+  // 1. OPEN 상태 → 즉시 거부 (프로바이더에 부담 안 줌)
+  if (state.openUntil > now) {
+    throw new CircuitOpenError(provider);
+  }
+
+  try {
+    const result = await fn();
+    // 성공 → 상태 리셋 (half-open에서도 closed로 복귀)
+    state.failures = 0;
+    state.openUntil = 0;
+    return result;
+  } catch (error) {
+    state.failures++;
+
+    // threshold 도달 → OPEN 전환 (2분 쿨다운)
+    if (state.failures >= 3) {
+      state.openUntil = now + 120_000;
+    }
+    throw error;
+  }
+}
+```
+
+### 에이전트별 최적 프로바이더 라우팅
+
+Circuit Breaker와 결합하여, 에이전트 역할별로 최적 프로바이더를 지정하되 장애 시 대체:
+
+| 에이전트 역할 | 1순위 | 2순위 (fallback) |
+|-------------|-------|-----------------|
+| 데이터 분석 (기술/펀더멘털) | Gemini | Claude |
+| 비판적 분석 (Bull/Bear 토론) | Claude | GPT |
+| 종합 판단 (Judge/CIO) | Claude | Gemini |
+| 토론 중재 | GPT | Claude |
+
+---
+
+## 운영 데이터
+
+- **Claude 429 빈도**: 피크 시간대(한국 21-23시) 10분 3회 수준
+- **쿨다운 설정**: 2분 (120,000ms) — 피크 빈도 기반으로 경험적 설정
+- **Threshold**: 3회 연속 실패 — 일시적 네트워크 이슈와 프로바이더 장애 구분
+- **장애 격리 효과**: Claude 차단 중에도 Gemini/GPT 에이전트는 정상 동작
+
+### 비용 추적 연동
+
+프로바이더별 호출 비용을 `ai-cost-tracker.ts`로 실시간 추적:
+
+```typescript
+// 프로바이더별 가격 (USD per 1M tokens)
+// Claude Sonnet: $3 input / $0.30 cached / $15 output
+// Gemini Pro: 무료 tier 후 $1.25/$5
+// cache_control: ephemeral 적용 시 90% 할인
+```
+
+Circuit Breaker에 의한 프로바이더 전환이 비용에 미치는 영향도 추적 가능.
+
+---
+
+## AI Agent Directive
+
+### Trigger
+- 멀티 AI 프로바이더를 사용하는 프로덕트에서 장애 대응 패턴이 필요할 때
+- 특정 프로바이더의 rate limit이 서비스 장애로 이어지는 상황
+
+### Prerequisites
+- [Multi-Agent Pipeline](/wiki/agents/multi-agent-pipeline)
+
+### Actionable Steps
+1. **프로바이더별 독립 CircuitState 구현** — failures 카운터 + openUntil 타임스탬프
+2. **Threshold 설정** — 연속 실패 횟수 (3회 권장, 프로바이더 SLA에 따라 조정)
+3. **쿨다운 설정** — 장애 빈도에 맞춰 경험적 결정 (moneyflow: 2분)
+4. **Fallback 라우팅 테이블 정의** — 에이전트별 1순위/2순위 프로바이더
+5. **비용 추적 연동** — 프로바이더 전환 시 비용 변동 로깅
+
+### Anti-patterns
+- **공유 Circuit Breaker** — 한 프로바이더 장애가 전체를 차단. 반드시 독립 관리
+- **무한 retry** — 과부하 프로바이더에 추가 요청으로 상황 악화
+- **하드코딩 프로바이더** — 장애 시 대체 경로 없음. 항상 fallback 정의
+
+---
+
+## 출처 / 검증 메모
+
+- 구현 파일: `mino-moneyflow/src/lib/trading/ai-client.ts` (lines 29-58)
+- 비용 추적: `mino-moneyflow/src/lib/trading/ai-cost-tracker.ts`
+- 운영 데이터: Claude 429 빈도는 moneyflow 프로덕션 로그 기반 (2026-04 관측)

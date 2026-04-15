@@ -1,0 +1,119 @@
+---
+title: "React Compiler + startTransition — useEffect setState 린트 에러 해결"
+category: frontend-ai
+date: "2026-04-16"
+tags: [react-compiler, startTransition, useEffect, next-js, tarosaju]
+confidence: 3
+connections:
+  - frontend-ai/nextjs-app-router-patterns
+status: complete
+description: "Next.js 16의 React Compiler가 useEffect 내 setState를 경고하는 문제를 startTransition으로 해결하는 패턴. tarosaju 7건 적용 기반."
+type: entry
+quiz:
+  - question: "React Compiler가 useEffect 내 setState를 경고하는 이유는?"
+    choices:
+      - "useEffect 자체가 deprecated여서"
+      - "Compiler가 effect 내 setState를 cascading render(불필요한 연쇄 렌더)의 잠재적 원인으로 판단하기 때문"
+      - "setState는 이벤트 핸들러에서만 사용 가능해서"
+      - "TypeScript 타입 오류여서"
+    answer: 1
+    explanation: "React Compiler는 렌더 최적화를 위해 불필요한 re-render를 탐지한다. useEffect 내 setState는 mount 직후 추가 렌더를 유발하므로, Compiler가 이를 cascading render 리스크로 판단한다."
+  - question: "startTransition이 이 문제를 해결하는 원리는?"
+    choices:
+      - "setState를 완전히 건너뛰게 함"
+      - "업데이트를 non-urgent로 마킹하여 React 배치 처리에 맡기고, Compiler의 cascading render 감지를 통과"
+      - "setState를 비동기로 만들어 useEffect 밖에서 실행"
+      - "Compiler를 비활성화"
+    answer: 1
+    explanation: "startTransition은 상태 업데이트를 '긴급하지 않음'으로 표시한다. React가 이 업데이트를 다른 긴급 업데이트와 배치하여 한 번에 처리할 수 있게 하며, Compiler는 이를 안전한 패턴으로 인식한다."
+---
+
+## 갭 / 맥락
+
+Next.js 16에서 `reactCompiler: true`를 활성화하면, `useEffect` 내의 `setState` 호출에 `react-hooks/set-state-in-effect` 린트 에러가 발생한다.
+
+```typescript
+// ❌ React Compiler 경고
+useEffect(() => {
+  setLoaded(true);  // Compiler: "cascading render risk"
+}, []);
+```
+
+이 패턴은 hydration guard(서버/클라이언트 불일치 방지)에서 매우 흔하다. tarosaju에서 7건 발생.
+
+---
+
+## 핵심 패턴
+
+```typescript
+import { startTransition } from "react";
+
+// ✅ React Compiler 통과
+useEffect(() => {
+  startTransition(() => setLoaded(true));
+}, []);
+```
+
+### 적용 대상 유형
+
+| 유형 | 예시 | 왜 useEffect + setState가 필요한가 |
+|------|------|-----------------------------------|
+| Hydration guard | `setLoaded(true)` | 서버/클라이언트 렌더 불일치 방지 |
+| Profile auto-fill | `setName(user.name)` | 클라이언트 로컬스토리지에서 읽기 |
+| Client capability | `setSupportsTouch(true)` | window/navigator 접근은 클라이언트만 |
+| Cleanup state | `setCleanup(false)` | 컴포넌트 언마운트 전 상태 정리 |
+
+### Before / After
+
+```typescript
+// Before (7건 lint 에러)
+useEffect(() => {
+  setLoaded(true);
+  setShow(true);
+  setName(savedName);
+  setYear(savedYear);
+}, []);
+
+// After (0건 lint 에러)
+useEffect(() => {
+  startTransition(() => {
+    setLoaded(true);
+    setShow(true);
+    setName(savedName);
+    setYear(savedYear);
+  });
+}, []);
+```
+
+---
+
+## 주의사항
+
+- `startTransition` 내의 업데이트는 **non-urgent**로 처리되므로, 즉각적인 UI 반응이 필요한 경우(입력 필드 등)에는 부적합
+- Hydration guard, 초기 로드 상태 같은 "보여지기 전 설정"에만 사용
+- `next.config.ts`에서 `reactCompiler: true`가 활성화된 경우에만 해당
+
+---
+
+## AI Agent Directive
+
+### Trigger
+- React Compiler 활성화 후 `react-hooks/set-state-in-effect` 경고 발생 시
+- Next.js 16+ 프로젝트에서 useEffect 내 setState 패턴이 있을 때
+
+### Actionable Steps
+1. `useEffect` 내 모든 `setState` 호출을 `startTransition(() => setState(...))` 로 감싸기
+2. 즉각 반응이 필요한 setState는 제외 (입력 핸들러 등)
+3. `import { startTransition } from "react"` 추가
+
+### Anti-patterns
+- **Compiler 비활성화로 우회** — 최적화 효과를 포기하게 됨
+- **eslint-disable로 무시** — 실제 cascading render 이슈를 가릴 수 있음
+
+---
+
+## 출처 / 검증 메모
+
+- 솔루션 문서: `mino-tarosaju/docs/solutions/react-patterns/2026-04-09-react-compiler-set-state-in-effect.md`
+- 설정: `mino-tarosaju/next.config.ts` (line 63: `reactCompiler: true`)
+- 적용 범위: tarosaju 내 7개 컴포넌트에 일괄 적용 후 린트 에러 0건 확인

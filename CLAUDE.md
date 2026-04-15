@@ -44,7 +44,7 @@ AI 하네스 엔지니어링 학습 위키 + 포트폴리오. Next.js 15 App Rou
 
 ## Project Structure
 ```
-content/           → MDX wiki entries (10 카테고리별 디렉토리)
+content/           → MDX wiki entries (13 카테고리별 디렉토리)
 scripts/           → prebuild manifest, watch, new-entry CLI, AI 과외 선생님, topic-pool.json
 src/app/           → Next.js App Router (홈, wiki, dashboard, projects)
 src/components/    → header, graph, sidebar, search, summary-card, mermaid,
@@ -69,8 +69,8 @@ src/generated/     → content-manifest.json (gitignored, entries + graph + stre
 - All content in `content/` as MDX files with frontmatter
 - `scripts/generate-content-manifest.mjs` reads all MDX → single `content-manifest.json` (entries + graph + streak)
 - Frontmatter schema: `src/lib/schema.ts` (zod validation)
-- 11 Categories: prompt-engineering, context-engineering, harness-engineering, **tokenomics**, rag, agents, fine-tuning, evaluation, infrastructure, ios-ai, frontend-ai
-- **Sidebar 그룹** (`CATEGORY_GROUPS` in schema.ts): 방법론(prompt/context/harness/tokenomics) · 시스템 설계(rag/agents/fine-tuning) · 평가&인프라(evaluation/infrastructure) · 응용(ios-ai/frontend-ai)
+- 13 Categories: prompt-engineering, context-engineering, harness-engineering, **tokenomics**, rag, agents, fine-tuning, evaluation, infrastructure, ios-ai, frontend-ai, **android-ai**, **backend-ai**
+- **Sidebar 그룹** (`CATEGORY_GROUPS` in schema.ts): 방법론(prompt/context/harness/tokenomics) · 시스템 설계(rag/agents/fine-tuning) · 평가&인프라(evaluation/infrastructure) · 응용(ios-ai/frontend-ai/android-ai/backend-ai)
 - **Tokenomics**: AI 토큰 경제학 — 지속 연구/디벨롭 필요. 카탈로그 엔트리에 "프로덕트 적용 기준 4 조건"이 박제되어 있어서 *안정적이고 확실히 효과 있는 레버만* 3 프로덕트(ai-study/moneyflow/tarosaju)에 즉시 적용. 적용 전 `ccusage` 베이스라인 측정 필수.
 - Confidence: 1-5 (들어봤다 → 가르칠 수 있다)
 - Streak: prebuild에서 frontmatter date 기반 연속 학습일 자동 계산
