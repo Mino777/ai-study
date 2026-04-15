@@ -2,6 +2,30 @@
 
 모든 주목할 만한 변경사항을 이 파일에 기록합니다.
 
+## [2026-04-15] — 보안 스프린트 + n8n 리서치 + Context Engineering 확장
+
+### Added — 보안 강화 7건
+- **`src/lib/rate-limit.ts`** — 로그인 Rate Limiting 신규 (IP 기반 15분/5회 슬라이딩 윈도우, 429 + Retry-After)
+- **`next.config.ts`** — Security Headers 6종 (CSP, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy)
+- **`ci.yml`** — `npm audit --audit-level=high` CI 통합 (NEXT.md Gap #7 해소)
+
+### Added — 신규 엔트리 + 문서
+- **`content/harness-engineering/security-hardening-checklist.mdx`** — 보안 7개 패턴 Wiki 박제. Default Secret 제거, Timing-Safe 비교, CSP, Rate Limiting, Error 누출 차단, Body 제한, npm audit CI
+- **`docs/n8n-adoption-research.md`** — n8n 도입 리서치. 7 워크플로 설계 + 대안 비교 + 4 Phase 로드맵
+
+### Fixed — 보안 취약점
+- **`src/lib/auth.ts`** — Default Secret `"dev-secret-change-me"` 제거 → `getEnv("ADMIN_SECRET", 16)` 런타임 검증. 빈 패스워드 `|| ""` 제거 → 최소 8자. `===` 비교 → Web Crypto HMAC 기반 constant-time (Edge Runtime 호환)
+- **`src/lib/github.ts`** — GitHub API 에러 메시지 클라이언트 노출 차단 (3곳). 서버 `console.error` + generic 한글 메시지
+- **`src/app/api/admin/entries/route.ts`** + **`[...slug]/route.ts`** — 에러 정보 누출 차단 (4곳) + MDX 100KB Body 크기 제한 (413)
+- **`package.json`** — Next.js 16.2.2→16.2.3 (GHSA-q4gf-8mx6-v5v3 Server Components DoS, CVSS 7.5)
+
+### Metrics
+- npm audit: 1 high → **0 vulnerabilities**
+- 위키 총 엔트리: 82 → **83**
+- 보안 수정: 14 files, +720 / -78 lines
+
+---
+
 ## [2026-04-15] — iOS Journal 007/008 교훈 반영 + Context Engineering 확장 + 히트맵 토글
 
 ### Added — 신규 엔트리 2
