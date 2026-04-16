@@ -9,6 +9,7 @@ connections:
   - harness-engineering/harness-journal-000-baseline
   - harness-engineering/compound-engineering-philosophy
   - harness-engineering/harness-engineering-overview
+  - harness-engineering/aidy-journal-001-20round-autoceo-sprint
 status: complete
 description: "Aidy Journal 시리즈의 출발점. Spec-Driven Multi-Agent Orchestration으로 4개 레포를 동시 관제하는 Agentic Coding 모델 — api-contract 중심 스펙, Gate 검증, Work Order 라이프사이클, Compound Flywheel 박제."
 type: entry
@@ -79,21 +80,27 @@ Aidy는 AI 다이어리 앱으로, 4개 레포가 동시에 움직인다:
 ```
 aidy-architect/
 ├── specs/                  ← Source of Truth
-│   ├── api-contract.md     ← THE 계약 (Architect만 수정)
+│   ├── api-contract.md     ← THE 계약 (Architect만 수정, v0.2 JWT 활성화)
 │   ├── conventions.md      ← 네이밍 규약
-│   └── decisions/          ← ADR (Architecture Decision Records)
+│   └── decisions/          ← ADR 6개
 │       ├── ADR-001.md      ← 기술 스택 락인
 │       ├── ADR-002.md      ← Coordinator 패턴
-│       └── ADR-003.md      ← iOS/Android 동기 규칙
-├── work-orders/            ← 작업 큐
+│       ├── ADR-003.md      ← iOS/Android 동기 규칙
+│       ├── ADR-004.md      ← Multi-Agent Pipeline
+│       ├── ADR-005.md      ← Relationship Memory Architecture (Phase 1/2)
+│       └── ADR-006.md      ← JWT Authentication
+├── work-orders/            ← 작업 큐 (9/9 done)
 │   ├── backlog/
 │   ├── in-progress/
-│   └── done/
-├── gates/                  ← 검증 리뷰 아카이브
+│   └── done/               ← WO-001 ~ WO-009
+├── gates/                  ← 검증 리뷰 아카이브 (10 files)
 │   ├── reviews/
 │   └── security-hardening-checklist.md
 ├── inbox/                  ← 워커↔Architect 비동기 통신
-├── docs/                   ← 회고 + 솔루션
+├── docs/                   ← 회고 7건 + 솔루션
+│   └── retros/
+├── DESIGN.md               ← 디자인 시스템 (Organic/Natural, Deep Green)
+├── CHANGELOG.md            ← v0.4.0
 └── .claude/commands/       ← 슬래시 커맨드
     ├── dispatch.md
     ├── gate-1.md
@@ -110,13 +117,17 @@ aidy-architect/
 일반 프로젝트: 코드가 source of truth → 문서가 뒤따라감 (항상 stale)
 Aidy 모델: **api-contract.md가 source of truth** → 코드가 이를 구현 → Gate가 검증
 
-### 계약 내용
+### 계약 내용 (v0.2 — JWT 인증 활성화 후)
 
-- Base URL, 인증 헤더 (v0.1: `X-User-Id`, v0.2: Bearer JWT)
-- 7개 엔드포인트 (Chat 2개, Memory 3개, Health 1개, Categories 1개)
+- Base URL, 인증: Bearer JWT (v0.1의 X-User-Id에서 마이그레이션 완료, ADR-006)
+- **10개 엔드포인트**:
+  - Auth: `POST /api/auth/signup`, `POST /api/auth/login`
+  - Chat: `POST /api/chat`, `GET /api/chat/history`
+  - Memory: `GET /api/memories`, `GET /api/memories/categories`, `GET /api/memories/search`, `GET /api/memories/people`, `POST /api/memories/{id}/feedback`
+  - Health: `GET /api/health`
 - Request/Response 스키마: 필드명과 타입 정확히 명시
-- Error Codes 테이블: 8개 (EMPTY_MESSAGE, INVALID_CREDENTIALS, ...)
-- Memory 카테고리 enum: 7개 고정값
+- Error Codes 테이블: 8개 (EMPTY_MESSAGE, INVALID_CREDENTIALS, UNAUTHORIZED, ...)
+- Memory 카테고리 enum: 7개 고정값 (schedule, finance, work, health, preference, people, general)
 
 ### 왜 이게 중요한가
 
@@ -289,38 +300,68 @@ WO 완료 + Gate 2 PASS
 
 ---
 
-## 9. 실전 실행 흔적 (git log 기반)
+## 9. 실전 실행 흔적 — 9 WO + 20라운드 autoceo
 
-### WO-001 → WO-002 → WO-003 사이클
+### WO 전체 현황 (9/9 done)
 
-```
-# Server (WO-001: Chat API + Memory Pipeline)
-feat: WO-001 채팅 API + 메모리 파이프라인 구현
-→ Gate 1 PASS → Gate 2 PASS → done
+| WO | 제목 | 담당 | Gate 1 | 핵심 |
+|----|------|------|--------|------|
+| 001 | Chat API + Memory Pipeline | server | PASS | 6 엔드포인트, 첫 WO |
+| 002 | iOS Chat Screen | ios | FAIL→PASS | categories/health 누락 → 재작업 |
+| 003 | Android Chat Screen | android | FAIL→PASS | 동일 누락 패턴 → ADR-003 탄생 |
+| 004 | AI Resilience | server | PASS | 에러 분류 + 재시도 + 타임아웃 + 비용 로깅 |
+| 005 | AI Output 5-Layer | server | PASS | Text Guard → Schema → Retry → Instruction Aug → Judge |
+| 006 | Relationship Memory DB | server | PASS | persons + person_memories 테이블, UNIQUE + ON CONFLICT |
+| 007 | iOS People Tab | ios | PASS | 인물 목록 + 상세 타임라인 + 피드백 |
+| 008 | Android People Tab | android | PASS | 동일 기능, Gate 1 수정(latestDate 표시) |
+| 009 | JWT Authentication | server | PASS | Bearer 토큰, X-User-Id 완전 제거, 3 플랫폼 동시 마이그레이션 |
 
-# iOS (WO-002: 클라이언트 연동)
-feat: 채팅 화면 서버 연동 — 히스토리 로드 + API 연결
-fix: Gate 1 재작업 — categories·health 엔드포인트 + 에러 파싱
-→ 1차 FAIL → 수정 → Gate 1 PASS → Gate 2 PASS
+### autoceo 20라운드 (10 + 10)
 
-# Android (WO-003: 클라이언트 연동)
-fix: Gate 1 재작업 — 누락 엔드포인트 추가 및 에러 파싱 구현
-→ 1차 FAIL → 수정 → Gate 1 PASS → Gate 2 PASS
-```
-
-iOS와 Android 모두 1차 Gate 1에서 FAIL. 누락 패턴이 동일(categories, health 엔드포인트 + 에러 파싱). 이 경험이 ADR-003으로 박제됨: **"iOS/Android는 같은 라운드에 같은 화면을 구현해야 드리프트 방지"**
-
-### autoceo Round 1~2
+**Sprint 1 (기능 — Relationship Memory Phase 1)**:
 
 ```
-[R1-server] chore: harness 엔지니어링 파일 추가
-[R1-server] test: ChatController 통합 테스트 + MemoryService 단위 테스트 추가
-[R1-ios] feat: 메모리 화면 카테고리 칩 필터 + selectedCategory 상태 추가
-[R1-android] feat: 메모리 탭 구현 — 카테고리 필터 + 리스트 + 스와이프 삭제
-
-[R2-server] feat: AI 타임아웃/에러 핸들링 강화, CORS 설정, 500 에러 로깅 추가
-[R2-android] feat: 설정 화면 구현 — 서버 URL 동적 변경 + 닉네임 저장 + 앱 버전 표시
+[R4-server] feat: PersonService + 피플 API + 피드백 API + LLM 프롬프트 강화
+[R4-server] feat: 관계 메모리 DB 스키마 + 엔티티 + 리포지토리
+[R5-ios] feat: 피플 탭 — 인물 목록 + 상세 타임라인 + 피드백 API 연동
+[R5-android] feat: 피플 탭 구현 — 인물 목록 + 상세 타임라인 + 기억 피드백
+[R8-server] feat: AI 출력 5-Layer 런타임 검증 체계
 ```
+
+**Sprint 2 (보안 + 품질 — JWT + 테스트)**:
+
+```
+[R1-server] security: DB 기본 패스워드 제거
+[R2-server] feat: JWT 인증 기반 구현
+[R2-server] refactor: 기존 API X-User-Id → JWT 인증 마이그레이션
+[R3-ios] feat: JWT 인증 연동 — Auth 화면 + Keychain 토큰 + 401 자동 로그아웃
+[R3-android] feat: JWT 인증 연동 — Auth 화면 + Bearer 헤더 + EncryptedSharedPreferences
+[R5-server] improve: 인물 추출 프롬프트 최적화
+[R6-ios] feat: 메모리 검색 debounce 300ms + 검색 결과 없음 UI
+[R7-server] test: 테스트 커버리지 강화 (8 파일, 1,121줄)
+[R7-ios] test: PeopleFeature + PersonDetailFeature + AuthFeature 테스트 추가
+[R7-android] test: PeopleViewModel + AuthViewModel 단위 테스트 19건 추가
+```
+
+### 플랫폼별 기능 매트릭스 (현재)
+
+| 화면 | Server | iOS | Android |
+|------|--------|-----|---------|
+| Auth (JWT) | ✅ signup/login | ✅ Keychain | ✅ EncryptedSharedPrefs |
+| Chat | ✅ API + AI 추출 | ✅ TCA Feature | ✅ MVVM ViewModel |
+| Memory | ✅ CRUD + 검색 + 피플별 | ✅ 목록+삭제+검색 | ✅ 목록+스와이프 삭제 |
+| People | ✅ API + 피드백 | ✅ 목록+상세+피드백 | ✅ 목록+상세+피드백 |
+| Settings | — | ✅ URL+닉네임+버전 | ✅ URL+닉네임+버전 |
+| AI Validation | ✅ 5-Layer | — | — |
+
+### DB 스키마 (6 테이블)
+
+```
+기존: chat_messages, memories
+신규: users (JWT), persons (관계), person_memories (인물-기억 연결), memory_feedback (피드백)
+```
+
+ADR-005의 `UNIQUE(userId, normalizedName) + ON CONFLICT UPDATE` 패턴으로 인물 중복 방지. Phase 2(Groups/Briefing/Timeline/Decay)는 Phase 1 실전 검증 후 착수 조건.
 
 ---
 
@@ -339,21 +380,22 @@ iOS와 Android 모두 1차 Gate 1에서 FAIL. 누락 패턴이 동일(categories
 
 ## 배운 것 / 다음 후보
 
-### 이 베이스라인에서 확인한 것
+### 20라운드에서 확인한 것
 
 1. **Spec-First가 멀티플랫폼 동기화 문제를 구조적으로 해결한다** — 3개 워커가 독립적으로 작업해도 Gate 2에서 필드 불일치를 잡는다
-2. **Gate 1 1차 FAIL은 정상이다** — iOS, Android 모두 1차에서 누락이 있었고, 이게 오히려 게이트가 작동하는 증거
-3. **ADR이 경험을 구조화한다** — iOS/Android 드리프트 문제가 ADR-003으로 박제되어 이후 라운드에서 재발 방지
+2. **Gate 1 FAIL은 초기에만 발생하고 이후 0건** — 워커(Claude 세션)가 계약을 숙지하면서 1차 통과율이 자연스럽게 올라감. 시스템이 *학습*하는 구조
+3. **ADR에 '보류'를 명시하는 것도 아키텍처 결정** — ADR-005의 Phase 2 보류가 Phase 1 집중을 가능하게 했고, normalizedName 실전 검증을 Phase 2 착수 조건으로 써두니 autoceo가 함부로 Phase 2를 시작하지 않음
+4. **기능 스프린트와 보안 스프린트를 분리하면 Gate 검증 초점이 명확해진다** — Sprint 1은 "동작하는가", Sprint 2는 "안전한가"
+5. **Compound Engineering은 언어를 넘어 이식된다** — moneyflow/tarosaju의 5-Layer 검증이 TypeScript → Kotlin(Spring Boot)으로 패턴 자체가 그대로 이식
 
 ### 다음 에피소드 큐
 
 | # | 주제 | 핵심 질문 |
 |---|------|----------|
-| 001 | Gate 검증 실전 딥다이브 | Gate 1 FAIL 패턴 분류 + 자동화 가능성은? |
-| 002 | WO 설계 패턴 | 좋은 WO vs 나쁜 WO, 의존성 그래프 설계 |
-| 003 | Inbox 통신의 병목 | 워커 블로킹 시간 측정 + 개선 방안 |
-| 004 | autoceo 안전성 | 체크포인트/롤백 실전 사례, 보호 파일 전략 |
-| 005 | Compound Flywheel 효과 측정 | 라운드별 WO 완료 시간 추이, 지식 재사용률 |
+| 001 | 20라운드 autoceo 실전기 | 대규모 실행에서 품질이 유지되는가? (→ 작성 완료) |
+| 002 | normalizedName 실전 검증 | LLM이 추출한 인물명 중복 방지가 실제로 작동하는가? |
+| 003 | Phase 2 설계 | Groups/Briefing/Timeline은 Phase 1 데이터로 충분한가? |
+| 004 | WebSocket/SSE 스트리밍 | 채팅 응답 UX를 스트리밍으로 개선하면? |
 
 ---
 
@@ -387,6 +429,14 @@ iOS와 Android 모두 1차 Gate 1에서 FAIL. 누락 패턴이 동일(categories
 ## 출처 / 검증 메모
 
 - 모든 구조와 실행 흔적은 `aidy-architect`, `aidy-server`, `aidy-ios`, `aidy-android` 4개 레포의 실제 파일과 git log에서 추출
-- Gate 리뷰 문서: `aidy-architect/gates/reviews/` 디렉토리
-- ADR: `aidy-architect/specs/decisions/` 디렉토리
+- Gate 리뷰 문서: `aidy-architect/gates/reviews/` 10 files
+- ADR: `aidy-architect/specs/decisions/ADR-001~006.md`
+- 회고: `aidy-architect/docs/retros/` 7 files (세션별 + autoceo 스프린트별)
 - WO 실행 이력: git commit 메시지의 `[WO-{num}]`, `[R{round}-{worker}]` 태그 기반
+- HANDOFF: `aidy-architect/HANDOFF.md` — 세션 간 인수인계 문서
+- 최종 상태: 2026-04-16 세션 3 종료 시점 (commit `2820856`)
+
+### 갱신 로그
+
+- **2026-04-16 (초기)**: WO-001~003 + autoceo R1~R2 기반 베이스라인 작성
+- **2026-04-16 (업데이트)**: 20라운드 autoceo 완주 후 전면 갱신 — WO-004~009 반영, ADR-004~006 추가, api-contract v0.2(JWT), Relationship Memory, 5-Layer 검증, 플랫폼별 기능 매트릭스 업데이트, DB 스키마 6 테이블
