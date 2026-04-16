@@ -2,6 +2,59 @@
 
 모든 주목할 만한 변경사항을 이 파일에 기록합니다.
 
+## [2026-04-17] 세션 5 — Aidy 생태계 스프린트 박제 + 연결 보강 + 중복 압축
+
+### Added — 신규 엔트리 10건 (107 → 117)
+
+**Aidy Journal 시리즈 확장 (3건)**
+- `harness-engineering/aidy-journal-003-parallel-dispatch-token-economics.mdx` — Session 6 R9 토큰 경제성 사건. 10R × 3워커 = 라운드당 4 Claude 인스턴스 동시 활동, architect 1 : worker 3 소비 비율. 429 후 순차 재개 성공
+- `harness-engineering/aidy-journal-004-test-evidence-policy-effectiveness.mdx` — s4 iOS 테스트 무실행 사건 → s5 자발적 준수 + QA 라운드 불필요 관찰. 정책 3층 박제(gates/CLAUDE.md/build_prompt) → 내재화
+- `harness-engineering/aidy-journal-005-sse-phase1-to-phase2-progressive-rollout.mdx` — ADR-008 SSE Phase 1(fake-stream, s5) → Phase 2(Anthropic 실연동, s6). Feature Flag 없이 Phase 경계만으로 점진 도입
+
+**SSE 3-플랫폼 0-dep (3건)**
+- `backend-ai/spring-boot-sse-streaming-0-dep.mdx` — SseEmitter + OkHttp BufferedSource.readUtf8Line. Circuit Breaker execute 래핑으로 스트리밍 확장
+- `ios-ai/urlsession-bytes-sse-subscription.mdx` — URLSession.bytes + AsyncLineSequence + AsyncThrowingStream. continuation.onTermination으로 cancel 전파
+- `android-ai/okhttp-buffered-source-sse.mdx` — OkHttp BufferedSource + sealed SseEvent + Flow retryWhen 1회 재시도. readTimeout 0 핵심
+
+**backend-ai 보안/성능 (2건)**
+- `backend-ai/password-reset-security-pattern.mdx` — SecureRandom 24byte URL-safe Base64 32자, 30분 만료, 1회용(used_at), 5분 쿨다운 기존 토큰 유지, 미존재 이메일도 200 응답(enumeration 방지)
+- `backend-ai/pg-trgm-gin-index-for-like-search.mdx` — V12 마이그레이션. CREATE EXTENSION IF NOT EXISTS + gin_trgm_ops 오퍼레이터 클래스, H2 프로파일 flyway.enabled=false 자동 우회
+
+**harness-engineering 인프라 (2건)**
+- `harness-engineering/worker-prompts-logging-pattern.mdx` — architect-cli.sh `tmux_send` 가 dispatch 프롬프트 원문을 날짜별 파일로 자동 기록. 비대칭 로깅(프롬프트만, 응답 안 함) 원칙
+- `harness-engineering/tmux-flush-automation-pattern.mdx` — 4-Layer 방어: paste-buffer 경유 + C-m 3회 재시도 + 429 감지 30s 윈도우 + 5분 backoff + send-seq idle 대기 순차 모드
+
+### Changed — 기존 엔트리 연결 보강 + 중복 압축
+
+**연결 보강 (10 파일)**
+- Aidy Journal 000/001/002: 신규 003/004/005 + 하네스 인프라 2 엔트리로 backward 링크
+- Journal 002 "다음 Journal 후보" 섹션을 "후속 Journal" 실제 링크 테이블로 교체
+- Flow Maps 3개 (backend/iOS/Android): 신규 SSE 엔트리 + Journal 005 연결
+- `spring-boot-ai-circuit-breaker.mdx`: "스트리밍 확장" 섹션 신설 — Journal 005의 CB 래핑 재사용 패턴
+- `numeric-execution-evidence.mdx` + `test-strategy-3-client-via-aidy.mdx`: Journal 004 연결
+
+**중복 압축 (2 파일)**
+- `aidy-journal-003`: §3(429 구현 bash) + §4(send-seq 구현)을 판단 기준 + 링크로 축약. 구현 세부는 tmux-flush-automation-pattern 전담
+- `tmux-flush-automation-pattern`: "관측+로깅" 단락 5 bullet → 1문단 + Worker Prompts Logging 엔트리로 세부 전담
+- 역할 분리: Journal 003 = "왜/판단 기준/교훈", tmux flush 엔트리 = "어떻게 구현"
+
+### Added — 설계 초안 (deferred)
+- `docs/highlights-page-design.md` — Highlights 페이지 설계안. 목적, 선정 기준(정량+정성), 구현 방식 2안 비교(frontmatter tier vs JSON), 현재 시점 Flagship 후보 8건, 구현 체크리스트 4단계, 착수 트리거. 다음 세션으로 연기
+- `TODOS.md` P3 백로그 한 줄 연결
+
+### Fixed
+- MDX 파싱 에러 1건: `pg-trgm-gin-index-for-like-search.mdx` 의 `<col>` 문자열이 MDX에서 JSX 태그로 파싱됨 → 인라인 코드(`)로 감싸 해결. 솔루션 박제: `docs/solutions/mdx/2026-04-12-jsx-parsing-traps-curly-angle.md` 에 패턴 #3 보강
+
+### Metrics
+- 엔트리: 107 → **117** (+10)
+- 카테고리 사용: harness-engineering(+5), backend-ai(+3), ios-ai(+1), android-ai(+1)
+- Aidy Journal 시리즈: 3편 → **6편**
+- 변경 합계: 22 files, **+3,209 / −40 lines**
+- 커밋: 8건 (feat 5 + docs 3)
+- Build: 117 MDX 컴파일 검증 PASS · 30 Mermaid 블록 검증 PASS · 135 pages 생성
+
+---
+
 ## [2026-04-16] 세션 4 (확장) — Layer 3 POC Phase 1+2a (인프라 + 인덱싱 범위 확장)
 
 ### Added — Layer 3 (JIT Retrieval) 인프라
