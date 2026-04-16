@@ -1,0 +1,177 @@
+---
+title: "Aidy Journal 001 — 20라운드 autoceo 스프린트 실전기"
+category: harness-engineering
+series: aidy-journal
+date: "2026-04-16"
+tags: [aidy-journal, autoceo, multi-agent-orchestration, sprint, gate-validation, compound-engineering]
+confidence: 4
+connections:
+  - harness-engineering/aidy-journal-000-architect-worker-baseline
+  - harness-engineering/compound-engineering-philosophy
+  - evaluation/ai-output-5-layer-defense
+status: complete
+description: "Journal 000 베이스라인 이후 20라운드 autoceo 스프린트로 WO-002~009 전부 완료. JWT 인증, Relationship Memory, AI 5-Layer 검증, People 탭까지 — Spec-Driven Multi-Agent Orchestration의 첫 대규모 실전 검증."
+type: entry
+quiz:
+  - question: "20라운드 autoceo 스프린트를 10라운드씩 2차로 나눈 이유는?"
+    choices:
+      - "시간이 부족해서"
+      - "스프린트 1에서 기능(관계 메모리)을 완성하고, 스프린트 2에서 보안+품질(JWT+테스트)을 강화하는 관심사 분리. 한 번에 20라운드를 돌리면 방향 수정 기회가 없음"
+      - "autoceo가 10라운드까지만 지원해서"
+      - "비용을 절약하기 위해"
+    answer: 1
+    explanation: "기능과 보안/품질을 한 스프린트에 섞으면 Gate 검증의 초점이 흐려진다. 스프린트 1은 'Relationship Memory가 3 플랫폼에서 동작하는가', 스프린트 2는 '인증과 테스트가 충분한가'로 각각 명확한 검증 기준을 가질 수 있다."
+  - question: "WO-009(JWT 인증)가 api-contract.md Auth v0.2 활성화와 동시에 진행된 이유는?"
+    choices:
+      - "JWT가 단순한 기능이라서"
+      - "api-contract.md가 source of truth이므로, 계약에 Auth v0.2를 먼저 명시한 후 3개 워커가 동시에 구현. 계약 없이 구현하면 X-User-Id→Bearer 마이그레이션 시점이 플랫폼마다 달라짐"
+      - "서버만 먼저 구현하고 클라이언트는 나중에"
+      - "보안은 항상 마지막에 추가하므로"
+    answer: 1
+    explanation: "Spec-First의 핵심. Auth 방식 변경은 전체 API에 영향을 미치므로, api-contract.md에 v0.2를 먼저 정의하고 WO-009를 발행한 후 3개 워커가 동시에 마이그레이션. 계약이 없으면 서버가 Bearer로 바꿨는데 iOS가 아직 X-User-Id를 보내는 상황이 발생."
+  - question: "ADR-005(Relationship Memory)에서 Phase 2를 명시적으로 '보류'한 이유는?"
+    choices:
+      - "시간이 부족해서"
+      - "Phase 1(Person 추출+DB+UI+피드백)의 실전 검증 없이 Phase 2(그룹/브리핑/타임라인/감쇠 알림)를 설계하면 추측 기반 아키텍처가 됨. normalizedName 실제 LLM 추출 10건 테스트가 Phase 2 착수 조건"
+      - "Phase 2가 필요 없어서"
+      - "비용 때문에"
+    answer: 1
+    explanation: "ADR에 '보류'를 명시하는 것 자체가 아키텍처 결정이다. Phase 1의 normalizedName 중복 방지 로직이 실전에서 작동하는지 확인하지 않으면, Phase 2의 Groups/Briefing 설계가 잘못된 전제 위에 세워질 수 있다."
+---
+
+## Before — Journal 000 이후의 상태
+
+Journal 000에서 베이스라인을 잡았을 때:
+
+- WO-001(Server Chat API)만 완료
+- iOS/Android는 1차 Gate 1 FAIL 후 수정하여 통과
+- autoceo R1~R2까지 실행 (harness + 메모리 화면 + 설정)
+- ADR 3개 (기술스택, Coordinator, 클라이언트 동기화)
+
+**핵심 질문**: autoceo를 대규모로 돌리면 실제로 품질이 유지되는가?
+
+---
+
+## After — 20라운드 autoceo 스프린트 완주
+
+### 스프린트 구조
+
+```
+스프린트 1 (10라운드): Relationship Memory Phase 1
+├── R1: WO-002/003 Gate 2 PASS (기존 iOS/Android 최종 검증)
+├── R4: WO-006 서버 관계 메모리 DB + API
+├── R5: WO-007/008 iOS/Android People 탭
+├── R7: 전체 Gate 2 PASS
+└── R8: WO-005 AI 5-Layer 검증 체계
+
+스프린트 2 (10라운드): Security + JWT + Quality
+├── R1: DB 기본 패스워드 제거
+├── R2-R4: WO-009 JWT 인증 (api-contract Auth v0.2)
+├── R5: 인물 추출 프롬프트 최적화
+├── R6: iOS 메모리 검색 (debounce 300ms)
+└── R7: 테스트 커버리지 강화 (3 플랫폼)
+```
+
+### WO 완료 현황: 9/9 (전부 done)
+
+| WO | 제목 | 담당 | Gate 1 | Gate 2 |
+|----|------|------|--------|--------|
+| 001 | Server Chat API | server | PASS | PASS |
+| 002 | iOS Chat Screen | ios | FAIL→PASS | PASS |
+| 003 | Android Chat Screen | android | FAIL→PASS | PASS |
+| 004 | Server AI Resilience | server | PASS | PASS |
+| 005 | Server AI Output 5-Layer | server | PASS | PASS |
+| 006 | Server Relationship Memory | server | PASS | PASS |
+| 007 | iOS People Tab | ios | PASS | PASS |
+| 008 | Android People Tab | android | PASS | PASS |
+| 009 | Server JWT Auth | server | PASS | — |
+
+### 플랫폼별 기능 매트릭스
+
+| 화면 | Server | iOS | Android |
+|------|--------|-----|---------|
+| Auth (JWT) | ✅ signup/login | ✅ Keychain | ✅ EncryptedSharedPrefs |
+| Chat | ✅ API | ✅ TCA | ✅ MVVM |
+| Memory | ✅ CRUD+검색 | ✅ 목록+삭제+검색 | ✅ 목록+삭제 |
+| People | ✅ API+피드백 | ✅ 목록+상세+피드백 | ✅ 목록+상세+피드백 |
+| Settings | — | ✅ URL+닉네임+버전 | ✅ URL+닉네임+버전 |
+| AI Validation | ✅ 5-Layer | — | — |
+
+### 신규 ADR 2건
+
+- **ADR-005: Relationship Memory Architecture** — Phase 1(Person 추출+DB+UI+피드백) 확정, Phase 2(그룹/브리핑/타임라인/감쇠) 명시적 보류. `UNIQUE(userId, normalizedName)` + `ON CONFLICT UPDATE` 패턴
+- **ADR-006: JWT Authentication** — Bearer 토큰, 7일 만료, X-User-Id 완전 제거. Keychain(iOS) / EncryptedSharedPreferences(Android)
+
+### DB 확장: 4 테이블 추가
+
+```
+기존: chat_messages, memories
+신규: users, persons, person_memories, memory_feedback
+```
+
+### 테스트 현황
+
+| 플랫폼 | 테스트 파일 | 비고 |
+|--------|-----------|------|
+| Server | 8개 (1,121줄) | Controller 3 + Service 4 + Validator 1 |
+| iOS | 4개 | Chat/Memory/Auth/People Feature |
+| Android | 2개 (19 케이스) | People + Auth ViewModel |
+
+---
+
+## 운영 데이터
+
+- **autoceo 총 라운드**: 20 (10 + 10)
+- **WO 완료**: 9/9 (100%)
+- **Gate 1 FAIL**: 2건 (WO-002 iOS, WO-003 Android) — 이후 0건
+- **신규 API 엔드포인트**: 10개 (기존 7 + auth 2 + search 1)
+- **커밋 수**: 서버 9 + iOS 7 + Android 4 = 20
+- **ADR 누적**: 6개
+- **회고 누적**: 7개
+
+---
+
+## 배운 것 / 다음 후보
+
+### 검증된 것
+
+1. **autoceo 대규모 실행이 품질을 유지한다** — 20라운드에서 Gate 1 FAIL은 초기 2건뿐. 이후 워커들이 계약을 숙지하면서 1차 통과율이 올라감
+2. **기능 스프린트와 보안 스프린트를 분리하면 Gate 검증 초점이 명확해진다** — 스프린트 1은 "동작하는가", 스프린트 2는 "안전한가"
+3. **ADR에 '보류'를 명시하는 것도 아키텍처 결정** — Phase 2를 미뤄둔 게 오히려 Phase 1에 집중하게 해줌
+
+### 다음 Journal 후보
+
+| # | 주제 | 핵심 질문 |
+|---|------|----------|
+| 002 | normalizedName 실전 검증 | LLM이 추출한 인물명 중복 방지가 실제로 작동하는가? |
+| 003 | Phase 2 설계 | Groups/Briefing/Timeline은 Phase 1 데이터로 충분한가? |
+| 004 | WebSocket/SSE 스트리밍 | 채팅 응답 UX를 스트리밍으로 개선하면 어떤 게 달라지나? |
+
+---
+
+## AI Agent Directive
+
+### Trigger
+- autoceo를 대규모(10+ 라운드)로 실행하려 할 때
+- 멀티플랫폼 프로젝트에서 기능과 보안을 어떤 순서로 진행할지 결정할 때
+
+### Actionable Steps
+1. **스프린트를 기능/보안으로 분리** — 한 스프린트에 둘 다 섞지 않기
+2. **Gate 1 FAIL을 두려워하지 않기** — 초기 FAIL은 게이트가 작동하는 증거
+3. **ADR에 '보류'를 명시** — 무엇을 안 하는지도 결정
+4. **Compound 라운드(R8~R10)를 활용** — 회고 + 문서화 + 다음 스프린트 입력
+
+### Anti-patterns
+- **20라운드를 한 번에 돌리기** — 10라운드 단위로 끊어 방향 수정 기회 확보
+- **보안을 마지막에 붙이기** — 별도 스프린트로 분리해야 Gate 검증이 의미 있음
+
+---
+
+## 출처 / 검증 메모
+
+- Architect git log: `aidy-architect` 20 commits
+- WO 파일: `aidy-architect/work-orders/done/WO-001~009.md`
+- Gate 리뷰: `aidy-architect/gates/reviews/` 10 files
+- ADR: `aidy-architect/specs/decisions/ADR-001~006.md`
+- 회고: `aidy-architect/docs/retros/` 7 files
+- HANDOFF: `aidy-architect/HANDOFF.md`

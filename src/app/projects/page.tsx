@@ -121,14 +121,15 @@ const PROJECTS = [
     url: "https://mino-moneyflow.vercel.app/",
     color: "#10b981",
     period: "2026.04 ~",
-    version: "v0.9.40+",
+    version: "v0.9.44",
     tagline: "13개 AI 에이전트가 적대적 토론으로 투자 판단을 도출하는 SaaS — 그러나 진짜 작업은 에이전트들이 서로 견제하도록 만든 *환경 설계*에 있다.",
     stack: ["Next.js 16", "TypeScript", "Supabase", "Claude", "Gemini", "GPT", "Upstash Redis"],
     metrics: {
-      tests: 1096,
+      tests: 1177,
       agents: 13,
       providers: 3,
       compoundCycles: "20+ (PM v2 + 안전성 + Harness Journal 012-018)",
+      smokeTests: 19,
     },
     environment: [
       {
@@ -187,15 +188,15 @@ const PROJECTS = [
     url: "https://mino-tarosaju.vercel.app/",
     color: "#8b5cf6",
     period: "2026.04 ~",
-    version: "R50+ (안전성 10차)",
-    tagline: "6개 존 점술 SaaS — 그러나 진짜 자랑할 만한 건 25라운드 안전성 스프린트로 12축 → 15축까지 확장된 *AI 운영 인프라 baseline*.",
+    version: "QA 100/100 · 수익화 준비 완료",
+    tagline: "6개 존 점술 SaaS — 78장 타로 + 11종 심리 테스트 + AI 상담. 25라운드 안전성 스프린트로 인프라 baseline을 확장하고, Phase A~D 단계별 수익화 게이트를 정의한 프로덕트.",
     stack: ["Next.js 16", "TypeScript", "Supabase", "Claude Haiku", "motion/react", "Sentry", "Playwright"],
     metrics: {
-      tests: 565,
+      tests: 720,
+      e2eTests: 65,
       rounds: 25,
-      compoundCycles: 5,
-      stabilityAxes: "12 → 15",
-      qualityJudge: "4차원",
+      qaScore: "100/100",
+      tarotCards: 78,
     },
     environment: [
       {
@@ -258,14 +259,14 @@ const PROJECTS = [
     url: "https://ai-study-wheat.vercel.app/",
     color: "#f59e0b",
     period: "2026.04 ~",
-    version: "57 entries · 11 categories",
-    tagline: "AI 과외 선생님 → 허브-워커 관제 모델 → LLM-First Wiki로 진화한 메타 프로젝트. 두 워커(MoneyFlow, TaroSaju)에서 검증한 AI 엔지니어링 방법론을 기록하고, 기록된 패턴이 다시 워커로 전이되는 복리 구조.",
+    version: "90+ entries · 13 categories",
+    tagline: "AI 과외 선생님 → 허브-워커 관제 모델 → LLM-First Wiki로 진화한 메타 프로젝트. 세 워커(MoneyFlow, TaroSaju, Aidy)에서 검증한 AI 엔지니어링 방법론을 기록하고, 기록된 패턴이 다시 워커로 전이되는 복리 구조.",
     stack: ["Next.js 15", "TypeScript", "MDX", "Tailwind CSS 4", "Gemini 2.5 Flash", "Vercel"],
     metrics: {
-      entries: 57,
-      journals: 18,
-      categories: 11,
-      slashCommands: 5,
+      entries: "90+",
+      journals: "25+ (Harness 24 + MAO 2 + iOS 9)",
+      categories: 13,
+      slashCommands: 7,
     },
     environment: [
       {
@@ -316,14 +317,14 @@ const PROJECTS = [
     url: "",
     color: "#34d399",
     period: "2026.04 ~",
-    version: "WO-003 완료 · R2 진행",
+    version: "WO-009 완료 · 20라운드 autoceo",
     tagline: "Spec-Driven Multi-Agent Orchestration — 1명이 4개 AI 에이전트(Architect/Server/iOS/Android)를 동시 관제하는 Agentic Coding. api-contract.md가 Agent Fleet을 움직이고, Gate 검증이 3 플랫폼 동기화를 보장한다.",
     stack: ["Spring Boot 3.5", "Kotlin", "Tuist + TCA", "Jetpack Compose", "PostgreSQL", "Claude Code"],
     metrics: {
       repos: 4,
-      workOrders: 3,
-      gates: "Gate 1+2",
-      adrs: 3,
+      workOrders: "9/9 완료",
+      autoceoRounds: 20,
+      adrs: 6,
     },
     environment: [
       {
@@ -339,12 +340,12 @@ const PROJECTS = [
         detail: "다른 Claude 세션이 작성한 커밋 메시지, PR 설명, 코드 주석을 신뢰하지 않는다. git diff만 추출하여 4 Trap(스펙 외 엔드포인트, 데드코드, 계약 외 에러코드, 하드코딩 시크릿)을 독립 검증. honest하지만 possibly buggy한 AI 출력의 현실을 구조로 대응.",
       },
       {
-        title: "Work Order 시스템 — 작업의 생명주기 관리",
-        detail: "backlog → in-progress → done 디렉토리 이동으로 상태 관리. WO 파일에 목표, 스펙 참조, 구현 요구사항, 테스트 요구사항, 검증 기준, 워커 세션 시작 명령까지 명시. 워커는 WO를 읽고 구현만 하면 된다.",
+        title: "JWT 인증 — X-User-Id에서 Bearer Token으로",
+        detail: "ADR-006으로 결정. api-contract.md Auth v0.2 활성화 → WO-009 발행 → 3개 워커 동시 마이그레이션. iOS는 Keychain, Android는 EncryptedSharedPreferences, Server는 Spring Security + BCrypt. 401 자동 로그아웃까지 3 플랫폼 일관 구현.",
       },
       {
-        title: "Inbox 비동기 통신 — 워커가 막히면",
-        detail: "워커가 블로커를 만나면 aidy-architect/inbox/{platform}-request.md에 요청 작성 후 작업 중단. Architect가 response.md로 응답하면 재개. 동기 통신의 블로킹 없이, 비동기로 의사결정 병목을 해소.",
+        title: "AI Output 5-Layer 검증 — 서버 사이드",
+        detail: "WO-005로 서버에 5-Layer 런타임 검증 체계 구축. Text Guard → Schema Validation → Retry → Instruction Augmentation → LLM-as-Judge. tarosaju/moneyflow에서 검증된 패턴이 Kotlin 서버로 이식된 첫 사례.",
       },
       {
         title: "Compound Flywheel — 지식 순환 구조",
@@ -353,24 +354,24 @@ const PROJECTS = [
     ],
     cycles: [
       {
-        title: "WO-001: Server Chat API + Memory Pipeline",
-        detail: "Spring Boot 백엔드에 6개 엔드포인트 구현. POST /api/chat, GET /api/chat/history, GET/DELETE /api/memories, GET /api/memories/categories, GET /api/health. Gate 1 + Gate 2 모두 1차 통과. 첫 WO로 계약 기반 개발 프로세스 검증.",
+        title: "WO-001~003: 기초 — Chat API + 클라이언트 연동",
+        detail: "Server 6 엔드포인트 → iOS/Android 연동. 양쪽 1차 Gate 1 FAIL(categories, health 누락) → 재작업 → 통과. ADR-003 탄생: 'iOS/Android는 같은 라운드에 같은 화면 구현'. 계약 기반 개발 프로세스 첫 검증.",
       },
       {
-        title: "WO-002 + WO-003: iOS/Android 클라이언트 연동",
-        detail: "iOS(TCA + SwiftUI)와 Android(Jetpack Compose + MVVM)에서 서버 API 연동. 둘 다 1차 Gate 1 FAIL — categories, health 엔드포인트 + 에러 파싱 누락. 재작업 후 통과. 이 경험이 ADR-003(iOS/Android 동일 라운드에 동일 화면 구현) 탄생의 계기.",
+        title: "Sprint 1 (autoceo 10R): Relationship Memory Phase 1",
+        detail: "WO-004(AI Resilience) + WO-005(5-Layer 검증) + WO-006(관계 메모리 DB) + WO-007/008(People 탭). ADR-005로 Phase 1 확정, Phase 2 명시적 보류. 3 플랫폼에 People 목록+상세+피드백 동시 구현. UNIQUE(userId, normalizedName) + ON CONFLICT UPDATE 패턴.",
       },
       {
-        title: "autoceo R1: Harness + Memory 화면 완성",
-        detail: "Server에 테스트 인프라(ChatController 통합 + MemoryService 단위), iOS에 메모리 카테고리 칩 필터, Android에 메모리 탭(카테고리 필터 + 리스트 + 스와이프 삭제). 3개 워커 동시 디스패치 → QA → Compound.",
+        title: "Sprint 2 (autoceo 10R): Security + JWT + Quality",
+        detail: "DB 기본 패스워드 제거 → WO-009 JWT 인증(api-contract Auth v0.2) → 인물 추출 프롬프트 최적화 → iOS 메모리 검색(debounce 300ms) → 테스트 커버리지 강화(Server 8파일 + iOS 4 + Android 2). 보안과 품질을 기능과 분리하여 Gate 검증 초점 확보.",
       },
       {
-        title: "autoceo R2: 안정성 강화 + 설정 화면",
-        detail: "Server에 AI 타임아웃/에러 핸들링 강화 + CORS + 500 에러 로깅. Android에 설정 화면(서버 URL 동적 변경 + 닉네임 저장 + 앱 버전). 안전성 레이어가 두꺼워지는 단계.",
+        title: "결과: 9/9 WO 완료 · 6 ADR · 10 API 엔드포인트",
+        detail: "Auth+Chat+Memory+People+Settings 5화면 전 플랫폼 구현. DB 4 테이블 추가(users, persons, person_memories, memory_feedback). 20라운드에서 Gate 1 FAIL은 초기 2건뿐 — autoceo 대규모 실행에서 품질 유지 검증.",
       },
     ],
     retrospective:
-      "이 프로젝트의 핵심은 *코드*가 아니라 *프로토콜*이다.\n\n4개 독립 Claude 세션이 동시에 코드를 작성하는 상황에서, 동기화 문제를 해결하는 방법은 두 가지다. 하나는 CI/CD 파이프라인에 모든 걸 맡기는 것. 다른 하나는 *코드를 작성하기 전에 계약을 먼저 정의하고, 계약 준수를 코드 레벨에서 검증하는 것*. Aidy는 후자를 택했고, 그 결과가 api-contract.md 중심의 Spec-First Architecture다.\n\nGate 1이 처음부터 통과하는 경우는 드물다. WO-002(iOS)와 WO-003(Android) 모두 1차에서 FAIL했고, 누락 패턴도 동일했다(categories, health 미구현 + 에러 파싱 부재). 이건 실패가 아니라 *게이트가 작동하는 증거*다. 게이트 없이 넘어갔으면 통합 시점에서 3배 더 비싼 디버깅이 필요했을 것.\n\n가장 가치 있는 산출물은 ADR-003이다. 'iOS/Android는 같은 라운드에 같은 화면을 구현해야 한다.' 단순한 규칙이지만, R2에서 각자 다른 화면을 만들었다가 드리프트가 발생한 실전 경험에서 나온 것이다. 이런 경험적 규칙을 ADR로 박제해두면, 다음 프로젝트의 Architect가 같은 실수를 반복하지 않는다.\n\nHarness Journal이 '단일 프로젝트에서 AI가 안전하게 달릴 환경'을 만들었다면, Aidy Journal은 '여러 AI 세션이 협업하는 환경'을 만드는 기록이다. 다음 단계는 이 프로토콜 자체를 다른 멀티레포 프로젝트에 이식할 수 있는지 검증하는 것.",
+      "20라운드 autoceo로 WO 9개를 전부 끝냈다. 이 숫자가 중요한 게 아니라, *게이트 시스템이 대규모 실행에서도 품질을 유지한다*는 것이 검증됐다는 게 핵심이다.\n\nGate 1 FAIL은 초기 WO-002, WO-003에서 2건 발생했고, 이후 0건이다. 워커(Claude 세션)들이 api-contract.md를 숙지하면서 1차 통과율이 자연스럽게 올라갔다. 이건 시스템이 *학습*하는 구조라는 뜻이다 — 게이트가 잡아낸 패턴이 다음 WO에서 반복되지 않는다.\n\n가장 좋은 아키텍처 결정은 ADR-005의 'Phase 2 명시적 보류'였다. Groups/Briefing/Timeline 같은 고급 기능을 미뤄두고 Phase 1(Person 추출+DB+UI+피드백)에 집중한 결과, 20라운드 안에 기초가 탄탄하게 완성됐다. normalizedName 실전 검증이 Phase 2 착수 조건인데, 이 조건을 ADR에 써두니까 autoceo가 함부로 Phase 2를 시작하지 않는다.\n\n스프린트를 기능(10R)과 보안(10R)으로 나눈 것도 정답이었다. 같은 스프린트에 '동작하는가'와 '안전한가'를 섞으면 Gate 검증의 초점이 흐려진다. JWT 인증은 보안 스프린트에서 집중적으로 처리해서, api-contract Auth v0.2 활성화 → WO-009 발행 → 3개 워커 동시 마이그레이션이 한 흐름으로 끝났다.\n\nmoneyflow/tarosaju에서 검증한 5-Layer 검증 패턴이 Kotlin 서버로 이식된 것도 Compound Engineering의 실체다. JavaScript → Kotlin으로 언어가 바뀌어도 패턴 자체는 그대로 이식 가능했다. 다음 단계는 Phase 2 설계와 WebSocket 스트리밍이다.",
   },
 ];
 
@@ -433,7 +434,7 @@ export default function ProjectsPage() {
           <div className="rounded-[var(--radius-md)] border border-accent/20 bg-accent/5 p-4">
             <p className="text-sm text-text leading-relaxed">
               <span className="font-bold text-accent">Compound Engineering</span> · <span className="font-bold text-accent">Context Engineering</span> · <span className="font-bold text-accent">Harness Engineering</span> 세 가지 방법론 위에서 운영.
-              세 프로젝트 모두 동일한 토대를 공유하고, MoneyFlow에서 검증된 패턴이 TaroSaju로 그대로 이식되며, AI Study Wiki가 허브로서 양방향 복리 구조를 운영한다.
+              네 프로젝트 모두 동일한 토대를 공유하고, MoneyFlow에서 검증된 패턴이 TaroSaju/Aidy로 그대로 이식되며, AI Study Wiki가 허브로서 양방향 복리 구조를 운영한다.
               사람이 코드 한 줄을 직접 치는 비중은 거의 0에 수렴하고, 대부분의 시간은 <span className="font-semibold">에이전트가 안전하게 달릴 환경을 조정하는 일</span>에 들어간다.
             </p>
           </div>
