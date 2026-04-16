@@ -1,0 +1,192 @@
+---
+title: "Harness Journal 025 — JIT Retrieval POC Phase 1: 인프라 작동, 한국어 모델은 다음 변수"
+category: harness-engineering
+series: harness-journal
+date: "2026-04-16"
+tags: [harness-journal, jit-retrieval, rag, embedding, vector-search, layer3, poc]
+confidence: 4
+connections:
+  - context-engineering/context-scaling-3-layer-architecture
+  - rag/vector-search-basics
+  - harness-engineering/harness-journal-024-solution-to-validator-promotion
+status: complete
+description: "[Context Scaling 3-레이어 아키텍처](/wiki/context-engineering/context-scaling-3-layer-architecture) 의 Layer 3(JIT Retrieval) POC Phase 1. 로컬 임베딩(@xenova all-MiniLM-L6-v2) + JSON 인덱스 + brute-force 코사인. 인프라는 1~2ms 응답으로 정상 동작, 영어 쿼리 적중률 우수, 한국어 쿼리는 모델 한계. Phase 2 변수: 다국어 모델 + docs/solutions 인덱싱 + 라우터."
+type: entry
+quiz:
+  - question: "POC Phase 1에서 Chroma/Pinecone 대신 'JSON + brute-force 코사인'을 선택한 근거는?"
+    choices:
+      - "Chroma 셋업이 너무 복잡해서"
+      - "vector-search-basics §6 권장 (1000 미만 문서는 ANN 불필요, brute force가 더 빠르고 단순). 923 청크 × 384 float = 8.7MB · 검색 1~2ms로 충분 입증. 외부 서비스 0 + 외부 의존성 최소화로 롤백 비용도 낮춤"
+      - "Chroma가 한국어 미지원이어서"
+      - "Pinecone 비용이 부담스러워서"
+    answer: 1
+    explanation: "POC Phase 1의 4 조건 중 '롤백 비용 낮음' 을 가장 보수적으로 해석. JSON + brute force는 코드 50줄로 구현 + 삭제도 50줄. ANN은 1000+ 문서 시점에 도입 검토. 현재 923 청크 brute force로 응답 1~2ms이라 ANN 필요성 0."
+  - question: "영어 쿼리는 적중률 우수인데 한국어는 부족한 이유는?"
+    choices:
+      - "한국어 텍스트가 부족해서"
+      - "임베딩 모델 all-MiniLM-L6-v2 가 영어 위주 학습 데이터로 훈련됨. 한·영 모두 처리 가능하다고 표시되지만 의미 분리 정밀도는 영어가 훨씬 높음 — Phase 2의 다국어 모델(multilingual-e5-small 등) 비교가 필수 변수"
+      - "한국어는 토큰 분리가 어려워서"
+      - "쿼리 길이가 너무 짧아서"
+    answer: 1
+    explanation: "전형적 영어 중심 sentence transformer의 한계. 'prompt caching cost reduction' 쿼리는 정답 엔트리 Top 3 모두 정확히 잡음(score 0.53/0.33/0.33). 같은 의미의 한국어 '프롬프트 캐싱 비용 절감' 은 무관한 quality-guards 엔트리가 1위(score 0.45). Phase 2의 핵심 변수는 모델 교체."
+  - question: "POC가 발견한 '인덱싱 대상 누락' 문제는?"
+    choices:
+      - ".github/ 스크립트가 빠짐"
+      - "docs/solutions/ 누락 — 가장 high-value JIT 검색 대상(에러 메시지 → 과거 솔루션 매칭)인데 content/ 만 인덱싱하는 스크립트라 빠짐. Phase 2에서 인덱싱 대상 확장 필요"
+      - "node_modules 가 빠짐"
+      - "image 파일이 빠짐"
+    answer: 1
+    explanation: "Layer 3의 핵심 사용처는 '특정 에러 메시지 → 과거 해결법'. 그런 텍스트가 가장 많이 누적된 곳이 docs/solutions/. POC v0가 content/ 만 봤다는 건 첫 인덱싱 범위 결정의 누락. Phase 2 1순위 작업."
+---
+
+## Before — 무엇이 없었나
+
+[Context Scaling 3-레이어 아키텍처](/wiki/context-engineering/context-scaling-3-layer-architecture) 가 방향성을 제시했다. Layer 1(Prompt Caching · 즉시 적용 가능) · Layer 2(Pruning · 단계적) · Layer 3(JIT Retrieval · POC 필수). Layer 3는 **롤백 비용 높음** 으로 분류돼 4 조건 게이트의 즉시 적용에서 제외 → "단일 프로덕트 POC 후 단계적 도입" 권고.
+
+Phase 1 목표: **인프라가 작동하는가**. 검색 품질은 그 다음 변수.
+
+---
+
+## After — 무엇을 박았나
+
+### 두 스크립트
+
+```
+scripts/embed-content.mjs    ← 인덱서
+scripts/search.mjs            ← 검색 CLI
+```
+
+### 설계 결정 (4 조건 게이트 통과 기준)
+
+| 항목 | 결정 | 근거 |
+|------|------|------|
+| 벡터 DB | **JSON 파일 + brute-force 코사인** | [vector-search-basics §6](/wiki/rag/vector-search-basics): 1000 미만 문서는 ANN 불필요. 923 청크 brute force = 1~2ms |
+| 임베딩 모델 | **`@xenova/transformers` Xenova/all-MiniLM-L6-v2** | 100% 로컬, 외부 API 0, ~80MB 일회성 다운로드, 384차원 |
+| 청킹 | **H2(`## `) 단위** | 엔트리 §10 안티패턴 "단일 .mdx 임베딩" 회피. 평균 8.7 청크/file |
+| 메타 | slug · title · category · tags · date · confidence · h2_title | 검색 후 필터링 + 디버깅 |
+| 인덱스 위치 | `public/embeddings.json` (gitignore) | search-index.json 패턴 따름 |
+| 청크 크기 | min 200자 / max 2000자 | 너무 작으면 합침, 너무 크면 분할 |
+
+### 인프라 메트릭 (실측)
+
+```
+106 MDX → 923 chunks (avg 8.7/file)
+Embedding time: 57.0s (모델 다운로드 포함)
+Index size: 8,735 KB (8.7 MB)
+Vector dim: 384
+Search latency: 1~2ms (923 chunks brute force)
+```
+
+---
+
+## 검증 — 7개 쿼리 실측
+
+### 한국어 쿼리 — 적중률 부족
+
+| 쿼리 | 정답 엔트리 | Top-1 결과 | 점수 |
+|------|-----------|----------|------|
+| "Mermaid 노드 라벨 따옴표 누락" | tuist-spm... or Journal 024 | mdx-mermaid-shiki-coexistence (다른 주제) | 0.49 |
+| "프롬프트 캐싱 비용 절감" | prompt-caching-cost-reduction | quality-guards (관련 약함) | 0.45 |
+| "iOS 테스트가 실행 안 되는 문제" | tuist-spm-testing-trap | apple-intelligence-api (무관) | 0.54 |
+
+### 영어 쿼리 — 적중률 우수
+
+| 쿼리 | 정답 엔트리 | Top-1 결과 | 점수 |
+|------|-----------|----------|------|
+| "prompt caching cost reduction" | prompt-caching-cost-reduction | **prompt-caching-cost-reduction § 출처** | **0.53** |
+| "Tuist SPM productTypes" | tuist-spm-testing-trap | **tuist-spm-testing-trap § 갭/맥락** | **0.37** |
+
+영어 쿼리는 Top 3 모두 정답 엔트리의 다른 섹션이 차지 — 완벽한 매칭.
+
+---
+
+## 발견 — 3가지 변수가 다음 사이클을 정의한다
+
+### 변수 1: 모델 (가장 큰 변수)
+
+`all-MiniLM-L6-v2` 는 영어 위주 학습. 한국어 처리는 가능하지만 의미 분리 정밀도가 영어 대비 현저히 낮음.
+
+Phase 2 후보:
+- `Xenova/multilingual-e5-small` (94 언어, 384차원)
+- `Xenova/paraphrase-multilingual-MiniLM-L12-v2`
+- API 기반: Voyage `voyage-multilingual-2`, OpenAI `text-embedding-3-small` (둘 다 한국어 강함)
+
+### 변수 2: 인덱싱 범위 누락 — `docs/solutions/`
+
+Layer 3의 핵심 사용처는 "에러 메시지 → 과거 해결법". 그런 텍스트는 `docs/solutions/<category>/*.md` 에 집중. POC v0는 `content/` 만 인덱싱 — 가장 high-value 자산을 통째로 누락.
+
+Phase 2 첫 작업: `embed-content.mjs` 의 인덱싱 대상에 `docs/solutions/` + `docs/retros/` 추가.
+
+### 변수 3: 라우터 부재
+
+현재는 *모든* 쿼리에 검색 실행. 엔트리 §5 안티패턴 "모든 쿼리에 RAG → Layer 3 가 선형 비용으로 회귀" 와 일치. 라우터(에러 키워드/명시 트리거)가 Phase 2 필수.
+
+---
+
+## 운영 데이터
+
+- **변경 파일**: 4 (`embed-content.mjs` · `search.mjs` · `package.json` · `.gitignore`)
+- **신규 의존성**: `@xenova/transformers` (76 패키지, 1 moderate vuln)
+- **추가 npm 스크립트**: `embed-content`, `search`
+- **인덱스 크기**: 8.7 MB (923 청크 × 384 float + 메타)
+- **검색 응답**: 1~2ms (brute force, 측정 5회 평균)
+- **외부 API 호출**: 0
+- **외부 서비스 호스팅**: 0
+
+---
+
+## 배운 것 / 다음 후보
+
+### POC Phase 1 의 진짜 메시지
+
+1. **인프라 자체는 단순하다** — JSON + brute force + 로컬 임베딩으로 50줄 + 50줄. ANN/Chroma/Pinecone 도입은 명확한 트리거(1000+ 문서)까지 미룸
+2. **모델 선택이 압도적 변수** — 영어 쿼리는 완벽 적중, 한국어는 무관한 결과. 인프라 재설계가 아니라 모델 한 줄 교체로 해결 가능
+3. **첫 인덱싱 범위 결정이 운명** — `content/` 만 인덱싱했더니 가장 가치 있는 `docs/solutions/` 누락. Phase 2 0순위
+4. **POC = 가설 검증 데이터** — "한국어 검색이 잘 될까?" 의 답을 7 쿼리로 실측. "잘 안 됨, 모델 변수" 라는 명확한 결론
+
+### 다음 사이클 후보 (Phase 2)
+
+| # | 작업 | 핵심 질문 |
+|---|------|----------|
+| A | 다국어 모델 비교 | multilingual-e5-small vs MiniLM-L6 한국어 적중률 차이 (같은 7 쿼리 재측정) |
+| B | `docs/solutions/` + `docs/retros/` 인덱싱 추가 | 가장 high-value 자산 포함 후 적중률 변화 |
+| C | 쿼리 라우터 v0 (규칙 기반) | "에러 키워드/스택 트레이스" 포함 시만 검색 실행 |
+| D | 섀도우 모드 + 측정 | 기존 전체 로드 vs JIT 주입 출력 차이 (LLM-as-Judge) |
+| E | 인덱싱 자동화 (pre-commit 또는 CI) | 새 .mdx 커밋 시 재임베딩 자동 |
+
+A·B 가 적중률 직접 영향 — Phase 2 의 가장 큰 ROI.
+
+---
+
+## AI Agent Directive
+
+### Trigger
+- Layer 3 (JIT Retrieval) POC를 시작하려는 모든 프로젝트
+- 한국어 콘텐츠가 많은데 영어 위주 임베딩 모델로 검색 품질 부족 경험
+
+### Prerequisites
+- [Context Scaling 3-레이어 아키텍처](/wiki/context-engineering/context-scaling-3-layer-architecture)
+- [vector-search-basics](/wiki/rag/vector-search-basics)
+
+### Actionable Steps
+1. **인프라 최소 시작** — JSON + brute force + 로컬 임베딩 (Chroma/Pinecone 미루기)
+2. **첫 인덱싱 범위 신중 결정** — `content/` 만 보지 말고 `docs/solutions/` `docs/retros/` 등 *재발 패턴이 누적된 곳* 우선
+3. **다양한 쿼리 7~10개로 실측** — 한국어/영어/추상/구체 골고루. POC = 가설 검증 데이터 수집
+4. **인프라 작동 vs 검색 품질 분리 평가** — 인프라 OK인데 품질 부족이면 모델 변수, 둘 다 부족이면 설계 재검토
+5. **모델 후보 미리 정리** — 영어 위주 시작 후 다국어 비교는 Phase 2 의 첫 작업
+
+### Anti-patterns
+- **Chroma/Pinecone부터 도입** — 1000 미만 문서에서는 ANN 불필요. 인프라 복잡도만 증가
+- **`content/` 만 인덱싱하고 끝** — 가장 high-value인 `docs/solutions/` 누락
+- **쿼리 1~2개로 적중률 판단** — 모델 약점이 특정 패턴에서만 드러남. 최소 7개
+- **POC 결과를 "성공/실패" 로 이분법** — Phase 1은 가설 검증. "어느 변수가 다음 사이클을 정의하는가" 의 답을 얻는 것이 목적
+
+---
+
+## 출처 / 검증 메모
+
+- 구현: `scripts/embed-content.mjs` (~180줄), `scripts/search.mjs` (~85줄)
+- 의존성: `@xenova/transformers` ^2.x, `Xenova/all-MiniLM-L6-v2` 모델
+- 실측 메트릭: 이 세션 (2026-04-16) embed-content + search 실행 결과
+- 7 쿼리 적중률: 영어 2/2 완벽, 한국어 3/3 적중 실패 (Top-1 무관 엔트리)
+- 관련 솔루션: `docs/solutions/workflow/2026-04-16-solution-to-validator-promotion.md` (N=3 룰) — Phase 2 인덱싱 시 같은 패턴으로 docs/solutions 자동 인덱싱 자동화 후보

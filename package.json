@@ -12,7 +12,9 @@
     "new-entry": "node scripts/new-entry.mjs",
     "generate-lesson": "node scripts/generate-lesson.mjs",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "embed-content": "node scripts/embed-content.mjs",
+    "search": "node scripts/search.mjs"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
@@ -40,6 +42,7 @@
     "@types/node": "^20.19.39",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@xenova/transformers": "^2.17.2",
     "chokidar": "^5.0.0",
     "concurrently": "^9.2.1",
     "eslint": "^9",
