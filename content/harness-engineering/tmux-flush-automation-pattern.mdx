@@ -249,14 +249,7 @@ architect-cli.sh send-seq server "<prompt1>" ios "<prompt2>" android "<prompt3>"
 
 ## 관측 + 로깅
 
-[Worker Prompts Logging](/wiki/harness-engineering/worker-prompts-logging-pattern) 와 같은 `tmux_send()` 함수 안에서 동시 기록:
-
-1. **프롬프트 로깅** (L82~L94) — 날짜별 파일에 원문 append
-2. **paste-buffer 전송** (L97~L102)
-3. **C-m 재시도** (L103~L116)
-4. **429 감지 + backoff** (L118~L158)
-
-4 레이어가 **한 함수 안**에 있음 = 호출자 우회 불가 = 모든 dispatch가 자동 보호.
+같은 `tmux_send()` 함수가 위 4 Layer와 함께 **프롬프트 원문을 파일로 자동 기록**한다(L82~L94). 이 5번째 조각이 호출자 우회 불가 위치에 있어 모든 dispatch 가 자동 보호 + 자동 관측된다. 로깅 포맷/학습 사이클은 [Worker Prompts Logging](/wiki/harness-engineering/worker-prompts-logging-pattern) 에서 전담.
 
 ---
 

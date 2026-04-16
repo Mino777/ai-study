@@ -8,6 +8,9 @@ confidence: 4
 connections:
   - harness-engineering/aidy-journal-001-20round-autoceo-sprint
   - harness-engineering/aidy-journal-000-architect-worker-baseline
+  - harness-engineering/aidy-journal-003-parallel-dispatch-token-economics
+  - harness-engineering/aidy-journal-004-test-evidence-policy-effectiveness
+  - harness-engineering/aidy-journal-005-sse-phase1-to-phase2-progressive-rollout
   - evaluation/numeric-execution-evidence
   - ios-ai/tuist-spm-testing-trap
   - backend-ai/spring-boot-ai-circuit-breaker
@@ -172,13 +175,15 @@ Session 4 QA 후 실측:
 3. **테스트 정책을 문서로 박제하면 이식 가능** — 4 레포 모두 test-policy.md 참조 한 줄 추가로 Gate 체크 일관성 확보
 4. **안정성 인프라는 기능과 분리된 스프린트로** — RateLimit/RequestId/CB/Headers는 자기들끼리 묶으면 관측 일관성 증가
 
-### 다음 Journal 후보
+### 후속 Journal (작성 완료)
 
-| # | 주제 | 핵심 질문 |
-|---|------|----------|
-| 003 | Gate 1 체크리스트 v2 | 숫자 증거 요구 + 테스트 카디널리티 자동 체크 |
-| 004 | normalizedName 실전 검증 | LLM 10회 추출 테스트 결과는? (Phase 2 착수 조건) |
-| 005 | WebSocket/SSE 스트리밍 | 챗 응답 UX를 스트리밍으로 개선하면? |
+| # | 주제 | 링크 |
+|---|------|------|
+| 003 | autoceo 병렬 dispatch 토큰 경제성 + 429 순차 재개 | [Journal 003](/wiki/harness-engineering/aidy-journal-003-parallel-dispatch-token-economics) |
+| 004 | Test Evidence 정책 실효성 관찰 (s4→s5) | [Journal 004](/wiki/harness-engineering/aidy-journal-004-test-evidence-policy-effectiveness) |
+| 005 | ADR-008 SSE Phase 1→2 점진 도입 (fake-stream → 실연동) | [Journal 005](/wiki/harness-engineering/aidy-journal-005-sse-phase1-to-phase2-progressive-rollout) |
+
+원래 후보였던 normalizedName 실전 검증은 여전히 대기(Phase 2 착수 조건).
 
 ---
 
