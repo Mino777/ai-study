@@ -10,6 +10,7 @@
 
 ## P3 — 백로그
 - [x] **학습 타임라인** — ✅ 2026-04-09 /timeline 페이지
+- [ ] **Highlights 페이지 (Flagship 큐레이션)** — 엄선 5~8 엔트리만 큰 카드로 노출. 설계안: [`docs/highlights-page-design.md`](docs/highlights-page-design.md). Effort: M
 - [ ] **Community contribution** — 다른 사람도 콘텐츠 기여 가능. 인증/PR 리뷰 필요. Effort: XL → L
 - [ ] **테스트 커버리지 향상** — 컴포넌트 유닛 테스트 + API 라우트 테스트. Effort: M → S
 - [ ] **퀴즈 결과 서버 동기화** — 현재 localStorage만. 로그인된 admin은 GitHub gist 동기화. Effort: M → S
