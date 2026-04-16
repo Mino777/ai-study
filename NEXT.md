@@ -61,52 +61,79 @@
 
 ## 🎯 다음 작업 큐 (우선순위 순)
 
+### 🔴 High — Aidy 세션 7 박제 대기
+
+0. **Aidy Journal 006 — WO-010 + ADR-009 iOS CI self-hosted runner 전환**
+   - aidy-architect 세션 7 이 2026-04-17 자로 이미 종료됨 (s6 종료 후 P3 인프라 + WO-010 복구)
+   - 새 커밋 2건: `a4f8861 v0.7.1 (P3 인프라)` + `0e23007 v0.7.2 (WO-010 iOS CI)`
+   - **핵심 박제 재료**:
+     - **진단 3회 정정 프로세스** — 1차 tuist↔macos-14 미스매치(exit 134) → 2차 결제 차단(payments have failed) → 3차 ai-review.yml 알림 폭탄 → 최종 self-hosted 전환
+     - **self-hosted runner trade-off** — 사용자 Mac(`jominhoui-mba-ios`), macOS 26.3.1 + Xcode 26.3 + tuist 4.180.0 사전 설치, launchd user agent 상시 실행
+     - **실측 수치** — 1m 56s / 124 tests / 10 suites, 4월 macOS 분 180min → **0min**
+     - **후속 WO 3건** — WO-011 Swift 6 Sendable / WO-012 Node.js 24 (시급, 2026-06-02 마이그레이션) / WO-013 워크플로 통합
+   - **묶어 박제할 것** — P3-9 `ci-status.sh` (gh CLI + jq, `--watch`/`--json`/`--since`), `/monitor` Phase 6, `/gate-2` Phase 0 통합
+   - **출처**:
+     - `aidy-architect/HANDOFF.md` L1~L28 (세션 7 요약)
+     - `aidy-architect/specs/decisions/ADR-009.md`
+     - aidy-ios 커밋 `9c3e715` (main push 경로 green 확인) + `3e77334` (macos-15 runner + path filter)
+   - 예상 크기: M (Journal 003~005 수준, ~200 라인)
+
+1. **기존 엔트리 출처 보강** (Journal 006 박제 세션에 같이 처리)
+   - `aidy-journal-003-parallel-dispatch-token-economics.mdx` "출처" 섹션 — `a4f8861 v0.7.1` 커밋 SHA 추가 (s6 교훈이 실제 도구로 박제된 시점)
+   - `tmux-flush-automation-pattern.mdx` "출처" 섹션 — 동일 커밋 + `ci-status.sh` 파일 경로 추가
+   - 변경 최소 (각 1~2줄 edit)
+
 ### 🔴 High — Layer 3 Phase 2 핵심 변수
 
-1. **다국어 임베딩 모델 비교 (POC Phase 2b)** — **여전히 0순위**
+2. **다국어 임베딩 모델 비교 (POC Phase 2b)** — **여전히 핵심 큐**
    - `Xenova/all-MiniLM-L6-v2` vs `Xenova/multilingual-e5-small` vs (옵션) `Xenova/paraphrase-multilingual-MiniLM-L12-v2`
    - 동일 7개 쿼리 (Phase 1과 동일) 재측정 → 한국어 적중률 비교표
    - `embed-content.mjs` 의 모델 ID 한 줄 교체 + 인덱스 별도 파일로 (`public/embeddings.{model}.json`)
    - 메모리 룰: [POC 베이스라인 변수 동시 측정](memory:feedback_poc_baseline_variables) 적용 — 모델 2~3개 동시 베이스라인
    - 예상 크기: M
 
-2. **Phase 2c — 쿼리 라우터 v0 (규칙 기반)**
+3. **Phase 2c — 쿼리 라우터 v0 (규칙 기반)**
    - 에러 키워드 / 명시 트리거 (`/search`) 만 검색 실행 — 일반 대화는 skip
    - 안 그러면 [엔트리 §10 안티패턴](/wiki/context-engineering/context-scaling-3-layer-architecture) "모든 쿼리에 RAG → Layer 3 가 선형 비용 회귀"
    - 예상 크기: S (정규식/키워드 매칭)
 
-3. **N=3 룰을 `compound-engineering-philosophy` 엔트리에 명시 추가**
+4. **N=3 룰을 `compound-engineering-philosophy` 엔트리에 명시 추가**
    - [Journal 024](/wiki/harness-engineering/harness-journal-024-solution-to-validator-promotion) 후속 — solution → validator 승격 트리거를 *철학 엔트리* 에 박제
    - 예상 크기: S
 
-### 🟡 Medium — Aidy 후속 + 꾸준한 박제
+### 🟡 Medium — Aidy 후속 (s8) + 꾸준한 박제
 
-4. **aidy Session 7 박제 대기 (아직 미실행)**
-   - `aidy-architect/HANDOFF.md` P1 반영 후 새 Journal 후보:
+5. **aidy Session 8 박제 대기 (아직 미실행)**
+   - s7 종료 후 등록된 WO-011/012/013 완료 시점에 Journal 007 박제 후보:
+     - **WO-011 Swift 6 Sendable** — iOS 의존성 마이그레이션
+     - **WO-012 Node.js 24** — 3 워커 모두. 2026-06-02 강제 마이그레이션이라 **시급**
+     - **WO-013 워크플로 통합** — test.yml + ai-review.yml + 새 워크플로
+   - 기타 HANDOFF P1 잔여:
      - **Password reset SMTP Phase 2** — 이메일 템플릿 + bounce 처리
      - **SSE Phase 3** — Anthropic official event 전수 (error/ping/usage)
      - **P-004 Phase 2 Multi-Provider Fallback** — 2nd API key 확보 후
-   - 트리거: aidy-architect 에서 s7 완료 + compound
+   - 트리거: aidy-architect 에서 s8 완료 + compound
 
-5. **JSX trap detector 정밀도 개선**
+6. **JSX trap detector 정밀도 개선**
    - `api-contract-as-3-client-source-of-truth.mdx Line ~213` `{worker}` warning 1건 잔존
    - 본문 인라인 코드(`)로 감싸 해결 또는 detectJsxTraps 룰 보강
+   - 세션 5에서 추가된 `<col>` 같은 HTML void element 패턴은 별도로 `validate-content.mjs` 사전 경고 추가 검토 (솔루션 #3 참조)
 
-6. **Flow Map 시리즈 Part 5 재개 판단**
+7. **Flow Map 시리즈 Part 5 재개 판단**
    - 현재 deferred (실 배포 미구축)
    - 트리거: 실제 Neon + Fly 연결 완료 시점
 
 ### 🟢 Low — 가치 시점 봐서
 
-7. **Phase 3 — Cross-repo 인덱싱**
+8. **Phase 3 — Cross-repo 인덱싱**
    - `aidy-architect/docs/solutions/`, `mino-moneyflow/docs/solutions/`, `mino-tarosaju/docs/solutions/` 도 ai-study 인덱스에 포함
    - sync 전략 설계 필요 (단방향 vs 양방향)
 
-8. **인덱싱 자동화 (pre-commit 또는 CI)**
+9. **인덱싱 자동화 (pre-commit 또는 CI)**
    - 새 .mdx/.md 커밋 시 재임베딩 자동
    - 단, 모델 다운로드 환경(CI)이라 시간/캐시 전략 필요
 
-9. **CLAUDE.md "세션 시작 4 파일 로드" 규약 재검토**
+10. **CLAUDE.md "세션 시작 4 파일 로드" 규약 재검토**
    - 선택적 로드로 격하 검토 (handoff 함정 섹션 제안)
 
 ---
@@ -116,7 +143,7 @@
 ### 코드 결정 대기 (자율 처리 X)
 - **Part 5 실제 도입 시점** — 사용자 · 예산 · 일정 결정
 - **다국어 모델 다운로드 크기** — multilingual-e5-small 은 ~100MB. 디스크 여유 확인 후 진행
-- **aidy s7 시작 시점** — 토큰 리밋 여유 확인 후 ([Journal 003](/wiki/harness-engineering/aidy-journal-003-parallel-dispatch-token-economics))
+- **aidy s8 시작 시점** — 토큰 리밋 여유 확인 후 ([Journal 003](/wiki/harness-engineering/aidy-journal-003-parallel-dispatch-token-economics)). s7 은 이미 종료(2026-04-17) — Journal 006 박제만 대기 중
 
 ### 다른 세션 주의
 - moneyflow · tarosaju 자체 세션 가능 — 세션 시작 시 `rtk git fetch` ([Journal 019](/wiki/harness-engineering/harness-journal-019-mcapp-cross-session-cleanup))
@@ -196,7 +223,7 @@ rtk npm run embed-content
 
 ## 📜 최근 갱신
 
-### 2026-04-17 (Session 5 종료 직전)
+### 2026-04-17 (Session 5 종료 직후 — aidy s7 체크 반영)
 - Aidy 생태계 스프린트 박제 완료 — Session 5/6 결과물을 10 엔트리로 박제
   - Journal 003 (토큰 경제성) · 004 (Test Evidence 정책 실효성) · 005 (SSE 점진 도입)
   - SSE 3-플랫폼 0-dep (backend/iOS/Android)
@@ -204,5 +231,9 @@ rtk npm run embed-content
   - harness-engineering: Worker Prompts Logging + tmux flush 자동화
 - 기존 문서 연결 보강 — Journal 000/001/002, Flow Maps 3개, CB 엔트리, test 엔트리 2개
 - 이식 가능 패턴 카드 확장 (moneyflow/tarosaju용) — SSE/Password Reset/Worker Prompts Logging 추가
-- 엔트리 수 107 → 117, 다음 Aidy s7 박제는 aidy-architect 작업 후
-- Layer 3 Phase 2b(모델 비교) 는 여전히 0순위 큐
+- 엔트리 수 107 → 117
+- **Aidy Session 7 이미 2026-04-17 종료 감지** (push 이후 사용자 제보). 새 재료 2건:
+  - `a4f8861 v0.7.1` P3 인프라 (send-seq + 429 backoff + ci-status.sh)
+  - `0e23007 v0.7.2` WO-010 iOS CI self-hosted runner 전환 + ADR-009
+  - **다음 세션 0순위**: Aidy Journal 006 박제 (진단 3회 정정 + self-hosted trade-off + 실측 수치 180min → 0min)
+- Layer 3 Phase 2b(모델 비교) 는 2순위로 이동
