@@ -2,6 +2,33 @@
 
 모든 주목할 만한 변경사항을 이 파일에 기록합니다.
 
+## [2026-04-16] 세션 4 (확장) — Layer 3 POC Phase 1+2a (인프라 + 인덱싱 범위 확장)
+
+### Added — Layer 3 (JIT Retrieval) 인프라
+- **`scripts/embed-content.mjs`** — 로컬 임베딩 인덱서. `@xenova/transformers` + `Xenova/all-MiniLM-L6-v2`. content/ + docs/solutions/ + docs/retros/ 모두 H2 단위 청킹 → JSON 인덱스
+- **`scripts/search.mjs`** — 쿼리 → Top-K 코사인 유사도 CLI. brute force, 1~3ms 응답
+- **npm scripts**: `embed-content`, `search`
+- **신규 의존성**: `@xenova/transformers` (76 패키지)
+- **`.gitignore`**: `public/embeddings.json`
+
+### Added — 신규 엔트리 1건
+- **`harness-engineering/harness-journal-025-jit-retrieval-poc-phase1.mdx`** — POC 가설 검증 결과. 영어 쿼리 적중 우수, 한국어 부족 → 모델이 Phase 2 핵심 변수. 인덱싱 범위 확장 가치 실증
+
+### Added — Phase 2 한 조각 (인덱싱 범위 확장)
+- `embed-content.mjs` 의 SOURCES 배열로 다중 소스 지원
+- `docs/solutions/` 19 파일 + `docs/retros/` 10 파일 인덱싱 추가 (총 1141 청크, +218)
+- 검증: "Mermaid 노드 라벨 따옴표 누락" 쿼리에서 솔루션 문서가 **Top-1·Top-3** 진입 (Phase 1에는 솔루션 0건)
+- search 출력에 `[entry]` `[solution]` `[retro]` 소스 태그 추가
+
+### Metrics
+- 임베딩 인덱스: 923 → **1141 청크** (+218, +24%), 8.7MB → 10.5MB
+- 인덱싱 소스: 1 → **3** (entry · solution · retro)
+- 검색 응답: 1~3ms (brute force, 변화 없음)
+- 엔트리: 106 → **107**
+- 변경: 7 files, +1,506 / -3
+
+---
+
 ## [2026-04-16] 세션 4 — Mermaid `<br/>` warning 시스템 + Journal 024 (solution → validator 승격)
 
 ### Added — 인프라 (validator 확장)

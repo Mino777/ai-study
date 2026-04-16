@@ -31,23 +31,31 @@ import fs from "fs";
 import path from "path";
 import matter from "gray-matter";
 
-const CONTENT_DIR = path.join(process.cwd(), "content");
 const OUTPUT_FILE = path.join(process.cwd(), "public", "embeddings.json");
+
+// Phase 2 (Journal 025의 발견): docs/solutions, docs/retros 도 인덱싱.
+// "에러 메시지 → 과거 솔루션" JIT 검색의 핵심 high-value 자산.
+// Phase 1 v0는 content/ 만 보고 가장 가치 있는 자산을 누락했었음.
+const SOURCES = [
+  { dir: "content", source_type: "entry", slug_prefix: "", ext: ".mdx" },
+  { dir: "docs/solutions", source_type: "solution", slug_prefix: "solutions", ext: ".md" },
+  { dir: "docs/retros", source_type: "retro", slug_prefix: "retros", ext: ".md" },
+];
 
 // 청크 최소 크기 (이보다 작으면 다음 H2 와 합침)
 const MIN_CHUNK_LEN = 200;
 // 청크 최대 크기 (너무 길면 모델 윈도우 초과 + 신호 희석)
 const MAX_CHUNK_LEN = 2000;
 
-function findMdxFiles(dir) {
+function findFiles(dir, ext) {
   const results = [];
   if (!fs.existsSync(dir)) return results;
   const items = fs.readdirSync(dir, { withFileTypes: true });
   for (const item of items) {
     const fullPath = path.join(dir, item.name);
     if (item.isDirectory()) {
-      results.push(...findMdxFiles(fullPath));
-    } else if (item.name.endsWith(".mdx")) {
+      results.push(...findFiles(fullPath, ext));
+    } else if (item.name.endsWith(ext)) {
       results.push(fullPath);
     }
   }
@@ -153,43 +161,67 @@ async function main() {
     "Xenova/all-MiniLM-L6-v2",
   );
 
-  const files = findMdxFiles(CONTENT_DIR);
-  console.log(`\n🔍 ${files.length} MDX files found.`);
-
+  // Multi-source: content/ + docs/solutions/ + docs/retros/
   const allChunks = [];
   let totalChunks = 0;
+  const sourceCounts = {};
 
-  for (const file of files) {
-    const rel = path.relative(process.cwd(), file);
-    const raw = fs.readFileSync(file, "utf-8");
-    const { data, content } = matter(raw);
+  for (const source of SOURCES) {
+    const sourceDir = path.join(process.cwd(), source.dir);
+    const files = findFiles(sourceDir, source.ext);
+    sourceCounts[source.source_type] = files.length;
+    console.log(`\n🔍 [${source.source_type}] ${files.length} ${source.ext} files in ${source.dir}/`);
 
-    // category/slug 도출 (content/<category>/<slug>.mdx)
-    const parts = rel.split(path.sep);
-    const category = parts[1];
-    const filename = parts[parts.length - 1].replace(/\.mdx$/, "");
-    const slug = `${category}/${filename}`;
+    for (const file of files) {
+      const rel = path.relative(process.cwd(), file);
+      const raw = fs.readFileSync(file, "utf-8");
+      const { data, content } = matter(raw);
 
-    const chunks = chunkByH2(content);
-    totalChunks += chunks.length;
+      // slug 도출
+      // entry: content/<category>/<filename>.mdx → "<category>/<filename>"
+      // solution: docs/solutions/<category>/<filename>.md → "solutions/<category>/<filename>"
+      // retro: docs/retros/<filename>.md → "retros/<filename>"
+      const parts = rel.split(path.sep);
+      let category, filename, slug;
+      if (source.source_type === "entry") {
+        category = parts[1];
+        filename = parts[parts.length - 1].replace(new RegExp(`\\${source.ext}$`), "");
+        slug = `${category}/${filename}`;
+      } else if (source.source_type === "solution") {
+        // docs/solutions/<category>/<filename>.md
+        category = parts[2] || "uncategorized";
+        filename = parts[parts.length - 1].replace(/\.md$/, "");
+        slug = `${source.slug_prefix}/${category}/${filename}`;
+      } else {
+        // retro: docs/retros/<filename>.md
+        category = "retro";
+        filename = parts[parts.length - 1].replace(/\.md$/, "");
+        slug = `${source.slug_prefix}/${filename}`;
+      }
 
-    for (let i = 0; i < chunks.length; i++) {
-      const chunk = chunks[i];
-      allChunks.push({
-        slug,
-        category,
-        title: data.title || filename,
-        tags: data.tags || [],
-        date: data.date || null,
-        confidence: data.confidence || null,
-        h2_title: chunk.h2 || "(intro)",
-        chunk_index: i,
-        chunk_text: chunk.text,
-      });
+      const chunks = chunkByH2(content);
+      totalChunks += chunks.length;
+
+      for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i];
+        allChunks.push({
+          source: source.source_type,  // "entry" | "solution" | "retro"
+          slug,
+          category,
+          title: data.title || filename,
+          tags: data.tags || [],
+          date: data.date || null,
+          confidence: data.confidence ?? null,
+          h2_title: chunk.h2 || "(intro)",
+          chunk_index: i,
+          chunk_text: chunk.text,
+        });
+      }
     }
   }
 
-  console.log(`\n🧮 ${totalChunks} chunks total (avg ${(totalChunks / files.length).toFixed(1)}/file). Embedding...`);
+  const totalFiles = Object.values(sourceCounts).reduce((a, b) => a + b, 0);
+  console.log(`\n🧮 ${totalChunks} chunks total from ${totalFiles} files (entry: ${sourceCounts.entry}, solution: ${sourceCounts.solution}, retro: ${sourceCounts.retro}). Embedding...`);
 
   const start = Date.now();
   const vectors = [];

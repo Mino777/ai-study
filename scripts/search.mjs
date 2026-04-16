@@ -78,9 +78,11 @@ async function main() {
   for (let i = 0; i < top.length; i++) {
     const r = top[i];
     const preview = r.chunk_text.replace(/\n+/g, " ").slice(0, 200);
-    console.log(`#${i + 1}  score=${r.score.toFixed(4)}`);
+    const sourceTag = r.source ? `[${r.source}]` : "";
+    const pathPrefix = r.source === "entry" || !r.source ? "/wiki/" : "/";
+    console.log(`#${i + 1}  score=${r.score.toFixed(4)}  ${sourceTag}`);
     console.log(`     ${r.title}`);
-    console.log(`     /wiki/${r.slug} § ${r.h2_title}`);
+    console.log(`     ${pathPrefix}${r.slug} § ${r.h2_title}`);
     console.log(`     ${preview}${r.chunk_text.length > 200 ? "…" : ""}`);
     console.log("");
   }
