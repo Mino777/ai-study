@@ -439,8 +439,8 @@ export default function ProjectsPage() {
           <div className="rounded-[var(--radius-md)] border border-accent/20 bg-accent/5 p-4">
             <p className="text-sm text-text leading-relaxed">
               <span className="font-bold text-accent">Compound Engineering</span> · <span className="font-bold text-accent">Context Engineering</span> · <span className="font-bold text-accent">Harness Engineering</span> 세 가지 방법론 위에서 운영.
-              네 프로젝트 모두 동일한 토대를 공유하고, MoneyFlow에서 검증된 패턴이 TaroSaju/Aidy로 그대로 이식되며, AI Study Wiki가 허브로서 양방향 복리 구조를 운영한다.
-              사람이 코드 한 줄을 직접 치는 비중은 거의 0에 수렴하고, 대부분의 시간은 <span className="font-semibold">에이전트가 안전하게 달릴 환경을 조정하는 일</span>에 들어간다.
+              네 프로젝트 모두 동일한 토대를 공유하고, MoneyFlow에서 검증된 패턴이 TaroSaju/Aidy로 그대로 이식된다 — 5-Layer 검증은 TypeScript에서 Kotlin으로 언어가 바뀌어도 패턴 자체가 그대로 이식되었고, Aidy의 Spec-Driven Multi-Agent Orchestration은 단일 에이전트 하네스를 4개 동시 관제로 확장한 결과다.
+              AI Study Wiki가 허브로서 양방향 복리 구조를 운영하며, 사람이 코드 한 줄을 직접 치는 비중은 거의 0에 수렴하고, 대부분의 시간은 <span className="font-semibold">에이전트가 안전하게 달릴 환경을 조정하는 일</span>에 들어간다.
             </p>
           </div>
         </div>

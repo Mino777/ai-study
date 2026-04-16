@@ -5,9 +5,9 @@ import { HarnessJournalClient } from "./harness-journal-client";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Harness Journal",
+  title: "Journal Series",
   description:
-    "두 프로젝트의 AI 운영 환경을 한 사이클씩 개선하고 박제하는 콘텐츠 시리즈. AI가 안전하게 날뛸 수 있는 환경을 만드는 일지.",
+    "AI 운영 환경을 한 사이클씩 개선하고 박제하는 콘텐츠 시리즈. Web+Backend, iOS, Multi-Agent Orchestration 세 트랙.",
 };
 
 function extractEpisodeNumber(slug: string, prefix: string): number | null {
@@ -66,13 +66,12 @@ export default function HarnessJournalPage() {
         {/* Hero */}
         <div className="mb-8">
           <h1 className="font-display text-4xl font-black tracking-tight mb-3">
-            Harness Journal
+            Journal Series
           </h1>
           <p className="text-lg text-muted leading-relaxed mb-4">
-            두 프로젝트(
-            <span className="text-text font-semibold">mino-moneyflow</span>,{" "}
-            <span className="text-text font-semibold">mino-tarosaju</span>)의 AI 운영 환경을{" "}
+            AI 운영 환경을{" "}
             <span className="text-text font-semibold">한 사이클씩</span> 개선하고, 그 과정을 박제하는 콘텐츠 시리즈.
+            단일 프로젝트 하네스부터 멀티에이전트 오케스트레이션까지 세 트랙으로 기록한다.
           </p>
           <p className="text-base text-muted leading-relaxed">
             AI가 자유롭게 달릴 수 있는 환경을 만드는 게 목표. 매 사이클은 한 가지 명확한 변화 + 한 가지 명확한 메시지.
@@ -91,13 +90,17 @@ export default function HarnessJournalPage() {
         {/* Footer note */}
         <div className="mt-16 pt-8 border-t border-border text-sm text-muted leading-relaxed">
           <p>
-            Web 에피소드는{" "}
+            Web은{" "}
             <code className="font-code text-xs bg-surface px-1.5 py-0.5 rounded">
-              content/harness-engineering/harness-journal-NNN-...mdx
+              harness-journal-NNN-...mdx
             </code>
-            , iOS 에피소드는{" "}
+            , iOS는{" "}
             <code className="font-code text-xs bg-surface px-1.5 py-0.5 rounded">
-              content/ios-ai/ios-ai-journal-NNN-...mdx
+              ios-ai-journal-NNN-...mdx
+            </code>
+            , MAO는{" "}
+            <code className="font-code text-xs bg-surface px-1.5 py-0.5 rounded">
+              aidy-journal-NNN-...mdx
             </code>{" "}
             형식으로 추가됩니다.
           </p>
