@@ -80,30 +80,30 @@ iOS 개발자가 백엔드 레포를 처음 열었을 때 흔한 실패 패턴:
 
 ```mermaid
 flowchart TD
-    Client[iOS/Android 클라이언트<br/>POST /api/chat + JWT] --> F1
+    Client["iOS/Android 클라이언트<br/>POST /api/chat + JWT"] --> F1
 
     subgraph Filters ["서블릿 필터 체인"]
-      F1[RequestIdFilter<br/>모든 로그에 추적 ID 부여] --> F2[JwtAuthenticationFilter<br/>토큰 검증 → 누가 호출했는지 식별]
+      F1["RequestIdFilter<br/>모든 로그에 추적 ID 부여"] --> F2["JwtAuthenticationFilter<br/>토큰 검증 → 누가 호출했는지 식별"]
     end
 
-    F2 --> I1[RateLimitInterceptor<br/>분당 호출 제한<br/>InMemoryRateLimiter]
-    I1 --> C[ChatController<br/>HTTP → Kotlin 함수]
-    C --> S[ChatService<br/>비즈니스 로직]
+    F2 --> I1["RateLimitInterceptor<br/>분당 호출 제한<br/>InMemoryRateLimiter"]
+    I1 --> C["ChatController<br/>HTTP → Kotlin 함수"]
+    C --> S["ChatService<br/>비즈니스 로직"]
 
-    S --> AI[AiService<br/>Claude API 호출]
-    AI --> CB{AiCircuitBreaker<br/>CLOSED/OPEN/HALF_OPEN}
+    S --> AI["AiService<br/>Claude API 호출"]
+    AI --> CB{"AiCircuitBreaker<br/>CLOSED/OPEN/HALF_OPEN"}
     CB -->|CLOSED| Anthropic[Anthropic Claude API]
-    CB -->|OPEN| Fail[CircuitOpenException<br/>→ 503 AI_UNAVAILABLE]
+    CB -->|OPEN| Fail["CircuitOpenException<br/>→ 503 AI_UNAVAILABLE"]
 
-    S --> M[MemoryService<br/>대화에서 메모리 자동 추출]
-    S --> R[Repository<br/>Spring Data JPA]
+    S --> M["MemoryService<br/>대화에서 메모리 자동 추출"]
+    S --> R["Repository<br/>Spring Data JPA"]
     R --> DB["(PostgreSQL<br/>ChatMessage · Memory)"]
 
     Anthropic --> S
     DB --> S
     S --> C
     C --> EH{에러 발생?}
-    EH -->|예외| GEH[GlobalExceptionHandler<br/>ErrorCode 표준화]
+    EH -->|예외| GEH["GlobalExceptionHandler<br/>ErrorCode 표준화"]
     EH -->|정상| Resp[ChatResponse DTO]
     GEH --> Resp
     Resp --> Client
