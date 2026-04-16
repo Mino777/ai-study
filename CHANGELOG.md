@@ -2,6 +2,29 @@
 
 모든 주목할 만한 변경사항을 이 파일에 기록합니다.
 
+## [2026-04-16] 세션 4 — Mermaid `<br/>` warning 시스템 + Journal 024 (solution → validator 승격)
+
+### Added — 인프라 (validator 확장)
+- **`scripts/lib/mermaid-fix.mjs`** — `detectUnquotedSpecialCharLabels()` 추가. `<br/>` · `→` 따옴표 누락 패턴 검출. warning-only 정책 (auto-fix 안 함, idempotency 위험 회피)
+- **`scripts/validate-content.mjs`** — `fixAndValidateMermaid` 반환값의 `warnings` 받아 `console.warn`으로 출력. 빌드 실패 안 시킴
+- **`scripts/__tests__/validate-content.test.mjs`** — 9 신규 케이스 (총 7→16). idempotency 별도 검증 케이스 포함
+
+### Added — 신규 엔트리 1건
+- **`harness-engineering/harness-journal-024-solution-to-validator-promotion.mdx`** — Solution N=3+ 누적 시 validator/훅 승격 패턴 박제. shape 다양성 + idempotency + memory rule 모두 통과 시 warning-only 채택
+
+### Fixed — 즉시 발견된 잠재 함정 9건
+- **`content/harness-engineering/five-levers-of-harness-engineering.mdx`** — 7건 (보고/잡고/되살리기 + CLAUDE.md 60줄 그래프 4건)
+- **`content/rag/vector-search-basics.mdx`** — 1건 (ANN 인덱스 HNSW)
+
+### Metrics
+- 신규 vitest: 9 (총 16, 모두 통과)
+- 즉시 발견된 잠재 부채: 9건 (모두 수정)
+- 엔트리: 105 → **106**
+- Warning 출력: 9건 → 0건 (수정 후)
+- 변경: 6 files, +371 / -13
+
+---
+
 ## [2026-04-16] 세션 3 — Flow Map 시리즈 완주(6/N) + Context Scaling 방향성 박제 + NEXT.md 87% 감축
 
 ### Added — 신규 엔트리 5건

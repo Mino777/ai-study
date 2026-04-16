@@ -181,8 +181,8 @@ Key routing rules:
 
 - `.claude/hooks/no-company-names.sh` — PreToolUse(Edit/Write) 가드. `gma-ios|GreenCar|LOTTIMS` 패턴 grep → 차단. 메모리 룰 보강용 행동 레벨 가드. 화이트리스트: `.claude/projects/.../memory/`, 훅 자체
 - `.claude/commands/cross-session-review.md` — Journal 019 5단 프로토콜 슬래시 커맨드
-- `scripts/lib/mermaid-fix.mjs` — `validate-content.mjs`에서 추출한 자동 수정 함수. 두 과거 버그(slicing offset / regex 누적) docstring 박제
-- `scripts/__tests__/validate-content.test.mjs` — mermaid-fix 6 회귀 테스트 (`npm test`로 vitest 실행)
+- `scripts/lib/mermaid-fix.mjs` — `validate-content.mjs`에서 추출한 자동 수정 + warning-only 검출. 두 과거 버그(slicing offset / regex 누적) docstring 박제 + `detectUnquotedSpecialCharLabels()` warning (`<br/>` `→`)
+- `scripts/__tests__/validate-content.test.mjs` — mermaid-fix 16 회귀 테스트 (idempotency 케이스 별도 박제, `npm test`로 vitest 실행)
 
 <!-- rtk-instructions v2 -->
 # RTK (Rust Token Killer) - Token-Optimized Commands
