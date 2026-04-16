@@ -2,6 +2,39 @@
 
 모든 주목할 만한 변경사항을 이 파일에 기록합니다.
 
+## [2026-04-16] 세션 3 — Flow Map 시리즈 완주(6/N) + Context Scaling 방향성 박제 + NEXT.md 87% 감축
+
+### Added — 신규 엔트리 5건
+- **`context-engineering/context-scaling-3-layer-architecture.mdx`** (650줄) — 방향성 제시 글. Prompt Caching · Pruning/Compression · JIT Retrieval 3-레이어로 "지식 = 토큰" 선형 트레이드오프 끊기. 4 조건 게이트 기반 도입 순서 + 4 프로덕트 매핑 + **핸드오프 문서 함정 특별 섹션** (ai-study NEXT.md 60KB 실제 사례)
+- **`harness-engineering/architect-flow-map-via-aidy-architect.mdx`** (382줄) — Flow Map 4편. iOS 개발자 관점의 Architect-Worker 오케스트레이션
+- **`context-engineering/api-contract-as-3-client-source-of-truth.mdx`** (393줄) — Flow Map 6편. 마크다운 한 장이 3-client source of truth
+- **`evaluation/test-strategy-3-client-via-aidy.mdx`** (429줄) — Flow Map 7편. "컴파일 성공 ≠ 테스트 통과" 오신 끊기. iOS Session 4 사고 사례 포함
+- **`infrastructure/aidy-3-client-deployment-design-roadmap.mdx`** — Part 5 대체 (설계 로드맵 장르). 실 배포 미구축 상태에서 Stage 0~8 도입 순서 + 선택 근거 박제
+
+### Added — 신규 솔루션 1건
+- **`docs/solutions/mdx/2026-04-16-mermaid-cylinder-nested-parens.md`** — Mermaid 4번째 재발 패턴. cylinder 노드 `[("...")]` + 내부 괄호 → validator 오탐 · 파서 모호
+
+### Changed — 운영 규칙
+- **NEXT.md 60KB → 7.6KB** (-87%, 1032줄 → 163줄). append-only 운영 규칙 폐기 → **세션 경계 교체** 로 전환. 핸드오프 함정 섹션에서 스스로 제안한 액션 동일 세션에서 실행 (dogfood)
+- **`docs/series-flow-map-for-ios-devs.md`** — 상태 3/N → 6/N. 출간 완료 표에 4·6·7편 추가. Part 5 deferred 마킹
+
+### Fixed — Dangling connections 4건
+- **`evaluation/ai-output-5-layer-defense.mdx`** — `llm-as-judge-overview` → `llm-as-judge-pattern` (실제 파일명)
+- **`tokenomics/prompt-caching-cost-reduction.mdx`** — `tokenomics-catalog` → `claude-code-token-levers-catalog`
+- **`frontend-ai/react-compiler-starttransition.mdx`** — `nextjs-app-router-patterns` → `frontend-ai-patterns`
+- **`infrastructure/content-pipeline-dag.mdx`** — `ci-cd-patterns` 연결 제거 (유사 엔트리 없음)
+
+### Metrics
+- 엔트리: 100 → **105** (+5)
+- NEXT.md: 60KB → 7.6KB (-87%)
+- 변경 라인: 약 +2400 / -1060
+- 빌드: 105 static paths (dangling 경고 0건)
+- 신규 솔루션: 1건 (Mermaid 4번째 재발 패턴)
+- 신규 메모리: 2건 (dogfood 원칙 · mermaid fix 범위)
+- Flow Map 시리즈 상태: 3/N → **6/N** (Part 5 deferred)
+
+---
+
 ## [2026-04-16] 세션 2 — Flow Map 4편 + Mermaid 런타임 버그 + Search Index Lazy Fetch
 
 ### Added — Flow Map 시리즈 4편
