@@ -17,6 +17,7 @@ export interface JournalEntry {
 interface HarnessJournalClientProps {
   webEpisodes: JournalEntry[];
   iosEpisodes: JournalEntry[];
+  maoEpisodes: JournalEntry[];
   firstDate?: string;
   lastDate?: string;
 }
@@ -24,13 +25,14 @@ interface HarnessJournalClientProps {
 export function HarnessJournalClient({
   webEpisodes,
   iosEpisodes,
+  maoEpisodes,
   firstDate,
   lastDate,
 }: HarnessJournalClientProps) {
-  const [activeTab, setActiveTab] = useState<"web" | "ios">("web");
+  const [activeTab, setActiveTab] = useState<"web" | "ios" | "mao">("web");
 
-  const episodes = activeTab === "web" ? webEpisodes : iosEpisodes;
-  const totalEpisodes = webEpisodes.length + iosEpisodes.length;
+  const episodes = activeTab === "web" ? webEpisodes : activeTab === "ios" ? iosEpisodes : maoEpisodes;
+  const totalEpisodes = webEpisodes.length + iosEpisodes.length + maoEpisodes.length;
 
   return (
     <>
@@ -48,6 +50,10 @@ export function HarnessJournalClient({
           <div>
             <div className="text-xs text-muted">iOS</div>
             <div className="font-data text-2xl font-semibold text-text">{iosEpisodes.length}</div>
+          </div>
+          <div>
+            <div className="text-xs text-muted">MAO</div>
+            <div className="font-data text-2xl font-semibold text-text">{maoEpisodes.length}</div>
           </div>
           {firstDate && (
             <div>
@@ -91,6 +97,16 @@ export function HarnessJournalClient({
           }`}
         >
           📱 iOS
+        </button>
+        <button
+          onClick={() => setActiveTab("mao")}
+          className={`px-5 py-2 rounded-[var(--radius-sm)] text-sm font-medium transition-colors ${
+            activeTab === "mao"
+              ? "bg-accent text-bg font-semibold"
+              : "bg-surface border border-border text-text hover:border-accent hover:text-accent"
+          }`}
+        >
+          🤖 Multi-Agent Orchestration
         </button>
       </div>
 

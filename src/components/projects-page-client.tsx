@@ -35,7 +35,7 @@ function StatBadge({ label, value }: { label: string; value: string | number }) 
 export function ProjectsPageClient({
   projects,
 }: ProjectsPageClientProps) {
-  const categories: ProjectCategory[] = ["moneyflow", "tarosaju", "ai-study-wiki"];
+  const categories: ProjectCategory[] = ["moneyflow", "tarosaju", "ai-study-wiki", "aidy"];
   const [currentCategory, setCurrentCategory] = useState<ProjectCategory>(categories[0]);
 
   const filteredProjects = projects.filter((p) => p.category === currentCategory);
@@ -71,14 +71,16 @@ export function ProjectsPageClient({
 
             <p className="text-base text-text leading-relaxed mb-5">{project.tagline}</p>
 
-            <a
-              href={project.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-[var(--radius-sm)] bg-surface border border-border px-4 py-2 text-sm font-medium text-accent hover:border-accent transition-colors mb-6"
-            >
-              {project.url.replace("https://", "")} →
-            </a>
+            {project.url && (
+              <a
+                href={project.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-[var(--radius-sm)] bg-surface border border-border px-4 py-2 text-sm font-medium text-accent hover:border-accent transition-colors mb-6"
+              >
+                {project.url.replace("https://", "")} →
+              </a>
+            )}
 
             {/* AI 운영 지표 */}
             <div className="flex flex-wrap gap-3 mb-6">
@@ -91,10 +93,19 @@ export function ProjectsPageClient({
                   compoundCycles: "Compound 사이클",
                   stabilityAxes: "안정성 축",
                   entries: "위키 엔트리",
-                  journals: "Harness Journal",
+                  journals: "Journal 시리즈",
                   categories: "카테고리",
                   slashCommands: "슬래시 커맨드",
                   qualityJudge: "품질 Judge",
+                  smokeTests: "스모크 테스트",
+                  e2eTests: "E2E 테스트",
+                  qaScore: "QA 점수",
+                  tarotCards: "타로 카드",
+                  repos: "레포",
+                  workOrders: "Work Orders",
+                  autoceoRounds: "autoceo 라운드",
+                  adrs: "ADR",
+                  gates: "Gate 검증",
                 };
                 return <StatBadge key={key} label={labels[key] || key} value={val} />;
               })}

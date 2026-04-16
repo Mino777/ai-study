@@ -108,6 +108,11 @@ const FOUNDATION_HARNESS = [
     title: "실패도 영구 자산화",
     detail: "타로사주 R23의 eslint 9→10 업그레이드 실패는 docs/maintenance/deferred-upgrades.md로 기록됨. 다음 시도자가 같은 조사를 반복하지 않는다. *실패도 compound 자산*이라는 것이 핵심 통찰.",
   },
+  {
+    code: "HE-8",
+    title: "Spec-First Multi-Agent Orchestration",
+    detail: "Aidy에서 검증. api-contract.md가 source of truth → 4개 AI 에이전트가 독립 구현 → Gate 1(스펙 준수) + Gate 2(통합 빌드+크로스 플랫폼 필드 동기화)로 검증. 코드가 아니라 *문서*가 진실의 원천. 20라운드 autoceo에서 Gate 1 FAIL 초기 2건 → 이후 0건.",
+  },
 ];
 
 // ─────────────────────────────────────────────────────────────
@@ -429,7 +434,7 @@ export default function ProjectsPage() {
           </h1>
           <p className="text-lg text-muted leading-relaxed mb-4">
             코드가 아니라 <span className="text-text font-semibold">환경</span>을 만든다.
-            AI가 자유롭게 달릴 수 있는 울타리를 치고, 매 사이클이 다음 사이클의 자산이 되도록 시스템을 쌓는다.
+            단일 AI 에이전트부터 4개 에이전트 동시 관제까지 — 매 사이클이 다음 사이클의 자산이 되도록 시스템을 쌓는다.
           </p>
           <div className="rounded-[var(--radius-md)] border border-accent/20 bg-accent/5 p-4">
             <p className="text-sm text-text leading-relaxed">

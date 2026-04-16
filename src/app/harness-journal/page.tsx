@@ -44,7 +44,18 @@ export default function HarnessJournalPage() {
     .filter((e): e is typeof e & { episode: number } => e.episode !== null)
     .sort((a, b) => a.episode - b.episode);
 
-  const allDates = [...webEpisodes, ...iosEpisodes].map((e) => e.frontmatter.date).filter(Boolean).sort();
+  // 🤖 MAO: aidy-journal-* 에피소드
+  const maoEpisodes = manifest.entries
+    .filter((e) => e.slug.includes("aidy-journal-"))
+    .map((e) => ({
+      slug: e.slug,
+      frontmatter: e.frontmatter,
+      episode: extractEpisodeNumber(e.slug, "aidy-journal-"),
+    }))
+    .filter((e): e is typeof e & { episode: number } => e.episode !== null)
+    .sort((a, b) => a.episode - b.episode);
+
+  const allDates = [...webEpisodes, ...iosEpisodes, ...maoEpisodes].map((e) => e.frontmatter.date).filter(Boolean).sort();
   const firstDate = allDates[0];
   const lastDate = allDates[allDates.length - 1];
 
@@ -72,6 +83,7 @@ export default function HarnessJournalPage() {
         <HarnessJournalClient
           webEpisodes={webEpisodes}
           iosEpisodes={iosEpisodes}
+          maoEpisodes={maoEpisodes}
           firstDate={firstDate}
           lastDate={lastDate}
         />
