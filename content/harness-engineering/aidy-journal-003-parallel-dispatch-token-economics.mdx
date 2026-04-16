@@ -1,0 +1,219 @@
+---
+title: "Aidy Journal 003 — autoceo 병렬 dispatch 토큰 경제성 + 429 순차 재개"
+category: harness-engineering
+series: aidy-journal
+date: "2026-04-16"
+tags: [aidy-journal, autoceo, token-economics, rate-limit, parallel-dispatch, sequential-fallback]
+confidence: 4
+connections:
+  - harness-engineering/aidy-journal-002-stability-observability-test-integrity
+  - harness-engineering/aidy-journal-001-20round-autoceo-sprint
+  - tokenomics/claude-code-token-levers-catalog
+  - harness-engineering/compound-engineering-philosophy
+status: complete
+description: "Session 6에서 리밋 리셋 직후 17% 즉시 소비 + 429 rejection 사건. 10라운드 × 3워커 병렬 dispatch가 라운드당 4 Claude 인스턴스를 동시 구동하는 구조. architect 1 : worker 3 소비 비율. R9 유실 후 순차 재개(server → iOS → Android)로 성공. 3-way 병렬이 항상 최적이 아니라는 실측."
+type: entry
+quiz:
+  - question: "Session 6에서 토큰 리밋 리셋 직후 17% 즉시 소비가 일어난 근본 원인은?"
+    choices:
+      - "프롬프트가 너무 길어서"
+      - "autoceo 10라운드 × 3 워커 병렬 dispatch = 라운드당 4 Claude 인스턴스(architect 1 + workers 3)가 동시 활동. 워커는 10~30분짜리 작업을 수행하므로 architect 본인 소비보다 약 15배 많은 백그라운드 소비"
+      - "Anthropic API 장애"
+      - "tmux flush 버그"
+    answer: 1
+    explanation: "3-way 병렬 dispatch의 실제 비용은 architect 턴 자체가 아니라 뒤따르는 워커 3명의 장시간 백그라운드 소비다. architect 1 : worker 3 비율이 org-level rate limit을 초과시키는 구조적 원인. 리밋 여유 있을 때는 문제 없지만 리셋 직후 시작하면 즉각 429."
+  - question: "R9에서 3-way 병렬 실패 후 선택한 재개 전략은?"
+    choices:
+      - "전체 R9 스킵, R10(compound)으로 직행"
+      - "서버 solo → iOS+Android 2-way 재시도 → 또 429 → 최종 순차 재개(iOS 단독 → Android 단독). 중단된 워커는 짧은 continue 프롬프트(200자)로 이어붙여 재개 — 전체 재디스패치 불필요"
+      - "모든 워커를 처음부터 재시작"
+      - "다음 세션으로 완전 이월"
+    answer: 1
+    explanation: "429 중간 단절 시에도 워커는 partial 파일 저장 상태로 남아있어, '이어서 계속'이라는 짧은 continue 프롬프트면 문맥 유지 가능. 새 프롬프트로 전체 재디스패치는 토큰 낭비. R9는 이 방식으로 server 207 / iOS 124 / Android 135 = 466 tests 완주."
+  - question: "이번 스프린트에서 도출한 병렬 dispatch 결정 기준은?"
+    choices:
+      - "항상 3-way 병렬이 최적"
+      - "항상 순차가 안전"
+      - "리밋 여유 + 작업 크기 함수 — 여유 많을 때는 3-way, 리셋 직후나 큰 작업은 부분/완전 순차. architect-cli.sh에 send-seq 모드 + 429 감지 + backoff + idle 대기로 런타임 적응"
+      - "워커 수를 줄이기"
+    answer: 2
+    explanation: "병렬 자체가 나쁜 게 아니라 '소비 pattern이 리밋 곡선을 초과하는가'가 판단 기준. 고정 규칙 대신 런타임 적응 — 429 감지 시 5분 backoff + 1회 재시도, send-seq 모드로 idle 대기 직렬 옵션. Session 5(여유)는 10R 완주, Session 6(리셋 직후)은 R9 유실 → 순차로 재개."
+---
+
+## Before — Journal 002 이후의 상태
+
+Journal 002에서 Session 4 stability/observability 스프린트와 iOS 테스트 무실행 사건을 박제하며 **Gate 1 체크리스트에 테스트 실행 증거(숫자)** 요구를 추가했다. 이 정책은 Session 5에서 자발적 준수로 검증됐다(→ Journal 004 참조).
+
+Session 5는 리밋 여유 있는 시점에 시작해 10R 완주. Session 6는 **토큰 리밋 리셋 직후** 착수했는데, 여기서 결정적인 토큰 경제성 데이터가 나왔다.
+
+---
+
+## 사건 타임라인
+
+### Session 6 디스패치 패턴
+
+```
+autoceo 6차 스프린트 (R1~R9):
+  R1: tmux flush 자동화 + 프롬프트 로깅
+  R2: SSE Phase 2 Anthropic streaming (서버)
+  R3: iOS SSE 구독 + 서버 SSE 테스트
+  R4: Android SSE 구독 + /chat/history since
+  R5: Password reset 서버 + SSE 회복성
+  R6: Password reset UI (iOS/Android) + 쿨다운
+  R7: pg_trgm GIN V12 + 검색 UX
+  R8: E2E 통합 테스트 확장
+  R9: [429 재발 후 순차 재개 성공] admin stats + 디버그 뷰
+```
+
+### R9 사건 전개
+
+1. **첫 시도**: 3-way 병렬 dispatch (server + iOS + Android) → 429 rejection
+2. **두 번째**: server solo 완료 후 iOS+Android 2-way → 또 429
+3. **세 번째**: 완전 순차 (iOS 단독 → 완료 대기 → Android 단독) → **PASS**
+
+---
+
+## 구조적 원인 — architect 1 : worker 3 소비 비율
+
+### 라운드 1회의 실제 소비 구조
+
+```
+Architect 턴 (분석/dispatch)     — 짧음, 프롬프트 1~2회
+  ↓
+Worker server (백그라운드)       — 10~30분, 파일 수정+테스트+커밋
+Worker iOS    (백그라운드, 동시)  — 10~30분, 파일 수정+테스트+커밋
+Worker android(백그라운드, 동시)  — 10~30분, 파일 수정+테스트+커밋
+  ↓
+Architect 턴 (gate-1 검증)       — 중간
+```
+
+Architect 본인이 소비하는 토큰은 스프린트 운영에서 **가장 작은 조각**이다. 실제 소모는 병렬 워커 3명이 각자 수행하는 장시간 작업 — 라운드당 **4 Claude 인스턴스**가 동시에 org에 붙어있다.
+
+### 수치
+
+| 구간 | architect 소비 | 워커 3 합산 소비 | 비율 |
+|------|---------------|------------------|------|
+| 라운드 1회 | ~1 | ~15 | 1 : 15 |
+| 10라운드 | ~10 | ~150 | 1 : 15 |
+
+(정확한 토큰 수치는 `architect-cli.sh` 기록에 없음 — 상대 비율만 경험적 관찰. 수치 보강은 Phase 2에서 pane별 토큰 추정치 누적 파일로 가능.)
+
+### 리밋 리셋 타이밍의 영향
+
+- **Session 5 (리밋 여유 많을 때 시작)** — R1~R10 완주, 문제 없음
+- **Session 6 (리밋 리셋 직후 시작)** — 15% 즉시 소비 + R9 429 유실
+
+리셋 직후는 **큐에 밀려있던 리소스 + 병렬 burst 충돌**. 3-way 병렬은 리밋 여유의 함수다.
+
+---
+
+## 박제한 교훈
+
+### 1. 3-way 병렬이 항상 최적은 아니다
+
+- **리밋 여유 많음** → 3-way 최대 스루풋
+- **리셋 직후 / 대규모 스프린트 중반** → 부분/완전 순차가 안전
+
+### 2. dispatch 후 폴링 간격
+
+- 2분 → **너무 공격적** (워커가 응답 시작도 전에 상태 체크)
+- **5~7분 권장** (wait_for_idle 기준)
+
+### 3. 429 감지 + backoff 런타임 적응
+
+`architect-cli.sh tmux_send` 에 이미 박제:
+
+```bash
+# 429 / rate-limit 감지 + backoff
+#   AIDY_SEND_429_DETECT=0   : 비활성 (기본 1)
+#   AIDY_SEND_429_WATCH=30   : 감지 윈도우 초
+#   AIDY_SEND_429_BACKOFF=300: 백오프 초 (기본 5분)
+#   AIDY_SEND_429_RETRY=1    : 재시도 횟수
+if echo "$capture" | grep -iqE '(rate limit|429|too many requests|usage limit reached|retry-after|claude usage limit|api error 529)'; then
+    hit_429=1
+    ...
+fi
+```
+
+dispatch 후 30초 윈도우로 pane을 감시 → 429 패턴 매칭 시 5분 backoff → 1회 재시도.
+
+### 4. Sequential 모드 (send-seq)
+
+idle 대기를 명시하는 직렬 옵션:
+
+```bash
+# 직렬 dispatch — 각 워커 dispatch 후 idle까지 대기
+tmux_send_sequential() {
+    while [ "$#" -gt 0 ]; do
+        local target=$1
+        local prompt=$2
+        shift 2
+        tmux_send "$target" "$prompt"
+        if [ "$#" -gt 0 ]; then
+            wait_for_idle "$target" "$seq_timeout" || true
+        fi
+    done
+}
+```
+
+`is_pane_idle` 이 `"esc to interrupt" / "ctrl+t"` 부재 + 프롬프트 시그니처 존재를 감지.
+
+### 5. 429 중단 후 재개는 짧은 continue
+
+- 전체 프롬프트 재전송은 **낭비**
+- 워커는 partial 파일 저장 상태로 유지됨
+- **200자 내외 continue 프롬프트**로 문맥 이어붙이기 가능
+
+---
+
+## 운영 데이터 (Session 6)
+
+| 항목 | 수치 |
+|------|------|
+| autoceo 라운드 | R1~R9 완주 / R10 compound |
+| 워커 커밋 | 24건 (server 8 / iOS 8 / android 8) |
+| Architect 커밋 | 2건 (compound v0.7.0 + R9 재개 compound) |
+| 롤백 | 0 |
+| 보호파일 위반 | 0 |
+| **테스트 실측** | **466 · 0 failures** |
+| 세션 5 대비 증분 | +126 tests |
+
+---
+
+## AI Agent Directive
+
+### Trigger
+- autoceo 스프린트 기획 시 병렬 워커 수 결정이 필요할 때
+- 3-way dispatch 후 429 / usage limit 메시지를 관측했을 때
+- 토큰 리밋 리셋 직후 대규모 스프린트를 돌리려 할 때
+
+### Prerequisites
+- [Aidy Journal 001](/wiki/harness-engineering/aidy-journal-001-20round-autoceo-sprint) — 20R autoceo 구조
+- [Aidy Journal 002](/wiki/harness-engineering/aidy-journal-002-stability-observability-test-integrity) — Gate 체크리스트
+
+### Actionable Steps
+
+1. **스프린트 시작 전 리밋 체크** — `ccusage` 또는 사용량 화면으로 여유 확인
+2. **여유 많음** → 3-way 병렬 유지 (`tmux_send` 기본 모드)
+3. **리셋 직후 / 스프린트 중반** → `send-seq` 로 순차 또는 2-way 혼합
+4. **dispatch 후 폴링 간격을 5~7분으로** — 2분은 너무 공격적
+5. **429 감지 시** — `AIDY_SEND_429_DETECT=1` 기본 활성, 5분 backoff + 1회 재시도
+6. **재시도 실패 시** — 순차 재개로 폴백, 짧은 continue 프롬프트로 이어붙이기
+
+### Anti-patterns
+
+- **워커 수 고정 규칙** ("항상 3-way") — 리밋 여유 무시한 경직 운영
+- **재디스패치로 재시작** — 파일 저장된 partial 상태 버리고 처음부터 → 토큰 낭비
+- **tmux_send 후 1~2분 폴링** — 워커가 응답 시작도 전에 상태 판정 불가
+- **architect 단일 인스턴스 토큰만 추적** — 실제 소비의 1/16에 해당
+
+---
+
+## 출처 / 검증 메모
+
+- Session 6 handoff: `aidy-architect/HANDOFF.md` (commit `5a75faf`)
+- Session 6 retro: `aidy-architect/docs/retros/autoceo-s6-session-retro.md`
+- R9 재개 retro: `aidy-architect/docs/retros/autoceo-s6-round-9-retro.md`
+- `architect-cli.sh` 64-161 `tmux_send` + 429 감지 + 213-233 `tmux_send_sequential`
+- memory rule: `feedback_autoceo_token_burst.md` (aidy-architect 측)
+- 엔트리 [Claude Code Token Levers Catalog](/wiki/tokenomics/claude-code-token-levers-catalog) — 프로덕트 적용 4 조건
