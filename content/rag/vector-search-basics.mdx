@@ -59,7 +59,7 @@ Naive k-NN은 쿼리 벡터를 코퍼스의 모든 벡터와 비교한다 → **
 flowchart LR
     Q[쿼리 텍스트] --> E[Embedding 모델]
     E --> V[쿼리 벡터]
-    V --> I[ANN 인덱스<br/>HNSW]
+    V --> I["ANN 인덱스<br/>HNSW"]
     I --> K[Top-k 후보]
     K --> R[LLM에 주입]
 ```

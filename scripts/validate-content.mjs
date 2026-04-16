@@ -165,7 +165,7 @@ async function main() {
 
     for (const block of blocks) {
       totalBlocks++;
-      const { fixed, autoFixed, errors } = fixAndValidateMermaid(block.code, rel);
+      const { fixed, autoFixed, errors, warnings } = fixAndValidateMermaid(block.code, rel);
 
       // 자동 수정이 적용되면 파일 업데이트
       // ⚠️ raw(frontmatter 포함) 기준으로 검색해야 슬라이싱 오프셋이 정확함.
@@ -185,6 +185,14 @@ async function main() {
           line: block.startLine + err.line,
           message: err.message,
         });
+      }
+
+      // warnings — 빌드 실패 안 시키고 console.warn 으로만 출력
+      // 솔루션 문서: docs/solutions/mdx/2026-04-16-mermaid-br-in-unquoted-node-labels.md
+      for (const w of warnings || []) {
+        console.warn(
+          `⚠️  ${rel} Line ~${block.startLine + w.line}: ${w.message}`,
+        );
       }
     }
 

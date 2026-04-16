@@ -23,7 +23,7 @@
  *
  * @param {string} code - mermaid 코드 블록 본문 (``` 제외)
  * @param {string} [filename] - (로깅용, 현재 미사용)
- * @returns {{ fixed: string, autoFixed: boolean, errors: Array<{line:number,message:string}> }}
+ * @returns {{ fixed: string, autoFixed: boolean, errors: Array<{line:number,message:string}>, warnings: Array<{line:number,message:string}> }}
  */
 export function fixAndValidateMermaid(code, filename) {
   let fixed = code;
@@ -41,9 +41,17 @@ export function fixAndValidateMermaid(code, filename) {
   const fixedLines = fixed.split("\n");
   const fixedContent = fixed;
 
-  // 수정된 내용이 원본과 다르면 기록
+  // WARNING-ONLY 검사: <br/> 등 특수문자 quoted 누락 (3·4번째 재발 패턴)
+  // auto-fix 하지 않는 이유:
+  //  - cylinder [("label")] · rhombus {label} · circle ((label)) shape 가 다양
+  //  - 잘못된 자동 수정 = 매 실행마다 손상 누적 (Bug 2 의 교훈)
+  //  - 사람이 보고 수동 수정하도록 경고만 띄움
+  // 솔루션 문서: docs/solutions/mdx/2026-04-16-mermaid-br-in-unquoted-node-labels.md
+  const warnings = detectUnquotedSpecialCharLabels(fixedContent);
+
+  // 수정된 내용이 원본과 다르면 기록 (warnings 도 함께 반환)
   if (fixedContent !== code) {
-    return { fixed: fixedContent, autoFixed: true, errors: [] };
+    return { fixed: fixedContent, autoFixed: true, errors: [], warnings };
   }
 
   // 수정 후 유효성 검증 (남은 에러만)
@@ -94,5 +102,66 @@ export function fixAndValidateMermaid(code, filename) {
     }
   });
 
-  return { fixed: fixedContent, autoFixed: false, errors };
+  return { fixed: fixedContent, autoFixed: false, errors, warnings };
+}
+
+/**
+ * 노드 라벨에 <br/> · → 같은 특수문자가 quoted 없이 들어간 케이스 탐지.
+ *
+ * Mermaid 파서는 라벨에 <br/>, →, /, + 등이 있으면 따옴표 필수다.
+ * 따옴표 없으면 빌드 통과하지만 *런타임-only* 에러 (브라우저에서 "Mermaid 에러" 메시지).
+ *
+ * 보수적 정책 — 현재 잡는 패턴:
+ *  - <br/> (가장 흔한 재발 패턴, Flow Map 27 노드 사례)
+ *  - → (화살표 유니코드)
+ *
+ * 잡지 않는 패턴 (false positive 위험):
+ *  - / (Path/to/file 같은 정상 경로 텍스트가 너무 흔함)
+ *  - + (Plus 부호도 흔함)
+ *
+ * shape 별 처리:
+ *  - 일반 노드 [label] : O
+ *  - rhombus {label} : O
+ *  - cylinder [(label)] : 일반 정규식이 매치 안 함 (별도 솔루션: cylinder 자체 회피)
+ *  - circle ((label)) : 매치 안 함
+ *
+ * @param {string} code
+ * @returns {Array<{line:number,message:string}>}
+ */
+function detectUnquotedSpecialCharLabels(code) {
+  const warnings = [];
+  const lines = code.split("\n");
+  const SPECIAL_CHAR = /(<br\s*\/?>)|→/;
+
+  lines.forEach((line, i) => {
+    const lineNum = i + 1;
+
+    // 일반 노드 [label] — 따옴표 없는 케이스만
+    const bracketMatches = line.matchAll(
+      /[A-Za-z_][\w]*\[(?!")([^\[\]"]+)\]/g,
+    );
+    for (const m of bracketMatches) {
+      if (SPECIAL_CHAR.test(m[1])) {
+        warnings.push({
+          line: lineNum,
+          message: `노드 라벨에 <br/> 또는 → 사용: "${m[1]}". 따옴표 필요: ["${m[1]}"]`,
+        });
+      }
+    }
+
+    // rhombus {label} — 따옴표 없는 케이스만
+    const braceMatches = line.matchAll(
+      /[A-Za-z_][\w]*\{(?!")([^{}"]+)\}/g,
+    );
+    for (const m of braceMatches) {
+      if (SPECIAL_CHAR.test(m[1])) {
+        warnings.push({
+          line: lineNum,
+          message: `rhombus 라벨에 <br/> 또는 → 사용: "${m[1]}". 따옴표 필요: {"${m[1]}"}`,
+        });
+      }
+    }
+  });
+
+  return warnings;
 }
