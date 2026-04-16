@@ -54,6 +54,7 @@ src/lib/           → schema.ts (zod, 10 categories, quizQuestionSchema),
                      content.ts (manifest/entry loaders),
                      quiz-storage.ts (localStorage attempts + SM-2 SRS schedule)
 src/generated/     → content-manifest.json (gitignored, entries + graph + streak)
+public/            → search-index.json (gitignored, SearchDialog lazy fetch용 슬림 인덱스)
 .github/workflows/ → daily-lesson, generate-on-pick, vercel-retry
 ```
 
@@ -87,7 +88,7 @@ src/generated/     → content-manifest.json (gitignored, entries + graph + stre
 ## Components
 - `Header` — 공통 헤더 (Wiki/Dashboard/Vibe Coding + 현재 탭 하이라이트)
 - `KnowledgeGraph` — force-directed 그래프 (useMemo graphData, useRef hover, 빈 카테고리 회색 노드)
-- `SearchDialog` — Cmd+K 검색 + GraphSearchContext 연동
+- `SearchDialog` — Cmd+K 검색 + GraphSearchContext 연동. 검색 인덱스는 `public/search-index.json`에서 lazy fetch (mount 후 `requestIdleCallback` 프리페치 + 모듈 스코프 캐시). layout.tsx가 글로벌로 한 번만 mount — 페이지별 중복 mount 금지
 - `Sidebar` — 카테고리 트리 (접이식, confidence dots, harness-engineering 내 Journal 서브그룹)
 - `SummaryCard` — 엔트리 요약 (카테고리 배지, confidence, 읽기 시간, GitHub 편집)
 - `CodeBlock` — 코드 블록 + 복사 버튼

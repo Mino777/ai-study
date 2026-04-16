@@ -2,6 +2,43 @@
 
 모든 주목할 만한 변경사항을 이 파일에 기록합니다.
 
+## [2026-04-16] 세션 2 — Flow Map 4편 + Mermaid 런타임 버그 + Search Index Lazy Fetch
+
+### Added — Flow Map 시리즈 4편
+- **`content/harness-engineering/architect-flow-map-via-aidy-architect.mdx`** — iOS 주력 개발자 관점의 Architect-Worker 패턴. "WO 한 건의 여정" Mermaid + iOS 매핑표 20개 + Week 1~5 로드맵 + 자주 막히는 지점 12건 (382줄)
+- **`docs/series-flow-map-for-ios-devs.md`** — 출간 완료 표에 4편 추가, 상태 3/N → 4/N
+
+### Added — 신규 솔루션 2건
+- **`docs/solutions/mdx/2026-04-16-mermaid-br-in-unquoted-node-labels.md`** — Mermaid 3번째 재발 패턴. 노드 label의 `<br/>` + 특수문자 따옴표 누락. `validate-content.mjs` 가 못 잡는 런타임-only 함정
+- **`docs/solutions/performance/2026-04-16-search-index-lazy-fetch.md`** — Next.js App Router에서 layout props로 배열 넘기는 안티패턴. `public/search-index.json` + idle prefetch 분리
+
+### Changed — 성능 (RSC payload 대폭 감축)
+- **`scripts/generate-content-manifest.mjs`** — `public/search-index.json` 추가 emit (SearchDialog lazy fetch용)
+- **`src/app/layout.tsx`** — `searchEntries` SSR props 제거 (페이지당 ~30KB gzipped 오버헤드 제거)
+- **`src/components/search-dialog.tsx`** — 모듈 스코프 캐시 + `requestIdleCallback` 프리페치 + open 시점 fallback fetch
+- **`src/app/dashboard/page.tsx`** · **`timeline/page.tsx`** — 중복 `<SearchDialog>` + `<GraphSearchProvider>` mount 제거 (layout 글로벌만 유지)
+- **`.gitignore`** — `public/search-index.json` 추가
+- **`CLAUDE.md`** — Project Structure에 `public/search-index.json` 명시, SearchDialog 컴포넌트 설명에 lazy fetch 전략 추가
+
+### Fixed — Mermaid 노드 label 27건 수정
+- **`content/android-ai/android-flow-map-via-aidy-android.mdx`** — 8 노드 따옴표 처리
+- **`content/ios-ai/ios-flow-map-via-aidy-ios.mdx`** — 8 노드 따옴표 처리
+- **`content/backend-ai/backend-flow-map-via-aidy-server.mdx`** — 11 노드 따옴표 처리
+- 원인: `<br/>` + `→`/`/`/`+` 특수문자가 대괄호(`[...]`) · 중괄호(`{...}`) 내 따옴표 없이 있어 Mermaid 파서 fail. 이전 fix `ed34d26` 이 놓친 패턴
+
+### Metrics
+- RSC payload 감축 (gzipped):
+  - 홈: 56.8KB → 39.6KB (**-30%**)
+  - 위키 리스트: 45.8KB → 29.8KB (**-35%**)
+  - 타임라인: 53.1KB → 22.8KB (**-57%**)
+  - 대시보드: 50KB → 15.0KB (**-70%**, 중복 mount 제거 효과)
+- 추가 정적 에셋: `search-index.json` 18KB gzipped (세션당 1회 idle fetch + HTTP 캐시)
+- 총 엔트리: 100 → **101**
+- 커밋: 3건 (fix / perf / entry)
+- 신규 솔루션: 2건 (mdx · performance)
+
+---
+
 ## [2026-04-16] — 카테고리 신설 + Multi-Agent Orchestration Journal + 엔트리 6건
 
 ### Added — 인프라
