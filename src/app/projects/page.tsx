@@ -434,7 +434,7 @@ export default function ProjectsPage() {
           </h1>
           <p className="text-lg text-muted leading-relaxed mb-4">
             코드가 아니라 <span className="text-text font-semibold">환경</span>을 만든다.
-            단일 AI 에이전트부터 4개 에이전트 동시 관제까지 — 매 사이클이 다음 사이클의 자산이 되도록 시스템을 쌓는다.
+            AI가 자유롭게 달릴 수 있는 울타리를 치고, 단일 에이전트부터 4개 동시 관제까지 — 매 사이클이 다음 사이클의 자산이 되도록 시스템을 쌓는다.
           </p>
           <div className="rounded-[var(--radius-md)] border border-accent/20 bg-accent/5 p-4">
             <p className="text-sm text-text leading-relaxed">
