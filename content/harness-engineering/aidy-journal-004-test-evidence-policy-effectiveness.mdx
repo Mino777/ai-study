@@ -1,0 +1,201 @@
+---
+title: "Aidy Journal 004 — Test Evidence 정책 실효성 관찰 (s4 → s5 전후 비교)"
+category: harness-engineering
+series: aidy-journal
+date: "2026-04-16"
+tags: [aidy-journal, gate-validation, test-policy, governance, policy-effectiveness, voluntary-compliance]
+confidence: 4
+connections:
+  - harness-engineering/aidy-journal-002-stability-observability-test-integrity
+  - harness-engineering/aidy-journal-003-parallel-dispatch-token-economics
+  - evaluation/numeric-execution-evidence
+  - evaluation/test-strategy-3-client-via-aidy
+  - harness-engineering/compound-engineering-philosophy
+status: complete
+description: "Session 4의 '테스트가 8라운드 동안 무실행이었다' 사건으로 Gate 1에 '테스트 실행 증거(숫자)'를 추가. Session 5에서 워커 3명이 **자발적으로** 매 커밋 메시지에 `NN tests, 0 failures`를 포함 — QA 라운드 없이 10R 완주. 정책이 행동 레벨에서 즉시 내재화된 드문 케이스."
+type: entry
+quiz:
+  - question: "Session 4의 'Test Evidence' 정책이 어떤 형태로 박제됐나?"
+    choices:
+      - "CI 스크립트에만 추가"
+      - "아키텍트 메모리에만 기록"
+      - "gates/test-policy.md 4종(universal + server/ios/android) + CLAUDE.md 참조 라인 + architect-cli.sh build_prompt 의 기본 요구사항. 정책이 *문서 · 도구 · 프롬프트* 3층에 동시에 박혔음"
+      - "Slack 채널 공지"
+    answer: 2
+    explanation: "정책이 효과를 내려면 문서만으로는 부족하다. `gates/test-policy.md` 4종 신설 + 4 레포 CLAUDE.md 참조 라인 + `architect-cli.sh build_prompt` 가 매 dispatch 프롬프트에 테스트 숫자 요구를 자동 삽입 — 3층 박제가 자발적 준수를 가능하게 했다."
+  - question: "Session 5에서 QA 라운드가 불필요했던 이유는?"
+    choices:
+      - "운이 좋았다"
+      - "매 라운드 커밋 메시지에 '170 passed', '92 passed' 같은 숫자 증거가 자발적으로 포함 → architect가 Gate에서 즉시 검증 가능 → R10까지 한 번도 테스트 무실행 의심 발생 안 함"
+      - "iOS 테스트를 모두 제거했다"
+      - "CI가 자동으로 블로킹"
+    answer: 1
+    explanation: "s4 QA 라운드는 '8라운드 동안 테스트 무실행' 사건 때문에 필요했다. s5에서는 매 라운드 숫자 증거가 커밋 메시지 · retro · Gate 로그 3곳에 남아 의심의 여지가 없었음. 정책이 내재화되면 감시 비용이 0에 수렴한다."
+  - question: "이 정책 실효성 패턴을 다른 하네스에 이식할 때 핵심 요소는?"
+    choices:
+      - "정책 문서만 복사"
+      - "'관측 가능한 증거(숫자/파일/해시)' + '모든 dispatch 프롬프트에 자동 삽입' + '참조 링크를 CLAUDE.md에 고정' — 정책을 행동 경로(프롬프트) 위에 두어야 자발적 준수 발생"
+      - "CI 파이프라인 강제화"
+      - "리뷰어 역할 분리"
+    answer: 1
+    explanation: "정책이 'dispatch 프롬프트'에 자동 포함되면 워커가 매번 정책을 보게 되고, CLAUDE.md에 참조되면 다음 세션 시작 시 context 로드 단계에서 로드된다. 체크리스트 문서만 두면 참조하지 않는다 — 행동 경로 위에 박아야 내재화."
+---
+
+## Before — Session 4의 사건
+
+Journal 002에서 박제한 사건:
+
+> iOS 테스트가 8라운드 동안 "통과"로 보고됐지만 `xcodebuild`가 `Executed 0 tests, with 0 failures` + `exit 0`을 반환했다. 워커도 Architect도 "통과"로 해석했고, QA 단계에서야 무실행이 드러났다.
+
+**사후 조치로 Session 4 종료 시**:
+
+1. Solution 문서 신설 — `aidy-architect/docs/solutions/2026-04-16-ios-tests-never-ran.md`
+2. **`gates/test-policy.md` 4종 신설**:
+   - `test-policy.md` — 범용 6원칙 (P1~P6)
+   - `test-policy-server.md` — Kotlin/Spring Boot
+   - `test-policy-ios.md` — Swift/TCA (productTypes `.framework` 의무)
+   - `test-policy-android.md` — Kotlin/Compose/MVVM
+3. 4 레포 CLAUDE.md에 `gates/test-policy*.md` 참조 라인 추가
+4. `architect-cli.sh build_prompt` 에 "테스트 실행 증거(숫자) 필수" 라인 기본 포함
+
+---
+
+## After — Session 5 관찰 (정책 실효성 검증)
+
+### 워커 자발적 준수
+
+Session 5 R1~R10 모든 커밋 메시지에 워커가 **자발적으로** 테스트 숫자 포함:
+
+```
+[R5-server] feat: POST /api/auth/refresh
+  → 커밋 메시지: "140 passed"
+
+[R5-ios] feat: Biometric 앱 잠금
+  → 커밋 메시지: "71 passed (+9)"
+
+[R5-android] feat: Biometric 앱 잠금
+  → 커밋 메시지: "62 passed"
+```
+
+Session 4 R2~R9 iOS 커밋 메시지와 비교:
+
+```
+(s4, before)
+[R5-ios] feat: Memory swipe-to-delete + optimistic UI
+  → 커밋 메시지: "Tests passed ✅"   ← 숫자 없음, 실제론 0 실행
+
+(s5, after)
+[R5-ios] feat: BiometricClient + AppFeature 잠금
+  → 커밋 메시지: "71 passed (+9)"   ← 숫자 있음
+```
+
+### QA 라운드 불필요
+
+Session 4는 R10 종료 후 **추가 QA 라운드** 필요했음 (iOS 테스트 무실행 수습). Session 5는 R1~R10 완주, QA 없음.
+
+### 누적 수치 — Session 4 → 5 → 6
+
+| 세션 | 테스트 총수 | 증분 | QA 라운드 필요? |
+|------|------------|------|----------------|
+| s4 | 198 | — | **필요** (iOS 무실행 수습) |
+| s5 | 340 | +142 | 불필요 |
+| s6 | 466 | +126 | 불필요 |
+
+---
+
+## 왜 자발적 준수가 일어났나
+
+### 3층 박제의 효과
+
+```
+Layer 1: gates/test-policy*.md (문서)
+          ↓ (CLAUDE.md에서 참조)
+Layer 2: 세션 시작 시 자동 로드
+          ↓ (architect-cli.sh build_prompt에서 인용)
+Layer 3: 매 dispatch 프롬프트에 기본 포함
+```
+
+워커가 **매 라운드** 프롬프트에서 "실행 증거(숫자) 제출" 요구를 본다. 정책이 *체크리스트 문서*로만 있었다면 참조되지 않았을 것. **행동 경로(프롬프트) 위에 박았기 때문에** 내재화됐다.
+
+### 유관성 (coupling)
+
+정책과 Gate 검증이 **같은 단위**를 공유:
+
+- 정책: "`NN tests, 0 failures` 형식 증거"
+- Gate 1: "숫자 패턴 없으면 FAIL"
+- 프롬프트: "실행 숫자 필수"
+
+셋이 같은 문법을 쓴다. 워커 입장에서 정책 준수 = Gate 통과 = 다음 라운드 dispatch 가능. 분리돼 있으면 준수 인센티브가 약해진다.
+
+---
+
+## 이식 가능성 체크
+
+이 패턴을 다른 하네스(moneyflow / tarosaju 등)에 이식할 때:
+
+### 필수 요소
+
+1. **관측 가능한 증거** — 숫자, 파일 경로, 해시처럼 기계가 검증 가능한 것
+2. **정책의 프롬프트 노출** — dispatch/build_prompt에서 매번 인용
+3. **CLAUDE.md 참조** — 세션 시작 context 로드 단계에서 로드
+4. **Gate와 정책의 문법 일치** — 준수 = 통과 인센티브
+
+### 주의
+
+- **문서만 추가**는 효과 없음 — 행동 경로 위에 없으면 참조되지 않음
+- **체크리스트 복붙**은 인센티브 결여 — 정책 준수가 다음 단계 블로커여야 함
+- **숫자 없는 정성적 기준** ("깔끔하게", "충분히") → 검증 불가 → 무력화
+
+---
+
+## 운영 데이터
+
+| 항목 | Session 4 | Session 5 | Session 6 |
+|------|-----------|-----------|-----------|
+| 라운드 | 10 + QA | 10 | 9 (R9 순차 재개) |
+| 워커 커밋 | 31 | 27 | 24 |
+| 테스트 총수 | 198 | 340 | 466 |
+| 증분 | — | +142 | +126 |
+| QA 라운드 | **필요** | 불필요 | 불필요 |
+| iOS 테스트 무실행 의심 | 발견 | 0 | 0 |
+
+---
+
+## AI Agent Directive
+
+### Trigger
+- 워커가 "Tests passed" 자체 보고만 하고 숫자 증거 없을 때
+- 정책 문서를 추가했지만 워커가 참조 안 하는 것 같을 때
+- 새 하네스에 Gate 정책을 이식하려 할 때
+
+### Prerequisites
+- [Aidy Journal 002](/wiki/harness-engineering/aidy-journal-002-stability-observability-test-integrity) — iOS 무실행 사건
+- [Numeric Execution Evidence](/wiki/evaluation/numeric-execution-evidence)
+- [Test Strategy 3-Client via Aidy](/wiki/evaluation/test-strategy-3-client-via-aidy)
+
+### Actionable Steps
+
+1. **정책을 문서로 먼저 박제** — `gates/test-policy*.md` 4종(범용 + 플랫폼별 3)
+2. **관측 가능한 증거 형식 지정** — `Test run with NN tests, 0 failures`
+3. **dispatch 프롬프트에 자동 인용** — `architect-cli.sh build_prompt` 수정
+4. **CLAUDE.md 참조 라인 추가** — 세션 시작 로드 경로에 노출
+5. **Gate 1 체크리스트에 숫자 검증 추가** — 매칭 실패 시 FAIL
+6. **첫 스프린트 후 실효성 관찰** — 자발적 준수 여부 = 정책이 행동 경로 위에 있는지의 지표
+
+### Anti-patterns
+
+- **체크리스트 문서만 추가** → 참조되지 않음
+- **정성적 기준** ("충분히 테스트되어야 함") → 검증 불가
+- **Gate와 정책의 형식 불일치** → 인센티브 분리
+- **정책 이식 후 실효성 관찰 생략** → 이식 실패를 2~3 스프린트 후 발견
+
+---
+
+## 출처 / 검증 메모
+
+- s4 solution: `aidy-architect/docs/solutions/2026-04-16-ios-tests-never-ran.md`
+- 테스트 정책 4종: `aidy-architect/gates/test-policy*.md`
+- s5 session retro: `aidy-architect/docs/retros/autoceo-s5-session-retro.md` — "정책 효과 관찰" 섹션
+- s5 round retro: `aidy-architect/docs/retros/autoceo-s5-round-*.md` — 모두 숫자 증거 포함
+- s6 continuation: `aidy-architect/docs/retros/autoceo-s6-*` — 정책 지속 작동
+- 커밋 실측: aidy-server / aidy-ios / aidy-android `git log --oneline` s5~s6 구간
