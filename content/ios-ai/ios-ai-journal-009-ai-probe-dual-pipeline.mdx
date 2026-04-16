@@ -1,0 +1,221 @@
+---
+title: "iOS Harness Journal 009 — AI 앱 탐침 2종 스프린트: idb 시뮬레이터 자동화 + Proxyman HAR 이중 파이프라인 + 6 함정 박제"
+category: ios-ai
+series: ios-ai-journal
+date: "2026-04-16"
+tags: [ios-harness-journal, ios, claude-code, harness-engineering, idb, proxyman, ui-automation, api-probe, slash-commands]
+confidence: 4
+connections: [ios-ai/ios-ai-journal-008-first-full-harness-setup-retro, ios-ai/ios-ai-journal-007-claude-hooks-silent-failure, ios-ai/ios-ai-journal-005-ios-compound, harness-engineering/compound-loop-break, harness-engineering/ai-agent-start-here]
+status: complete
+type: entry
+description: "Journal 008이 `.claude/` 전면 이식의 조감도였다면, 이 글은 그 위에서 AI가 *실행 중인 앱을 직접 만지는* 탐침 도구 2종을 하루 만에 구축하고 end-to-end 검증한 기록이다. `/ios-api-probe`(API 응답 자동 캡처)와 `/ios-ui-test`(스크린샷+접근성 트리+에러 로그 3중 버그 탐지) — 시뮬레이터는 idb + OSLog, 실기기는 Proxyman HAR의 이중 파이프라인. 설계 중에 터진 6개 함정(idb UI 자동화 실기기 불가 / iOS 26 SecureStartService / simctl log 버퍼링 잘림 / Proxyman proxy-on 시뮬 차단 / devicectl vs xctrace UDID / 응답 pagination 구조 버그)을 모두 박제해서 다음 사용자가 같은 삽질을 안 하게 만든다."
+quiz:
+  - question: "*시뮬레이터에서는 잘 되던 `idb ui tap` 같은 UI 자동화 명령이 실기기에 붙으면 `FBAccessibilityCommands` 모듈 로드 실패로 에러가 난다.* 이 사실을 Journal 009는 어떻게 처리했나?"
+    choices:
+      - "실기기에서도 작동하게 idb를 포크해서 패치했다"
+      - "*이분법 패턴*으로 박제: idb UI 자동화는 시뮬레이터 전용, 실기기는 Proxyman HAR export만. 두 경로를 같은 `api-probe.sh` 인터페이스 뒤에 통합"
+      - "실기기 지원을 포기하고 시뮬레이터만 지원하기로 했다"
+      - "Apple에 버그 리포트를 보냈다"
+    answer: 1
+    explanation: "FBAccessibilityCommands는 시뮬레이터의 XCTest 하네스가 제공하는 accessibility bridge라 실기기에는 구조적으로 없다. 그래서 *대안 경로*를 만드는 게 유일한 해법: 실기기는 Proxyman으로 HTTPS 트래픽을 잡고 HAR export → base64 디코딩 → `jq` 파싱. 시뮬레이터 경로와 실기기 경로가 서로 다른 기술이지만 `api-probe.sh`가 동일 인터페이스(capture/read/stop)로 감싸서 사용자는 이분법을 몰라도 된다."
+  - question: "*Proxyman을 켜둔 상태로 시뮬레이터의 OSLog를 캡처하려 하면 NSURLSession이 인증서 에러로 요청이 죄다 실패한다.* 원인은?"
+    choices:
+      - "Proxyman이 OSLog 스트림을 독점해서"
+      - "시스템 프록시를 Proxyman이 잡으면 시뮬레이터 NSURLSession의 요청이 Proxyman의 MITM 인증서를 통과하는데, 시뮬레이터에는 해당 루트 인증서가 설치돼있지 않아 인증서 검증 실패로 차단됨"
+      - "idb가 Proxyman과 포트 충돌을 일으켜서"
+      - "시뮬레이터는 TLS를 지원하지 않아서"
+    answer: 1
+    explanation: "Proxyman/Charles 같은 HTTPS 디버깅 프록시는 MITM 방식으로 TLS를 푼다 — 즉 Proxyman이 발급한 루트 인증서를 클라이언트가 신뢰해야 한다. 실기기에는 Proxyman 설치 과정에서 프로파일로 신뢰를 심지만, 시뮬레이터는 그 프로파일이 없다. 그래서 *OSLog 캡처 경로를 쓸 때는 Proxyman 프록시를 꺼야 하고, 실기기 HAR export 경로를 쓸 때만 Proxyman을 켠다.* 한 명령어에 두 도구가 모두 붙는 설계는 이 충돌을 피할 수 없어서 *경로 분리*가 강제된다."
+  - question: "Journal 009의 회고에서 *이전 회고의 '다음에 적용' 5개 항목 중 0개가 해결됐다*는 사실이 가장 우려스러운 이유는?"
+    choices:
+      - "스프린트가 느렸다는 뜻이라서"
+      - "*복리 루프가 끊겼다*는 신호 — Compound Engineering의 전제(사이클 N의 산출물이 사이클 N+1의 입력이 된다)가 이번 스프린트에서는 작동하지 않았다. 주제 전환이 인계를 통째로 단절시킨 구조적 현상이고, 다음 회고는 두 목록을 합산해서 처리해야 한다"
+      - "회고 양식이 잘못됐다는 뜻이라서"
+      - "AI가 회고를 제대로 못 읽었다는 뜻이라서"
+    answer: 1
+    explanation: "이건 단순 게으름이 아니라 *구조적 현상*이다. 이전 스프린트는 훅/메모리/CLAUDE.md 정비였고, 이번 스프린트는 AI 탐침 도구 구축 — 주제가 완전히 다른 방향으로 튀어서 이전의 액션 아이템이 자연스럽게 인계되지 않았다. 대응: (1) 다음 회고에서 두 목록(이전 미완 + 이번 신규)을 *합산*, (2) *주제 전환을 선언적으로* 기록해서 단절을 감추지 말 것, (3) `복리 루프 단절 현상` 엔트리 참조. 감추면 2~3 스프린트가 쌓여서 복구 불능이 된다."
+---
+
+## 한 줄 요약
+
+Journal 008이 **`.claude/` 전면 이식의 조감도**였다면, 이 글은 그 위에서 **AI가 실행 중인 앱을 직접 만지는 탐침 도구 2종**을 하루 만에 구축하고 end-to-end 검증한 기록이다. 8 커밋, 72 파일, +9,598 / -171 줄 — **거의 전부 `.claude/` 레이어**, 프로덕션 코드 변경 1줄(로그 접근 수준 수정). `/ios-api-probe`(실행 중인 앱 API 응답 자동 캡처)와 `/ios-ui-test`(스크린샷 + 접근성 트리 + 에러 로그 3중 버그 탐지)를 양쪽 다 완성하되, **시뮬레이터는 `idb` + `OSLog`, 실기기는 Proxyman `HAR`의 이중 파이프라인**으로 분리 설계. 그 과정에서 터진 **6개 함정**을 모두 박제해 다음 사용자의 삽질을 차단하는 게 이 글의 본 목표.
+
+---
+
+## 이 글의 각도
+
+Journal 007은 **훅 4중 wiring 무음 실패** — 하네스 자체의 자가진단을 박았다. Journal 008은 **프로덕션 코드 0줄로 하네스 전면 이식** — 건드리지 않는 것의 기록이었다. 이 글은 반대 방향이다. **AI가 실행 중인 앱을 *실제로 만지는* 경로**를 뚫고, 그 과정에서 부딪힌 OS/툴링 레벨의 경계를 전부 박제한다.
+
+"AI로 버그를 잡겠다"는 선언은 쉽다. 어려운 건, 그 AI가 앱을 어떻게 관찰하느냐의 **물리 계층**이다. 화면은 어떻게 찍고, 사용자 입력은 어떻게 흉내 내고, API 응답은 어떻게 가로채고, 로그는 어떻게 잘리지 않고 받아오는가. 이 글은 그 물리 계층의 **실전 지도**다.
+
+---
+
+## 최종 설치물 조감도
+
+| 레이어 | 구성 요소 | 역할 |
+|---|---|---|
+| 슬래시 커맨드 | `/ios-api-probe` | 실행 중인 앱의 API 응답을 OSLog/HAR에서 자동 추출 |
+| 슬래시 커맨드 | `/ios-ui-test` | 스크린샷 + 접근성 트리 + 에러 로그 3중 분석으로 화면 버그 자동 탐지 |
+| 스크립트 | `api-probe.sh` (12 서브커맨드) | `check` / `capture` / `stop` / `read` / `screenshot` / `idb-tree` / `idb-tap` / `idb-swipe` / `idb-input` / `idb-key` / `capture-errors` / `read-errors` |
+| 가이드 | `ai-probe-guide.md` | 시뮬레이터 vs 실기기 경로 분리 설명 + 함정 6종 박제 |
+| 프로덕션 픽스 | `Log.osLogger`/`networkLogger` 접근 수준 수정 | 자동화 스크립트가 OSLog subsystem을 참조하려면 `public`이어야 함 |
+
+**핵심 숫자는 "2"다.** 두 개의 파이프라인(시뮬레이터 / 실기기), 두 개의 커맨드(`/ios-api-probe` / `/ios-ui-test`), 그리고 하나의 통합 인터페이스(`api-probe.sh`). 두 경로가 같은 인터페이스 뒤에 숨어서, 사용자는 **"지금 시뮬인가 실기기인가"만 알면 나머지는 동일하게 조작**한다.
+
+---
+
+## 시뮬레이터 vs 실기기 — 이분법 왜 필요했나
+
+처음에는 "한 파이프라인으로 시뮬/실기기 동시 지원"을 목표로 잡았다. 설계 3시간 만에 철회했다. **두 환경은 근본적으로 다른 관찰 경계**를 가진다.
+
+| | 시뮬레이터 | 실기기 |
+|---|---|---|
+| UI 자동화 | `idb ui tap` / `swipe` / `screenshot` **✅** | `FBAccessibilityCommands` 로드 실패 **❌** |
+| 로그 수집 | `xcrun simctl spawn <udid> log stream` **✅** | `xcrun devicectl` + `os_log_stream` (제한적) |
+| 네트워크 캡처 | OSLog `com.apple.CFNetwork` subsystem | **OSLog 접근 불가** — Proxyman HAR로만 |
+| 스크린샷 | `idb screenshot` / `xcrun simctl io` **✅** | iOS 26 `SecureStartService` 오류 **❌** |
+| UDID 형식 | `xcrun simctl list` — 고정 | `xcrun devicectl`은 coredevice UUID (idb 불가), `xctrace list devices`는 idb 호환 UDID |
+
+한 파이프라인으로 억지로 합치면 **시뮬에 맞춘 코드가 실기기에서 조용히 실패**하거나 **실기기에 맞춘 예외 처리가 시뮬 경로를 지저분하게 만든다.** 두 기술 경로는 다르지만 같은 외부 인터페이스(`api-probe.sh capture` / `read`) 뒤에 숨겨서, 사용자의 머리에서는 "환경 선택"만 남게 만드는 게 해답이었다.
+
+---
+
+## 함정 6종 박제
+
+이 섹션이 이 글의 본 목표다. 다음 사용자가 **같은 삽질을 안 하도록**, 증상 → 원인 → 대안 순으로 고정.
+
+### 1. `idb ui *` 명령은 시뮬레이터 전용
+
+- **증상**: 실기기 UDID로 `idb ui tap <x> <y>` 실행 → `FBAccessibilityCommands` 모듈 로드 실패 에러.
+- **원인**: `FBAccessibilityCommands`는 시뮬레이터의 XCTest 하네스가 제공하는 accessibility bridge. 실기기에는 구조적으로 존재하지 않는다. 시뮬레이터가 iOS 앱을 호스트 프로세스로 띄우기 때문에 가능한 것.
+- **대안**: 실기기 UI 자동화는 *포기*하고 **Proxyman HAR export**로 대체. 화면 시각화는 Xcode Instruments 또는 수동 스크린샷.
+- **교훈**: 설계 단계에서 `idb` 공식 문서의 "platform support" 표를 먼저 읽었어야 한다. 실기기 지원을 별도 커밋으로 따로 붙이느라 커밋 2개가 추가로 들었음.
+
+### 2. iOS 26 실기기 `idb screenshot` 불가
+
+- **증상**: iOS 26 실기기에서 `idb screenshot <udid>` → `SecureStartService` 오류.
+- **원인**: iOS 버전이 올라갈수록 실기기의 비밀 계층 접근이 강화됨. Apple이 시뮬레이터에 몰아주고 실기기는 점점 sealed box로 만드는 방향.
+- **대안**: 실기기 스크린샷은 `xcrun devicectl device process captureScreen` 또는 Xcode의 Devices and Simulators 창. 자동화 경로는 **사실상 없음** — AI 도구 관점에서는 "실기기 시각화는 사람이 찍는다"로 전제.
+
+### 3. `xcrun simctl log` 50KB+ 버퍼링 잘림
+
+- **증상**: API 응답 본문이 큰 경우(50KB+) 로그 스트림이 중간에서 잘림. JSON 파서 깨짐.
+- **원인**: `xcrun simctl spawn <udid> log stream`의 기본 출력이 TTY/파이프 버퍼링에 걸림. 한 줄이 일정 길이를 넘으면 끊긴다.
+- **대안**: 두 가지 경로.
+  1. `--predicate` 필터로 수집량 자체를 줄인다 (예: subsystem = `com.apple.CFNetwork` + category = `Connection`).
+  2. 출력을 파일에 redirect해서 라인 단위 버퍼링을 우회한다: `log stream --style ndjson > capture.log`.
+- **상태**: 이번 스프린트는 **문서화만** 했고 실제 해결은 다음 스프린트 이월. 정직하게 박제 — 숨기면 다음 사용자가 또 맞닥뜨린다.
+
+### 4. Proxyman `proxy-on` 시 시뮬레이터 네트워크 차단
+
+- **증상**: Proxyman 켠 상태로 시뮬레이터에서 앱을 돌리면 모든 NSURLSession 요청이 인증서 에러로 실패.
+- **원인**: Proxyman의 HTTPS 디버깅은 MITM 방식. Proxyman 루트 인증서를 클라이언트가 신뢰해야 하는데, 시뮬레이터에는 해당 프로파일이 없다.
+- **대안**: **경로 자체를 분리**. 시뮬레이터 쪽에서 OSLog로 API 응답을 잡을 때는 Proxyman을 *끈다*. 실기기 HAR export 경로에서만 Proxyman을 *켠다*. `api-probe.sh capture --env sim|device` 플래그로 환경을 명시하고, 내부에서 Proxyman 상태 체크를 다르게 한다.
+- **교훈**: 두 도구가 같은 명령어에 공존할 수 없는 경우, **사용자가 충돌을 모르고 쓰게** 설계한다. 경로 분리 + 환경 플래그가 "충돌 자체를 없애는" 가드.
+
+### 5. `devicectl` UDID vs `xctrace` UDID
+
+- **증상**: `xcrun devicectl list devices`에서 복사한 UDID를 `idb connect`에 주면 "device not found".
+- **원인**: `devicectl`은 CoreDevice 프레임워크의 새 UUID 포맷을 반환한다. `idb`는 레거시 UDID 포맷(하이픈 없는 긴 16진수)만 받는다.
+- **대안**: `xcrun xctrace list devices` 출력의 UDID 컬럼이 `idb` 호환. 자동화 스크립트는 반드시 `xctrace` 쪽에서 UDID를 뽑는다.
+- **교훈**: Apple 내부 툴 체인도 UUID 포맷이 세대별로 나뉘어있다. 자동화 스크립트에서 "UDID 하나로 통일"은 환상. **툴에 맞는 UDID 소스를 명시적으로 선택**해야 함.
+
+### 6. 응답 pagination 구조 버그 발견
+
+자동화 탐침을 돌리던 중 실제 API 버그가 튀어나왔다. 도구가 **목적대로 작동한다는 증명**.
+
+- **증상**: 항목 목록 API의 응답에서 `totalCount: 0`인데 실제 아이템은 30개 이상 존재.
+- **원인**: 서버 응답 구조가 `totalCount`를 루트가 아니라 **각 아이템(`items[n].totalCount`) 안**에 내려주는 구조. Repository 레이어가 루트 `totalCount`를 읽으면 항상 0.
+- **대안**: Repository 파싱에서 `items[0]?.totalCount` 폴백 or 서버팀과 응답 구조 정규화 협의.
+- **메타 교훈**: **AI 탐침 도구가 버그를 처음 발견한 케이스**. 사람이 수동 QA로는 "데이터는 보이네"로 지나쳤을 버그를, 자동 캡처가 값 자체를 뜯어봐서 drop을 잡아냈다. 이게 이 스프린트의 ROI 증명.
+
+---
+
+## `api-probe.sh` — 12 서브커맨드 통합 인터페이스
+
+두 파이프라인이 같은 인터페이스 뒤에 숨으려면 **공통 subcommand 체계**가 필요하다. 최종 형태:
+
+```bash
+api-probe.sh check                      # 환경 진단 (idb 설치? UDID 인식? simctl 접근?)
+api-probe.sh capture --env sim          # OSLog 네트워크 스트림 시작 (시뮬)
+api-probe.sh capture --env device       # Proxyman HAR 감시 모드 (실기기)
+api-probe.sh stop                       # 캡처 중단
+api-probe.sh read                       # 가장 최근 캡처 결과 jq 파싱 출력
+api-probe.sh screenshot                 # 현재 화면 캡처 + 자동 open (시뮬만)
+api-probe.sh idb-tree                   # 접근성 트리 덤프 → jq 파서
+api-probe.sh idb-tap <x> <y>            # 좌표 탭 (시뮬만)
+api-probe.sh idb-swipe <x1> <y1> <x2> <y2>
+api-probe.sh idb-input "<text>"
+api-probe.sh idb-key <keycode>
+api-probe.sh capture-errors             # os_log 레벨 error 이상만 필터
+api-probe.sh read-errors                # 에러 로그 파싱
+```
+
+**12 서브커맨드가 많아 보이지만**, 사용자의 일반 워크플로는 3단계다: `check` → `capture` → `read`. 나머지 9개는 디버깅/UI 자동화가 필요할 때만.
+
+---
+
+## `/ios-api-probe` — end-to-end 시나리오 완주
+
+이 스프린트가 "동작할 것 같다"가 아니라 "동작한다"로 커밋된 이유는 **실제 시뮬레이터에서 앱 실행 → 권한 팝업 허용 → 로그인 → 홈 → 세부 탭 → 항목 목록**까지 자동 이동을 완주했기 때문. 그 과정을 `.claude/commands/ios-api-probe.md`의 실행 예시에 박제.
+
+- 권한 팝업 처리 패턴: `idb-tree`로 `Allow` 버튼의 접근성 식별자 찾기 → `idb-tap` 좌표 계산 → 팝업 체인 통과
+- 로그인 입력: `idb-input`으로 텍스트 주입. 이메일 필드 포커스는 `idb-tap` 선행 필수.
+- 탭바 이동: 접근성 트리에서 탭 식별자를 찾아 좌표 추출 (디바이스 독립)
+
+**팝업 허용 로직은 특히 "모두 허용" 정책으로 고정**했다. 자동화 시나리오는 권한을 세부 분기하지 않고 모두 수락 — 팝업 분기마다 별도 경로를 만들면 유지보수 지옥.
+
+---
+
+## `/ios-ui-test` — 스크린샷 + 접근성 트리 + 에러 로그 3중 분석
+
+이 커맨드는 **실전 완주 미검증** 상태로 커밋됐다. 정직하게 박제: 커맨드 파일과 설계는 완성했지만, **시뮬레이터에서 실제로 3중 분석 루프를 한 번도 끝까지 돌린 기록이 없다.** Journal 007의 교훈("검증 안 된 완료는 부채")이 여기 해당한다.
+
+설계는 다음과 같다:
+
+1. `screenshot` — 현재 화면 캡처
+2. `idb-tree` — 접근성 트리 전체 덤프
+3. `capture-errors` + `read-errors` — os_log error 이상 수집
+4. **AI가 3개 입력을 동시에 받아서**: 화면에 보이는 요소 vs 접근성 트리의 요소 불일치 탐지, 에러 로그와의 교차 참조, 레이아웃 overflow/clipping 휴리스틱
+
+다음 스프린트 액션 아이템: **실전 1회 완주 기록 남기기.** 완주 기록 없이는 `/ios-ui-test`는 "잘 설계된 파일"일 뿐 하네스의 자산이 아니다.
+
+---
+
+## 회고 복리 체크 — 이전 회고 인계 0/5
+
+이번 스프린트의 가장 뼈아픈 발견. 이전 회고(2026-04-15)의 "다음에 적용" 5개 항목 중 **0개** 이번 스프린트에서 해결됨.
+
+| # | 이전 항목 | 상태 |
+|---|------|------|
+| 1 | 훅 wiring 자동 검증 스크립트 (`verify-hooks.sh`) | ❌ |
+| 2 | `CLAUDE.md` 200줄 다이어트 재시도 | ❌ |
+| 3 | SwiftUI iOS 17+ 전환 경로 문서화 | ❌ |
+| 4 | 메모리 인덱스 정책 | ❌ |
+| 5 | `detect-context.sh --full` 실전 검증 | ❌ |
+
+이건 게으름이 아니라 **구조적 현상**이다. 이전 스프린트는 훅/메모리 정비였고 이번은 AI 탐침 구축 — 주제가 완전히 다른 방향으로 튀었다. Compound Engineering의 전제("사이클 N의 산출물이 사이클 N+1의 입력")가 이번에는 작동하지 않았다.
+
+대응 3종을 **별도 엔트리**로 박제했다: [복리 루프 단절 현상](/wiki/harness-engineering/compound-loop-break). 다음 스프린트는 두 목록(이전 미완 5 + 이번 신규)을 합산해 처리한다.
+
+---
+
+## 교훈
+
+1. **시뮬레이터와 실기기는 서로 다른 관찰 경계를 가진다.** 한 파이프라인으로 합치려 하면 조용한 실패가 쌓인다. `idb` UI 자동화 / OSLog / 스크린샷은 시뮬 전용, Proxyman HAR은 실기기 전용 — 두 경로를 분리하고 외부 인터페이스만 통합하는 게 유일하게 유지보수 가능한 구조.
+2. **Apple 툴 체인의 UUID 포맷은 세대별로 분열돼있다.** `devicectl`과 `xctrace`가 같은 기기에 대해 다른 UDID를 반환한다. 자동화 스크립트는 "어떤 툴의 UDID가 필요한가"를 명시적으로 고정해야 한다.
+3. **두 도구가 같은 명령어에 공존할 수 없을 때는 경로 자체를 분리한다.** Proxyman + 시뮬레이터 OSLog는 인증서 충돌로 공존 불가. 한 명령에 두 도구가 붙는 설계는 피하고, `--env` 플래그로 경로를 나눈다.
+4. **함정 박제는 "내가 하루 만에 다시 쓰게 만드는 문서"여야 한다.** 6개 함정 전부를 증상 → 원인 → 대안 구조로 고정. 다음 사용자의 첫 30분을 절약하는 게 목표. 이 Journal 자체가 그 문서.
+5. **도구가 실제 버그를 먼저 발견하는 게 ROI 증명.** 수동 QA가 놓친 pagination 파싱 버그를 자동 캡처가 값 단위로 뜯어봐서 찾아냈다. 탐침 도구의 존재 근거.
+6. **"검증 안 된 완료"는 반드시 명시적으로 박제한다.** `/ios-ui-test`가 실전 완주 미검증 상태로 커밋됐다는 사실을 숨기지 않고 회고와 이 Journal에 박제. Journal 007의 교훈 적용.
+7. **복리 루프가 끊어질 수 있다는 건 Compound Engineering의 실패 케이스가 아니라 관리 대상이다.** 0/5라는 숫자를 숨기지 않고 [별도 엔트리](/wiki/harness-engineering/compound-loop-break)로 뽑아, 대응 패턴을 방법론 레이어로 일반화.
+
+---
+
+## 연결
+
+- **[Journal 008 — 하네스 첫 풀셋업 후기](/wiki/ios-ai/ios-ai-journal-008-first-full-harness-setup-retro)**: 이 글의 전제. `.claude/` 전면 이식 위에 AI 탐침 2종이 얹힌 구조.
+- **[Journal 007 — 훅 4중 wiring 무음 실패](/wiki/ios-ai/ios-ai-journal-007-claude-hooks-silent-failure)**: "검증 안 된 완료"의 교훈. `/ios-ui-test` 실전 미검증 박제 방식의 근거.
+- **[Journal 005 — /compound](/wiki/ios-ai/ios-ai-journal-005-ios-compound)**: 이번 회고를 `/compound`로 박제한 결과물이 이 글. compound 3 Phase가 제대로 돌았다는 증명.
+- **[복리 루프 단절 현상](/wiki/harness-engineering/compound-loop-break)**: 이전 회고 인계 0/5의 대응 패턴을 방법론으로 추출한 엔트리.
+- **[AI Agent Start Here](/wiki/harness-engineering/ai-agent-start-here)**: "AI가 실행 중인 앱을 관찰한다"는 상황 라우팅의 iOS 케이스.
