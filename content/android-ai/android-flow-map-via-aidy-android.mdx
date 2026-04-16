@@ -1,0 +1,346 @@
+---
+title: "aidy-android로 그리는 안드로이드 흐름 맵 — iOS 개발자를 위한 큰 그림"
+category: android-ai
+date: "2026-04-16"
+tags: [android, jetpack-compose, kotlin, coroutines, mvvm, aidy, ios-to-android, learning-path]
+confidence: 2
+connections:
+  - backend-ai/backend-flow-map-via-aidy-server
+  - harness-engineering/aidy-journal-000-architect-worker-baseline
+status: complete
+description: "iOS 개발자가 aidy-android(Jetpack Compose + Kotlin)로 안드로이드를 학습할 때, 파일별 독해가 아닌 '채팅 메시지 한 번의 여정'을 따라가며 큰 그림을 잡는 학습 경로. Compose UI · ViewModel · Repository · Retrofit · Coroutine · 인증/에러 처리를 한 묶음으로 이해하기 위한 로드맵과 iOS(SwiftUI/Combine) 대응 매핑표."
+type: entry
+quiz:
+  - question: "Jetpack Compose에서 'Composable 함수는 state가 바뀌면 다시 실행된다'는 개념(Recomposition)을 SwiftUI의 무엇과 대응시키는 게 정확한가?"
+    choices:
+      - "UIViewController의 viewDidLoad"
+      - "SwiftUI View의 body가 @State 변화에 의해 재계산되는 것. SwiftUI View struct와 Composable 함수 모두 '선언형 UI' + '상태 기반 재렌더'라는 동일 모델을 공유"
+      - "UITableView의 reloadData"
+      - "Combine의 sink"
+    answer: 1
+    explanation: "Compose와 SwiftUI는 같은 세대의 선언형 UI 프레임워크. Composable 함수(또는 SwiftUI View)는 '현재 state에서 UI가 어떻게 보여야 하는가'를 선언한다. state가 바뀌면 프레임워크가 재계산해서 diff만 그린다. mutableStateOf ↔ @State, mutableStateListOf ↔ @Published array 느낌으로 매핑하면 이해가 빠르다."
+  - question: "iOS의 'URLSession + Codable + async' 조합에 해당하는 Android의 스택은?"
+    choices:
+      - "SharedPreferences + JSON 수동 파싱"
+      - "Retrofit2 + Gson(or Moshi) + Kotlin Coroutine(suspend fun). aidy-android의 AidyApiService가 이 조합"
+      - "WorkManager + Room"
+      - "Intent + Bundle"
+    answer: 1
+    explanation: "Retrofit은 URLSession의 상위 추상(인터페이스만 선언하면 구현 자동 생성). Gson/Moshi가 Codable 역할(JSON ↔ data class). suspend fun이 async 키워드 역할. OkHttp Interceptor가 Alamofire RequestInterceptor와 동일한 체인 포인트다."
+  - question: "iOS의 'Keychain에 토큰 저장' 관행에 대응되는 Android의 방식은?"
+    choices:
+      - "그냥 SharedPreferences"
+      - "EncryptedSharedPreferences (Jetpack Security). 일반 SharedPreferences는 평문 저장이라 토큰/키 금지. aidy-android의 SettingsPreferences가 이 래퍼"
+      - "파일에 저장"
+      - "환경변수"
+    answer: 1
+    explanation: "Keychain이 시스템 차원의 암호화 저장소라면, Android는 앱별 SharedPreferences 위에 암호화 레이어를 덮은 EncryptedSharedPreferences가 실무 표준. 키는 AndroidKeyStore에 보관. Root 된 기기에서도 평문 노출을 막는다."
+---
+
+## 한 줄 요약
+
+iOS 개발자가 `aidy-android`(Jetpack Compose + Kotlin) 레포로 안드로이드 학습을 시작할 때, 파일별 코드 독해가 아니라 **"채팅 메시지 한 번을 전송하는 여정"을 Composable부터 API 응답까지 따라가는 방식**으로 큰 그림을 잡는다. Compose + MVVM + Retrofit + Coroutines + EncryptedSharedPreferences가 작은 레포 안에 모여 있어 **iOS의 SwiftUI/Combine/Keychain 경험을 그대로 매핑하며 배우기 좋은 구조**다.
+
+---
+
+## 갭 / 맥락
+
+iOS 개발자가 Android Studio에서 Kotlin 프로젝트를 처음 열었을 때 흔한 실패 패턴:
+
+| 증상 | 원인 |
+|------|------|
+| `activity_main.xml`부터 찾으려 함 | 최신 Compose 앱에는 XML 레이아웃이 거의 없음. `@Composable` 함수가 View 역할 |
+| ViewModel을 `@StateObject`처럼 읽으려다 혼란 | Compose의 ViewModel은 lifecycle-scoped. SwiftUI의 `StateObject`보다 명시적으로 생존 범위가 길다 |
+| Retrofit 인터페이스만 보고 "구현체 어디 있지?" | Retrofit이 런타임에 프록시 생성. 인터페이스 선언 = 구현 선언 |
+| Coroutine이 async/await과 달라 헷갈림 | `suspend`는 키워드 위치가 다르고, CoroutineScope/Dispatcher 개념 추가 |
+| Gradle 에러의 원인이 안 보임 | iOS의 xcconfig + Podfile + SPM이 Gradle 하나에 모여있음. 복잡해 보이지만 "의존성 + 빌드 설정" 동일 역할 |
+
+**핵심 진단**: 이미 아는 iOS 개념(SwiftUI 선언형, Combine state, URLSession, Keychain)에 **Android 용어를 올바르게 매핑**하면 학습 속도가 급격히 빨라진다.
+
+---
+
+## aidy-android가 학습 재료로 좋은 이유
+
+`~/Develop/aidy-android` — Jetpack Compose + Kotlin + Retrofit + Coroutines. 작은 앱이지만 실무 Android 클라이언트의 필수 요소가 한 군데 모여 있다.
+
+```
+[선언형 UI]       Jetpack Compose + Material 3 (XML 없음)
+[상태 관리]       ViewModel + mutableStateOf / mutableStateListOf
+[비동기]          Kotlin Coroutines (viewModelScope)
+[네트워킹]        Retrofit2 + OkHttp + Gson
+[보안 저장]       EncryptedSharedPreferences (토큰)
+[인증 자동화]     OkHttp Interceptor로 Bearer 헤더 자동 첨부
+[에러 처리]       ApiException + ChatErrorState (retryable 구분)
+[네비게이션]      Scaffold + NavigationBar (탭 기반, 3탭)
+```
+
+iOS로 비유하면 "SwiftUI + @StateObject + URLSession + Keychain + Alamofire Interceptor"를 다 담은 Starter 프로젝트다.
+
+---
+
+## 1단계: "채팅 메시지 한 번의 여정" 따라가기
+
+### 사용자가 메시지 입력 → 전송 버튼 탭 → 응답 화면 업데이트
+
+```mermaid
+flowchart TD
+    User[사용자: TextField에 입력 + 전송 버튼 탭]
+
+    subgraph UI[UI Layer - Jetpack Compose]
+      Screen[ChatScreen<br/>Composable 함수]
+      Screen -->|onClick| VM_call[viewModel.send()]
+    end
+
+    User --> Screen
+
+    subgraph VM[ViewModel Layer]
+      VM_call --> VM[ChatViewModel]
+      VM -->|1 State 즉시 업데이트| S1[messages.add 유저 메시지]
+      VM -->|2 isLoading = true| S2[로딩 UI 표시]
+      VM -->|3 coroutine 시작| Scope[viewModelScope.launch]
+    end
+
+    Scope --> Repo[ChatRepository]
+
+    subgraph Data[Data Layer]
+      Repo -->|sendMessage| Api[AidyApiService<br/>Retrofit 인터페이스]
+      Api --> OK[OkHttp Client]
+    end
+
+    subgraph Interceptors[OkHttp Interceptor 체인]
+      OK --> I1[Auth Interceptor<br/>Bearer 토큰 자동 첨부]
+      I1 --> I2[401 Interceptor<br/>인증 만료 시 로그아웃 트리거]
+    end
+
+    I2 --> Net[네트워크]
+    Net --> Server[aidy-server<br/>POST /api/chat]
+
+    Server -->|응답| Net2[네트워크]
+    Net2 --> GSON[Gson Converter<br/>JSON → ChatResponse data class]
+    GSON --> Repo2{에러?}
+    Repo2 -->|HttpException| E1[toApiException<br/>ApiException 변환]
+    Repo2 -->|정상| Resp[ChatResponse 반환]
+
+    E1 --> VM_err[ViewModel catch]
+    Resp --> VM_ok[ViewModel try]
+
+    VM_err --> State_err[errorState 업데이트<br/>retryable 여부 포함]
+    VM_ok --> State_ok[messages.add 어시스턴트 메시지]
+
+    State_err --> Recompose
+    State_ok --> Recompose
+    Recompose[Compose Recomposition<br/>state 변화 감지 → UI 재렌더]
+    Recompose --> UI_final[ChatScreen 화면 업데이트]
+```
+
+### 각 단계가 하는 일 (한 줄씩)
+
+| 단계 | 역할 | iOS(SwiftUI) 대응 |
+|------|------|-------------------|
+| **ChatScreen (`@Composable`)** | UI 선언. state 변화 시 프레임워크가 재렌더 | SwiftUI `View` struct의 `body` |
+| **`viewModel.send()`** | UI 이벤트를 ViewModel에 위임 | Button action → ObservableObject method |
+| **`mutableStateOf` / `mutableStateListOf`** | Compose가 관찰하는 상태 홀더 | `@Published` / `@State` |
+| **`viewModelScope.launch`** | ViewModel이 살아있는 동안 유지되는 Coroutine 범위 | `Task { }` + async / Combine `sink` |
+| **Repository** | ViewModel과 네트워크 사이 추상 | iOS의 `Repository` / `Service` 레이어 |
+| **Retrofit `@POST("api/chat")`** | 어노테이션으로 HTTP 선언. 런타임 프록시 생성 | 수동 `URLRequest` + `URLSession` |
+| **OkHttp Interceptor** | 모든 요청/응답 공통 전처리 (토큰 주입, 401 처리) | Alamofire `RequestInterceptor` |
+| **Gson Converter** | JSON ↔ Kotlin data class 자동 변환 | `Codable` + `JSONDecoder` |
+| **ApiException** | 서버 에러 코드를 앱 예외로 표준화 | `NetworkError` enum |
+| **`ChatErrorState(message, isRetryable)`** | UI에 노출되는 에러 상태 + 재시도 가능 여부 | 같음 |
+| **Recomposition** | state 변화 → Composable 재실행 (변경 diff만 그림) | SwiftUI의 body 재계산 |
+
+> 💡 **파일별이 아닌 이 흐름 한 줄기**를 끝까지 따라가면 Compose + ViewModel + Retrofit + Coroutine이 왜 함께 쓰이는지가 자연스럽게 이해된다.
+
+---
+
+## 2단계: 관심사별 훑기
+
+각 주제에 대해 **한 문장으로 "iOS에서는 뭐였지?"에 답할 수 있으면 통과**.
+
+### Jetpack Compose (선언형 UI)
+- **Composable 함수**: `@Composable fun ChatScreen(...) { ... }` — SwiftUI `View` struct의 `body`와 같은 역할. 상태가 바뀌면 함수가 다시 실행됨(Recomposition).
+- **state hoisting**: 상태를 하위 Composable이 소유하지 않고 상위로 끌어올리는 패턴. SwiftUI의 `@Binding` 흐름과 동일한 철학.
+- **`remember` / `rememberSaveable`**: Composable 재실행 간에 값을 유지. SwiftUI `@State`(생존)와 거의 같음. `rememberSaveable`은 프로세스 재생성까지 살아남음(`@SceneStorage` 느낌).
+- **Material 3**: Google 디자인 시스템. iOS의 Apple HIG에 대응. `Scaffold`, `NavigationBar`가 공통 레이아웃 제공.
+
+### ViewModel + 상태 관리
+- **`ViewModel`**: 화면 회전 같은 구성 변경에도 살아남는 상태 보관소. SwiftUI `ObservableObject`와 유사하나 **더 명시적인 lifecycle**.
+- **`mutableStateOf(...)`**: Compose가 관찰하는 단일 값. `@State` / `@Published` 대응.
+- **`mutableStateListOf<T>()`**: 관찰 가능한 리스트. 배열 변경이 자동으로 Recomposition 트리거. `[T]` + `@Published` 조합.
+- **`viewModelScope`**: ViewModel이 cleared 될 때 자동 취소되는 Coroutine 범위. iOS의 `Task` + `deinit` 수동 cancel을 자동화한 것.
+
+### Repository 패턴
+- ViewModel이 Retrofit을 직접 알지 못하게 분리하는 계층.
+- `ChatRepository` → `ChatViewModel`에 주입 → 테스트에서 Mock 주입 가능.
+- iOS의 `ChatUseCase` / `ChatRepository`와 **이름까지 똑같이 쓴다**.
+
+### 네트워킹 (Retrofit + OkHttp)
+- **Retrofit 인터페이스**: `interface AidyApiService { @POST("api/chat") suspend fun chat(...) }` — 어노테이션이 HTTP 명세 + suspend가 async 역할.
+- **OkHttp**: 실제 HTTP 클라이언트. 여기서 Interceptor로 공통 처리(토큰 주입, 401 감지).
+- **Gson Converter**: JSON ↔ `data class`. `Codable`과 같은 역할이지만 **리플렉션 기반**이라 필드명 매핑에 주의(`@SerializedName`).
+
+### 비동기 (Kotlin Coroutines)
+- **`suspend fun`**: "이 함수는 중단될 수 있다" 마커. Swift의 `async` 키워드와 동일 개념.
+- **Coroutine vs Task**: Coroutine은 `CoroutineScope`와 `Dispatcher`를 명시적으로 지정. iOS의 `Task { }` + `@MainActor`를 더 세분화한 것.
+- **`viewModelScope.launch { ... }`**: ViewModel 생명주기에 묶인 Coroutine. UI 이벤트 핸들러에서 가장 많이 씀.
+- **`withContext(Dispatchers.IO)`**: 네트워크/DB 작업을 IO 스레드로 옮김. Retrofit은 내부적으로 처리하므로 명시하지 않아도 됨.
+
+### 인증 / 보안
+- **`EncryptedSharedPreferences`**: Android의 Keychain 대응. 키는 `AndroidKeyStore`에 보관, 값은 AES로 암호화.
+- **Bearer 토큰 자동 주입**: OkHttp Interceptor에서 매 요청마다 `Authorization: Bearer ...` 헤더 추가.
+- **401 자동 로그아웃**: Interceptor에서 응답 코드 감지 → `onUnauthorized` 콜백 → `isLoggedIn = false` → Auth 화면 이동.
+
+### 에러 처리
+- **`ApiException(message, isRetryable)`**: 서버 ErrorCode를 앱 예외로 표준화.
+- **`ChatErrorState`**: UI에 노출할 에러 상태 + **재시도 가능 여부** 표시.
+- **네트워크 예외 분류**:
+  ```kotlin
+  is ConnectException     → "서버 연결 실패" (retryable)
+  is SocketTimeoutException → "응답 지연" (retryable)
+  is UnknownHostException → "인터넷 연결 확인" (retryable)
+  else                    → "일반 오류" (non-retryable)
+  ```
+- iOS의 `URLError` + `NetworkError` enum 매핑 패턴과 완전히 동일.
+
+### 네비게이션
+- **`Scaffold + NavigationBar`**: Material 탭 레이아웃. iOS의 `TabView`.
+- **탭 전환을 `selectedTab` state로 관리**: `when (selectedTab) { 0 -> ChatScreen(); 1 -> PeopleScreen(); ... }`. SwiftUI `TabView` + `selection`과 동일.
+- **더 복잡한 네비게이션은 Navigation Compose** 사용 (이 앱은 탭만 쓰므로 미도입).
+
+---
+
+## 3단계: iOS 경험을 레버리지 — SwiftUI ↔ Compose 비교 매핑표
+
+| iOS / SwiftUI | Android / Compose | 한 줄 메모 |
+|---------------|-------------------|-----------|
+| `View` struct + `body` | `@Composable fun` | 선언형 UI 단위 |
+| `@State var x` | `var x by mutableStateOf(...)` | 지역 상태 |
+| `@StateObject / @ObservedObject` | `ViewModel` + `viewModel()` | 화면 상태 소유자 |
+| `@Published` | `mutableStateOf` / `StateFlow` | 관찰 가능한 값 |
+| `[T]` + `@Published` | `mutableStateListOf<T>()` | 관찰 가능한 리스트 |
+| `@Binding` | `onValueChange: (T) -> Unit` + state hoisting | 양방향/단방향 상태 전달 |
+| `Task { await ... }` | `viewModelScope.launch { ... }` | 비동기 실행 범위 |
+| `async / await` | `suspend fun / .await()` | 비동기 함수 표현 |
+| `URLSession` | `OkHttpClient` | HTTP 엔진 |
+| `URLRequest` + 수동 JSON | `Retrofit @POST/@GET interface` | 선언적 API 계층 |
+| `Codable` + `JSONDecoder` | `data class` + Gson/Moshi | JSON 직렬화 |
+| Alamofire `RequestInterceptor` | OkHttp `Interceptor` | 요청/응답 전처리 체인 |
+| `Keychain` | `EncryptedSharedPreferences` | 민감 데이터 저장 |
+| `UserDefaults` | `SharedPreferences` | 일반 앱 설정 |
+| `NetworkError` enum | `ApiException` | 앱 예외 표준화 |
+| `TabView` + `selection` | `Scaffold` + `NavigationBar` | 탭 UI |
+| `NavigationStack` | Navigation Compose | 스택 네비게이션 |
+| `XCTest` | JUnit + Robolectric / Compose Test | 단위/UI 테스트 |
+| `xcconfig + Podfile + SPM` | `build.gradle.kts + gradle.properties` | 빌드/의존성 설정 |
+| `Info.plist` | `AndroidManifest.xml` | 앱 메타/권한 선언 |
+| Simulator | Emulator (AVD) | 개발용 가상 기기 |
+| `@MainActor` | `Dispatchers.Main` | 메인 스레드 제약 |
+
+> 🎯 이 표만 외워도 Android 레포를 열었을 때 "아 이건 SwiftUI의 저거구나"가 자동 변환된다.
+
+---
+
+## 4단계: 실전 학습 로드맵
+
+### Week 1 — 앱 띄우고 한 번 돌려보기
+1. Android Studio 설치 → `aidy-android` Open Project → Gradle sync
+2. 에뮬레이터(AVD) 생성 → `./gradlew installDebug`로 설치
+3. aidy-server가 `localhost:8080`에 떠있는지 확인 (`docker compose up -d` + `./gradlew bootRun`)
+4. 앱에서 회원가입 → 로그인 → 채팅 한 번
+5. **"메시지 전송 → 응답"이 돌면 이 시점에 파일 열기 순서**:
+   ```
+   ChatScreen → ChatViewModel → ChatRepository → AidyApiService
+   → SettingsPreferences (토큰 저장) → ApiException (에러 처리)
+   ```
+
+### Week 2 — Compose 기본기 (SwiftUI 경험 활용)
+- `@Composable` + `remember` + `mutableStateOf` 3종 세트가 `body` + `@State`임을 체득
+- `ChatScreen.kt`에서 `LazyColumn`(= SwiftUI `List` + `ForEach`), `TextField`, `Button` 관찰
+- **작은 실습**: 메시지 오른쪽 정렬 색상 변경 → Recomposition 체감
+- **Preview 활용**: `@Preview` 어노테이션으로 SwiftUI Canvas 같은 미리보기
+
+### Week 3 — ViewModel + Coroutine
+- `ChatViewModel.send()` 읽으며 "상태 즉시 업데이트 → Coroutine으로 API 호출 → 결과로 상태 갱신" 3단 구조 체득
+- `viewModelScope.launch`가 왜 필요한지 (lifecycle binding)
+- `try/catch` + `finally` 패턴이 iOS `do/catch`와 거의 동일함 확인
+- **작은 실습**: 메시지 전송 실패 시 재시도 UI 동작 눈으로 확인 → `retry()` 함수 추적
+
+### Week 4 — 네트워킹 계층 해부
+- `AidyApiService` 인터페이스 → Retrofit이 런타임에 구현체를 생성한다는 점 체득
+- `OkHttpClient.Builder().addInterceptor { ... }` — 토큰 자동 주입 원리
+- 401 자동 로그아웃: Interceptor → `onUnauthorized` 콜백 → `AidyApp.kt`의 `DisposableEffect`로 연결되는 흐름
+- **작은 실습**: Android Studio의 **App Inspection → Network Inspector**로 실제 HTTP 트래픽 확인 (iOS Charles Proxy / Network 탭 대응)
+
+### Week 5 — 보안 / 테스트 / 운영
+- `EncryptedSharedPreferences` — 일반 SharedPreferences와 차이
+- `local.properties` / BuildConfig — API 키 하드코딩 금지 관행
+- `./gradlew testDebugUnitTest` — ViewModel 테스트 구조
+- **Network Security Config**: 개발용 `10.0.2.2` cleartext 허용 패턴
+
+### (확장) Week 6+ — SwiftUI vs Compose 평행 학습
+- 같은 기능을 aidy-ios와 aidy-android 양쪽에서 비교하며 읽기
+- 동일 백엔드 스펙(api-contract.md)을 두 플랫폼이 어떻게 구현하는지 대조
+
+---
+
+## 자주 막히는 지점 (미리 공유)
+
+| 증상 | 원인 / 해법 |
+|------|------------|
+| 에뮬레이터에서 서버 호출이 `ConnectException` | 에뮬레이터는 `localhost` ≠ 호스트 머신. `10.0.2.2:8080`로 접근해야 함 |
+| 실제 디바이스에서 서버 호출 실패 | 같은 Wi-Fi + 서버 IP 직접 입력 + Network Security Config에 cleartext 허용 |
+| Gradle sync 실패 | `gradle.properties`의 JVM 옵션, JDK 버전 불일치 확인. Android Studio 내장 JDK 사용 권장 |
+| `compose compiler version` 에러 | Kotlin 버전과 Compose Compiler 버전 매트릭스 확인 — Kotlin 2.x부터는 Compose plugin 사용 |
+| Recomposition이 안 일어남 | `var x = ...`로 선언하면 관찰 불가. 반드시 `by mutableStateOf(...)` 또는 `StateFlow` 사용 |
+| Coroutine이 갑자기 멈춤 | `viewModelScope`가 아닌 `CoroutineScope(...)`를 직접 만들었다면 cancel 안 됨. 메모리 누수 원인 |
+| 401 루프 | Interceptor 안에서 재로그인 호출 시 다시 401 → 무한 루프. `/auth/` 경로는 예외 처리(현 코드 참고) |
+| `NetworkOnMainThreadException` (레거시) | 최신 Retrofit + Coroutine 조합에서는 거의 안 봄. 봤다면 Coroutine 안에서 호출 안 한 것 |
+
+---
+
+## AI Agent Directive
+
+### Trigger
+- iOS 개발자가 Android 학습을 시작할 때
+- Compose/Kotlin 레포를 처음 열고 어디부터 봐야 할지 모를 때
+- "SwiftUI는 아는데 Compose는 뭐가 비슷하고 뭐가 다른지" 정리가 필요할 때
+
+### Prerequisites
+- SwiftUI 기본기 (View / @State / @StateObject / Task)
+- URLSession + Codable 사용 경험
+- [aidy-server로 그리는 백엔드 흐름 맵](/wiki/backend-ai/backend-flow-map-via-aidy-server) — 같은 요청이 서버에서 어떻게 처리되는지
+
+### Actionable Steps
+1. **"채팅 한 번의 여정"을 먼저 그린다** — UI 이벤트 → ViewModel → Repository → Retrofit → 응답 → Recomposition 풀 트레이스
+2. **SwiftUI ↔ Compose 매핑표를 자신의 수준에 맞게 재작성** — 이미 아는 개념에 새 용어를 붙이는 작업이 핵심
+3. **state 변화가 Recomposition을 일으키는지 눈으로 확인** — 로그 추가 후 버튼 클릭 → Composable이 다시 실행되는 것 체감
+4. **Network Inspector로 실제 HTTP 트래픽 보기** — 말로 듣는 Interceptor보다 눈으로 보는 요청 1건이 빠름
+5. **401 루프 + 에뮬레이터 네트워킹은 먼저 맞고 시작** — 90% 개발자가 여기서 시간 낭비
+
+### Anti-patterns
+- **XML 레이아웃부터 찾기** — 최신 Compose 앱에는 거의 없음
+- **Kotlin을 Swift의 미묘한 차이로 비교하며 공부** — 언어 차이보다 **프레임워크 매핑**이 우선
+- **Navigation Compose부터 학습** — 작은 앱은 `when(selectedTab)`로 충분. 과설계 방지
+- **SharedPreferences에 토큰 저장** — 평문 유출 위험. 반드시 EncryptedSharedPreferences
+- **GlobalScope 사용** — lifecycle 무시 → 메모리 누수. `viewModelScope` 쓰기
+
+---
+
+## 다음 학습 연결
+
+- [aidy-server로 그리는 백엔드 흐름 맵](/wiki/backend-ai/backend-flow-map-via-aidy-server) — 클라이언트가 보낸 요청이 서버에서 어떻게 흐르는가
+- [Aidy Journal 000 — Architect/Worker Baseline](/wiki/harness-engineering/aidy-journal-000-architect-worker-baseline) — iOS/Android/Server 3자가 하나의 API 계약을 공유하는 구조
+
+---
+
+## 출처 / 검증 메모
+
+- 코드: `~/Develop/aidy-android` (README.md, CLAUDE.md)
+- 구조: `app/src/main/java/com/mino/aidy/{ui, data/api, data/repository, data/model}`
+- 핵심 파일:
+  - `ui/chat/ChatViewModel.kt` — state + coroutine 패턴
+  - `data/api/AidyApiService.kt` — Retrofit 인터페이스 + OkHttp Interceptor
+  - `ui/AidyApp.kt` — Scaffold + NavigationBar 탭 구조
+  - `data/SettingsPreferences.kt` — EncryptedSharedPreferences 래퍼
+- API 계약: `~/Develop/aidy-architect/specs/api-contract.md`
+- 자매 프로젝트: `aidy-server`, `aidy-ios`
