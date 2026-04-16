@@ -2,6 +2,32 @@
 
 모든 주목할 만한 변경사항을 이 파일에 기록합니다.
 
+## [2026-04-17] 세션 6 — Aidy Journal 006 박제 + 교훈→도구→사례 3단 연결
+
+### Added — 신규 엔트리 1건 (117 → 118)
+
+- `harness-engineering/aidy-journal-006-ios-ci-self-hosted-runner-migration.mdx` — WO-010 진단 3회 정정(tuist↔macos-14 → 결제 차단 → ai-review.yml 알림 폭탄) + ADR-009 self-hosted runner 결정 + 실측 180min → 0min + 후속 WO 3건(011 Swift 6 / 012 Node.js 24 P0 / 013 워크플로 통합)
+
+### Changed — 기존 엔트리 출처 보강 (교훈→도구→사례 3단 연결)
+
+- `aidy-journal-003-parallel-dispatch-token-economics.mdx` "출처" 섹션 — `a4f8861 v0.7.1` 커밋 추가(s6 교훈이 실제 도구로 박제된 시점) + Journal 006 역링크
+- `tmux-flush-automation-pattern.mdx` "출처" 섹션 — `ci-status.sh` 자매 도구 명시 + `a4f8861` 커밋 + Journal 006 역링크
+- 연결 패턴 확립: **교훈 엔트리(Journal 003) → 도구화 커밋(v0.7.1) → 첫 실행 사례(Journal 006)** 3단을 양 끝에서 역링크로 묶음
+
+### Metrics
+
+| 항목 | 값 |
+|---|---|
+| 신규 엔트리 | 1 (Journal 006) |
+| 수정 엔트리 | 2 (출처 보강) |
+| 총 엔트리 수 | 117 → **118** |
+| 박제 대상 (aidy-architect) | `a4f8861` v0.7.1 + `0e23007` v0.7.2 |
+| 실측 수치 박제 | 4월 macOS 분 ~180min → **0min**, 124 tests / 1m 56s |
+| 빌드 | ✅ 통과 (Next.js 16.2.3) |
+| Mermaid 검증 | ✅ 30 블록, 0 에러 |
+
+---
+
 ## [2026-04-17] 세션 5 — Aidy 생태계 스프린트 박제 + 연결 보강 + 중복 압축
 
 ### Added — 신규 엔트리 10건 (107 → 117)
