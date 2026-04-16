@@ -82,7 +82,7 @@ iOS 개발자가 백엔드 레포를 처음 열었을 때 흔한 실패 패턴:
 flowchart TD
     Client[iOS/Android 클라이언트<br/>POST /api/chat + JWT] --> F1
 
-    subgraph Filters[서블릿 필터 체인]
+    subgraph Filters ["서블릿 필터 체인"]
       F1[RequestIdFilter<br/>모든 로그에 추적 ID 부여] --> F2[JwtAuthenticationFilter<br/>토큰 검증 → 누가 호출했는지 식별]
     end
 
@@ -97,7 +97,7 @@ flowchart TD
 
     S --> M[MemoryService<br/>대화에서 메모리 자동 추출]
     S --> R[Repository<br/>Spring Data JPA]
-    R --> DB[(PostgreSQL<br/>ChatMessage · Memory)]
+    R --> DB["(PostgreSQL<br/>ChatMessage · Memory)"]
 
     Anthropic --> S
     DB --> S

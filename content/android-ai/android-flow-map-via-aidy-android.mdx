@@ -86,14 +86,14 @@ iOS로 비유하면 "SwiftUI + @StateObject + URLSession + Keychain + Alamofire 
 flowchart TD
     User[사용자: TextField에 입력 + 전송 버튼 탭]
 
-    subgraph UI[UI Layer - Jetpack Compose]
+    subgraph UI ["UI Layer - Jetpack Compose"]
       Screen[ChatScreen<br/>Composable 함수]
-      Screen -->|onClick| VM_call[viewModel.send()]
+      Screen -->|onClick| VM_call["viewModel.send()"]
     end
 
     User --> Screen
 
-    subgraph VM[ViewModel Layer]
+    subgraph VM ["ViewModel Layer"]
       VM_call --> VM[ChatViewModel]
       VM -->|1 State 즉시 업데이트| S1[messages.add 유저 메시지]
       VM -->|2 isLoading = true| S2[로딩 UI 표시]
@@ -102,12 +102,12 @@ flowchart TD
 
     Scope --> Repo[ChatRepository]
 
-    subgraph Data[Data Layer]
+    subgraph Data ["Data Layer"]
       Repo -->|sendMessage| Api[AidyApiService<br/>Retrofit 인터페이스]
       Api --> OK[OkHttp Client]
     end
 
-    subgraph Interceptors[OkHttp Interceptor 체인]
+    subgraph Interceptors ["OkHttp Interceptor 체인"]
       OK --> I1[Auth Interceptor<br/>Bearer 토큰 자동 첨부]
       I1 --> I2[401 Interceptor<br/>인증 만료 시 로그아웃 트리거]
     end
