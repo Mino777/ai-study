@@ -1,0 +1,318 @@
+---
+title: "tmux flush 자동화 — paste-buffer + C-m 재시도 3회 + 429 backoff + idle 대기"
+category: harness-engineering
+date: "2026-04-17"
+tags: [harness-engineering, tmux, dispatch, autoceo, 429-handling, sequential-dispatch, architect-cli]
+confidence: 4
+connections:
+  - harness-engineering/aidy-journal-003-parallel-dispatch-token-economics
+  - harness-engineering/aidy-journal-000-architect-worker-baseline
+  - harness-engineering/worker-prompts-logging-pattern
+status: complete
+description: "Architect가 tmux pane에서 구동 중인 워커 Claude에게 긴 프롬프트를 안정적으로 전달하는 실전 패턴. paste-buffer 경유 전송 + C-m(Enter) 최대 3회 재시도 + Pasted text 감지 루프 + 429/rate-limit 패턴 감지 + 5분 backoff + idle 대기 순차 모드. Aidy Session 5 R2/R3 flush 실패 경험 → s6 R1 자동화."
+type: entry
+quiz:
+  - question: "`tmux send-keys -t <pane> '<long prompt>' C-m` 직접 전송이 긴 프롬프트에서 실패하는 이유는?"
+    choices:
+      - "tmux 버그"
+      - "긴 문자열은 bracketed paste 모드로 pane에 들어가는데, 이 상태에선 `C-m` 이 paste 내부 newline으로 해석되고 실제 Enter/submit은 pending 상태. Claude CLI는 paste 종료 신호 전까지 submit 대기 → prompt가 보내졌지만 실행 안 되는 침묵 실패"
+      - "문자열 길이 제한"
+      - "tmux 버전"
+    answer: 1
+    explanation: "tmux의 bracketed paste 모드에서 `\\e[200~` ... `\\e[201~` 사이의 내용은 paste로 처리된다. 긴 프롬프트 + 마지막 C-m이 이 블록 안에 갇혀 pane은 paste 내용을 '아직 붙여넣는 중'으로 인식. `paste-buffer` 명령으로 별도 전송한 뒤 별개의 `C-m` 을 pane에 보내야 submit 트리거됨."
+  - question: "`tmux_send` 에서 C-m 재시도 3회가 필요한 시나리오는?"
+    choices:
+      - "tmux 불안정성"
+      - "paste-buffer 붙이기 직후 pane이 아직 paste 처리 중일 수 있음. 첫 C-m은 paste 내부로 흡수되고 두번째/세번째 C-m 이 submit을 트리거. 매 시도 전 pane 마지막 줄 검사해 `Pasted text` 남아있으면 재시도, 사라지면 break"
+      - "네트워크 지연"
+      - "Claude CLI 처리 속도"
+    answer: 1
+    explanation: "paste-buffer가 pane에 내용을 흘려넣는 데 수백 ms 걸릴 수 있다. 그 사이 C-m은 paste 완료 전이라 흡수된다. `tmux capture-pane -p | tail -3` 로 `Pasted text` 마커 확인해 paste 완료 여부 판정 → 완료면 break, 아니면 0.4s 대기 후 다시 C-m. 3회면 실무 커버."
+  - question: "`AIDY_SEND_429_DETECT=1` 감지 로직이 dispatch 직후 30초 윈도우를 감시하는 이유는?"
+    choices:
+      - "30초가 예쁜 숫자"
+      - "429/rate-limit은 dispatch 즉시 반환되는 에러 — 워커 Claude CLI가 pane에 'Claude usage limit reached' 등을 출력. 이 메시지가 pane에 나타나는 데 걸리는 시간 커버. 30초면 API 응답 지연 + tmux 버퍼 flush 커버하면서 다음 라운드 블로킹은 최소"
+      - "Anthropic API 요구사항"
+      - "tmux 기본값"
+    answer: 1
+    explanation: "429는 API가 즉시 반환 → Claude CLI 표시 → tmux pane capture 가능까지 보통 1~5초. 30s 윈도우는 변동성 흡수. 너무 길면 매 dispatch마다 30s 블로킹 → 라운드 시간 증가. AIDY_SEND_429_WATCH 로 조절 가능."
+---
+
+## 컨텍스트
+
+[Journal 003 토큰 경제성](/wiki/harness-engineering/aidy-journal-003-parallel-dispatch-token-economics) 에서 파생된 인프라. Aidy Session 5 R2/R3 에서 tmux flush 실패(긴 프롬프트가 pane에 붙여넣어졌지만 Enter 안 됨) 발생 → Session 6 R1 에서 자동화 박제.
+
+`architect-cli.sh` `tmux_send()` 함수가 4단계 방어:
+1. paste-buffer 경유 전송
+2. C-m 최대 3회 재시도
+3. 429/rate-limit 감지 + 5분 backoff
+4. `send-seq` 직렬 모드 + idle 대기
+
+---
+
+## Layer 1 — paste-buffer 경유 전송
+
+### 안티 패턴 (직접 send-keys)
+
+```bash
+# ❌ 이건 긴 프롬프트에서 실패
+tmux send-keys -t aidy:server "$very_long_prompt" C-m
+```
+
+**왜 실패**: 긴 문자열이 bracketed paste 블록 안에 갇혀 C-m이 paste 내부 newline으로 해석 → submit 안 됨 → Claude CLI 는 paste 종료 대기 → 프롬프트 휘발.
+
+### 올바른 방식
+
+```bash
+# paste-buffer 명령으로 별도 전송 → 별도 C-m 으로 submit 트리거
+local buf_name="aidy_send_$$_$RANDOM"
+tmux set-buffer -b "$buf_name" "$prompt"
+tmux paste-buffer -b "$buf_name" -t "$tmux_target"
+tmux delete-buffer -b "$buf_name" 2>/dev/null
+```
+
+`$$` = shell PID, `$RANDOM` = 랜덤 숫자. 동시 호출 중복 방지.
+
+---
+
+## Layer 2 — C-m 재시도 3회
+
+```bash
+# Enter flush — 최대 3회 재시도
+local attempt
+for attempt in 1 2 3; do
+    tmux send-keys -t "$tmux_target" C-m
+    sleep 0.4
+    # pane 마지막 줄에 실행 마커 (스피너/결과)가 나타나면 OK
+    local tail
+    tail=$(tmux capture-pane -t "$tmux_target" -p | tail -3 | tr -d '\n')
+    if [[ "$tail" == *"Pasted text"* || "$tail" == *"[Pasted"* ]]; then
+        # 아직 paste 상태 — 재시도
+        continue
+    fi
+    break
+done
+```
+
+### 동작
+
+1. C-m 전송 → 0.4s 대기 → pane 마지막 3줄 캡처
+2. `Pasted text` / `[Pasted` 마커 있으면: paste 처리 중 → 재시도
+3. 마커 없으면: submit 완료 → break
+4. 최대 3회 (총 1.2s)
+
+### 판정 근거
+
+`tmux capture-pane -p` 가 pane 현재 화면을 텍스트로 반환. `tail -3` 으로 최근 3줄만 추출 → `tr -d '\n'` 로 한 줄로 합쳐 단순 문자열 매칭.
+
+**왜 정규식 아님**: bash `[[ ... == *pattern* ]]` 이 grep보다 가볍고 실패 확률 낮음. paste 마커는 정확히 `Pasted text` 또는 `[Pasted` 패턴.
+
+---
+
+## Layer 3 — 429 / rate-limit 감지 + backoff
+
+```bash
+# 429 / rate-limit 감지 + backoff (P3-8)
+# 환경변수로 제어:
+#   AIDY_SEND_429_DETECT=0   : 비활성 (기본 1)
+#   AIDY_SEND_429_WATCH=30   : 감지 윈도우 초 (기본 30)
+#   AIDY_SEND_429_BACKOFF=300: 백오프 초 (기본 5분)
+#   AIDY_SEND_429_RETRY=1    : 재시도 횟수 (기본 1)
+
+if [[ "${AIDY_SEND_429_DETECT:-1}" == "1" && "${AIDY_SEND_NO_429:-0}" != "1" ]]; then
+    local watch_sec="${AIDY_SEND_429_WATCH:-30}"
+    local backoff_sec="${AIDY_SEND_429_BACKOFF:-300}"
+    local max_retry="${AIDY_SEND_429_RETRY:-1}"
+    local retry_count="${AIDY_SEND_429_TRY_NUM:-0}"
+
+    local elapsed=0
+    local hit_429=0
+    local hit_pattern=""
+    while [ "$elapsed" -lt "$watch_sec" ]; do
+        local capture
+        capture=$(tmux capture-pane -t "$tmux_target" -p | tail -20)
+        # Claude Code의 rate-limit 메시지 패턴 (대소문자 무시)
+        if echo "$capture" | grep -iqE \
+            '(rate limit|429|too many requests|usage limit reached|retry[- ]after|claude usage limit|api error 529)'; then
+            hit_429=1
+            hit_pattern=$(echo "$capture" | grep -iE '(...)' | head -1 | tr -s ' ' | cut -c1-80)
+            break
+        fi
+        sleep 2
+        elapsed=$((elapsed + 2))
+    done
+
+    if [ "$hit_429" = "1" ]; then
+        echo -e "${RED}[429 감지] $target — \"$hit_pattern\"${NC}"
+        if [ "$retry_count" -lt "$max_retry" ]; then
+            echo -e "${YELLOW}[backoff] ${backoff_sec}s 대기 후 재시도...${NC}"
+            sleep "$backoff_sec"
+            AIDY_SEND_429_TRY_NUM=$((retry_count + 1)) tmux_send "$target" "$prompt"
+            return $?
+        fi
+    fi
+fi
+```
+
+### 매칭 패턴
+
+```
+rate limit | 429 | too many requests | usage limit reached |
+retry-after | claude usage limit | api error 529
+```
+
+Claude CLI가 출력하는 실제 rate-limit 메시지 변형을 커버. 대소문자 무시(`-i`).
+
+### 재귀 재시도
+
+`AIDY_SEND_429_TRY_NUM=N tmux_send "$target" "$prompt"` 로 자기 자신 재호출. `$retry_count` 가 환경변수로 전파돼 무한 재귀 방지 — `max_retry` (기본 1회) 초과 시 중단.
+
+### 환경변수 제어 이점
+
+- **Dev/CI 구분** — CI에서는 `AIDY_SEND_429_DETECT=0` 로 비활성
+- **스프린트 상황별 조정** — 리밋 여유 있으면 watch 10s, 리셋 직후엔 60s
+- **디버깅** — `AIDY_SEND_NO_429=1` 로 임시 비활성
+
+---
+
+## Layer 4 — Sequential Dispatch (`send-seq`)
+
+### idle 감지
+
+```bash
+is_pane_idle() {
+    local last_lines
+    last_lines=$(tmux capture-pane -t "$tmux_target" -p 2>/dev/null | grep -v "^$" | tail -5)
+    # "esc to interrupt" / "ctrl+t" → 작업 중. 그 외 프롬프트 시그니처는 idle.
+    if echo "$last_lines" | grep -q "esc to interrupt\|ctrl+t"; then
+        return 1  # working
+    fi
+    if echo "$last_lines" | grep -q "bypass permissions on\|accept edits on\|? for shortcuts"; then
+        return 0  # idle
+    fi
+    return 1  # 알 수 없음 → working으로 취급 (안전)
+}
+```
+
+### idle 대기
+
+```bash
+wait_for_idle() {
+    local target=$1
+    local timeout="${2:-1800}"     # 30분 기본
+    local poll="${AIDY_IDLE_POLL_SEC:-15}"
+    local elapsed=0
+    sleep 5   # 첫 dispatch 직후 working 진입 여유
+    while [ "$elapsed" -lt "$timeout" ]; do
+        if is_pane_idle "$target"; then
+            return 0
+        fi
+        sleep "$poll"
+        elapsed=$((elapsed + poll))
+    done
+    return 1  # timeout
+}
+```
+
+### send-seq 본체
+
+```bash
+# 가변 인자: target1 "prompt1" target2 "prompt2" ...
+tmux_send_sequential() {
+    while [ "$#" -gt 0 ]; do
+        local target=$1
+        local prompt=$2
+        shift 2
+        tmux_send "$target" "$prompt"
+        if [ "$#" -gt 0 ]; then
+            wait_for_idle "$target" "$seq_timeout" || true
+        fi
+    done
+}
+```
+
+### 사용
+
+```bash
+# 병렬 (기본)
+architect-cli.sh send server "<prompt1>"
+architect-cli.sh send ios    "<prompt2>"
+architect-cli.sh send android "<prompt3>"
+
+# 순차 (idle 대기)
+architect-cli.sh send-seq server "<prompt1>" ios "<prompt2>" android "<prompt3>"
+```
+
+**Journal 003의 교훈**과 결합: 리밋 여유 많을 때 `send`, 리셋 직후/큰 작업엔 `send-seq`.
+
+---
+
+## 관측 + 로깅
+
+[Worker Prompts Logging](/wiki/harness-engineering/worker-prompts-logging-pattern) 와 같은 `tmux_send()` 함수 안에서 동시 기록:
+
+1. **프롬프트 로깅** (L82~L94) — 날짜별 파일에 원문 append
+2. **paste-buffer 전송** (L97~L102)
+3. **C-m 재시도** (L103~L116)
+4. **429 감지 + backoff** (L118~L158)
+
+4 레이어가 **한 함수 안**에 있음 = 호출자 우회 불가 = 모든 dispatch가 자동 보호.
+
+---
+
+## 운영 데이터
+
+| Session | flush 실패 건 | 429 자동 backoff 성공 | send-seq 사용 |
+|---------|--------------|---------------------|--------------|
+| s5 (R2/R3) | 다수 | — (아직 미도입) | — |
+| s6-R1 이후 | 0 | — | — |
+| s6-R2 | 0 | — | — |
+| s6-R9 (3-way 실패) | 0 | 실패 후 수동 순차 | 수동 `send-seq` |
+
+s6-R1 이후 tmux flush 실패는 0건. 429는 자동 backoff만으론 부족 → 사용자 판단으로 `send-seq` 전환 필요.
+
+---
+
+## AI Agent Directive
+
+### Trigger
+- tmux 기반 multi-pane agent 하네스 구축 시
+- 긴 프롬프트(3KB 이상) dispatch 후 pane이 submit 안 되는 현상
+- 3-way 병렬 dispatch가 429로 유실된 경험
+
+### Prerequisites
+- tmux 3.0+ (paste-buffer 명령 안정)
+- bash 4+ (연관배열 / `$RANDOM` 의존)
+- pane 하나당 Claude CLI 1개 구동 구조
+
+### Actionable Steps
+
+1. **paste-buffer 경유** — `tmux set-buffer` + `paste-buffer -t` + `delete-buffer`
+2. **C-m 3회 재시도** — 0.4s 간격, `Pasted text` 마커 체크
+3. **429 감지 윈도우** — dispatch 후 30s, `tmux capture-pane | tail -20` 에 rate-limit 패턴 매칭
+4. **Backoff 재귀 호출** — `AIDY_SEND_429_TRY_NUM` 환경변수로 재시도 횟수 전파
+5. **idle 감지** — `"esc to interrupt"` 없고 `"? for shortcuts"` 있으면 idle
+6. **send-seq 모드** — 가변 인자 target/prompt 쌍, 각 dispatch 후 idle 대기
+7. **로깅 통합** — 같은 함수에서 [Worker Prompts Logging](/wiki/harness-engineering/worker-prompts-logging-pattern) 동시 실행
+
+### Anti-patterns
+
+- **`tmux send-keys "$long_prompt" C-m` 직접 전송** — bracketed paste에 갇혀 submit 안 됨
+- **paste-buffer 후 C-m 1회만** — paste 완료 전 C-m 흡수 가능
+- **429 감지 없이 fixed 재시도** — 진짜 429면 재시도도 실패
+- **429 backoff 없이 재시도** — rate-limit 유지 상태에서 즉시 재시도 → 또 실패
+- **무한 재귀 재시도** — max_retry 환경변수 없으면 스택 오버플로 위험
+- **send-seq 전용** — 리밋 여유 있을 때 throughput 손실 큼
+
+---
+
+## 출처
+
+- 구현: `aidy-architect/architect-cli.sh` L64~L233
+  - `tmux_send()` L64~L161
+  - `is_pane_idle()` L166~L188
+  - `wait_for_idle()` L191~L209
+  - `tmux_send_sequential()` L213~L233
+- 도입 retro: `aidy-architect/docs/retros/autoceo-s6-round-1-retro.md`
+- 실측 사건: `aidy-architect/docs/retros/autoceo-s5-round-2-retro.md` + R3 (flush 실패 언급)
+- 429 재개 사례: `aidy-architect/docs/retros/autoceo-s6-round-9-retro.md`
