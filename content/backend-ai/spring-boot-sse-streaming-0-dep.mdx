@@ -1,0 +1,318 @@
+---
+title: "Spring Boot SSE 스트리밍 0-dependency 패턴 (Anthropic Messages API 실연동)"
+category: backend-ai
+date: "2026-04-16"
+tags: [backend-ai, spring-boot, sse, streaming, anthropic, okhttp, circuit-breaker, 0-dep]
+confidence: 4
+connections:
+  - backend-ai/spring-boot-ai-circuit-breaker
+  - backend-ai/backend-flow-map-via-aidy-server
+  - harness-engineering/aidy-journal-005-sse-phase1-to-phase2-progressive-rollout
+  - ios-ai/urlsession-bytes-sse-subscription
+  - android-ai/okhttp-buffered-source-sse
+status: complete
+description: "Spring Boot에서 AI Messages API의 SSE 스트림을 외부 라이브러리 없이 중계하는 실구현 패턴. SseEmitter + OkHttp BufferedSource.readUtf8Line() 으로 라인 파싱, Circuit Breaker 래핑으로 OPEN 상태 즉시 차단, content_block_delta/message_stop/error 이벤트 처리. Aidy Session 6 R2 에서 실측 검증(response 170 tests passed)."
+type: entry
+quiz:
+  - question: "이 패턴에서 Anthropic SSE를 OkHttp로 파싱할 때 핵심 API는?"
+    choices:
+      - "OkHttpSseClient (외부 라이브러리)"
+      - "response.body().source()의 readUtf8Line() — BufferedSource 표준 API로 라인 단위 읽기. 'data:' 접두 라인만 JSON 파싱 → type 분기. Retrofit/OkHttp-EventSource 불필요"
+      - "Reactor Flux"
+      - "Spring WebClient"
+    answer: 1
+    explanation: "Anthropic SSE는 `event: <type>\\ndata: <json>\\n\\n` 형식의 라인 스트림. OkHttp Response body의 `BufferedSource` 가 `readUtf8Line()` 을 제공하므로 외부 SSE 파서 불필요. 한 번의 `execute()` 로 연결, `source.exhausted()` 까지 loop — 표준 API만으로 충분."
+  - question: "Circuit Breaker를 스트리밍에 적용하는 올바른 방식은?"
+    choices:
+      - "스트림 중간에 매 토큰마다 CB 체크"
+      - "스트리밍엔 CB 적용 안 함"
+      - "`circuitBreaker.execute { executeStreaming(...) }` 로 스트림 전체를 트랜잭션처럼 래핑. OPEN 상태면 스트림 시작도 전에 onError, 스트림 중 실패(IOException/ApiException)는 CB의 failure로 카운트되어 threshold 넘으면 OPEN"
+      - "SSE 전용 CB 구현"
+    answer: 2
+    explanation: "CB의 단위는 '요청 1건'이다. 스트리밍도 1 요청이므로 전체를 `execute { ... }` 래핑 — OPEN이면 즉시 onError, 스트림 진행 중 예외는 failure로 집계. 토큰 단위 CB는 오버엔지니어링이고 CB 상태 전이를 혼란시킨다. 기존 non-stream chat() 과 동일 패턴 유지."
+  - question: "content_block_delta 외에 반드시 처리해야 하는 SSE 이벤트는?"
+    choices:
+      - "message_start만"
+      - "message_stop (break) + error (ApiException throw). message_start는 input_tokens, message_delta는 output_tokens 누적용으로 선택 처리"
+      - "ping"
+      - "keep-alive"
+    answer: 1
+    explanation: "필수는 content_block_delta(토큰 수신) / message_stop(정상 종료 break) / error(예외 변환). message_start와 message_delta는 usage 토큰 집계용 선택. ping은 keepalive로 무시해도 안전. break@parseSseStream 같은 Kotlin 라벨 break로 loop 탈출을 명확히."
+---
+
+## 컨텍스트
+
+Aidy Session 5 R7(Phase 1 fake-stream) → Session 6 R2(Phase 2 실연동) 진화로 박제. 자세한 Phase 도입 맥락은 [Journal 005](/wiki/harness-engineering/aidy-journal-005-sse-phase1-to-phase2-progressive-rollout) 참조.
+
+외부 SSE 라이브러리 없이 **SseEmitter + OkHttp BufferedSource + Circuit Breaker** 조합으로 Anthropic Messages API 스트림을 중계한다.
+
+---
+
+## 전체 흐름
+
+```
+Client (iOS/Android/Web)
+    ↓ POST /api/chat/stream
+Controller (SseEmitter)
+    ↓ AiService.chatStream(onToken, onDone, onError)
+CircuitBreaker.execute
+    ↓ OkHttp → Anthropic Messages API (stream=true)
+BufferedSource.readUtf8Line()
+    ↓ SSE 라인 파싱 → onToken 콜백
+Controller → emitter.send(SseEvent)
+    ↓ Client stream 수신
+```
+
+---
+
+## 구현 A — Controller 측 SseEmitter
+
+```kotlin
+@PostMapping("/api/chat/stream")
+fun chatStream(@RequestBody req: ChatRequest, auth: Authentication): SseEmitter {
+    val emitter = SseEmitter(5 * 60 * 1000L)  // 5분 timeout
+    val userId = auth.principal as Long
+
+    CompletableFuture.runAsync {
+        try {
+            val user = userService.get(userId)
+            val history = chatService.recentHistory(userId)
+            val memories = memoryService.topK(userId, k = 10)
+
+            aiService.chatStream(
+                user, history, memories, req.message,
+                onToken = { text ->
+                    emitter.send(SseEmitter.event().name("token").data(text))
+                },
+                onDone = { reply ->
+                    chatService.persist(userId, req.message, reply.reply, reply.memories)
+                    emitter.send(SseEmitter.event().name("done").data(reply.reply))
+                    emitter.complete()
+                },
+                onError = { err ->
+                    emitter.send(SseEmitter.event().name("error").data(err.message ?: "unknown"))
+                    emitter.completeWithError(err)
+                },
+            )
+        } catch (e: Exception) {
+            emitter.completeWithError(e)
+        }
+    }
+    return emitter
+}
+```
+
+**핵심**:
+- `SseEmitter(timeout)` — LB/프록시 타임아웃보다 짧게
+- `CompletableFuture.runAsync` 로 비동기 — controller 쓰레드 반환해 Servlet 커넥션 풀 고갈 방지
+- 이벤트 이름 `token` / `done` / `error` — 클라이언트 분기용
+
+---
+
+## 구현 B — Service 측 Anthropic SSE 파싱
+
+```kotlin
+// AiService.kt (발췌, 실제: aidy-server L384~L526)
+
+fun chatStream(
+    user: User, history: List<ChatMessage>, memories: List<Memory>,
+    userMessage: String,
+    onToken: (String) -> Unit,
+    onDone: (AiReply) -> Unit,
+    onError: (Throwable) -> Unit,
+) {
+    if (apiKey.isBlank()) { onError(ApiException(ErrorCode.INTERNAL_ERROR)); return }
+    try {
+        val aiReply = circuitBreaker.execute {  // ← CB 래핑
+            executeStreaming(user, history, memories, userMessage, onToken)
+        }
+        onDone(aiReply)
+    } catch (e: Throwable) {
+        onError(e)
+    }
+}
+
+private fun executeStreaming(
+    user: User, history: List<ChatMessage>, memories: List<Memory>,
+    userMessage: String, onToken: (String) -> Unit,
+): AiReply {
+    val systemPrompt = buildSystemPrompt(user, memories)
+    val messages = history.map { mapOf("role" to it.role.lower(), "content" to it.content) } +
+                   mapOf("role" to "user", "content" to userMessage)
+
+    val requestBody = objectMapper.writeValueAsString(mapOf(
+        "model" to model, "max_tokens" to 2048,
+        "system" to systemPrompt, "messages" to messages,
+        "stream" to true,  // ← 핵심
+    ))
+
+    val request = Request.Builder()
+        .url("https://api.anthropic.com/v1/messages")
+        .addHeader("x-api-key", apiKey)
+        .addHeader("anthropic-version", "2023-06-01")
+        .addHeader("accept", "text/event-stream")
+        .post(requestBody.toRequestBody("application/json".toMediaType()))
+        .build()
+
+    val startTime = System.currentTimeMillis()
+    val response = try {
+        chatClient.newCall(request).execute()
+    } catch (e: SocketTimeoutException) {
+        logCall(System.currentTimeMillis() - startTime, false, "TIMEOUT", userId = user.id)
+        throw ApiException(ErrorCode.AI_TIMEOUT)
+    }
+
+    return response.use {
+        if (!it.isSuccessful) {
+            val errType = classifyHttpError(it.code)
+            throw ApiException(errorCodeFor(errType))
+        }
+        val source = it.body!!.source()
+        val accumulated = StringBuilder()
+        var inputTokens = 0
+        var outputTokens = 0
+
+        parseSseStream@ while (!source.exhausted()) {
+            val line = source.readUtf8Line() ?: break
+            if (!line.startsWith("data:")) continue
+            val jsonStr = line.substring(5).trim()
+            if (jsonStr.isEmpty()) continue
+
+            val json = try { objectMapper.readTree(jsonStr) }
+                        catch (e: Exception) { continue }
+            val type = json["type"]?.asText() ?: continue
+
+            when (type) {
+                "message_start" -> {
+                    inputTokens = json["message"]?.get("usage")?.get("input_tokens")?.asInt() ?: 0
+                }
+                "content_block_delta" -> {
+                    val delta = json["delta"] ?: continue@parseSseStream
+                    if (delta["type"]?.asText() == "text_delta") {
+                        val text = delta["text"]?.asText() ?: ""
+                        if (text.isNotEmpty()) {
+                            accumulated.append(text)
+                            onToken(text)   // ← 토큰 스트리밍
+                        }
+                    }
+                }
+                "message_delta" -> {
+                    outputTokens = json["usage"]?.get("output_tokens")?.asInt() ?: outputTokens
+                }
+                "message_stop" -> break@parseSseStream
+                "error" -> {
+                    val msg = json["error"]?.get("message")?.asText() ?: "stream error"
+                    throw ApiException(ErrorCode.INTERNAL_ERROR)
+                }
+            }
+        }
+
+        val durationMs = System.currentTimeMillis() - startTime
+        logCall(durationMs, true, null, inputTokens, outputTokens, user.id)
+
+        val fullText = accumulated.toString()
+        AiReply(
+            reply = fullText.replace(Regex("```memory\\n[\\s\\S]*?```"), "").trim(),
+            memories = extractMemories(fullText),
+        )
+    }
+}
+```
+
+---
+
+## 핵심 패턴
+
+### 1. `BufferedSource.readUtf8Line()` 만으로 SSE 파싱
+
+```
+Anthropic SSE 포맷:
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"hello"}}
+
+event: message_stop
+data: {"type":"message_stop"}
+```
+
+- `"data:"` 접두만 JSON 파싱
+- `type` 필드로 분기
+- 외부 SSE 라이브러리(OkHttp-EventSource 등) **불필요**
+
+### 2. Circuit Breaker 스트리밍 래핑
+
+```kotlin
+val aiReply = circuitBreaker.execute {   // ← OPEN 이면 즉시 예외
+    executeStreaming(...)  // ← 스트림 전체가 1 "요청"
+}
+```
+
+스트림 중 `IOException` / `ApiException` 은 CB가 catch → failure 카운트 → threshold 도달 시 OPEN. 기존 non-stream `chat()` 과 동일 CB 인스턴스 공유.
+
+### 3. `parseSseStream@` 라벨 break
+
+Kotlin `when` 안에서 바깥 `while` loop 탈출 — 라벨 break로 의도 명확히. 흔한 실수: `when` 에서 `break` 쓰면 `when` 자체 종료만 되고 loop 계속.
+
+### 4. Rate Limit 버킷 공유
+
+```kotlin
+// RateLimitInterceptor
+val chatEndpoints = setOf("/api/chat", "/api/chat/stream")  // 동일 버킷 20rpm
+```
+
+SSE 엔드포인트가 기존 chat rpm 버킷 공유 — 별도 버킷 만들면 사용자가 `/chat` 을 10회, `/chat/stream` 을 10회 써서 40rpm 우회 가능.
+
+### 5. 메모리 추출은 스트림 종료 후
+
+`accumulated.toString()` 전체에서 `` ```memory ... ``` `` 블록 regex 파싱 — 토큰 단위 파싱은 불안정(부분 JSON).
+
+---
+
+## 테스트 관찰
+
+`ChatStreamE2ETest.kt`에서 실측 검증:
+
+- Phase 2 초기 구현 — 170 tests passed (s6-R2)
+- 스트림 종료 후 메모리 persist — transactional 경계 보존
+- CB OPEN 상태에서 `/chat/stream` 호출 시 즉시 `error` 이벤트 + `completeWithError`
+
+---
+
+## AI Agent Directive
+
+### Trigger
+- Spring Boot에서 AI 응답을 스트리밍으로 중계하려 할 때
+- 외부 SSE 라이브러리 도입 유혹이 있을 때
+- 기존 Circuit Breaker를 스트림에도 적용하려 할 때
+
+### Prerequisites
+- [Spring Boot AI Circuit Breaker](/wiki/backend-ai/spring-boot-ai-circuit-breaker) — CB 구조
+- [Aidy Journal 005](/wiki/harness-engineering/aidy-journal-005-sse-phase1-to-phase2-progressive-rollout) — Phase 도입 맥락
+
+### Actionable Steps
+
+1. **Controller**: `SseEmitter(timeout)` + `CompletableFuture.runAsync` 비동기 전송
+2. **Service**: `chatStream(onToken, onDone, onError)` 시그니처 — 콜백 3개 계약
+3. **OkHttp**: `addHeader("accept", "text/event-stream")` + `"stream" to true` body
+4. **파싱**: `source.readUtf8Line()` loop, `"data:"` prefix 필터, JSON `type` 분기
+5. **CB 래핑**: `circuitBreaker.execute { executeStreaming(...) }` — 스트림 전체가 1 요청
+6. **이벤트 처리**: `content_block_delta` / `message_stop` 필수, `error` 예외 변환, `message_start/delta` 는 usage 집계 선택
+7. **Rate Limit**: 기존 chat 버킷 공유 — 별도 버킷 금지
+
+### Anti-patterns
+
+- **외부 SSE 라이브러리 도입** — `BufferedSource.readUtf8Line()` 으로 충분
+- **토큰 단위 CB 체크** — 오버엔지니어링, 상태 전이 혼란
+- **`when` 내부 `break`** — loop 탈출 못 함, 라벨 break 사용
+- **메모리 추출을 토큰 단위로** — 부분 JSON 파싱 실패, 스트림 종료 후 전체에서 regex
+- **Controller를 동기 실행** — Servlet 쓰레드 고갈, `runAsync` 필수
+- **별도 Rate Limit 버킷** — 사용자가 엔드포인트 switching 으로 우회
+
+---
+
+## 출처
+
+- Aidy server: `aidy-server/src/main/kotlin/com/mino/aidy/service/AiService.kt` L384~L526 `chatStream` + `executeStreaming`
+- E2E: `aidy-server/src/test/kotlin/com/mino/aidy/e2e/ChatStreamE2ETest.kt`
+- ADR-008: `aidy-architect/specs/decisions/ADR-008.md`
+- s6-R2 retro: `aidy-architect/docs/retros/autoceo-s6-round-2-retro.md`
+- Anthropic SSE 공식 포맷: [docs.anthropic.com/messages-streaming](https://docs.anthropic.com/en/api/messages-streaming)

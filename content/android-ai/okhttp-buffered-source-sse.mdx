@@ -1,0 +1,403 @@
+---
+title: "Android OkHttp BufferedSource SSE — 0 dependency 스트리밍"
+category: android-ai
+date: "2026-04-17"
+tags: [android-ai, sse, streaming, okhttp, bufferedsource, kotlin-flow, 0-dep, retry]
+confidence: 4
+connections:
+  - android-ai/android-flow-map-via-aidy-android
+  - backend-ai/spring-boot-sse-streaming-0-dep
+  - ios-ai/urlsession-bytes-sse-subscription
+  - harness-engineering/aidy-journal-005-sse-phase1-to-phase2-progressive-rollout
+status: complete
+description: "Android에서 Server-Sent Events를 외부 SSE 라이브러리 없이 구독하는 실전 패턴. OkHttp + BufferedSource.readUtf8Line()로 수동 파싱, Kotlin Flow + retryWhen으로 IOException 1회 재시도, volatile latency 측정, 테스트 주입 훅으로 단위 테스트. Aidy Session 6 R4 + R5 실구현."
+type: entry
+quiz:
+  - question: "OkHttp SSE 스트림에서 `readTimeout` 을 0으로 설정하는 이유는?"
+    choices:
+      - "성능 최적화"
+      - "스트림은 응답 완료까지 수십 초~수 분 걸릴 수 있음. 기본 readTimeout(10s)로 두면 SSE 라인 사이 idle 기간에 SocketTimeoutException 발생. 0(disable)로 설정해 서버가 연결 유지하는 한 기다림"
+      - "메모리 절약"
+      - "HTTP/2 요구사항"
+    answer: 1
+    explanation: "OkHttp readTimeout은 '소켓 read 사이 최대 대기 시간'. SSE는 토큰 사이에 AI가 계산하는 자연스러운 idle 구간이 있어 기본 readTimeout에 걸린다. `.readTimeout(0, TimeUnit.MILLISECONDS)` 로 disable — 서버 close 또는 네트워크 장애로만 종료."
+  - question: "Kotlin Flow의 `retryWhen { cause, attempt -> attempt < 1 && cause is IOException }` 이 하는 것은?"
+    choices:
+      - "무한 재시도"
+      - "첫 IOException 1회만 재시도. attempt 인덱스는 실패 횟수(0부터 시작) — `attempt == 0` 일 때만 true 반환 → 한 번 재시도. 두 번째 실패(attempt=1)는 false → downstream으로 전파"
+      - "모든 에러 재시도"
+      - "Flow 취소"
+    answer: 1
+    explanation: "retryWhen 의 `attempt` 는 현재까지 실패 횟수다. `attempt < 1` 조건은 첫 실패(attempt=0)에서만 true → 정확히 1회 재시도. IOException 외 예외(HttpException, CancellationException)는 재시도 없이 전파 — 재시도 대상 좁게 지정."
+  - question: "`SseEvent` 를 `sealed class` 로 정의하고 `when` 으로 분기할 때 장점은?"
+    choices:
+      - "속도가 빠름"
+      - "exhaustiveness check — 새 이벤트 타입(예: `ping`) 추가 시 컴파일러가 모든 `when` 절을 강제. 런타임 버그 방지 + 이벤트 스키마 변경이 컴파일 타임에 드러남"
+      - "메모리 효율"
+      - "Java 호환성"
+    answer: 1
+    explanation: "Kotlin sealed class + exhaustive when 조합은 이벤트 스키마를 타입으로 박제한다. 서버가 새 이벤트 `ping` 을 추가하면 SseEvent에 case 추가 → 모든 when 절이 빌드 에러 → 처리 누락 방지. Data class로 payload를 강타입화해서 파싱 에러도 조기에 잡힘."
+---
+
+## 컨텍스트
+
+Aidy Session 6 R4 (구독) + R5 (회복성) 에서 Android가 [ADR-008 Phase 2 SSE](/wiki/harness-engineering/aidy-journal-005-sse-phase1-to-phase2-progressive-rollout) 클라이언트 구현. 서버 구현은 [Spring Boot SSE 0-dep](/wiki/backend-ai/spring-boot-sse-streaming-0-dep), iOS는 [URLSession.bytes SSE](/wiki/ios-ai/urlsession-bytes-sse-subscription) 참조.
+
+**제약**: OkHttp는 이미 의존성, 외부 SSE 라이브러리(OkHttp-EventSource, LaunchDarkly okhttp-eventsource 등) **도입 금지**.
+
+---
+
+## 전체 구현
+
+```kotlin
+sealed class SseEvent {
+    data class Token(val text: String) : SseEvent()
+    data class Memory(
+        val category: String,
+        val title: String,
+        val content: String,
+    ) : SseEvent()
+    data class Done(val messageId: Long) : SseEvent()
+    data class Error(val code: String, val message: String) : SseEvent()
+}
+
+class SseClient @JvmOverloads constructor(
+    private val client: OkHttpClient = defaultClient(),
+    private val baseUrlProvider: () -> String = { SettingsPreferences.getServerUrl() },
+    private val tokenProvider: () -> String? = { SettingsPreferences.getToken() },
+    private val rawStreamProvider: ((String) -> Flow<SseEvent>)? = null,
+    private val clock: () -> Long = { System.currentTimeMillis() },
+) {
+    @Volatile
+    var lastFirstTokenLatencyMs: Long? = null
+        private set
+
+    fun stream(message: String): Flow<SseEvent> {
+        val startTs = clock()
+        var firstTokenRecorded = false
+        val source = rawStreamProvider?.invoke(message) ?: defaultRawStream(message)
+
+        return source
+            .retryWhen { cause, attempt ->
+                attempt < 1 && cause is IOException   // 1회만 재시도
+            }
+            .onEach { event ->
+                if (!firstTokenRecorded && event is SseEvent.Token) {
+                    firstTokenRecorded = true
+                    lastFirstTokenLatencyMs = clock() - startTs
+                }
+            }
+    }
+
+    private fun defaultRawStream(message: String): Flow<SseEvent> = flow {
+        val url = baseUrlProvider().trimEnd('/') + "/api/chat/stream"
+        val bodyJson = Gson().toJson(mapOf("message" to message))
+        val request = Request.Builder()
+            .url(url)
+            .post(bodyJson.toRequestBody("application/json".toMediaType()))
+            .header("Accept", "text/event-stream")
+            .apply { tokenProvider()?.let { header("Authorization", "Bearer $it") } }
+            .build()
+
+        val response = client.newCall(request).execute()
+        try {
+            if (!response.isSuccessful) {
+                emit(SseEvent.Error(
+                    code = "HTTP_${response.code}",
+                    message = response.message.ifEmpty { "stream unavailable" },
+                ))
+                return@flow
+            }
+            val source = response.body?.source() ?: run {
+                emit(SseEvent.Error(code = "EMPTY_BODY", message = "no body"))
+                return@flow
+            }
+            parseSseStream(source).collect { emit(it) }
+        } finally {
+            response.close()   // ← 구독 취소/에러 모두 cover
+        }
+    }
+
+    companion object {
+        private val gson = Gson()
+
+        internal fun parseSseStream(source: BufferedSource): Flow<SseEvent> = flow {
+            var eventType: String? = null
+            val dataBuffer = StringBuilder()
+            while (true) {
+                val line = source.readUtf8Line() ?: break
+                when {
+                    line.isEmpty() -> {
+                        val type = eventType
+                        val data = dataBuffer.toString()
+                        if (type != null && data.isNotEmpty()) {
+                            parseEvent(type, data)?.let { emit(it) }
+                        }
+                        eventType = null
+                        dataBuffer.clear()
+                    }
+                    line.startsWith(":") -> {} // SSE 주석 무시
+                    line.startsWith("event:") -> eventType = line.removePrefix("event:").trim()
+                    line.startsWith("data:") -> {
+                        if (dataBuffer.isNotEmpty()) dataBuffer.append("\n")
+                        dataBuffer.append(line.removePrefix("data:").trim())
+                    }
+                    // id:, retry: 등 지원 외 필드 무시
+                }
+            }
+        }
+
+        private fun parseEvent(event: String, data: String): SseEvent? = runCatching {
+            @Suppress("UNCHECKED_CAST")
+            val json = gson.fromJson(data, Map::class.java) as? Map<String, Any?>
+                ?: return@runCatching null
+            when (event) {
+                "token" -> SseEvent.Token(text = (json["text"] as? String).orEmpty())
+                "memory" -> SseEvent.Memory(
+                    category = (json["category"] as? String).orEmpty(),
+                    title = (json["title"] as? String).orEmpty(),
+                    content = (json["content"] as? String).orEmpty(),
+                )
+                "done" -> SseEvent.Done(
+                    messageId = (json["messageId"] as? Number)?.toLong() ?: 0L,
+                )
+                "error" -> SseEvent.Error(
+                    code = (json["code"] as? String) ?: "UNKNOWN",
+                    message = (json["error"] as? String) ?: (json["message"] as? String).orEmpty(),
+                )
+                else -> null
+            }
+        }.getOrNull()
+
+        // 핵심: readTimeout 0 — 스트림 idle 중 SocketTimeoutException 방지
+        private fun defaultClient(): OkHttpClient = OkHttpClient.Builder()
+            .readTimeout(0, TimeUnit.MILLISECONDS)
+            .build()
+    }
+}
+```
+
+---
+
+## 6가지 핵심 패턴
+
+### 1. `readTimeout = 0` (disable)
+
+```kotlin
+OkHttpClient.Builder()
+    .readTimeout(0, TimeUnit.MILLISECONDS)
+    .build()
+```
+
+SSE는 토큰 사이 idle 구간이 있다 (AI가 다음 토큰 계산). 기본 readTimeout(10s)에 걸리면 `SocketTimeoutException`. 0으로 disable 하면 서버 close 또는 네트워크 장애로만 종료.
+
+**주의**: connectTimeout은 유지 — 초기 연결은 타임아웃 걸어야 함.
+
+### 2. `BufferedSource.readUtf8Line()` + 빈 줄 dispatch
+
+```kotlin
+while (true) {
+    val line = source.readUtf8Line() ?: break
+    when {
+        line.isEmpty() -> { /* dispatch accumulated event */ }
+        line.startsWith("event:") -> eventType = line.removePrefix("event:").trim()
+        line.startsWith("data:") -> dataBuffer.append(...)
+        line.startsWith(":") -> {} // SSE 주석 무시
+    }
+}
+```
+
+`readUtf8Line()` 은 `\n` / `\r\n` 모두 처리 + 끝에서 null 반환. 빈 줄이 이벤트 경계 — event + data 누적 후 dispatch.
+
+### 3. Kotlin Flow + `retryWhen` 1회 재시도
+
+```kotlin
+return source.retryWhen { cause, attempt ->
+    attempt < 1 && cause is IOException
+}
+```
+
+- `attempt` = 실패 횟수 (0부터)
+- `attempt == 0 && IOException` → true (첫 실패에서 1회 재시도)
+- 두 번째 실패(attempt=1)는 false → downstream 전파
+- CancellationException / HttpException 은 재시도 안 함
+
+무한 재시도 방지 + 재시도 대상 좁게.
+
+### 4. 테스트 주입 훅
+
+```kotlin
+class SseClient(
+    ...
+    private val rawStreamProvider: ((String) -> Flow<SseEvent>)? = null,
+    private val clock: () -> Long = { System.currentTimeMillis() },
+)
+```
+
+- `rawStreamProvider` 로 네트워크 스트림 대체 가능 → 테스트에서 Flow 직접 주입
+- `clock` 주입 → latency 측정 검증 가능
+- 프로덕션은 기본값 사용 (DI 필요 없음)
+
+### 5. `@Volatile` latency 측정
+
+```kotlin
+@Volatile
+var lastFirstTokenLatencyMs: Long? = null
+    private set
+```
+
+- 첫 Token 이벤트 수신 시점 기록
+- `@Volatile` — 다른 스레드에서 읽어도 최신 값
+- `private set` — 외부에서 수정 불가
+- 디버그 UI에서 표시 가능 (요청 통계 화면)
+
+### 6. Sealed class + Data class 이벤트
+
+```kotlin
+sealed class SseEvent {
+    data class Token(val text: String) : SseEvent()
+    data class Memory(...) : SseEvent()
+    data class Done(val messageId: Long) : SseEvent()
+    data class Error(val code: String, val message: String) : SseEvent()
+}
+```
+
+- exhaustive `when` 으로 처리 누락 컴파일 타임 방지
+- 서버가 새 이벤트 추가 시 코드 빌드 실패 → 누락 인지
+- payload 강타입화로 parse 에러 조기 감지
+
+---
+
+## ViewModel 통합
+
+```kotlin
+class ChatViewModel(
+    private val sseClient: SseClient,
+) : ViewModel() {
+    private val _state = MutableStateFlow(ChatState())
+    val state: StateFlow<ChatState> = _state
+
+    fun sendMessage(message: String) {
+        viewModelScope.launch {
+            sseClient.stream(message)
+                .catch { e -> _state.update { it.copy(error = e.message) } }
+                .collect { event ->
+                    when (event) {
+                        is SseEvent.Token -> _state.update {
+                            it.copy(streamingText = it.streamingText + event.text)
+                        }
+                        is SseEvent.Memory -> _state.update {
+                            it.copy(extractedMemories = it.extractedMemories + event)
+                        }
+                        is SseEvent.Done -> _state.update {
+                            it.copy(confirmedMessageId = event.messageId, streamingText = "")
+                        }
+                        is SseEvent.Error -> _state.update {
+                            it.copy(error = "${event.code}: ${event.message}")
+                        }
+                    }
+                }
+        }
+    }
+}
+```
+
+- `viewModelScope` — ViewModel destroy 시 자동 취소
+- `flow { }` 의 `finally { response.close() }` 가 cancel 시 네트워크 정리
+- exhaustive `when` — sealed class 덕분에 컴파일러가 강제
+
+---
+
+## 테스트
+
+### Unit — rawStreamProvider 주입
+
+```kotlin
+@Test
+fun `token 이벤트 누적 후 done`() = runTest {
+    val sseClient = SseClient(
+        rawStreamProvider = { _ ->
+            flowOf(
+                SseEvent.Token("Hello"),
+                SseEvent.Token(" World"),
+                SseEvent.Done(messageId = 42),
+            )
+        }
+    )
+    val events = sseClient.stream("test").toList()
+    assertEquals(3, events.size)
+    assertEquals("Hello", (events[0] as SseEvent.Token).text)
+}
+```
+
+### Parser — Okio Buffer로 직접 주입
+
+```kotlin
+@Test
+fun `SSE 라인 파싱 — 이벤트 경계`() = runTest {
+    val raw = """
+        event: token
+        data: {"text":"hi"}
+        
+        event: done
+        data: {"messageId":42}
+        
+    """.trimIndent()
+
+    val buffer = Buffer().writeUtf8(raw)
+    val events = SseClient.parseSseStream(buffer).toList()
+
+    assertEquals(2, events.size)
+    assertEquals("hi", (events[0] as SseEvent.Token).text)
+    assertEquals(42L, (events[1] as SseEvent.Done).messageId)
+}
+```
+
+Aidy Android 테스트 132 passed (s6 종료) 에 SSE 관련 케이스 포함.
+
+---
+
+## AI Agent Directive
+
+### Trigger
+- Android에서 SSE / 서버 스트리밍 구독 구현 착수 시
+- 외부 SSE 라이브러리 (okhttp-eventsource 등) 도입 유혹
+- Kotlin Flow 기반 Chat/Streaming ViewModel 설계
+
+### Prerequisites
+- OkHttp 4+ 의존성
+- Kotlin 1.6+ (sealed class + Flow retryWhen)
+- [Backend SSE 구현](/wiki/backend-ai/spring-boot-sse-streaming-0-dep)
+
+### Actionable Steps
+
+1. **`OkHttpClient` readTimeout=0** — 스트림 idle 대비
+2. **`Request` header**: `Accept: text/event-stream` + Bearer
+3. **`response.body.source()`** → `BufferedSource.readUtf8Line()` loop
+4. **빈 줄 dispatch** — event + data 누적 버퍼 비우기
+5. **`sealed class SseEvent`** — exhaustive when 보장
+6. **`flow { ... } finally { response.close() }`** — cancel 시 리소스 정리
+7. **`retryWhen { cause, attempt -> attempt < 1 && cause is IOException }`** — 1회 재시도
+8. **테스트 훅** — `rawStreamProvider` / `clock` 주입 가능 생성자
+
+### Anti-patterns
+
+- **외부 SSE 라이브러리** — OkHttp + readUtf8Line 으로 충분
+- **`readTimeout` 기본값(10s)** — idle 중 SocketTimeoutException
+- **`response.body!!.string()`** — 전체 body 읽기, 스트림 무용지물
+- **`finally { response.close() }` 누락** — cancel 시 네트워크 누수
+- **무한 retry** — attempt 조건 없이 `true` 반환
+- **when 없이 if-else** — sealed class 장점(exhaustive check) 무효화
+- **CancellationException까지 재시도** — 취소 의도 무시
+
+---
+
+## 출처
+
+- Android 구현: `aidy-android/app/src/main/java/com/mino/aidy/data/api/SseClient.kt`
+- 테스트: `aidy-android/app/src/test/java/com/mino/aidy/data/api/SseClientTest.kt`
+- ChatViewModel: `aidy-android/app/src/main/java/com/mino/aidy/ui/chat/ChatViewModel.kt`
+- s6-R4 retro: `aidy-architect/docs/retros/autoceo-s6-round-4-retro.md`
+- s6-R5 retro: `aidy-architect/docs/retros/autoceo-s6-round-5-retro.md`
+- Okio Docs: [BufferedSource](https://square.github.io/okio/3.x/okio/okio/-buffered-source/index.html)
+- SSE 스펙: [WHATWG EventSource](https://html.spec.whatwg.org/multipage/server-sent-events.html)

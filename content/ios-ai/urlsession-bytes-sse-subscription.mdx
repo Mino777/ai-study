@@ -1,0 +1,368 @@
+---
+title: "iOS URLSession.bytes(for:) SSE 구독 — 외부 라이브러리 0 스트리밍"
+category: ios-ai
+date: "2026-04-17"
+tags: [ios-ai, sse, streaming, urlsession, asyncsequence, tca, 0-dep]
+confidence: 4
+connections:
+  - ios-ai/ios-flow-map-via-aidy-ios
+  - backend-ai/spring-boot-sse-streaming-0-dep
+  - android-ai/okhttp-buffered-source-sse
+  - harness-engineering/aidy-journal-005-sse-phase1-to-phase2-progressive-rollout
+status: complete
+description: "iOS에서 Server-Sent Events를 외부 라이브러리 없이 구독하는 실전 패턴. URLSession.bytes(for:) + AsyncLineSequence로 라인 파싱, event/data 2줄 누적 + 빈 줄 dispatch 규칙, AsyncThrowingStream으로 TCA/@DependencyClient 에 통합, continuation.onTermination으로 cancel 전파. Aidy Session 6 R3 실구현."
+type: entry
+quiz:
+  - question: "iOS에서 SSE 파싱 시 `for try await line in bytes.lines` 가 동작하는 iOS 버전은?"
+    choices:
+      - "iOS 13+"
+      - "iOS 15+ — `URLSession.bytes(for:)` 와 `AsyncBytes.lines` 가 iOS 15에서 도입. iOS 14 이하면 수동 `URLSessionDataDelegate` 로 바이트 버퍼 누적 필요"
+      - "iOS 16+"
+      - "iOS 17+"
+    answer: 1
+    explanation: "`URLSession.bytes(for:)` → `(AsyncBytes, URLResponse)` 시그니처는 iOS 15 SDK에 추가됐다. `AsyncBytes.lines` 는 `AsyncLineSequence<AsyncBytes>` 를 반환해 `for try await line in` 으로 소비 가능. iOS 14 이하 타겟은 URLSessionDataDelegate로 수동 파싱해야 함."
+  - question: "SSE 라인 파싱에서 '빈 줄(empty line)' 이 의미하는 것은?"
+    choices:
+      - "스트림 종료"
+      - "이벤트 경계 — `event:` 와 `data:` 필드를 누적하다가 빈 줄을 만나면 하나의 완성된 이벤트로 dispatch. 빈 줄 자체는 종료가 아님"
+      - "에러"
+      - "무시"
+    answer: 1
+    explanation: "SSE 프로토콜에서 `event: token\\ndata: {\"text\":\"hi\"}\\n\\n` 의 마지막 `\\n\\n` 이 이벤트 경계. 파서는 빈 줄이 나올 때까지 누적하다가 그 시점에 event + data 조합으로 하나의 SseEvent를 생성하고 버퍼 리셋. 스트림 종료는 source가 exhausted / cancel 될 때 자연스럽게 종료."
+  - question: "AsyncThrowingStream의 `continuation.onTermination` 을 설정하는 이유는?"
+    choices:
+      - "iOS 16 요구사항"
+      - "구독자가 Task를 cancel하면 continuation도 termination 받음 → 이 콜백에서 진행 중인 URLSession task를 `task.cancel()` 해야 네트워크 연결도 같이 정리됨. 안 하면 백그라운드에서 스트림 계속 진행"
+      - "메모리 누수 방지"
+      - "SwiftUI preview 호환성"
+    answer: 1
+    explanation: "AsyncThrowingStream은 생성자 내부 Task와 구독자(뷰/리듀서)가 분리돼 있다. 구독자가 떠날 때(view dismiss, navigation pop, TCA cancel) onTermination이 호출되는데 여기서 내부 Task를 cancel 안 하면 네트워크 연결이 살아있고 토큰이 버려지는 곳으로 계속 yield → 리소스 누수."
+---
+
+## 컨텍스트
+
+Aidy Session 6 R3 에서 iOS가 [ADR-008 Phase 2 SSE](/wiki/harness-engineering/aidy-journal-005-sse-phase1-to-phase2-progressive-rollout) 클라이언트 구현. 서버 구현은 [Spring Boot SSE 0-dep](/wiki/backend-ai/spring-boot-sse-streaming-0-dep), Android 는 [OkHttp BufferedSource SSE](/wiki/android-ai/okhttp-buffered-source-sse) 참조.
+
+**제약**: 외부 SSE 라이브러리(EventSource, IKEventSource 등) 사용 금지 — iOS 15+ 표준 API 만으로 구현.
+
+---
+
+## 전체 구현
+
+```swift
+import Foundation
+import ComposableArchitecture
+
+enum SSEEvent: Equatable, Sendable {
+    case token(String)
+    case memory(StreamedMemory)
+    case done(messageId: Int64)
+    case error(code: String, message: String)
+}
+
+struct StreamedMemory: Equatable, Sendable, Codable {
+    let category: String
+    let title: String
+    let content: String
+}
+
+@DependencyClient
+struct SSEClient {
+    var stream: @Sendable (_ message: String) -> AsyncThrowingStream<SSEEvent, Error> = { _ in
+        AsyncThrowingStream { $0.finish() }
+    }
+}
+
+extension SSEClient: DependencyKey {
+    static let liveValue = SSEClient(
+        stream: { message in
+            AsyncThrowingStream<SSEEvent, Error> { continuation in
+                let task = Task {
+                    do {
+                        var request = URLRequest(url: Self.url("/api/chat/stream"))
+                        request.httpMethod = "POST"
+                        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+                        request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
+                        if let token = Self.loadToken() {
+                            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+                        }
+                        request.httpBody = try JSONEncoder().encode(["message": message])
+
+                        let (bytes, response) = try await URLSession.shared.bytes(for: request)
+
+                        if let http = response as? HTTPURLResponse {
+                            if http.statusCode == 401 {
+                                NotificationCenter.default.post(name: .unauthorizedDetected, object: nil)
+                                throw APIError.unauthorized
+                            }
+                            guard (200..<300).contains(http.statusCode) else {
+                                throw APIError.network("HTTP \(http.statusCode)")
+                            }
+                        }
+
+                        // SSE 라인 파싱 루프
+                        var currentEvent: String?
+                        var currentData: String?
+
+                        for try await line in bytes.lines {
+                            if line.isEmpty {
+                                // 빈 줄 = 이벤트 경계 → dispatch
+                                if let event = currentEvent, let data = currentData,
+                                   let parsed = Self.parse(event: event, data: data) {
+                                    continuation.yield(parsed)
+                                }
+                                currentEvent = nil
+                                currentData = nil
+                            } else if line.hasPrefix("event:") {
+                                currentEvent = String(line.dropFirst("event:".count))
+                                    .trimmingCharacters(in: .whitespaces)
+                            } else if line.hasPrefix("data:") {
+                                currentData = String(line.dropFirst("data:".count))
+                                    .trimmingCharacters(in: .whitespaces)
+                            }
+                        }
+                        continuation.finish()
+                    } catch {
+                        continuation.finish(throwing: error)
+                    }
+                }
+
+                // ← 중요: 구독자 cancel → Task cancel
+                continuation.onTermination = { _ in task.cancel() }
+            }
+        }
+    )
+
+    private static func parse(event: String, data: String) -> SSEEvent? {
+        let bytes = Data(data.utf8)
+        let decoder = JSONDecoder()
+        switch event {
+        case "token":
+            struct P: Decodable { let text: String }
+            return (try? decoder.decode(P.self, from: bytes)).map { .token($0.text) }
+        case "memory":
+            return (try? decoder.decode(StreamedMemory.self, from: bytes)).map { .memory($0) }
+        case "done":
+            struct P: Decodable { let messageId: Int64 }
+            return (try? decoder.decode(P.self, from: bytes)).map { .done(messageId: $0.messageId) }
+        case "error":
+            struct P: Decodable { let code: String; let error: String }
+            return (try? decoder.decode(P.self, from: bytes)).map {
+                .error(code: $0.code, message: $0.error)
+            }
+        default:
+            return nil
+        }
+    }
+}
+
+extension SSEClient: TestDependencyKey {
+    static let testValue = SSEClient(
+        stream: { _ in AsyncThrowingStream { $0.finish() } }
+    )
+}
+```
+
+---
+
+## 5가지 핵심 패턴
+
+### 1. `URLSession.bytes(for:)` — iOS 15+ 표준 API
+
+```swift
+let (bytes, response) = try await URLSession.shared.bytes(for: request)
+for try await line in bytes.lines {
+    // 라인 단위 수신
+}
+```
+
+- `bytes` 타입: `URLSession.AsyncBytes` (AsyncSequence of UInt8)
+- `bytes.lines` → `AsyncLineSequence<AsyncBytes>` 라인 분할
+- 네트워크 버퍼링 자동 처리 — 개발자는 라인만 소비
+
+**iOS 14 이하** 타겟은 `URLSessionDataDelegate` 로 수동 바이트 누적 + 라인 분할 필요 (코드 복잡도 약 3배).
+
+### 2. 빈 줄 기준 이벤트 dispatch
+
+SSE 프로토콜 포맷:
+
+```
+event: token
+data: {"text":"hello"}
+<empty line>
+event: memory
+data: {"category":"schedule","title":"...","content":"..."}
+<empty line>
+```
+
+파서 규칙:
+- `event:` / `data:` 라인은 누적
+- **빈 줄** 만나면 누적된 event + data로 SseEvent 생성 → yield
+- 버퍼 리셋 후 다음 이벤트 대기
+
+```swift
+if line.isEmpty {
+    // dispatch
+    if let e = currentEvent, let d = currentData {
+        continuation.yield(Self.parse(event: e, data: d)!)
+    }
+    currentEvent = nil; currentData = nil
+}
+```
+
+### 3. `AsyncThrowingStream` 으로 TCA 통합
+
+`@DependencyClient` + TCA effects에 자연스럽게 결합:
+
+```swift
+// Reducer
+case .sendMessage:
+    return .run { [msg = state.input] send in
+        for try await event in sseClient.stream(msg) {
+            await send(.sseEvent(event))
+        }
+    }
+    .cancellable(id: CancelID.chat, cancelInFlight: true)
+
+case .sseEvent(.token(let text)):
+    state.streamingText += text
+    return .none
+
+case .sseEvent(.done(let id)):
+    state.confirmedMessageId = id
+    state.streamingText = ""
+    return .none
+
+case .sseEvent(.error(let code, let msg)):
+    state.toast = "에러 \(code): \(msg)"
+    return .none
+```
+
+TCA `.cancellable(id:, cancelInFlight: true)` 로 이전 스트림 자동 취소 (새 메시지 전송 시).
+
+### 4. `continuation.onTermination` 으로 cancel 전파
+
+```swift
+AsyncThrowingStream { continuation in
+    let task = Task { /* 네트워크 루프 */ }
+    continuation.onTermination = { _ in task.cancel() }
+}
+```
+
+구독자(TCA effect, SwiftUI `.task` 등)가 취소되면:
+1. `AsyncThrowingStream` 이 termination 상태로 전환
+2. `onTermination` 콜백 호출
+3. 내부 Task `cancel()` → `URLSession.bytes(for:)` loop가 `CancellationError` throw
+4. `continuation.finish(throwing:)` 으로 자연스러운 종료
+
+**안 하면** 뷰가 떠나도 네트워크 연결 유지 + 버려진 곳으로 yield → 리소스 누수.
+
+### 5. 인증 + 401 자동 처리
+
+```swift
+if http.statusCode == 401 {
+    NotificationCenter.default.post(name: .unauthorizedDetected, object: nil)
+    throw APIError.unauthorized
+}
+```
+
+- JWT는 Keychain에서 로드 → `Authorization: Bearer <token>`
+- 401 감지 시 글로벌 notification 게시 → AuthFeature 가 구독해 자동 로그아웃
+- 스트림은 `throw` 로 종료 → TCA가 error 처리
+
+---
+
+## 회복성 (Phase 2 + 이후)
+
+Session 6 R5 에서 연결 회복 도입. iOS 쪽은 AsyncThrowingStream 특성상 재시도가 까다로워 **호출자 레벨 재시도** 방식:
+
+```swift
+case .streamFailed where state.retryCount < 1:
+    state.retryCount += 1
+    return .run { [msg] send in
+        try? await Task.sleep(for: .seconds(2))
+        await send(.sendMessage(msg))  // 재시도
+    }
+```
+
+AsyncThrowingStream 내부 `retry` 연산자가 없어서 (Combine과 다름) — 뷰 모델/리듀서 레벨에서 명시적 재시도가 깔끔.
+
+---
+
+## 테스트 전략
+
+### Unit — TestDependencyKey로 스텁
+
+```swift
+extension SSEClient: TestDependencyKey {
+    static let testValue = SSEClient(
+        stream: { _ in AsyncThrowingStream { $0.finish() } }
+    )
+}
+
+// TestStore
+$0.sseClient.stream = { _ in
+    AsyncThrowingStream { continuation in
+        continuation.yield(.token("Hello"))
+        continuation.yield(.token(" World"))
+        continuation.yield(.done(messageId: 42))
+        continuation.finish()
+    }
+}
+```
+
+### Integration — URLProtocol 스텁
+
+```swift
+class SseURLProtocol: URLProtocol {
+    override func startLoading() {
+        client?.urlProtocol(self, didReceive: HTTPURLResponse(...), ...)
+        client?.urlProtocol(self, didLoad: Data("event: token\ndata: {\"text\":\"hi\"}\n\n".utf8))
+        client?.urlProtocolDidFinishLoading(self)
+    }
+}
+```
+
+Aidy iOS 테스트 121 passed (s6 종료 시점) 에 SSE 관련 케이스 포함.
+
+---
+
+## AI Agent Directive
+
+### Trigger
+- iOS에서 SSE / 서버 스트리밍 구독 구현 착수 시
+- 외부 SSE 라이브러리 (IKEventSource, EventSource) 도입 유혹
+- AsyncThrowingStream ↔ TCA 통합 패턴 필요
+
+### Prerequisites
+- iOS 15+ 타겟 (iOS 14 이하는 URLSessionDataDelegate 별도 경로)
+- [Backend SSE 구현](/wiki/backend-ai/spring-boot-sse-streaming-0-dep)
+- [iOS Flow Map](/wiki/ios-ai/ios-flow-map-via-aidy-ios)
+
+### Actionable Steps
+
+1. **`URLSession.bytes(for:)`** 로 request 시작 — Accept: text/event-stream 헤더
+2. **401 분기** — Keychain 토큰 무효 시 글로벌 notification + throw
+3. **라인 파싱 루프** — `event:` / `data:` 누적, 빈 줄에서 dispatch
+4. **`AsyncThrowingStream`** 래핑 — continuation.yield로 SseEvent 방출
+5. **`continuation.onTermination`** 필수 — 내부 Task cancel 연결
+6. **`@DependencyClient` + TestDependencyKey** — TCA 의존성 주입
+7. **재시도는 호출자 레벨** — stream 자체에 retry 로직 넣지 말 것
+
+### Anti-patterns
+
+- **외부 SSE 라이브러리 도입** — iOS 15+ 표준 API로 충분
+- **`onTermination` 생략** — cancel 시 네트워크 누수
+- **빈 줄을 종료로 해석** — 이벤트 경계이지 스트림 끝 아님
+- **stream 내부 자동 재시도** — AsyncThrowingStream엔 retry 연산자 없음, 호출자가 명시적으로
+- **Keychain 토큰을 매 스트림마다 로드 후 캐싱** — Keychain 접근 비용보다 동기화 비용이 큼, 필요 시점 로드가 안전
+
+---
+
+## 출처
+
+- iOS 구현: `aidy-ios/Projects/App/Sources/Core/Network/SSEClient.swift`
+- ChatFeature: `aidy-ios/Projects/App/Sources/Feature/Chat/ChatFeature.swift`
+- s6-R3 retro: `aidy-architect/docs/retros/autoceo-s6-round-3-retro.md`
+- Apple Docs: [URLSession.bytes(for:)](https://developer.apple.com/documentation/foundation/urlsession/3767353-bytes)
+- SSE 스펙: [WHATWG EventSource](https://html.spec.whatwg.org/multipage/server-sent-events.html)
