@@ -9,43 +9,53 @@
 
 ## 🕒 작성 시점
 
-- **작성 일시**: 2026-04-16 (Session 4 확장 종료 직전)
-- **작성 주체**: Claude (Session 4)
-- **이유**: Layer 3 POC Phase 1 + Phase 2a (인덱싱 범위 확장) 사이클 종료 → 다음 세션 부트스트랩
+- **작성 일시**: 2026-04-17 (Session 5 종료 직전)
+- **작성 주체**: Claude (Session 5)
+- **이유**: Aidy 생태계 스프린트(aidy-architect Session 5/6) 박제 10 엔트리 + 기존 문서 연결 보강 사이클 종료 → 다음 세션 부트스트랩
 
 ---
 
 ## 📸 현재 상태 스냅샷
 
 ### ai-study Wiki
-- **엔트리 수**: 107 (+1, Journal 025)
+- **엔트리 수**: 117 (+10, Journal 003/004/005 + SSE 3-플랫폼 + 백엔드 2 + 하네스 2)
 - **카테고리**: 13 (방법론 4 + 시스템 3 + 평가&인프라 2 + 응용 4)
 - **주요 시리즈**:
   - **Harness Journal** (000~025)
   - **iOS Journal** (000~009)
-  - **Multi-Agent Orchestration Journal (Aidy)** (000, 001, 002)
+  - **Multi-Agent Orchestration Journal (Aidy)** (000 · 001 · 002 · **003 · 004 · 005**)
   - **Flow Map for iOS Devs** (1·2·3·4·6·7편 완료, 5편 deferred)
 - **Git 상태**: main clean, origin/main 동기 (세션 시작 시 반드시 `rtk git fetch`)
 - **최근 major 변경**:
-  - **Layer 3 (JIT Retrieval) POC Phase 1 + 2a** — `embed-content.mjs` + `search.mjs` + 1141 청크 인덱스
-  - 인덱싱 소스: content + docs/solutions + docs/retros (3소스)
-  - Mermaid `<br/>` warning 시스템 (Session 4 첫 사이클)
-  - vitest 7→16 (idempotency 케이스 박제)
+  - **Aidy Journal 003** — autoceo 병렬 dispatch 토큰 경제성 (Session 6 R9 429 순차 재개)
+  - **Aidy Journal 004** — Test Evidence 정책 실효성 관찰 (s4 → s5 QA 라운드 불필요)
+  - **Aidy Journal 005** — ADR-008 SSE Phase 1→2 점진 도입
+  - **SSE 3-플랫폼 0-dep** — backend/iOS/Android (외부 라이브러리 0)
+  - **backend-ai**: Password Reset 보안 + pg_trgm GIN 박제
+  - **harness-engineering**: Worker Prompts Logging + tmux flush 자동화 박제
 
-### Layer 3 POC 현재 상태
+### Layer 3 POC 현재 상태 (변동 없음)
 - **인프라**: ✅ 작동 (1~3ms 응답, brute force, JSON 인덱스)
 - **영어 쿼리**: ✅ 적중률 우수 (Top-1 정답)
 - **한국어 쿼리**: ⚠️ 부족 (모델 한계 — `Xenova/all-MiniLM-L6-v2` 영어 위주)
-- **인덱싱 범위**: Phase 2a 완료 (solution Top-1 진입 확인)
-- **다음 변수**: 모델 교체(가장 큰 영향) > 라우터 > 섀도우 모드
+- **인덱싱 범위**: Phase 2a 완료 (솔루션 Top-1 진입)
+- **다음 변수**: 모델 교체 > 라우터 > 섀도우 모드
 
 ### aidy 4 레포 (관제 + 3 워커)
-- Session 4 (10R + QA) 결과 박제 완료 (Journal 002 + 엔트리 3건)
+- **Session 5/6 박제 완료** — Journal 003/004/005 + 카테고리 엔트리 7건
+- **Session 6 종료 상태** (aidy-architect commit `5a75faf`): R1~R9 완주 / 466 tests / API v0.2.5 / V12
 - **배포 상태**: 3-client 모두 프로덕션 미구축 — [배포 설계 로드맵](/wiki/infrastructure/aidy-3-client-deployment-design-roadmap) 참조
+- **다음 aidy 세션(s7) 시작점**: `aidy-architect/HANDOFF.md` P1 — Password reset SMTP 통합 / SSE Phase 3 / P-004 Phase 2
 
 ### moneyflow / tarosaju (워커 프로젝트)
 - **Git 상태**: 세션 시작 시 직접 fetch 확인 ([Journal 003 squash merge 함정](/wiki/harness-engineering/harness-journal-003-squash-merge-trap-pattern))
-- **이식 가능 패턴**: Circuit Breaker · 3-provider 폴백 · 프롬프트 캐싱 · 5-Layer Defense · React Compiler + startTransition · Numeric Execution Evidence · Mermaid warning 시스템
+- **이식 가능 패턴** (이번 세션 신규 포함):
+  - Circuit Breaker · 3-provider 폴백 · 프롬프트 캐싱 · 5-Layer Defense
+  - React Compiler + startTransition · Numeric Execution Evidence · Mermaid warning
+  - **Worker Prompts Logging** (multi-agent 하네스가 있다면)
+  - **tmux flush 자동화** (architect-cli 패턴)
+  - **SSE 0-dep 패턴** (3 플랫폼 각자의 표준 API)
+  - **Password Reset 보안 5원칙** (enumeration 방지 + 쿨다운 기존 토큰 유지)
 
 ---
 
@@ -53,7 +63,7 @@
 
 ### 🔴 High — Layer 3 Phase 2 핵심 변수
 
-1. **다국어 임베딩 모델 비교 (POC Phase 2b)**
+1. **다국어 임베딩 모델 비교 (POC Phase 2b)** — **여전히 0순위**
    - `Xenova/all-MiniLM-L6-v2` vs `Xenova/multilingual-e5-small` vs (옵션) `Xenova/paraphrase-multilingual-MiniLM-L12-v2`
    - 동일 7개 쿼리 (Phase 1과 동일) 재측정 → 한국어 적중률 비교표
    - `embed-content.mjs` 의 모델 ID 한 줄 교체 + 인덱스 별도 파일로 (`public/embeddings.{model}.json`)
@@ -69,19 +79,22 @@
    - [Journal 024](/wiki/harness-engineering/harness-journal-024-solution-to-validator-promotion) 후속 — solution → validator 승격 트리거를 *철학 엔트리* 에 박제
    - 예상 크기: S
 
-### 🟡 Medium — 꾸준한 박제
+### 🟡 Medium — Aidy 후속 + 꾸준한 박제
 
-4. **JSX trap detector 정밀도 개선**
-   - 현재 `api-contract-as-3-client-source-of-truth.mdx Line ~213` `{worker}` warning 1건 잔존
+4. **aidy Session 7 박제 대기 (아직 미실행)**
+   - `aidy-architect/HANDOFF.md` P1 반영 후 새 Journal 후보:
+     - **Password reset SMTP Phase 2** — 이메일 템플릿 + bounce 처리
+     - **SSE Phase 3** — Anthropic official event 전수 (error/ping/usage)
+     - **P-004 Phase 2 Multi-Provider Fallback** — 2nd API key 확보 후
+   - 트리거: aidy-architect 에서 s7 완료 + compound
+
+5. **JSX trap detector 정밀도 개선**
+   - `api-contract-as-3-client-source-of-truth.mdx Line ~213` `{worker}` warning 1건 잔존
    - 본문 인라인 코드(`)로 감싸 해결 또는 detectJsxTraps 룰 보강
 
-5. **Flow Map 시리즈 Part 5 재개 판단**
+6. **Flow Map 시리즈 Part 5 재개 판단**
    - 현재 deferred (실 배포 미구축)
    - 트리거: 실제 Neon + Fly 연결 완료 시점
-
-6. **다음 Harness Journal 후보**
-   - SearchDialog lazy fetch 운영 데이터 (Session 2 박제 후 며칠 사용)
-   - aidy Session 4 안정성 인프라(RateLimit · RequestId · CB) 운영 후기
 
 ### 🟢 Low — 가치 시점 봐서
 
@@ -103,6 +116,7 @@
 ### 코드 결정 대기 (자율 처리 X)
 - **Part 5 실제 도입 시점** — 사용자 · 예산 · 일정 결정
 - **다국어 모델 다운로드 크기** — multilingual-e5-small 은 ~100MB. 디스크 여유 확인 후 진행
+- **aidy s7 시작 시점** — 토큰 리밋 여유 확인 후 ([Journal 003](/wiki/harness-engineering/aidy-journal-003-parallel-dispatch-token-economics))
 
 ### 다른 세션 주의
 - moneyflow · tarosaju 자체 세션 가능 — 세션 시작 시 `rtk git fetch` ([Journal 019](/wiki/harness-engineering/harness-journal-019-mcapp-cross-session-cleanup))
@@ -130,8 +144,8 @@
 - [ ] 양쪽 main 최신 commit 확인 · 이 NEXT.md 의 스냅샷과 비교 → 다른 세션 작업 감지 시 갱신
 
 ### Phase 4: 최근 박제 훑기 (3분)
-- [ ] `docs/retros/2026-04-16-session-4.md` (Mermaid warning 사이클)
-- [ ] `docs/retros/2026-04-16-session-4-extended.md` (Layer 3 POC + Phase 2a)
+- [ ] `content/harness-engineering/aidy-journal-003-parallel-dispatch-token-economics.mdx` (토큰 경제성)
+- [ ] `content/harness-engineering/aidy-journal-005-sse-phase1-to-phase2-progressive-rollout.mdx` (ADR-008 운영)
 - [ ] `content/harness-engineering/harness-journal-025-jit-retrieval-poc-phase1.mdx` (POC 결과 + 다음 변수)
 
 ### Phase 5: 작업 시작 (2분 내)
@@ -147,6 +161,7 @@
 # 프로젝트 상태 확인
 rtk git -C ~/Develop/mino-moneyflow fetch origin
 rtk git -C ~/Develop/mino-tarosaju fetch origin
+rtk git -C ~/Develop/aidy-architect fetch origin
 
 # 새 작업 시작 (반드시)
 /wt-branch ai-ops/<new-branch-name>
@@ -181,11 +196,13 @@ rtk npm run embed-content
 
 ## 📜 최근 갱신
 
-### 2026-04-16 (Session 4 확장 종료 직전)
-- Layer 3 (JIT Retrieval) POC Phase 1 완료 — `embed-content.mjs` + `search.mjs` + 923 청크 인덱스
-- POC 7 쿼리 실측: 영어 2/2 적중, 한국어 0/3 적중 → 모델이 핵심 변수 결론
-- Journal 025 박제 — POC 가설 검증 데이터 + Phase 2 변수 명확화
-- Phase 2a 첫 조각: docs/solutions/ + docs/retros/ 인덱싱 추가 (923 → 1141 청크)
-- 솔루션 Top-1 진입 확인 (인덱싱 범위 확장 ROI 입증)
-- `feedback_poc_baseline_variables` 메모리 신규 — POC 단계 분리 시 교환 가능 변수 동시 측정 원칙
-- 큐 갱신: Phase 2b(다국어 모델 비교)가 다음 세션 0순위
+### 2026-04-17 (Session 5 종료 직전)
+- Aidy 생태계 스프린트 박제 완료 — Session 5/6 결과물을 10 엔트리로 박제
+  - Journal 003 (토큰 경제성) · 004 (Test Evidence 정책 실효성) · 005 (SSE 점진 도입)
+  - SSE 3-플랫폼 0-dep (backend/iOS/Android)
+  - backend-ai: Password Reset 보안 + pg_trgm GIN
+  - harness-engineering: Worker Prompts Logging + tmux flush 자동화
+- 기존 문서 연결 보강 — Journal 000/001/002, Flow Maps 3개, CB 엔트리, test 엔트리 2개
+- 이식 가능 패턴 카드 확장 (moneyflow/tarosaju용) — SSE/Password Reset/Worker Prompts Logging 추가
+- 엔트리 수 107 → 117, 다음 Aidy s7 박제는 aidy-architect 작업 후
+- Layer 3 Phase 2b(모델 비교) 는 여전히 0순위 큐
