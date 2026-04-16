@@ -1,10 +1,8 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { getManifest } from "@/lib/content";
-import { SearchDialog } from "@/components/search-dialog";
 import type { Category } from "@/lib/schema";
 import { CATEGORY_LABELS, CATEGORY_COLORS } from "@/lib/schema";
-import { GraphSearchProvider } from "@/contexts/graph-search-context";
 import { Header } from "@/components/header";
 import { LearningHeatmap } from "@/components/learning-heatmap";
 import { QuizWidget } from "@/components/quiz-widget";
@@ -57,15 +55,6 @@ export default function DashboardPage() {
     .sort((a, b) => a.frontmatter.confidence - b.frontmatter.confidence)
     .slice(0, 3);
 
-  // Search entries for dialog
-  const searchEntries = entries.map((e) => ({
-    slug: e.slug,
-    title: e.frontmatter.title,
-    category: e.frontmatter.category,
-    description: e.frontmatter.description,
-    tags: e.frontmatter.tags,
-  }));
-
   // Quizable entries (have quiz frontmatter with at least one question)
   const quizableEntries = entries
     .filter((e) => Array.isArray(e.frontmatter.quiz) && e.frontmatter.quiz.length > 0)
@@ -85,7 +74,6 @@ export default function DashboardPage() {
   const completeCount = entries.filter((e) => e.frontmatter.status === "complete").length;
 
   return (
-    <GraphSearchProvider>
     <div className="min-h-screen bg-bg">
       <Header />
 
@@ -285,9 +273,6 @@ export default function DashboardPage() {
           </section>
         )}
       </main>
-
-      <SearchDialog entries={searchEntries} />
     </div>
-    </GraphSearchProvider>
   );
 }

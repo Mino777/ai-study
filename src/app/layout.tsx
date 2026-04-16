@@ -6,7 +6,6 @@ import { MobileNav } from "@/components/mobile-nav";
 import { MagneticMode } from "@/components/magnetic-mode";
 import { SearchDialog } from "@/components/search-dialog";
 import { GraphSearchProvider } from "@/contexts/graph-search-context";
-import { getManifest } from "@/lib/content";
 import "./globals.css";
 
 const SITE_URL = "https://ai-study-wheat.vercel.app";
@@ -32,17 +31,6 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // searchEntries는 모든 페이지의 Header → SearchTrigger → SearchDialog가 사용
-  // root layout에서 한 번만 로드해서 글로벌 dialog에 주입 (wiki/홈 개별 mount 제거)
-  const manifest = getManifest();
-  const searchEntries = manifest.entries.map((e) => ({
-    slug: e.slug,
-    title: e.frontmatter.title,
-    category: e.frontmatter.category,
-    description: e.frontmatter.description,
-    tags: e.frontmatter.tags,
-  }));
-
   return (
     <html lang="ko" suppressHydrationWarning>
       <head>
@@ -79,7 +67,7 @@ export default function RootLayout({
             {children}
             <MobileNav />
             <MagneticMode />
-            <SearchDialog entries={searchEntries} />
+            <SearchDialog />
           </GraphSearchProvider>
         </ThemeProvider>
         <Analytics />

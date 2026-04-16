@@ -3,8 +3,6 @@ import type { Metadata } from "next";
 import { getManifest } from "@/lib/content";
 import { CATEGORY_LABELS, CATEGORY_COLORS } from "@/lib/schema";
 import { Header } from "@/components/header";
-import { GraphSearchProvider } from "@/contexts/graph-search-context";
-import { SearchDialog } from "@/components/search-dialog";
 
 export const metadata: Metadata = {
   title: "학습 타임라인",
@@ -38,16 +36,7 @@ export default function TimelinePage() {
   const totalDays = sortedDates.length;
   const totalEntries = manifest.entries.length;
 
-  const searchEntries = manifest.entries.map((e) => ({
-    slug: e.slug,
-    title: e.frontmatter.title,
-    category: e.frontmatter.category,
-    description: e.frontmatter.description,
-    tags: e.frontmatter.tags,
-  }));
-
   return (
-    <GraphSearchProvider>
       <div className="min-h-screen bg-bg">
         <Header />
         <main className="mx-auto max-w-3xl px-6 py-8">
@@ -152,8 +141,6 @@ export default function TimelinePage() {
             </p>
           )}
         </main>
-        <SearchDialog entries={searchEntries} />
       </div>
-    </GraphSearchProvider>
   );
 }

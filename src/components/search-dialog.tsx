@@ -14,32 +14,60 @@ interface SearchEntry {
   tags: string[];
 }
 
+// 모듈 스코프 캐시 — 한 세션에서 한 번만 fetch.
+let searchIndexCache: SearchEntry[] | null = null;
+let searchIndexPromise: Promise<SearchEntry[]> | null = null;
 
-interface SearchDialogProps {
-  entries: SearchEntry[];
+function loadSearchIndex(): Promise<SearchEntry[]> {
+  if (searchIndexCache) return Promise.resolve(searchIndexCache);
+  if (searchIndexPromise) return searchIndexPromise;
+  searchIndexPromise = fetch("/search-index.json")
+    .then((r) => r.json())
+    .then((data: SearchEntry[]) => {
+      searchIndexCache = data;
+      return data;
+    })
+    .catch((err) => {
+      searchIndexPromise = null; // 재시도 허용
+      throw err;
+    });
+  return searchIndexPromise;
 }
 
-export function SearchDialog({ entries }: SearchDialogProps) {
+export function SearchDialog() {
   const router = useRouter();
   const { highlightNodes, clearHighlights } = useGraphSearch();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [entries, setEntries] = useState<SearchEntry[]>(
+    () => searchIndexCache ?? []
+  );
 
-  // Build search index on mount
-  const searchIndex = useMemo(() => {
-    // Simple search: match against title, description, tags, category
-    return entries;
-  }, [entries]);
+  // Idle prefetch: 유저가 Cmd+K 치기 전에 미리 로드해서 첫 열람 지연 제거.
+  // requestIdleCallback 미지원 환경은 setTimeout으로 폴백.
+  useEffect(() => {
+    if (searchIndexCache) return;
+    const idle =
+      (window as Window & { requestIdleCallback?: (cb: () => void) => number })
+        .requestIdleCallback ?? ((cb: () => void) => setTimeout(cb, 200));
+    const handle = idle(() => {
+      loadSearchIndex()
+        .then(setEntries)
+        .catch(() => {}); // 실패해도 첫 Cmd+K에서 재시도됨
+    });
+    return () => {
+      if (typeof handle === "number") clearTimeout(handle);
+    };
+  }, []);
 
   const results = useMemo(() => {
     if (!query.trim()) {
-      // Empty query: show recent entries (all, sorted as-is)
       return entries.slice(0, 8);
     }
     const q = query.toLowerCase();
-    return searchIndex
+    return entries
       .filter(
         (e) =>
           e.title.toLowerCase().includes(q) ||
@@ -48,7 +76,7 @@ export function SearchDialog({ entries }: SearchDialogProps) {
           e.category.toLowerCase().includes(q)
       )
       .slice(0, 8);
-  }, [query, searchIndex, entries]);
+  }, [query, entries]);
 
   // Reset selected index and sync graph highlights when results change
   useEffect(() => {
@@ -76,13 +104,18 @@ export function SearchDialog({ entries }: SearchDialogProps) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  // Focus input when opening
+  // Focus input when opening + ensure search index is loaded
   useEffect(() => {
     if (open) {
       setQuery("");
       setTimeout(() => inputRef.current?.focus(), 50);
+      if (entries.length === 0) {
+        loadSearchIndex()
+          .then(setEntries)
+          .catch(() => {});
+      }
     }
-  }, [open]);
+  }, [open, entries.length]);
 
   const navigate = useCallback(
     (slug: string) => {

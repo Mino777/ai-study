@@ -10,6 +10,14 @@ const OUTPUT_FILE = path.join(
   "content-manifest.json"
 );
 
+// 모든 페이지의 SearchDialog가 lazy fetch로 가져가는 정적 인덱스.
+// layout.tsx에서 SSR props로 inline 주입하던 ~30KB gzipped 오버헤드를 제거.
+const SEARCH_INDEX_FILE = path.join(
+  process.cwd(),
+  "public",
+  "search-index.json"
+);
+
 // NOTE: src/lib/schema.ts의 CATEGORIES와 동기화 유지 필요.
 // 이 파일은 .mjs라 .ts에서 import 불가 → 수동 동기화.
 // 카테고리 추가 시 schema.ts + CATEGORY_LABELS(아래) 3곳 모두 업데이트.
@@ -316,8 +324,22 @@ function main() {
   fs.mkdirSync(path.dirname(OUTPUT_FILE), { recursive: true });
   fs.writeFileSync(OUTPUT_FILE, JSON.stringify(manifest, null, 2));
 
+  // SearchDialog 전용 슬림 인덱스. 압축 우선이라 minified.
+  const searchIndex = entries.map((e) => ({
+    slug: e.slug,
+    title: e.frontmatter.title,
+    category: e.frontmatter.category,
+    description: e.frontmatter.description,
+    tags: e.frontmatter.tags,
+  }));
+  fs.mkdirSync(path.dirname(SEARCH_INDEX_FILE), { recursive: true });
+  fs.writeFileSync(SEARCH_INDEX_FILE, JSON.stringify(searchIndex));
+
   console.log(
     `✅ Manifest generated: ${entries.length} entries, ${nodes.length} nodes, ${edges.length} edges`
+  );
+  console.log(
+    `✅ Search index: ${searchIndex.length} entries → public/search-index.json`
   );
 }
 

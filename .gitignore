@@ -37,4 +37,5 @@ next-env.d.ts
 
 # generated
 /src/generated/
+/public/search-index.json
 .claude/worktrees/
