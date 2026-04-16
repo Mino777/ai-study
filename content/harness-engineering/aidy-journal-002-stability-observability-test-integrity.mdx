@@ -1,0 +1,216 @@
+---
+title: "Aidy Journal 002 — Stability + Observability + 테스트 무결성 Session 4"
+category: harness-engineering
+series: aidy-journal
+date: "2026-04-16"
+tags: [aidy-journal, autoceo, observability, rate-limiting, circuit-breaker, test-integrity, gate-validation]
+confidence: 4
+connections:
+  - harness-engineering/aidy-journal-001-20round-autoceo-sprint
+  - harness-engineering/aidy-journal-000-architect-worker-baseline
+  - evaluation/numeric-execution-evidence
+  - ios-ai/tuist-spm-testing-trap
+  - backend-ai/spring-boot-ai-circuit-breaker
+status: complete
+description: "Session 4의 10라운드 + QA 스프린트. RateLimit/RequestId/CircuitBreaker/Security Headers 안정성 인프라 + UX 폴리싱. 그리고 iOS 테스트가 8라운드 동안 '통과'로 보고됐지만 실제로 실행되지 않았다는 충격적 발견 — 테스트 무결성을 Gate 체크리스트로 승격."
+type: entry
+quiz:
+  - question: "Session 4에서 발견된 iOS 테스트 무결성 문제의 본질은?"
+    choices:
+      - "테스트 코드가 잘못 작성됨"
+      - "Tuist + SPM의 productTypes 미설정으로 테스트 번들이 실행 가능한 형태로 빌드되지 않아, xcodebuild가 'no tests to run, finishing early'를 출력하고 exit 0으로 끝남 — 실패가 아니라 무실행"
+      - "CI 설정이 잘못됨"
+      - "테스트 파일 경로가 틀림"
+    answer: 1
+    explanation: "정적 라이브러리로 빌드된 SPM 의존성은 리소스 번들 경로가 맞지 않아 테스트 번들 로딩이 실패한다. 하지만 xcodebuild는 이를 'no tests' 상태로 간주하여 exit 0을 반환. 8 라운드 동안 '테스트 통과'가 사실은 '테스트 미실행'이었다. Fix: `productTypes: [.framework]` 명시."
+  - question: "Gate 1 체크리스트에 '테스트 실행 증거(숫자)'를 추가하는 이유는?"
+    choices:
+      - "숫자가 예뻐서"
+      - "워커가 'Tests passed ✅'라고 보고해도 그게 0개 실행일 수 있음. 'Test run with NN tests, 0 failures' 같은 숫자 증거가 없으면 무실행과 통과를 구분할 수 없어 신뢰 경계 자체가 깨짐"
+      - "리포팅 포맷 일관성"
+      - "벤치마킹용"
+    answer: 1
+    explanation: "'Test passed'라는 주장은 실행됐다는 전제와 통과했다는 결론을 섞는다. 무실행은 실패가 아니라 '증거 없음'이다. 숫자 증거(NN tests run)가 없으면 Gate는 FAIL로 처리해야 한다. 이게 관측 가능성(observability)의 신뢰 경계."
+  - question: "Session 4에서 도입한 Circuit Breaker가 in-memory + 0 dependency로 구현된 이유는?"
+    choices:
+      - "Redis가 비싸서"
+      - "단일 서버 인스턴스 환경에서 외부 의존성 추가는 Phase 1 범위 초과. 2nd API key + 분산 환경 필요 시점에 Phase 2로 분산 CB 도입. ADR-007에 Phase 1/2 경계 명시"
+      - "테스트가 편해서"
+      - "Spring Boot가 CB를 지원 안 해서"
+    answer: 1
+    explanation: "ADR-005의 '보류'처럼 ADR-007도 Phase 1 범위를 명시. 단일 인스턴스 + 단일 API 키 환경에서는 in-memory CB로 충분. 분산 CB는 2nd API key(Phase 2)가 추가될 때 자연스럽게 필요해짐. 조기 복잡성 도입 회피."
+---
+
+## Before — Journal 001 이후의 상태
+
+Journal 001에서 20라운드 autoceo로 WO-001~009를 완료하고 All workers idle 상태로 Session 3 종료. Phase 2 설계는 normalizedName 실전 검증 후 착수하기로 보류.
+
+**Session 4 트리거**: 실제 기능 확장보다 *운영 기반*(안정성, 관측성, UX, 테스트)을 먼저 다지는 것이 Phase 2보다 높은 우선순위로 판단됨. Backlog의 P-004(AI Circuit Breaker) + P-001~003(보안/관측/레이트 리밋) 병렬 진행.
+
+---
+
+## After — Session 4 (10라운드 + QA)
+
+### 라운드별 성과
+
+| R | 서버 | iOS | Android |
+|---|------|-----|---------|
+| R1 | RequestId Filter + MDC | — | — |
+| R2 | AiCircuitBreaker + 10 CB 테스트 | Pull-to-refresh | PullToRefreshBox |
+| R3 | RateLimit 20rpm chat / 10rpm auth | Retry UI 구분 | Retry UI 구분 |
+| R4 | Security Headers (X-Frame, Referrer, X-Content-Type) | Chat auto-scroll | Chat auto-scroll |
+| R5 | DTO validation i18n (한국어) | Memory swipe-to-delete + optimistic | Memory swipe-to-delete + optimistic |
+| R6 | Structured logging (duration_ms, success, model) | Empty state UI | Empty state UI |
+| R7 | V8 DB 성능 인덱스 6개 | Skeleton loading | Skeleton loading |
+| R8 | GlobalExceptionHandler 테스트 | 접근성 + 다크모드 semantic colors | 접근성 + 다크 Material theme |
+| R9 | ChatE2ETest (signup→login→chat) | Feature reducer 통합 테스트 4종 | ViewModel 통합 테스트 |
+| R10 | OPERATIONS.md + test policy | README 생성 + test policy | README + deprecation fix |
+
+### 신규 ADR
+
+- **ADR-007: AI Circuit Breaker (P-004 Phase 1)** — in-memory, 0 dependency, CLOSED/OPEN/HALF_OPEN 상태 머신. Request-based failure counting with sliding window + cooldown. Phase 2(분산 CB)는 2nd API key 추가 시점으로 연기.
+
+### 새 인프라 (서버)
+
+- `RateLimitInterceptor.kt` + `InMemoryRateLimiter.kt` — sliding window
+- `RequestIdFilter.kt` — X-Request-Id 헤더 + MDC 전파로 로그 추적
+- `AiCircuitBreaker.kt` — 3상태 머신
+- `WebMvcConfig.kt` + `SecurityConfig.kt` — Security Headers
+- `V8__add_performance_indexes.sql` — memories/chat_messages/persons/person_memories 6 복합 인덱스
+- `OPERATIONS.md` — Request-Id, Rate Limit, CB 운영 노트
+
+### UX 폴리싱 (iOS/Android)
+
+3 플랫폼 동기 구현 (ADR-003 준수):
+- Pull-to-refresh (SwiftUI refreshable / Compose PullToRefreshBox)
+- Skeleton loading
+- Accessibility labels + 다크 모드 semantic colors
+- Retryable 에러 구분 + 재시도 버튼
+- Memory swipe-to-delete + optimistic UI
+- Chat auto-scroll
+- Empty state UI
+
+---
+
+## 🚨 Critical Discovery — iOS 테스트가 8라운드 동안 "통과"였지만 실제로는 무실행
+
+### 증상
+
+R2~R9 iOS 워커가 매 라운드 "테스트 통과" 보고. Gate는 PASS로 처리. 하지만 QA 단계에서 **실제 xcodebuild 출력을 확인하자**:
+
+```
+Test Suite 'All tests' started at ...
+Test Suite 'All tests' passed at ...
+Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.001) seconds
+** TEST SUCCEEDED **
+```
+
+**0 tests executed.** 테스트 코드는 있었고 컴파일도 됐지만 *실행되지 않았다*. xcodebuild는 `exit 0`을 반환했고, 워커도 Architect도 이를 "통과"로 해석했다.
+
+### 근본 원인
+
+1. **Tuist + SPM productTypes 미설정** — TCA/Sharing/Perception/Dependencies/CasePaths가 기본값으로 static library로 빌드됨. 테스트 번들이 리소스 번들 경로를 찾지 못해 로딩 실패.
+2. **xcodebuild CLI 명령 — `-project` vs `-workspace`** — Tuist 환경에서 `-project` 사용 시 SPM 의존성이 누락된 상태로 실행.
+
+### Fix
+
+**`Tuist/Package.swift`**:
+```swift
+productTypes: [
+  "ComposableArchitecture": .framework,
+  "Sharing": .framework,
+  "Perception": .framework,
+  "Dependencies": .framework,
+  "CasePaths": .framework,
+]
+```
+
+**테스트 명령**: `-project`가 아닌 `-workspace Aidy.xcworkspace` 사용 의무화.
+
+### 사후 조치
+
+1. **Solution 문서**: `aidy-architect/docs/solutions/2026-04-16-ios-tests-never-ran.md` 작성
+2. **테스트 정책 4개 신설**:
+   - `gates/test-policy.md` — 범용 6원칙 (P1-P6)
+   - `gates/test-policy-server.md` — Kotlin/Spring Boot
+   - `gates/test-policy-ios.md` — Swift/TCA (productTypes fix 포함)
+   - `gates/test-policy-android.md` — Kotlin/Compose/MVVM
+3. **CLAUDE.md 참조**: 4 레포 모두 test-policy 참조 라인 추가
+4. **Gate 1 체크리스트 보강 대기**: "테스트 실행 증거(숫자)" 요구사항 추가 예정
+
+### 검증 결과
+
+Session 4 QA 후 실측:
+- Server: **113 tests** · 0 failures
+- iOS: **46 tests** (Auth 9 + Chat 16 + Memory 11 + People 5 + PersonDetail 5)
+- Android: **39 tests**
+- **합계: 198 tests · 0 failures**
+
+8라운드간 "통과"였던 iOS 46 tests가 그제서야 실제로 실행됐다.
+
+---
+
+## 운영 데이터
+
+- **워커 커밋**: 31 (server 10 + iOS 12 + android 9)
+- **Architect 커밋**: 3 (v0.5.0 compound + 테스트 정책 gate + 세션 핸드오프)
+- **라운드**: 10 + QA
+- **신규 ADR**: 1 (ADR-007)
+- **테스트 추가**: ~1,200+ 줄
+- **테스트 검증**: 198 · 0 failures
+- **롤백**: 0
+- **보호 파일 위반**: 0
+
+---
+
+## 배운 것 / 다음 후보
+
+### 이번 스프린트의 진짜 메시지
+
+1. **"Tests passed"는 주장이 아니라 증거로 뒷받침돼야 한다** — 숫자 없는 통과는 무실행과 구분 불가
+2. **침묵하는 실패가 가장 위험하다** — exit 0 + "no tests to run"은 *실패로 보고되지 않는 실패*
+3. **테스트 정책을 문서로 박제하면 이식 가능** — 4 레포 모두 test-policy.md 참조 한 줄 추가로 Gate 체크 일관성 확보
+4. **안정성 인프라는 기능과 분리된 스프린트로** — RateLimit/RequestId/CB/Headers는 자기들끼리 묶으면 관측 일관성 증가
+
+### 다음 Journal 후보
+
+| # | 주제 | 핵심 질문 |
+|---|------|----------|
+| 003 | Gate 1 체크리스트 v2 | 숫자 증거 요구 + 테스트 카디널리티 자동 체크 |
+| 004 | normalizedName 실전 검증 | LLM 10회 추출 테스트 결과는? (Phase 2 착수 조건) |
+| 005 | WebSocket/SSE 스트리밍 | 챗 응답 UX를 스트리밍으로 개선하면? |
+
+---
+
+## AI Agent Directive
+
+### Trigger
+- autoceo 스프린트에서 "테스트 통과" 보고를 받고 있지만 실제 실행 여부가 의심될 때
+- 안정성/관측성 인프라를 기능 스프린트와 별도로 진행하려 할 때
+
+### Prerequisites
+- [Aidy Journal 000](/wiki/harness-engineering/aidy-journal-000-architect-worker-baseline)
+- [Aidy Journal 001](/wiki/harness-engineering/aidy-journal-001-20round-autoceo-sprint)
+
+### Actionable Steps
+1. **Gate 1에 "테스트 실행 증거(숫자)" 요구** — 'Test run with NN tests, 0 failures' 패턴 없으면 FAIL
+2. **iOS Tuist + SPM 환경**: `Package.swift`의 productTypes를 `.framework`로 명시
+3. **xcodebuild는 `-workspace`로만 호출** — `-project`는 SPM 누락 위험
+4. **테스트 정책 문서 4종 박제** (범용 + 플랫폼별 3) + CLAUDE.md에서 참조
+5. **안정성 인프라 스프린트 분리** — RateLimit/RequestId/CB/Headers를 한 묶음으로
+
+### Anti-patterns
+- **"Tests passed"를 그대로 신뢰** — 숫자 없는 통과는 무실행일 수 있음
+- **`-project`로 xcodebuild 실행** — Tuist 환경에서는 SPM 의존성 누락 위험
+- **안정성 기능을 기능 스프린트에 섞어 넣기** — Gate 검증 초점이 흐려짐
+
+---
+
+## 출처 / 검증 메모
+
+- Session 4 handoff: `aidy-architect/HANDOFF.md` (commit `5ea2762`)
+- Solution doc: `aidy-architect/docs/solutions/2026-04-16-ios-tests-never-ran.md`
+- 테스트 정책: `aidy-architect/gates/test-policy*.md` (4 files)
+- ADR-007: `aidy-architect/specs/decisions/ADR-007.md`
+- CHANGELOG: `aidy-architect/CHANGELOG.md` v0.5.0
+- 실측 테스트 수치: 각 워커 저장소 CI 실행 결과 기반

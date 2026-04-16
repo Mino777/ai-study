@@ -1,0 +1,176 @@
+---
+title: "Tuist + SPM Testing Trap — productTypes 미설정이 만든 8라운드 Silent Failure"
+category: ios-ai
+date: "2026-04-16"
+tags: [tuist, spm, testing, silent-failure, xcodebuild, ios, aidy]
+confidence: 4
+connections:
+  - evaluation/numeric-execution-evidence
+  - harness-engineering/aidy-journal-002-stability-observability-test-integrity
+status: complete
+description: "Tuist + Swift Package Manager 환경에서 productTypes를 .framework로 명시하지 않으면 SPM 의존성이 static library로 빌드되어 테스트 번들 리소스 경로가 깨진다. xcodebuild는 이를 'no tests to run'으로 처리하고 exit 0을 반환 — 8라운드 동안 Aidy iOS 테스트가 무실행으로 '통과' 처리된 실전 사례."
+type: entry
+quiz:
+  - question: "Tuist에서 SPM 의존성이 기본적으로 static library로 빌드되는 것이 왜 테스트 실행에 문제가 되는가?"
+    choices:
+      - "static library는 느려서"
+      - "테스트 번들이 SPM 의존성의 리소스 번들 경로를 런타임에 찾아야 하는데, static 링킹 시 번들이 앱 번들에 병합되지 않아 경로 해석 실패 → 테스트 번들 로딩 실패"
+      - "Swift 언어 제약"
+      - "Xcode 버그"
+    answer: 1
+    explanation: "TCA, Sharing 등 의존성은 내부적으로 resource bundle을 사용한다. static library로 빌드되면 번들 경로가 런타임에 찾아지지 않아 테스트 번들이 로딩되지 않고, xcodebuild는 이를 'no tests' 상태로 처리한다."
+  - question: "xcodebuild에서 -project 대신 -workspace를 써야 하는 이유는?"
+    choices:
+      - "최신 문법이어서"
+      - "Tuist는 xcodeproj + xcworkspace를 함께 생성하는데, SPM 의존성은 workspace 레벨에서 해석됨. -project로 호출하면 workspace 설정이 무시되어 SPM 의존성 누락"
+      - "-workspace가 더 빠름"
+      - "CI 호환성"
+    answer: 1
+    explanation: "Tuist generate가 만드는 workspace에는 SPM 의존성 해석 설정이 포함되어 있다. -project만 사용하면 이 설정이 적용되지 않아 빌드는 되지만 SPM 의존성의 리소스가 누락된 상태로 실행된다."
+---
+
+## 갭 / 맥락
+
+iOS 프로젝트가 Tuist + Swift Package Manager 조합을 쓰면 편리하지만, **테스트 실행의 silent failure**를 만드는 함정이 있다.
+
+Aidy iOS에서 R2~R9까지 8라운드 동안 매 라운드 "테스트 통과"로 보고됐지만, 실제로는 xcodebuild가 **0개 테스트를 실행**하고 `exit 0`을 반환하고 있었다. 워커도 Architect도 이를 알아채지 못했다.
+
+---
+
+## 핵심 패턴
+
+### 함정의 구조
+
+```
+Tuist 프로젝트
+    ↓ tuist generate
+xcodeproj + xcworkspace 생성
+    ↓
+SPM 의존성(TCA, Sharing, Perception 등) — 기본값 static library
+    ↓
+테스트 번들 빌드
+    ↓
+테스트 번들이 SPM 의존성의 리소스 번들 경로를 런타임에 찾지 못함
+    ↓
+xcodebuild: "no tests to run, finishing early"
+    ↓
+exit 0 (실패 아님)
+    ↓
+워커/AI: "Tests passed ✅" (Gate PASS)
+```
+
+### Fix — 두 가지 조치 동시 필요
+
+**1. Tuist/Package.swift에 productTypes 명시**:
+
+```swift
+import PackageDescription
+
+#if TUIST
+    import ProjectDescription
+
+    let packageSettings = PackageSettings(
+        productTypes: [
+            "ComposableArchitecture": .framework,
+            "Sharing": .framework,
+            "Perception": .framework,
+            "Dependencies": .framework,
+            "CasePaths": .framework,
+        ]
+    )
+#endif
+
+let package = Package(
+    name: "Aidy",
+    dependencies: [
+        .package(url: "https://github.com/pointfreeco/swift-composable-architecture", from: "1.10.0"),
+        // ...
+    ]
+)
+```
+
+`productTypes`를 `.framework`로 명시하면 dynamic framework로 빌드되어 리소스 번들 경로가 정상 작동.
+
+**2. xcodebuild는 `-workspace`로만**:
+
+```bash
+# ❌ 잘못된 방식 — SPM 설정 누락
+xcodebuild test \
+  -project Aidy.xcodeproj \
+  -scheme AidyApp \
+  -destination 'platform=iOS Simulator,name=iPhone 15'
+
+# ✅ 올바른 방식
+xcodebuild test \
+  -workspace Aidy.xcworkspace \
+  -scheme AidyApp \
+  -destination 'platform=iOS Simulator,name=iPhone 15'
+```
+
+---
+
+## 검증 방법
+
+Fix 적용 후 실제 테스트가 실행되는지 반드시 **숫자 증거**로 확인:
+
+```
+# Before fix
+Test Suite 'All tests' passed at ...
+Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.001) seconds
+
+# After fix
+Test Suite 'AuthFeatureTests' passed at ...
+Executed 9 tests, with 0 failures (0 unexpected) in 0.123 (0.145) seconds
+...
+Test Suite 'All tests' passed at ...
+Executed 46 tests, with 0 failures (0 unexpected) in 2.345 (2.567) seconds
+```
+
+`Executed {NN} tests` 숫자가 0이 아닌지 반드시 확인. 0이면 여전히 무실행 상태.
+
+자세한 검증 원칙: [Numeric Execution Evidence](/wiki/evaluation/numeric-execution-evidence)
+
+---
+
+## 왜 8라운드 동안 놓쳤는가
+
+1. **exit 0 = 성공 신호** — `set -e` 기반 CI/CD는 exit code만 본다
+2. **"Test Suite passed" 메시지** — 자연어로 읽으면 "통과"처럼 보임
+3. **워커 AI의 요약 보고** — "Tests passed"라는 자연어 요약이 Gate 프롬프트에 주입되어 Architect도 "통과"로 해석
+4. **숫자 카디널리티 체크 부재** — `NN > 0` 확인 단계가 Gate에 없었음
+
+---
+
+## AI Agent Directive
+
+### Trigger
+- Tuist + SPM 프로젝트에서 iOS 테스트 작성 시
+- "Tests passed"가 보고되는데 실제 실행 시간이 너무 짧을 때 (의심 신호)
+- 새 SPM 의존성 추가 후 테스트가 갑자기 "빠르게 통과"할 때
+
+### Actionable Steps
+1. **Tuist/Package.swift에 productTypes 명시** — TCA + 모든 resource-using 의존성을 `.framework`로
+2. **xcodebuild는 `-workspace`로만 호출** — `-project`는 Tuist 환경에서 금지
+3. **테스트 실행 후 `Executed NN tests` 숫자 체크** — 0이면 FAIL
+4. **CI 스크립트에 카디널리티 가드 추가**:
+   ```bash
+   output=$(xcodebuild test ... 2>&1)
+   if ! echo "$output" | grep -E "Executed [1-9][0-9]* tests"; then
+     echo "FAIL: 0 tests executed"
+     exit 1
+   fi
+   ```
+
+### Anti-patterns
+- **productTypes 미설정** — static library 기본값 그대로 두면 silent failure
+- **`-project`로 xcodebuild 호출** — workspace 레벨 SPM 설정 무시됨
+- **"Test Suite passed" 메시지만으로 PASS 판단** — 숫자 확인 없이는 무실행과 구분 불가
+
+---
+
+## 출처 / 검증 메모
+
+- Aidy 사례: `aidy-architect/docs/solutions/2026-04-16-ios-tests-never-ran.md`
+- Fix 적용 커밋: `aidy-ios` Session 4 QA
+- 검증 결과: iOS 테스트 46개 실제 실행 확인 (Auth 9 + Chat 16 + Memory 11 + People 5 + PersonDetail 5)
+- 테스트 정책: `aidy-architect/gates/test-policy-ios.md`

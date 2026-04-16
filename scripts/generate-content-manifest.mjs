@@ -24,6 +24,8 @@ const CATEGORIES = [
   "evaluation",
   "ios-ai",
   "frontend-ai",
+  "android-ai",
+  "backend-ai",
   "infrastructure",
 ];
 
@@ -182,6 +184,8 @@ function main() {
     infrastructure: "Infrastructure",
     "ios-ai": "iOS + AI",
     "frontend-ai": "Frontend + AI",
+    "android-ai": "Android + AI",
+    "backend-ai": "Backend + AI",
   };
   for (const cat of CATEGORIES) {
     if (!categoriesWithEntries.has(cat)) {

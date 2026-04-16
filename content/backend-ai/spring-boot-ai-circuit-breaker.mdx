@@ -1,0 +1,257 @@
+---
+title: "Spring Boot AI Circuit Breaker — 0 Dependency In-Memory 구현"
+category: backend-ai
+date: "2026-04-16"
+tags: [spring-boot, kotlin, circuit-breaker, ai-resilience, aidy, adr]
+confidence: 4
+connections:
+  - agents/multi-provider-circuit-breaker
+  - harness-engineering/aidy-journal-002-stability-observability-test-integrity
+status: complete
+description: "Spring Boot + Kotlin 환경에서 외부 의존성(Resilience4j, Redis) 없이 in-memory Circuit Breaker를 구현하는 패턴. CLOSED/OPEN/HALF_OPEN 3상태 머신 + Sliding Window failure counting. ADR-007 Phase 1 — 단일 서버 + 단일 API key 환경에서의 최소 복잡도 설계."
+type: entry
+quiz:
+  - question: "Phase 1에서 in-memory + 0 dependency Circuit Breaker를 선택한 이유는?"
+    choices:
+      - "Resilience4j가 무거워서"
+      - "단일 서버 인스턴스 + 단일 API key 환경에서 외부 의존성(Redis, Resilience4j) 추가는 Phase 1 범위 초과. ADR-007에 Phase 1(in-memory)/Phase 2(분산) 경계 명시"
+      - "Kotlin에서 라이브러리 호환성 문제"
+      - "비용 때문"
+    answer: 1
+    explanation: "조기 복잡성 도입 회피. 단일 인스턴스에서는 ConcurrentHashMap 기반 in-memory CB로 충분. 2nd API key 추가 + 멀티 인스턴스 시점에 Phase 2로 Redis/Resilience4j 도입을 검토. ADR-005의 '명시적 보류' 패턴과 동일."
+  - question: "HALF_OPEN 상태가 존재해야 하는 이유는?"
+    choices:
+      - "로깅 편의"
+      - "OPEN에서 CLOSED로 직접 전이하면 아직 복구 안 된 프로바이더에 full traffic이 몰림. HALF_OPEN은 쿨다운 후 1회만 시도하여 복구 여부를 안전하게 자동 감지"
+      - "테스트 작성을 쉽게 하기 위해"
+      - "Spring 요구사항"
+    answer: 1
+    explanation: "OPEN→CLOSED 직접 전이는 회복 중인 프로바이더에 부담을 준다. HALF_OPEN은 1회만 허용하여 성공하면 CLOSED, 실패하면 다시 OPEN으로 돌아간다. 이 시험 호출이 복구 자동 감지의 핵심."
+---
+
+## 갭 / 맥락
+
+Aidy 서버는 Claude API에 의존한다. 외부 API가 일시적으로 실패할 때 무한 재시도는 상황을 악화시킨다 (rate limit 증폭, 비용 증가, 사용자 대기).
+
+Spring Boot 생태계에는 [Resilience4j](https://resilience4j.readme.io/) 같은 성숙한 CB 라이브러리가 있지만, **ADR-007에서 Phase 1 범위를 "단일 인스턴스 + 0 dependency"로 명시**하고 in-memory 구현을 선택했다.
+
+---
+
+## 핵심 패턴
+
+### 3상태 머신
+
+```
+CLOSED (정상)
+  │ sliding window에서 failure ≥ threshold
+  ▼
+OPEN (차단) ── cooldown 경과 ──→ HALF_OPEN (시험)
+  ▲                                  │
+  │ 1회 실패                        │ 1회 성공
+  └──────────────────────────────────┘
+                                      ▼
+                                  CLOSED (복구)
+```
+
+### Kotlin 구현 (Spring `@Component`)
+
+```kotlin
+@Component
+class AiCircuitBreaker(
+    private val clock: Clock = Clock.systemDefaultZone(),
+) {
+    enum class State { CLOSED, OPEN, HALF_OPEN }
+
+    private val state = AtomicReference(State.CLOSED)
+    private val failures = CopyOnWriteArrayList<Instant>()
+    private var openUntil: Instant? = null
+
+    companion object {
+        const val FAILURE_THRESHOLD = 5
+        val WINDOW_DURATION: Duration = Duration.ofMinutes(1)
+        val COOLDOWN: Duration = Duration.ofSeconds(30)
+    }
+
+    fun <T> execute(block: () -> T): T {
+        val currentState = transitionIfNeeded()
+        if (currentState == State.OPEN) {
+            throw CircuitOpenException("AI service circuit is OPEN")
+        }
+
+        return try {
+            val result = block()
+            onSuccess()
+            result
+        } catch (e: Exception) {
+            onFailure()
+            throw e
+        }
+    }
+
+    private fun transitionIfNeeded(): State {
+        val now = clock.instant()
+        val current = state.get()
+
+        if (current == State.OPEN && openUntil?.isBefore(now) == true) {
+            state.compareAndSet(State.OPEN, State.HALF_OPEN)
+            return State.HALF_OPEN
+        }
+        return current
+    }
+
+    private fun onSuccess() {
+        val current = state.get()
+        if (current == State.HALF_OPEN) {
+            failures.clear()
+            openUntil = null
+            state.compareAndSet(State.HALF_OPEN, State.CLOSED)
+        }
+    }
+
+    private fun onFailure() {
+        val now = clock.instant()
+        failures.add(now)
+
+        // Sliding window 정리
+        val windowStart = now.minus(WINDOW_DURATION)
+        failures.removeIf { it.isBefore(windowStart) }
+
+        val current = state.get()
+
+        when (current) {
+            State.CLOSED -> {
+                if (failures.size >= FAILURE_THRESHOLD) {
+                    openUntil = now.plus(COOLDOWN)
+                    state.compareAndSet(State.CLOSED, State.OPEN)
+                }
+            }
+            State.HALF_OPEN -> {
+                openUntil = now.plus(COOLDOWN)
+                state.compareAndSet(State.HALF_OPEN, State.OPEN)
+            }
+            else -> Unit
+        }
+    }
+}
+
+class CircuitOpenException(message: String) : RuntimeException(message)
+```
+
+### 사용 예시 (AiService에 주입)
+
+```kotlin
+@Service
+class AiService(
+    private val anthropic: AnthropicClient,
+    private val circuitBreaker: AiCircuitBreaker,
+) {
+    fun generateResponse(prompt: String): String {
+        return circuitBreaker.execute {
+            anthropic.messages.create(/* ... */)
+        }
+    }
+}
+```
+
+### Controller에서 CircuitOpenException 처리
+
+```kotlin
+@ExceptionHandler(CircuitOpenException::class)
+fun handleCircuitOpen(e: CircuitOpenException): ResponseEntity<ErrorResponse> {
+    return ResponseEntity
+        .status(HttpStatus.SERVICE_UNAVAILABLE)
+        .body(ErrorResponse(
+            code = "AI_SERVICE_UNAVAILABLE",
+            message = "AI 서비스가 일시적으로 사용할 수 없습니다. 잠시 후 다시 시도해주세요.",
+        ))
+}
+```
+
+---
+
+## 테스트 10 케이스 (AiCircuitBreakerTest)
+
+```kotlin
+@Test
+fun `CLOSED 상태에서 임계값 미만 실패는 상태 유지`()
+
+@Test
+fun `CLOSED에서 임계값 실패 누적 시 OPEN 전이`()
+
+@Test
+fun `OPEN 상태에서 cooldown 전 호출은 CircuitOpenException`()
+
+@Test
+fun `OPEN에서 cooldown 경과 후 첫 호출은 HALF_OPEN에서 실행`()
+
+@Test
+fun `HALF_OPEN에서 성공 시 CLOSED로 복귀`()
+
+@Test
+fun `HALF_OPEN에서 실패 시 다시 OPEN`()
+
+@Test
+fun `Sliding window 밖 실패는 카운트에서 제외`()
+
+@Test
+fun `성공 호출은 CLOSED에서 상태 변화 없음`()
+
+@Test
+fun `동시성 — 여러 스레드가 동시 호출해도 상태 일관성`()
+
+@Test
+fun `CLOSED 복귀 시 failure 카운트 초기화`()
+```
+
+---
+
+## Phase 1 vs Phase 2 경계
+
+| 항목 | Phase 1 (현재) | Phase 2 (미래) |
+|------|--------------|---------------|
+| 저장소 | in-memory (ConcurrentHashMap) | Redis (분산) |
+| 범위 | 단일 인스턴스 | 멀티 인스턴스 |
+| 의존성 | 0 | Resilience4j + Redis client |
+| 트리거 시점 | 지금 | 2nd API key 추가 or 멀티 인스턴스 배포 |
+
+ADR-007에 이 경계가 명시되어 있어, autoceo가 Phase 2 구현을 자의적으로 시작하지 않는다.
+
+---
+
+## 운영 관점 차이 (moneyflow Circuit Breaker와 비교)
+
+moneyflow의 [Multi-Provider Circuit Breaker](/wiki/agents/multi-provider-circuit-breaker)는 **프로바이더별 독립 CB**를 가진다 (Gemini/Claude/OpenAI 각각). Aidy Phase 1은 **단일 프로바이더**(Claude) 기준이라 단일 CB로 충분.
+
+Phase 2에서 2nd API key가 추가되면 moneyflow 패턴을 참조하여 프로바이더별 독립 CB로 확장 예정.
+
+---
+
+## AI Agent Directive
+
+### Trigger
+- Spring Boot + Kotlin 환경에서 외부 API 의존성에 CB 적용 필요 시
+- 단일 서버 + 단일 API key 상황에서 조기 복잡성을 피하고 싶을 때
+
+### Prerequisites
+- [Multi-Provider Circuit Breaker](/wiki/agents/multi-provider-circuit-breaker) — 프로바이더별 독립 CB 패턴
+
+### Actionable Steps
+1. **3상태 머신 구현** — CLOSED/OPEN/HALF_OPEN, AtomicReference로 상태 관리
+2. **Sliding Window failure counting** — CopyOnWriteArrayList + 시간 기반 정리
+3. **Clock 주입** — 테스트에서 시간 조작 가능하도록 `Clock` 파라미터화
+4. **CircuitOpenException** — Controller에서 503 SERVICE_UNAVAILABLE로 변환
+5. **ADR에 Phase 1/2 경계 명시** — 분산 CB는 명확한 트리거(2nd key, multi-instance) 있을 때만
+
+### Anti-patterns
+- **OPEN → CLOSED 직접 전이** — HALF_OPEN 없이 복구하면 프로바이더 부담 증가
+- **Sliding window 없이 누적 카운트** — 오래된 실패가 영구 남아 불필요한 OPEN 발생
+- **Phase 1에 Redis 도입** — 단일 인스턴스 환경에서는 과설계
+
+---
+
+## 출처 / 검증 메모
+
+- ADR-007: `aidy-architect/specs/decisions/ADR-007.md`
+- 구현: `aidy-server/src/main/kotlin/com/mino/aidy/config/AiCircuitBreaker.kt`
+- 테스트: `aidy-server/src/test/kotlin/.../AiCircuitBreakerTest.kt` (10 케이스)
+- 관련 Journal: [Aidy Journal 002](/wiki/harness-engineering/aidy-journal-002-stability-observability-test-integrity)
