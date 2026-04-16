@@ -1,0 +1,311 @@
+---
+title: "PostgreSQL pg_trgm + GIN 인덱스로 LIKE '%keyword%' 최적화"
+category: backend-ai
+date: "2026-04-16"
+tags: [backend-ai, postgresql, pg-trgm, gin-index, full-text-search, flyway, h2-testing]
+confidence: 4
+connections:
+  - backend-ai/backend-flow-map-via-aidy-server
+  - infrastructure/aidy-3-client-deployment-design-roadmap
+status: complete
+description: "메모리 검색이 `LOWER(content) LIKE LOWER('%keyword%')` 로 시작해 sequential scan으로 회귀한 시점에 pg_trgm extension + GIN 인덱스로 최적화. Aidy Session 6 R7 V12 마이그레이션 기반. 주의: PostgreSQL 전용 → H2 테스트 프로파일은 flyway.enabled=false 로 자동 우회, CREATE EXTENSION 권한 폴백 패턴, IF NOT EXISTS 로 비파괴 additive-only."
+type: entry
+quiz:
+  - question: "B-tree 인덱스가 `LIKE '%keyword%'` 에 왜 쓸모없는가?"
+    choices:
+      - "PostgreSQL 버그"
+      - "B-tree는 prefix 비교 기반 — `LIKE 'keyword%'` (앞 와일드카드 없음)는 range scan 가능하지만 `%keyword%` (앞뒤 와일드카드)는 모든 row 검사 필요 → sequential scan 강제"
+      - "B-tree는 문자열 지원 안 함"
+      - "PostgreSQL은 항상 sequential scan"
+    answer: 1
+    explanation: "B-tree는 prefix 기준 정렬 구조다. 앞 와일드카드(`%keyword...`)는 prefix가 정의되지 않아 인덱스 활용 불가. pg_trgm GIN 인덱스는 문자열을 3-gram 단위로 쪼개 역인덱스로 만들어, substring 검색에도 인덱스 사용 가능."
+  - question: "이 마이그레이션을 H2 테스트 프로파일에서 자동 우회하는 방법은?"
+    choices:
+      - "Flyway baseline version 변경"
+      - "`test` profile에서 `spring.flyway.enabled=false` + `spring.jpa.hibernate.ddl-auto=create-drop` — 테스트 스키마는 JPA entity로 생성, Flyway 스크립트 실행 안 함. PostgreSQL 전용 DDL(CREATE EXTENSION)은 테스트에서 무시됨"
+      - "pg_trgm을 H2에 포팅"
+      - "profile 마다 다른 V12 작성"
+    answer: 1
+    explanation: "Aidy의 표준 패턴 — application-test.yml 에서 Flyway 비활성화 + JPA create-drop으로 스키마 생성. V12 파일은 존재하지만 실행 안 됨. Entity 정의에 인덱스 힌트(@Index)를 주진 않아서 테스트는 seq scan이지만 기능 검증은 통과. 프로덕션만 pg_trgm 사용."
+  - question: "`CREATE EXTENSION IF NOT EXISTS pg_trgm` 이 프로덕션에서 실패할 수 있는 시나리오는?"
+    choices:
+      - "Flyway 버전 호환성"
+      - "DB 계정이 superuser가 아닐 때 — `CREATE EXTENSION` 은 일반 권한으로 실행 불가. 해결: DBA가 사전 실행해두면 `IF NOT EXISTS` 로 no-op 안전 통과. 또는 관리형 DB는 prelude 스크립트로 extension 먼저 생성"
+      - "테이블 이름 충돌"
+      - "charset 불일치"
+    answer: 1
+    explanation: "pg_trgm은 contrib 모듈이라 superuser 또는 rds_superuser 등 상위 권한 필요. 일반 앱 계정으로는 실패. DBA 사전 실행 + Flyway는 `IF NOT EXISTS` 로 no-op 통과가 안전. Aidy의 V12 주석에 이 폴백이 명시됨."
+---
+
+## 컨텍스트
+
+Aidy 메모리 검색은 `MemoryRepository.searchByKeyword(userId, keyword)` 가 다음 JPQL:
+
+```kotlin
+@Query("""
+    SELECT m FROM Memory m
+    WHERE m.userId = :userId
+      AND (LOWER(m.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
+           OR LOWER(m.content) LIKE LOWER(CONCAT('%', :keyword, '%')))
+    ORDER BY m.createdAt DESC
+""")
+```
+
+초기에는 row 수가 적어 seq scan 충분했지만 메모리 누적 → 검색 지연 체감. Session 6 R7에서 pg_trgm + GIN 인덱스 도입.
+
+---
+
+## 이론 — pg_trgm이 substring 검색을 최적화하는 원리
+
+### B-tree 인덱스의 한계
+
+B-tree는 prefix 기준 정렬 구조:
+
+```
+LIKE 'coffee%'     ← prefix, range scan 가능
+LIKE '%coffee%'    ← 앞 와일드카드, prefix 미정의 → seq scan 강제
+```
+
+B-tree로는 `%keyword%` 형태 검색 인덱스화 불가.
+
+### pg_trgm = trigram 역인덱스
+
+문자열을 **3-글자 단위(trigram)** 로 쪼개:
+
+```
+"coffee" → ["  c", " co", "cof", "off", "ffe", "fee", "ee "]
+```
+
+GIN 인덱스는 각 trigram → row id 리스트 역인덱스 구성:
+
+```
+"cof" → [row_42, row_87, ...]
+"off" → [row_42, row_99, ...]
+"fee" → [row_42, row_87, row_101, ...]
+```
+
+`LIKE '%coffee%'` 쿼리 시 옵티마이저가:
+1. "coffee"를 trigram 분해
+2. 각 trigram의 row id 리스트 교집합 후보 추출
+3. 실제 LIKE 매칭 재검증
+
+전체 table scan이 **후보 수십~수백 row** 로 축소.
+
+---
+
+## V12 마이그레이션 (실구현)
+
+`aidy-server/src/main/resources/db/migration/V12__add_pg_trgm_for_memory_search.sql`:
+
+```sql
+-- V12: pg_trgm GIN 인덱스 — 메모리 검색(LIKE %keyword%) 성능 최적화
+--
+-- 주의사항
+-- 1. PostgreSQL 전용. `CREATE EXTENSION pg_trgm` 및 `gin_trgm_ops` 연산자 클래스는
+--    PostgreSQL 의 pg_trgm 컨트리뷰션 모듈 기능이다.
+-- 2. 테스트(H2) 환경에서는 flyway.enabled=false + JPA create-drop으로 스키마를 생성하므로
+--    이 파일은 실행되지 않는다 (기존 V8/V9/V10/V11 과 동일 패턴).
+-- 3. pg_trgm + GIN 인덱스는 MemoryRepository.searchByKeyword 의
+--    `LOWER(title) LIKE LOWER('%keyword%')` 형태 쿼리를 플래너가 자동으로 활용해
+--    seq scan 대비 큰 폭 성능 향상을 제공한다.
+-- 4. CREATE EXTENSION 권한: 운영 DB 계정이 superuser가 아니면 실패 가능. 이 경우
+--    DBA가 사전 실행하고 본 라인만 IF NOT EXISTS로 안전하게 no-op 처리된다.
+-- 5. 비파괴적 additive-only. 기존 인덱스/테이블 변경 없음.
+
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+CREATE INDEX IF NOT EXISTS idx_memories_content_trgm
+    ON memories USING gin (content gin_trgm_ops);
+
+CREATE INDEX IF NOT EXISTS idx_memories_title_trgm
+    ON memories USING gin (title gin_trgm_ops);
+```
+
+---
+
+## 5가지 운영 포인트
+
+### 1. PostgreSQL 전용 — H2 테스트 자동 우회
+
+Aidy 프로파일 구조:
+
+```yaml
+# application-test.yml
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb
+  flyway:
+    enabled: false        # ← V12 실행 안 됨
+  jpa:
+    hibernate:
+      ddl-auto: create-drop  # ← Entity 기반 스키마 생성
+```
+
+```yaml
+# application-prod.yml (또는 default)
+spring:
+  datasource:
+    url: jdbc:postgresql://...
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+```
+
+테스트는 H2, 프로덕션은 PostgreSQL. V12는 PostgreSQL 전용 DDL이지만 H2 테스트에선 Flyway 자체가 비활성 → 안전.
+
+**체크**: `@DataJpaTest` + PostgreSQL 쓰면 Testcontainers 로 별도 설정 필요.
+
+### 2. CREATE EXTENSION 권한 폴백
+
+```sql
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+```
+
+- **Self-managed PostgreSQL**: superuser 또는 `postgres` 계정 필요
+- **RDS / Cloud SQL**: `rds_superuser` 같은 권한 허용
+- **일반 앱 계정으로 실행 실패 시**:
+  1. DBA가 사전에 `CREATE EXTENSION pg_trgm;` 실행
+  2. Flyway V12는 `IF NOT EXISTS` 로 **no-op 통과**
+  3. 인덱스만 생성됨
+
+### 3. `gin_trgm_ops` 오퍼레이터 클래스 필수
+
+```sql
+-- ❌ 이건 동작 안 함
+CREATE INDEX idx_memories_content ON memories USING gin (content);
+
+-- ✅ 올바른 형태
+CREATE INDEX idx_memories_content_trgm ON memories USING gin (content gin_trgm_ops);
+```
+
+GIN 인덱스는 기본적으로 array/jsonb 타입용. 텍스트 trigram 검색에는 `gin_trgm_ops` 명시 필수 — pg_trgm extension이 제공.
+
+### 4. 쿼리 변경 불필요
+
+옵티마이저가 자동 감지:
+
+```sql
+EXPLAIN ANALYZE
+SELECT * FROM memories
+WHERE LOWER(content) LIKE LOWER('%coffee%');
+
+-- Before (seq scan):
+--   Seq Scan on memories  (cost=0.00..1524.30 rows=12 ...)
+--
+-- After (GIN bitmap scan):
+--   Bitmap Heap Scan on memories  (cost=12.30..52.45 rows=12 ...)
+--     Recheck Cond: ...
+--     -> Bitmap Index Scan on idx_memories_content_trgm
+```
+
+JPA/JPQL 쿼리 변경 **0줄** — 인덱스만 추가.
+
+### 5. 비파괴 additive-only
+
+- 기존 테이블 변경 0
+- 기존 인덱스 변경 0
+- `IF NOT EXISTS` 로 재실행 안전
+- 롤백: `DROP INDEX` (빈시간 작업) + 앱 재배포 불필요
+
+---
+
+## 부작용 / 트레이드오프
+
+### 인덱스 크기 증가
+
+GIN trigram 인덱스는 **테이블 컬럼 크기의 2~3배**. `content` 컬럼이 길면 디스크 사용량 증가. 메모리 100만 row / `content` 평균 500자 → 인덱스 ~1.5GB 추정.
+
+### INSERT/UPDATE 약간 느려짐
+
+trigram 쪼개기 + 역인덱스 유지 오버헤드. 일반 앱 쓰기 패턴에선 체감 적음.
+
+### VACUUM 권장
+
+GIN 인덱스는 pending list 사용 — `VACUUM` 으로 주기 병합. 자동 autovacuum으로 충분하지만 대규모 bulk insert 후 수동 실행 고려.
+
+---
+
+## 대안 비교
+
+| 방식 | 성능 | 설정 | 유지보수 |
+|------|------|------|---------|
+| B-tree | ❌ seq scan | 쉬움 | 쉬움 |
+| **pg_trgm + GIN** | ✅ 빠름 | 중간 | 중간 |
+| to_tsvector (FTS) | ✅ 매우 빠름 | 어려움 (어휘 분석기) | 어려움 |
+| Elasticsearch | ✅ 최고 | 매우 어려움 | 운영 팀 필요 |
+
+**pg_trgm이 적합한 경우**:
+- LIKE '%keyword%' 그대로 쓰고 싶을 때
+- 어휘 분석기(한국어 형태소) 불필요
+- DB 1개로 통합 운영
+
+**넘어서야 할 경우**:
+- 다국어 형태소 분석 필요 → tsvector + mecab/noori
+- 수천만 row 이상 → Elasticsearch
+
+---
+
+## 테스트 전략
+
+### 통합 테스트 (프로덕션 스키마)
+
+```kotlin
+@Testcontainers
+@SpringBootTest
+class MemorySearchIntegrationTest {
+    @Container
+    val postgres = PostgreSQLContainer("postgres:15")
+        .withDatabaseName("test")
+    // Flyway V1~V12 모두 적용된 상태에서 검증
+}
+```
+
+### 단위 테스트 (H2)
+
+`flyway.enabled=false` → V12 미적용. 기능 검증만 가능 (성능 측정 X).
+
+Aidy는 s6 시점에서 H2 단위 테스트만 유지 — 성능 실측은 별도 `EXPLAIN ANALYZE` 로 프로덕션 staging에서 확인.
+
+---
+
+## AI Agent Directive
+
+### Trigger
+- PostgreSQL 백엔드에서 `LIKE '%keyword%'` 쿼리가 seq scan으로 회귀
+- 메모리/로그/콘텐츠 substring 검색 성능 요구 발생
+- 다국어 형태소 분석까진 과한 유즈케이스
+
+### Prerequisites
+- PostgreSQL 9.1+ (pg_trgm 포함)
+- Flyway 또는 직접 DDL 권한
+- H2/PostgreSQL 프로파일 분리 전략
+
+### Actionable Steps
+
+1. **V_n 마이그레이션 파일 생성** — `V_n__add_pg_trgm_for_<table>.sql`
+2. **헤더 주석으로 경고 박제**:
+   - PostgreSQL 전용 표기
+   - H2 테스트 우회 방식
+   - CREATE EXTENSION 권한 폴백
+3. **CREATE EXTENSION IF NOT EXISTS pg_trgm**
+4. **`CREATE INDEX USING gin (<col> gin_trgm_ops)`** — 오퍼레이터 클래스 필수
+5. **IF NOT EXISTS** — 재실행 안전
+6. **H2 테스트 프로파일**: `flyway.enabled=false` 확인
+7. **EXPLAIN ANALYZE**로 staging에서 실측 검증
+
+### Anti-patterns
+
+- **`CREATE INDEX USING gin (content)`** (gin_trgm_ops 누락) — 인덱스 생성은 성공하지만 LIKE 쿼리에서 활용 안 됨
+- **`CREATE EXTENSION pg_trgm` 누락** — `gin_trgm_ops` 미존재 에러
+- **H2 테스트에서 Flyway 활성** — PostgreSQL DDL이 H2에서 실패
+- **인덱스 크기 무시** — 대용량 컬럼에 무작정 적용 시 디스크 터짐
+- **일반 앱 계정으로 CREATE EXTENSION 강제** — DBA 사전 실행 폴백 안 만들면 프로덕션 배포 실패
+
+---
+
+## 출처
+
+- V12 마이그레이션: `aidy-server/src/main/resources/db/migration/V12__add_pg_trgm_for_memory_search.sql`
+- s6-R7 retro: `aidy-architect/docs/retros/autoceo-s6-round-7-retro.md`
+- PostgreSQL docs: [pg_trgm](https://www.postgresql.org/docs/current/pgtrgm.html)
+- JPA 쿼리: `aidy-server/src/main/kotlin/com/mino/aidy/repository/MemoryRepository.kt` `searchByKeyword`
