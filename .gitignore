@@ -41,4 +41,5 @@ next-env.d.ts
 /public/embeddings.json
 /public/embeddings.*.json
 /public/benchmark-results.json
+/wiki-index.md
 .claude/worktrees/

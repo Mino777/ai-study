@@ -218,6 +218,90 @@ async function main() {
     process.exit(1);
   }
   console.log("✅ 모든 MDX + Mermaid 블록 정상");
+
+  // ── Wiki Lint (warning-only, 빌드 차단 안 함) ──
+  // Karpathy LLM Wiki 패턴 적용: 고아 엔트리 / AI Agent Directive 누락 / 일방향 연결
+  wikiLint(files);
+}
+
+/**
+ * Wiki Lint — Karpathy LLM Wiki 패턴 적용
+ * warning-only: 빌드 차단 안 함. N=3 승격 원칙 (compound-engineering-philosophy 원칙 9).
+ *
+ * 검사 항목:
+ * 1. 고아 엔트리 (connections 0개) — Journal 제외
+ * 2. AI Agent Directive 누락 — Journal 제외
+ * 3. 일방향 연결 (A→B 있지만 B→A 없음)
+ */
+function wikiLint(files) {
+  const entries = [];
+  const slugToConnections = {};
+
+  for (const file of files) {
+    const raw = fs.readFileSync(file, "utf-8");
+    const { data, content } = matter(raw);
+    const rel = path.relative(path.join(process.cwd(), "content"), file);
+    const slug = rel.replace(/\.mdx$/, "");
+    const connections = data.connections || [];
+    const isJournal = /journal-\d{3}/.test(slug);
+    const hasDirective = content.includes("AI Agent Directive") || content.includes("For AI Agents");
+
+    entries.push({ slug, connections, isJournal, hasDirective, title: data.title });
+    slugToConnections[slug] = connections;
+  }
+
+  const allSlugs = new Set(entries.map(e => e.slug));
+  let orphans = 0;
+  let noDirective = 0;
+  let oneWay = 0;
+
+  // 1. 고아 엔트리 (connections 0, non-journal)
+  const orphanList = entries.filter(e => !e.isJournal && e.connections.length === 0);
+  if (orphanList.length > 0) {
+    orphans = orphanList.length;
+  }
+
+  // 2. AI Agent Directive 누락 (non-journal)
+  const noDirectiveList = entries.filter(e => !e.isJournal && !e.hasDirective);
+  if (noDirectiveList.length > 0) {
+    noDirective = noDirectiveList.length;
+  }
+
+  // 3. 일방향 연결
+  const oneWayPairs = [];
+  for (const entry of entries) {
+    for (const conn of entry.connections) {
+      if (allSlugs.has(conn)) {
+        const reverse = slugToConnections[conn] || [];
+        if (!reverse.includes(entry.slug)) {
+          oneWayPairs.push({ from: entry.slug, to: conn });
+        }
+      }
+    }
+  }
+  oneWay = oneWayPairs.length;
+
+  // 출력
+  const total = entries.length;
+  const nonJournal = entries.filter(e => !e.isJournal).length;
+  const withDirective = entries.filter(e => !e.isJournal && e.hasDirective).length;
+  const directivePct = nonJournal > 0 ? ((withDirective / nonJournal) * 100).toFixed(0) : 0;
+
+  console.log(`\n📋 Wiki Lint (${total} entries):`);
+  console.log(`   AI Agent Directive: ${withDirective}/${nonJournal} non-journal (${directivePct}%)`);
+
+  if (orphans > 0) {
+    console.warn(`   ⚠️  고아 엔트리 ${orphans}건 (connections 0): ${orphanList.slice(0, 3).map(e => e.slug).join(", ")}${orphans > 3 ? ` 외 ${orphans - 3}건` : ""}`);
+  }
+  if (noDirective > 0) {
+    console.warn(`   ⚠️  AI Agent Directive 누락 ${noDirective}건`);
+  }
+  if (oneWay > 0) {
+    console.warn(`   ⚠️  일방향 연결 ${oneWay}건 (역링크 없음)`);
+  }
+  if (orphans === 0 && noDirective === 0 && oneWay === 0) {
+    console.log("   ✅ 위키 품질 이상 없음");
+  }
 }
 
 main().catch((err) => {

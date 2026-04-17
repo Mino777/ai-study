@@ -335,11 +335,37 @@ function main() {
   fs.mkdirSync(path.dirname(SEARCH_INDEX_FILE), { recursive: true });
   fs.writeFileSync(SEARCH_INDEX_FILE, JSON.stringify(searchIndex));
 
+  // wiki-index.md — Karpathy LLM Wiki 패턴 적용.
+  // 에이전트가 검색 전 카테고리별 한 줄 요약을 먼저 읽고 drill-down.
+  const WIKI_INDEX_FILE = path.join(process.cwd(), "wiki-index.md");
+  const grouped = {};
+  for (const e of entries) {
+    const cat = e.frontmatter.category;
+    if (!grouped[cat]) grouped[cat] = [];
+    grouped[cat].push(e);
+  }
+  let indexMd = `# Wiki Index — ${entries.length} entries\n\n> AI 에이전트가 검색 전 이 파일을 먼저 읽고 관련 엔트리로 drill-down.\n> 자동 생성 (generate-content-manifest.mjs). 직접 수정 금지.\n\n`;
+  for (const cat of CATEGORIES) {
+    const catEntries = grouped[cat];
+    if (!catEntries || catEntries.length === 0) continue;
+    indexMd += `## ${cat} (${catEntries.length})\n\n`;
+    for (const e of catEntries.sort((a, b) => a.slug.localeCompare(b.slug))) {
+      const desc = e.frontmatter.description || "";
+      const shortDesc = desc.length > 80 ? desc.slice(0, 80) + "…" : desc;
+      indexMd += `- **${e.slug}** — ${shortDesc}\n`;
+    }
+    indexMd += "\n";
+  }
+  fs.writeFileSync(WIKI_INDEX_FILE, indexMd);
+
   console.log(
     `✅ Manifest generated: ${entries.length} entries, ${nodes.length} nodes, ${edges.length} edges`
   );
   console.log(
     `✅ Search index: ${searchIndex.length} entries → public/search-index.json`
+  );
+  console.log(
+    `✅ Wiki index: wiki-index.md (${entries.length} entries, agent drill-down용)`
   );
 }
 
