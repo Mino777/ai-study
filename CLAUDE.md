@@ -163,9 +163,11 @@ In QA mode, flag any code that doesn't match DESIGN.md.
 
 솔루션 카테고리: build-errors, runtime-errors, next-patterns, mdx, ai-pipeline, performance, workflow, github-actions
 
-## Frozen Snapshot 원칙
+## Frozen Snapshot 원칙 (Hermes + aidy-architect 이식)
 
-세션 중 CLAUDE.md 수정 최소화. 변경이 필요하면 메모리에 기록만 하고, `/compound` (Phase 3)에서 일괄 반영. 세션 중 CLAUDE.md를 수정하면 prefix cache가 깨져 토큰 비용 증가.
+- 활성 세션 중 CLAUDE.md 수정 금지 (캐시 전체 무효화 + 1.25x 오버헤드)
+- 변경이 필요하면 메모리에 기록만 하고, `/compound` Phase 3에서 일괄 반영
+- CLAUDE.md ≤ 200줄 유지, 상세는 슬래시 커맨드로 분리
 
 ## Skill routing
 
