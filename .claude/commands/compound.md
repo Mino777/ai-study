@@ -24,6 +24,13 @@ Keep a Changelog 포맷. Added/Changed/Fixed + Metrics.
 ## Phase 3: CLAUDE.md 동기화
 새 API/컴포넌트/구조 변경 있으면 CLAUDE.md 업데이트.
 
+## Phase 3b: Anti-Rationalization Guard (Superpowers 이식)
+회고 작성 전 자기 점검 — 다음 중 해당하는 것이 있으면 회고에 솔직히 기록:
+- "이 정도면 충분하다"고 판단했지만, 실제로는 어려운 부분을 건너뛴 것 아닌가?
+- 에러/경고를 무시하고 넘어간 곳이 있는가?
+- 테스트 없이 "동작할 것"이라고 추정한 코드가 있는가?
+- 사용자 피드백 없이 자체 판단으로 스코프를 줄인 곳이 있는가?
+
 ## Phase 4: 메모리 업데이트
 핵심 교훈을 Claude Code 메모리에 저장.
 

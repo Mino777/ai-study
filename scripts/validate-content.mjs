@@ -75,6 +75,54 @@ function detectJsxTraps(content, filePath) {
   return warnings;
 }
 
+/**
+ * No-Placeholder Scan — Superpowers 패턴 이식.
+ * 미완성 콘텐츠 마커를 탐지하여 경고. AI 생성 콘텐츠에서 빈번한 패턴.
+ * 코드 블록/인라인 코드/frontmatter 안은 스킵 (정상 사용).
+ */
+function detectPlaceholders(content, filePath) {
+  const warnings = [];
+  const lines = content.split("\n");
+  let inCodeBlock = false;
+  let inFrontmatter = false;
+
+  // 정밀도 우선: "TODO 개념을 설명하는" 콘텐츠와 "실제 미완성 마커"를 구분
+  // TODO:/FIXME: 같은 actionable 마커만 탐지, 산문 속 개념 언급은 스킵
+  const PLACEHOLDER_PATTERNS = [
+    { regex: /\bTODO\s*[:(\-]/, label: "TODO" },
+    { regex: /\bFIXME\s*[:(\-]/, label: "FIXME" },
+    { regex: /\bLorem ipsum\b/i, label: "Lorem ipsum" },
+    { regex: /구현\s*예정/, label: "구현 예정" },
+    { regex: /추후\s*작성/, label: "추후 작성" },
+    { regex: /작성\s*필요/, label: "작성 필요" },
+  ];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const lineNum = i + 1;
+
+    if (i === 0 && line.trim() === "---") { inFrontmatter = true; continue; }
+    if (inFrontmatter && line.trim() === "---") { inFrontmatter = false; continue; }
+    if (inFrontmatter) continue;
+
+    if (line.trim().startsWith("```")) { inCodeBlock = !inCodeBlock; continue; }
+    if (inCodeBlock) continue;
+
+    const withoutInlineCode = line.replace(/`[^`]+`/g, "");
+
+    for (const { regex, label } of PLACEHOLDER_PATTERNS) {
+      if (regex.test(withoutInlineCode)) {
+        warnings.push({
+          line: lineNum,
+          message: `미완성 마커 "${label}" 탐지 → 콘텐츠 완성 후 제거 필요`,
+        });
+        break; // 한 줄에 여러 마커는 1건으로
+      }
+    }
+  }
+  return warnings;
+}
+
 function findMdxFiles(dir) {
   const results = [];
   if (!fs.existsSync(dir)) return results;
@@ -132,10 +180,18 @@ async function main() {
 
     const { content } = matter(raw);
 
-    // 1. MDX JSX 함정 사전 탐지 (컴파일 전 경고)
+    // 1a. MDX JSX 함정 사전 탐지 (컴파일 전 경고)
     const jsxWarnings = detectJsxTraps(content, rel);
     if (jsxWarnings.length > 0) {
       for (const w of jsxWarnings) {
+        console.warn(`⚠️  ${rel} Line ~${w.line}: ${w.message}`);
+      }
+    }
+
+    // 1b. No-Placeholder Scan (Superpowers 패턴 이식)
+    const placeholderWarnings = detectPlaceholders(content, rel);
+    if (placeholderWarnings.length > 0) {
+      for (const w of placeholderWarnings) {
         console.warn(`⚠️  ${rel} Line ~${w.line}: ${w.message}`);
       }
     }
