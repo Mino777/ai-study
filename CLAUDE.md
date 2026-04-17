@@ -179,7 +179,7 @@ Key routing rules:
 - Bugs, errors, "why is this broken", 500 errors → invoke investigate
 - Ship, deploy, push, create PR → invoke ship
 - QA, test the site, find bugs → invoke qa
-- Code review, check my diff → invoke review
+- Code review, check my diff → invoke review (2-Stage: Plan 있으면 Spec compliance + Code quality)
 - Update docs after shipping → invoke document-release
 - Design system, brand → invoke design-consultation
 - Visual audit, design polish → invoke design-review

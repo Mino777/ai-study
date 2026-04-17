@@ -59,6 +59,29 @@ Keep a Changelog 포맷. Added/Changed/Fixed + Metrics.
 | 세션 중 CLAUDE.md 수정 | Frozen Snapshot 원칙 추가 | CLAUDE.md |
 ```
 
+## Phase 4b: 경험→스킬 자동 생성 (Hermes 이식)
+
+`docs/solutions/` 카테고리별 누적 건수를 체크한다.
+
+```bash
+for d in docs/solutions/*/; do
+  count=$(find "$d" -name "*.md" | wc -l)
+  echo "$count $(basename $d)"
+done | sort -rn
+```
+
+**N≥3인 카테고리 발견 시**:
+1. 해당 카테고리의 솔루션들을 읽고 공통 패턴을 추출
+2. `.claude/commands/{category}-check.md` 스킬 초안을 생성 (또는 기존 스킬 보강)
+3. 스킬 초안에는 반드시 포함:
+   - 트리거 조건 (언제 이 스킬을 호출하는가)
+   - 체크리스트 (솔루션들에서 추출한 검증 항목)
+   - 안티패턴 (솔루션들의 "근본 원인"에서 추출)
+4. CLAUDE.md skill routing에 1줄 추가
+5. **사람 리뷰 필수** — 자동 생성 스킬을 커밋 전 유저에게 확인
+
+**N<3이면 스킵** — 아직 패턴이 충분하지 않음.
+
 ## Phase 5: 메모리 업데이트
 핵심 교훈을 Claude Code 메모리에 저장.
 
