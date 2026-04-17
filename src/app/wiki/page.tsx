@@ -17,6 +17,7 @@ const COMING_SOON_TOPICS: Record<string, string[]> = {
 
 export default function WikiIndexPage() {
   const manifest = getManifest();
+  const hits = manifest.searchHits?.hits ?? {};
 
   const grouped: Record<string, typeof manifest.entries> = {};
   for (const entry of manifest.entries) {
@@ -84,6 +85,11 @@ export default function WikiIndexPage() {
                 </p>
 
                 <div className="flex items-center gap-3">
+                  {(hits[entry.slug] ?? 0) > 0 && (
+                    <span className="text-xs text-muted font-code" title="JIT 검색 조회 횟수">
+                      JIT {hits[entry.slug]}회
+                    </span>
+                  )}
                   <div className="flex items-center gap-1.5">
                     <span className="text-xs text-muted">Confidence</span>
                     <span className="inline-flex gap-0.5">

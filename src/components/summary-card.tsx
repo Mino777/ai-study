@@ -8,9 +8,10 @@ interface SummaryCardProps {
   frontmatter: Frontmatter;
   slug?: string;
   readingTime?: number;
+  searchHitCount?: number;
 }
 
-export function SummaryCard({ frontmatter, slug, readingTime }: SummaryCardProps) {
+export function SummaryCard({ frontmatter, slug, readingTime, searchHitCount }: SummaryCardProps) {
   const catColor = CATEGORY_COLORS[frontmatter.category] || "var(--accent)";
 
   return (
@@ -31,6 +32,11 @@ export function SummaryCard({ frontmatter, slug, readingTime }: SummaryCardProps
         <span className="text-xs text-muted font-code">{frontmatter.date}</span>
         {readingTime && (
           <span className="text-xs text-muted font-code">약 {readingTime}분</span>
+        )}
+        {searchHitCount !== undefined && searchHitCount > 0 && (
+          <span className="text-xs text-muted font-code" title="JIT 검색에서 이 엔트리가 조회된 횟수">
+            JIT {searchHitCount}회
+          </span>
         )}
         {frontmatter.status !== "complete" && (
           <span className="text-xs text-warning font-code">{frontmatter.status}</span>

@@ -184,7 +184,7 @@ export default async function WikiEntryPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <SummaryCard frontmatter={entry.frontmatter} slug={slug} readingTime={readingTime} />
+      <SummaryCard frontmatter={entry.frontmatter} slug={slug} readingTime={readingTime} searchHitCount={manifest.searchHits?.hits?.[slug] ?? 0} />
 
       <div className="prose-custom">{content}</div>
       <MermaidRenderer />

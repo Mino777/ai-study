@@ -26,6 +26,29 @@ import path from "path";
 import { routeQuery } from "./lib/query-router.mjs";
 
 const INDEX_FILE = path.join(process.cwd(), "public", "embeddings.json");
+const HITS_FILE = path.join(process.cwd(), "data", "search-hits.json");
+
+/**
+ * 검색 결과의 slug별 히트 카운트를 영구 저장.
+ * 어떤 엔트리가 실제로 JIT 검색에서 활용되는지 추적.
+ */
+function recordHits(slugs) {
+  let data = { totalQueries: 0, lastUpdated: null, hits: {} };
+  try {
+    if (fs.existsSync(HITS_FILE)) {
+      data = JSON.parse(fs.readFileSync(HITS_FILE, "utf-8"));
+    }
+  } catch {
+    // 파일 손상 시 초기화
+  }
+  data.totalQueries++;
+  data.lastUpdated = new Date().toISOString();
+  for (const slug of slugs) {
+    data.hits[slug] = (data.hits[slug] || 0) + 1;
+  }
+  fs.mkdirSync(path.dirname(HITS_FILE), { recursive: true });
+  fs.writeFileSync(HITS_FILE, JSON.stringify(data, null, 2));
+}
 
 function cosineSimilarity(a, b) {
   // 둘 다 정규화된 벡터 → dot product 가 코사인
@@ -93,6 +116,10 @@ async function main() {
   const elapsed = Date.now() - start;
 
   const top = scored.slice(0, topK);
+
+  // 히트 카운트 기록 (unique slugs만)
+  const hitSlugs = [...new Set(top.map((r) => r.slug))];
+  recordHits(hitSlugs);
 
   if (injectMode) {
     // 에이전트 컨텍스트 주입 모드: 청크 본문만 구조화 출력

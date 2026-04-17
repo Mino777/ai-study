@@ -9,6 +9,7 @@ const OUTPUT_FILE = path.join(
   "generated",
   "content-manifest.json"
 );
+const HITS_FILE = path.join(process.cwd(), "data", "search-hits.json");
 
 // 모든 페이지의 SearchDialog가 lazy fetch로 가져가는 정적 인덱스.
 // layout.tsx에서 SSR props로 inline 주입하던 ~30KB gzipped 오버헤드를 제거.
@@ -300,9 +301,24 @@ function main() {
     .slice(0, 5)
     .map((e) => ({ slug: e.slug, title: e.frontmatter.title, date: e.frontmatter.date, category: e.frontmatter.category }));
 
+  // JIT 검색 히트 카운트 로드
+  let searchHits = { totalQueries: 0, lastUpdated: null, hits: {} };
+  try {
+    if (fs.existsSync(HITS_FILE)) {
+      searchHits = JSON.parse(fs.readFileSync(HITS_FILE, "utf-8"));
+    }
+  } catch {
+    // 파일 없거나 손상 시 빈 데이터
+  }
+
   const manifest = {
     entries: entries.map((e) => ({ slug: e.slug, frontmatter: e.frontmatter })),
     graph: { nodes, edges },
+    searchHits: {
+      totalQueries: searchHits.totalQueries,
+      lastUpdated: searchHits.lastUpdated,
+      hits: searchHits.hits,
+    },
     streak: {
       current: currentStreak,
       longest: longestStreak,

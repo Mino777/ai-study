@@ -136,6 +136,11 @@ export interface ContentManifest {
       target: string;
     }>;
   };
+  searchHits: {
+    totalQueries: number;
+    lastUpdated: string | null;
+    hits: Record<string, number>;
+  };
   streak: {
     current: number;
     longest: number;
