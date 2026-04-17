@@ -212,6 +212,31 @@ tarosaju의 경우 *다른 세션*이 ai-study의 박제 패치를 별도 안내
 3. **fetch(Phase 2) 생략** -- 회피 메커니즘 자체가 무력화
 4. **worktree를 사용자 승인 없이 자동 remove** -- 머지 완료 확인 후에만 정리
 
+## AI Agent Directive
+
+**Trigger**: 새 작업 분기 생성 시 / squash merge 후 같은 branch 재사용 위험 / worktree 기반 안전한 작업 격리
+
+**Prerequisites**:
+- git 2.7+ (worktree 지원)
+- `origin/main` 상태가 최신인 상황
+
+### Actionable Steps
+
+1. **`git fetch origin` 실행** — 최신 origin 상태 확보 (필수)
+2. **`/wt-branch <branch-name>` 호출** — 또는 `git worktree add -b <branch> /tmp/<project>-<branch> origin/main`
+3. **`.env.local` 복사** (필요 시) — `cp .env.local /tmp/<project>-<branch>/.env.local`
+4. **worktree 디렉터리에서 작업** — `/tmp/<project>-<branch>/` 로 이동 후 모든 작업 진행
+5. **작업 완료 후 정리** — `git worktree remove /tmp/<project>-<branch>` (또는 `/wt-branch` 자체가 정리)
+
+### Anti-patterns
+
+- ❌ 원본 working tree에서 `git checkout -b` 후 작업 (stale state 상속)
+- ❌ worktree 생성 후 fetch 생략 (origin과 diverge 가능)
+- ❌ `.env.local` 복사 안 함 (Next.js 빌드 실패)
+- ❌ 여러 worktree를 동시에 작업 (같은 branch에 대한 경쟁)
+
+---
+
 ## 핵심 교훈
 
 ### 1. 두 번 발생하면 패턴이다

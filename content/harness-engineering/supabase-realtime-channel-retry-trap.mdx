@@ -216,6 +216,32 @@ hook/util이 새 return 필드 또는 새 파라미터를 추가할 때:
 
 ---
 
+## AI Agent Directive
+
+**Trigger**: Supabase Realtime 훅에 재시도 로직 추가 시 / 채널 구독 에러 처리 / React에서 좀비 타이머 방지
+
+**Prerequisites**:
+- React hooks (useEffect, useRef)
+- Supabase JS SDK
+- TypeScript
+
+### Actionable Steps
+
+1. **원본 채널 참조 유지** — `supabase.channel(name)`을 여러 번 호출하지 말고, 첫 번 결과를 변수/ref에 저장
+2. **타이머를 ref에 저장** — `useRef<ReturnType<typeof setTimeout>>()`로 타이머 ID 관리
+3. **cleanup에서 clearTimeout** — `useEffect` 반환 함수에서 `clearTimeout(ref.current)` 필수
+4. **채널 정리 명시** — 재구독 전 `supabase.removeChannel(oldChannel)` 호출
+5. **error state 소비자 grep 감사** — 훅이 error를 return하면 모든 호출 위치에서 destructure되는지 확인
+
+### Anti-patterns
+
+- ❌ `supabase.channel(name).unsubscribe()` 형태로 새 인스턴스 생성 (no-op)
+- ❌ setTimeout 콜백을 ref 없이 저장 (cleanup 불가)
+- ❌ 에러 state를 return하지만 소비자가 안 읽음 (dead code)
+- ❌ 재시도 로직을 추가했지만 사용자 UX와 연결 안 함 (복잡도만 증가)
+
+---
+
 ## 핵심 메시지
 
 > Supabase Realtime 재시도 로직은 "쉬워 보이지만" 세 가지 JavaScript/React 레벨 함정(인스턴스 identity, 타이머 cleanup, dead code return)이 동시에 터지기 쉬운 지점이다. 새 복잡도를 추가하기 전에 **"지금 사용자에게 실제로 보이는 에러 UX가 있는가?"**를 먼저 묻고, 답이 "없다"이면 그 복잡도는 애초에 추가할 이유가 없다.

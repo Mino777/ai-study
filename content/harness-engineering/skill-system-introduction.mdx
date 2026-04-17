@@ -188,6 +188,30 @@ Single-developer + AI auto-merge environments often leave stale changes in worki
 3. 다음 새 작업 시 AI가 *자동으로* 이 skill을 가져다 쓰는지 관찰
 4. 작동하면 *다음 작은 능력*을 추가 (위 큐 참조)
 
+## AI Agent Directive
+
+**Trigger**: 여러 워크플로에서 반복되는 작은 작업 발견 / 슬래시 커맨드가 너무 커지기 시작 / AI가 특정 작업 타입에서 자동으로 도움 제공할 필요
+
+**Prerequisites**:
+- Claude Code `.claude/skills/` 디렉터리 구조 이해
+- Markdown + YAML frontmatter
+
+### Actionable Steps
+
+1. **반복 작업 식별** — 모든 워크플로에서 공통으로 필요한 작은 작업 (예: git status 확인)
+2. **Skill frontmatter 작성** — name, description, allowed-tools 명시
+3. **`.claude/skills/<name>/SKILL.md` 신설** — 상황, 실행 단계, 출력 형식 정의
+4. **AI-AGENT-GUIDE에 추가** — "어떤 작업 시 이 skill을 호출해야 하는가" 명시
+5. **Dogfooding 실행** — 다음 작업에서 AI가 실제로 skill을 자동으로 사용하는지 확인
+
+### Anti-patterns
+
+- ❌ 이미 작동하는 슬래시 커맨드를 쪼개서 Skill로 변환 (위험)
+- ❌ Skill이 너무 커서 하나의 워크플로에서만 사용 (그냥 슬래시 커맨드로)
+- ❌ Skill을 만들었지만 AI-AGENT-GUIDE에 기록 안 함 (AI가 모를 수 있음)
+
+---
+
 ## 출처
 
 이 엔트리는 *제안* — 양쪽 프로젝트 모두 미적용 상태. 다음 사이클의 입력.

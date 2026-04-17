@@ -181,6 +181,33 @@ if (content && typeof content === "string" && content.length > 100_000) {
 | Body 크기 제한 | ✅ | - | - |
 | npm audit CI | ✅ | ⏳ 이식 예정 | ⏳ 이식 예정 |
 
+## AI Agent Directive
+
+**Trigger**: 새 Next.js 프로젝트 셋업 / 수익화(결제) 기능 도입 / 보안 감사 직전
+
+**Prerequisites**:
+- Next.js 프로젝트 (App Router / API routes)
+- 환경변수 관리 시스템
+
+### Actionable Steps
+
+1. **Default Secret 제거** — `process.env.SECRET || "dev-secret"` 패턴 금지, lazy evaluation 함수로 감싸기
+2. **Timing-Safe 비교 추가** — `crypto.timingSafeEqual()` (Node.js) 또는 Web Crypto API (Edge)
+3. **CSP / HSTS 헤더** — `next.config.ts`의 `headers` 함수에 Security Headers 추가
+4. **Rate Limiting** — 인증 엔드포인트, API에 IP/토큰 기반 rate limit 적용 (Upstash Redis 또는 in-memory)
+5. **Error 정보 누출 차단** — 서버 에러 메시지를 클라이언트에 그대로 전달 금지, 로깅만
+6. **Body 크기 제한** — 대용량 업로드(MDX, 이미지) 엔드포인트에 크기 제한 명시
+7. **npm audit CI** — `.github/workflows/ci.yml`에 `npm audit --audit-level=high` 통합
+
+### Anti-patterns
+
+- ❌ 환경변수 기본값 하드코딩 (프로덕션 배포 시 보안 사고)
+- ❌ 문자열 `===` 비교로 토큰 검증 (타이밍 어택)
+- ❌ 모든 API 에러를 클라이언트에 노출 (stack trace 유출)
+- ❌ Body 크기 제한 없음 (메모리 폭발)
+
+---
+
 ## For AI Agents
 
 이 체크리스트의 7개 항목은 새 Next.js 프로젝트 셋업 시 **1일차에 적용**해야 할 최소 기준. 특히 항목 1(Default Secret)과 2(Timing-Safe)는 코드 리뷰에서 자동 탐지 대상.

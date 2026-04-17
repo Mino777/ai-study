@@ -152,23 +152,29 @@ if [ $BUILD_EXIT -ne 0 ]; then exit 1; fi
 
 ---
 
-## For AI Agents
+## AI Agent Directive
 
-**Trigger**: shell 스크립트에서 빌드/테스트 결과를 파이프로 필터링한 후 `$?`로 성공 여부를 판단하는 코드를 발견했을 때.
+**Trigger**: QA gate / CI 스크립트에서 빌드/테스트 성공 여부 판단 / `$?` 종료 코드 검사
 
-**Actionable**:
-1. 파이프를 제거하고 출력을 파일로 리다이렉트한 뒤 종료 코드를 변수에 저장 (패턴 A)
-2. 또는 스크립트 상단에 `set -o pipefail` 추가 후 grep 결과 처리에 주의 (패턴 B)
-3. bash 확정 환경이면 `${PIPESTATUS[0]}` 사용 (패턴 C)
+**Prerequisites**:
+- bash/zsh shell 스크립트
+- `npm run build` / `npm test` 등 명령 실행
 
-**Anti-pattern**:
-```bash
-# 절대 이렇게 쓰지 말 것
-cmd | grep | tail
-if [ $? -ne 0 ]; then ...  # $? 는 tail의 코드. cmd 실패를 감지 못함
-```
+### Actionable Steps
 
-**AI 에이전트 환경에서 특히 위험한 이유**: AI가 생성하거나 수정한 코드는 미묘한 타입 에러나 빌드 실패를 포함할 수 있다. QA gate가 이 함정으로 인해 통과시키면, 검토되지 않은 코드가 프로덕션에 배포된다. 하네스의 신뢰도가 코드 자체의 신뢰도를 결정한다.
+1. **파이프 제거 후 종료 코드 캡처** (권장) — `cmd > /tmp/log 2>&1; EXIT=$?` 형식으로 분리
+2. **또는 `set -o pipefail` 사용** — 파이프 내 어느 명령이든 실패하면 전체 fail (grep 조심)
+3. **또는 `${PIPESTATUS[0]}` 배열** (bash만) — 파이프 첫 명령의 종료 코드만 캡처
+4. **QA gate 스크립트에서는 패턴 A 권장** — 가장 명확함
+5. **종료 코드 검사 전 출력 내용 기록** — 나중에 디버깅할 때 필요
+
+### Anti-patterns
+
+- ❌ `cmd | grep pattern | tail` 후 `$?` 검사 (tail의 0만 반환)
+- ❌ 모든 파이프에 `set -o pipefail` 무조건 적용 (grep이 no-match 시 1 반환)
+- ❌ 출력을 버림 (`cmd > /dev/null` 후 $? 만 확인) — 실패 원인 모름
+
+---
 
 ---
 
