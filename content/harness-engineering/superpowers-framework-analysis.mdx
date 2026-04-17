@@ -1,5 +1,5 @@
 ---
-title: 'Superpowers 프레임워크 분석 — obra/superpowers에서 이식할 3가지 패턴'
+title: Superpowers 프레임워크 분석 — obra/superpowers에서 이식할 3가지 패턴
 category: harness-engineering
 date: '2026-04-17'
 tags:
@@ -17,37 +17,45 @@ connections:
   - harness-engineering/compound-automation-slash-commands
   - harness-engineering/wt-branch-structural-safety
   - agents/hermes-agent-analysis
+  - evaluation/agent-self-evaluation-bias-countermeasures
+  - harness-engineering/cross-project-pattern-porting-methodology
 status: complete
 description: >-
-  obra/superpowers의 7개 스킬을 ai-study 기존 패턴과 대조 분석.
-  이미 동급인 4개(worktree, debugging, ship, review)를 확인하고,
-  이식할 가치가 있는 3개(SDD 2-stage review, no-placeholder plan, brainstorming hard-gate)를 식별.
+  obra/superpowers의 7개 스킬을 ai-study 기존 패턴과 대조 분석. 이미 동급인 4개(worktree, debugging,
+  ship, review)를 확인하고, 이식할 가치가 있는 3개(SDD 2-stage review, no-placeholder plan,
+  brainstorming hard-gate)를 식별.
 type: entry
 quiz:
-  - question: 'Superpowers의 Subagent-Driven Development에서 2-stage review의 올바른 순서는?'
+  - question: Superpowers의 Subagent-Driven Development에서 2-stage review의 올바른 순서는?
     choices:
-      - 'Code quality → Spec compliance'
-      - 'Spec compliance → Code quality'
-      - 'Unit test → Integration test'
-      - '순서 없이 병렬 수행'
+      - Code quality → Spec compliance
+      - Spec compliance → Code quality
+      - Unit test → Integration test
+      - 순서 없이 병렬 수행
     answer: 1
-    explanation: 'Spec compliance(계획 대로 구현했는가)를 먼저 검증하고, 그 다음 Code quality(코드 품질)를 검증한다. 순서가 고정되어 있고, 둘 다 통과해야 완료.'
-  - question: 'Superpowers의 writing-plans에서 "계획 실패"로 간주되는 표현이 아닌 것은?'
+    explanation: >-
+      Spec compliance(계획 대로 구현했는가)를 먼저 검증하고, 그 다음 Code quality(코드 품질)를 검증한다. 순서가
+      고정되어 있고, 둘 다 통과해야 완료.
+  - question: Superpowers의 writing-plans에서 "계획 실패"로 간주되는 표현이 아닌 것은?
     choices:
       - '"TBD"'
       - '"add validation"'
       - '"similar to Task N"'
       - '"src/lib/schema.ts의 CategorySchema에 새 enum 추가"'
     answer: 3
-    explanation: '구체적 파일 경로와 실행 내용이 명시된 단계는 유효한 계획. TBD, add validation, similar to Task N은 모두 placeholder로 계획 실패에 해당.'
-  - question: 'ai-study 프로젝트에서 Superpowers의 using-git-worktrees와 동급 이상으로 판정된 기존 패턴은?'
+    explanation: >-
+      구체적 파일 경로와 실행 내용이 명시된 단계는 유효한 계획. TBD, add validation, similar to Task N은
+      모두 placeholder로 계획 실패에 해당.
+  - question: ai-study 프로젝트에서 Superpowers의 using-git-worktrees와 동급 이상으로 판정된 기존 패턴은?
     choices:
-      - '/review 스킬'
-      - '/wt-branch 커맨드 + squash merge 함정 해결'
-      - '/compound 워크플로우'
-      - '/investigate 스킬'
+      - /review 스킬
+      - /wt-branch 커맨드 + squash merge 함정 해결
+      - /compound 워크플로우
+      - /investigate 스킬
     answer: 1
-    explanation: '/wt-branch는 Superpowers의 worktree 패턴에 더해 squash merge 함정(harness-journal-003)까지 구조적으로 해결한다.'
+    explanation: >-
+      /wt-branch는 Superpowers의 worktree 패턴에 더해 squash merge
+      함정(harness-journal-003)까지 구조적으로 해결한다.
 ---
 
 ## 왜 지금 이 주제인가

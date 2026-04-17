@@ -1,5 +1,5 @@
 ---
-title: 'Hermes Agent 분석 — 자기 개선 에이전트에서 이식할 패턴'
+title: Hermes Agent 분석 — 자기 개선 에이전트에서 이식할 패턴
 category: agents
 date: '2026-04-17'
 tags:
@@ -16,37 +16,45 @@ connections:
   - harness-engineering/compound-engineering-philosophy
   - harness-engineering/skill-system-introduction
   - harness-engineering/superpowers-framework-analysis
+  - evaluation/agent-self-evaluation-bias-countermeasures
+  - harness-engineering/cross-project-pattern-porting-methodology
 status: complete
 description: >-
-  NousResearch/hermes-agent의 5단계 학습 루프, 스킬 시스템, GEPA 자기 진화를
-  ai-study 기존 패턴과 대조 분석. 이식 가능 패턴 3개(Progressive Disclosure,
-  경험→스킬 자동 생성, Frozen Snapshot)와 관찰만 할 패턴(GEPA)을 식별.
+  NousResearch/hermes-agent의 5단계 학습 루프, 스킬 시스템, GEPA 자기 진화를 ai-study 기존 패턴과 대조
+  분석. 이식 가능 패턴 3개(Progressive Disclosure, 경험→스킬 자동 생성, Frozen Snapshot)와 관찰만 할
+  패턴(GEPA)을 식별.
 type: entry
 quiz:
-  - question: 'Hermes Agent의 Frozen Memory Snapshot이 세션 중간 메모리 쓰기를 시스템 프롬프트에 반영하지 않는 이유는?'
+  - question: Hermes Agent의 Frozen Memory Snapshot이 세션 중간 메모리 쓰기를 시스템 프롬프트에 반영하지 않는 이유는?
     choices:
-      - '보안 취약점 방지'
-      - 'prefix cache 보존으로 토큰 비용 절감'
-      - '사용자 혼란 방지'
-      - '모델 성능 저하 방지'
+      - 보안 취약점 방지
+      - prefix cache 보존으로 토큰 비용 절감
+      - 사용자 혼란 방지
+      - 모델 성능 저하 방지
     answer: 1
-    explanation: 'MEMORY.md를 세션 시작 시 1회만 시스템 프롬프트에 주입하고, 중간 쓰기는 디스크만 업데이트한다. 이렇게 하면 시스템 프롬프트가 변경되지 않아 prefix cache가 유지되고 토큰 비용이 절감된다.'
-  - question: 'GEPA(Genetic-Pareto Prompt Evolution)가 RL 대비 우위인 핵심 이유는?'
+    explanation: >-
+      MEMORY.md를 세션 시작 시 1회만 시스템 프롬프트에 주입하고, 중간 쓰기는 디스크만 업데이트한다. 이렇게 하면 시스템
+      프롬프트가 변경되지 않아 prefix cache가 유지되고 토큰 비용이 절감된다.
+  - question: GEPA(Genetic-Pareto Prompt Evolution)가 RL 대비 우위인 핵심 이유는?
     choices:
-      - '더 큰 모델을 사용하기 때문'
+      - 더 큰 모델을 사용하기 때문
       - '실행 trace를 읽어 실패 원인을 이해하고, 35배 적은 rollout으로 더 높은 성능'
-      - '사람이 직접 개입하기 때문'
-      - 'fine-tuning으로 모델 가중치를 수정하기 때문'
+      - 사람이 직접 개입하기 때문
+      - fine-tuning으로 모델 가중치를 수정하기 때문
     answer: 1
-    explanation: 'GEPA는 RL과 달리 gradient 없이 LLM의 reflection 능력과 진화 알고리즘만으로 최적화한다. 실행 trace를 분석해 왜 실패했는지 이해하고, GRPO 대비 평균 6%, 최대 20% 높은 성능을 35배 적은 rollout으로 달성한다.'
-  - question: 'Hermes의 Progressive Skill Disclosure에서 스킬 목록 단계의 토큰 비용은 전체 콘텐츠 대비 약 얼마인가?'
+    explanation: >-
+      GEPA는 RL과 달리 gradient 없이 LLM의 reflection 능력과 진화 알고리즘만으로 최적화한다. 실행 trace를
+      분석해 왜 실패했는지 이해하고, GRPO 대비 평균 6%, 최대 20% 높은 성능을 35배 적은 rollout으로 달성한다.
+  - question: Hermes의 Progressive Skill Disclosure에서 스킬 목록 단계의 토큰 비용은 전체 콘텐츠 대비 약 얼마인가?
     choices:
-      - '약 50%'
-      - '약 20%'
-      - '약 2~3%'
-      - '약 10%'
+      - 약 50%
+      - 약 20%
+      - 약 2~3%
+      - 약 10%
     answer: 2
-    explanation: '메타데이터만 표시하는 목록 단계는 전체 스킬 콘텐츠의 약 2~3% 토큰만 소비한다. 실제 지시사항은 호출 시에만 로드되어 토큰 비용이 사용량에 비례한다.'
+    explanation: >-
+      메타데이터만 표시하는 목록 단계는 전체 스킬 콘텐츠의 약 2~3% 토큰만 소비한다. 실제 지시사항은 호출 시에만 로드되어 토큰 비용이
+      사용량에 비례한다.
 ---
 
 ## 왜 지금 이 주제인가

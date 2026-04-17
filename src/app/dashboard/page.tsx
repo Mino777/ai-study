@@ -146,6 +146,59 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {/* JIT Search Stats */}
+        {manifest.searchHits && manifest.searchHits.totalQueries > 0 && (() => {
+          const { totalQueries, hits } = manifest.searchHits;
+          const hitEntries = Object.entries(hits).sort(([, a], [, b]) => b - a);
+          const totalHitSlugs = hitEntries.length;
+          const neverHit = entries.filter((e) => !hits[e.slug]).length;
+          return (
+            <div className="rounded-[var(--radius-md)] border border-border bg-surface p-5 mb-8">
+              <h2 className="font-display text-lg font-bold mb-4">JIT 검색 통계</h2>
+              <div className="grid grid-cols-3 gap-4 mb-4">
+                <div className="text-center">
+                  <div className="font-data text-xl font-semibold text-text">{totalQueries}</div>
+                  <div className="text-xs text-muted">총 쿼리</div>
+                </div>
+                <div className="text-center">
+                  <div className="font-data text-xl font-semibold text-text">{totalHitSlugs}</div>
+                  <div className="text-xs text-muted">조회된 엔트리</div>
+                </div>
+                <div className="text-center">
+                  <div className="font-data text-xl font-semibold text-text">{neverHit}</div>
+                  <div className="text-xs text-muted">미조회 엔트리</div>
+                </div>
+              </div>
+              {hitEntries.length > 0 && (
+                <div>
+                  <h3 className="text-xs text-muted font-semibold mb-2">Top 조회 엔트리</h3>
+                  <div className="space-y-1">
+                    {hitEntries.slice(0, 5).map(([slug, count]) => {
+                      const entry = entries.find((e) => e.slug === slug);
+                      const title = entry?.frontmatter.title || slug.split("/").pop()?.replace(/-/g, " ") || slug;
+                      const barWidth = Math.round((count / hitEntries[0][1]) * 100);
+                      return (
+                        <div key={slug} className="flex items-center gap-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="text-xs text-text truncate">{title}</div>
+                            <div className="h-1 rounded-full bg-border mt-0.5">
+                              <div
+                                className="h-1 rounded-full"
+                                style={{ width: `${barWidth}%`, background: "var(--accent)" }}
+                              />
+                            </div>
+                          </div>
+                          <span className="text-xs text-muted font-code shrink-0">{count}회</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
         {/* Quiz widget */}
         <QuizWidget quizableEntries={quizableEntries} />
 

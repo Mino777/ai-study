@@ -1,8 +1,17 @@
 {
-  "totalQueries": 1,
-  "lastUpdated": "2026-04-17T07:37:32.012Z",
+  "totalQueries": 6,
+  "lastUpdated": "2026-04-17T09:14:02.311Z",
   "hits": {
-    "solutions/mdx/2026-04-16-mermaid-br-in-unquoted-node-labels": 1,
-    "solutions/mdx/2026-04-16-mermaid-cylinder-nested-parens": 1
+    "solutions/mdx/2026-04-16-mermaid-br-in-unquoted-node-labels": 2,
+    "solutions/mdx/2026-04-16-mermaid-cylinder-nested-parens": 2,
+    "harness-engineering/ai-call-patterns-circuit-breaker-fallback": 1,
+    "context-engineering/context-scaling-3-layer-architecture": 2,
+    "harness-engineering/harness-engineering-overview": 1,
+    "harness-engineering/compound-engineering-philosophy": 1,
+    "agents/multi-provider-circuit-breaker": 1,
+    "solutions/mdx/2026-04-11-mermaid-subgraph-space-in-name": 1,
+    "tokenomics/claude-code-token-levers-catalog": 1,
+    "frontend-ai/frontend-ai-patterns": 1,
+    "tokenomics/claude-code-token-levers-applied-log": 1
   }
 }
