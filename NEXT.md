@@ -179,4 +179,7 @@ rtk npm run embed-content
 - **N=3 룰** — compound-engineering-philosophy 원칙 9에 승격 트리거 명시
 - CLAUDE.md에 Layer 3 인프라 정보 추가
 - 엔트리 수 118 → 119
-- **다음 순위**: Phase 3 섀도우 모드 + aidy s9 박제 대기
+- Karpathy LLM Wiki 패턴 /ingest + SWOT 비교 분석 박제
+- 위키 린트 + wiki-index.md 자동 생성
+- 토큰 레버 4종 적용 (A1 CLAUDE.md −45% + A4 + C2 + D2)
+- **다음 순위**: ccusage 재측정 + 인제스트 크로스 업데이트 + Directive 70%+

@@ -2,6 +2,35 @@
 
 모든 주목할 만한 변경사항을 이 파일에 기록합니다.
 
+## [2026-04-17] 세션 7 최종 — Karpathy LLM Wiki 패턴 적용 + SWOT + 토큰 레버
+
+### Added — 신규 엔트리 2건 + 인프라 3건 (119 → 121)
+
+- `context-engineering/karpathy-llm-wiki-pattern-compilation-over-retrieval.mdx` — Karpathy LLM Wiki 패턴 /ingest (Gist 원문 + 3개 보강 소스 교차 검증). Compilation > Retrieval 철학 + ai-study 비교 + 적용 방향 5건
+- `context-engineering/llm-wiki-swot-ai-study-vs-karpathy.mdx` — 실측 기반 SWOT 비교 분석. SO: Compound+Compilation 합류(양방향 컴파일), WO: 크로스 업데이트+Directive 투입, ST: 차별화 3종(Compound/Directive/Quiz)
+- `scripts/validate-content.mjs` — 위키 린트 추가 (고아 엔트리 / Directive ���락 / 일방향 연결 warning-only)
+- `scripts/generate-content-manifest.mjs` — wiki-index.md 자동 생성 (카테고리별 한 줄 요약, 에이전트 drill-down용)
+- `scripts/lib/query-router.mjs` — Layer 3 Phase 2c 쿼리 라우터 v0
+
+### Changed — 토큰 레버 4건 적용
+
+- `CLAUDE.md` **324→177줄** (−45%) — RTK 이중 로딩 제거 + Components/Admin 슬림화 (A1)
+- `~/.claude/settings.json` — `includeGitInstructions: false` (A4) + `MAX_MCP_OUTPUT_TOKENS=5000` (C2) + `CLAUDE_CODE_SUBAGENT_MODEL=haiku` (D2)
+- `tokenomics/claude-code-token-levers-applied-log.mdx` — 적용 로그 2건 추가
+
+### Metrics
+
+| 항목 | 값 |
+|---|---|
+| 신규 엔트리 | 2 (Karpathy 패턴 + SWOT) |
+| 신규 스크립트 | 3 (benchmark-models, query-router, wiki lint + wiki-index) |
+| CLAUDE.md | 324 → **177줄** (−45%) |
+| 토큰 레버 | 4건 (A1, A4, C2, D2) |
+| 위키 린트 실측 | Directive 59%, 일방향 332건 |
+| 빌드 | ✅ 통과 (121 entries, 416 edges) |
+
+---
+
 ## [2026-04-17] 세션 7 후반 — Layer 3 Phase 2b/2c + N=3 룰 박제
 
 ### Added — 신규 스크립트 2건
