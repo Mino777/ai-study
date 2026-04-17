@@ -1,0 +1,187 @@
+---
+title: Aidy Journal 008 — UI Test Automation Sprint + Backlog Zero (s9-s10)
+category: harness-engineering
+series: aidy-journal
+date: '2026-04-17'
+tags:
+  - aidy-journal
+  - xcuitest
+  - compose-ui-test
+  - qa-agent
+  - ui-testing
+  - swift6-sendable
+  - backlog-zero
+  - accessibility-identifier
+  - test-automation
+confidence: 4
+connections:
+  - harness-engineering/aidy-journal-007-ci-infra-independence-hybrid-fallback
+  - harness-engineering/aidy-journal-004-test-evidence-policy-effectiveness
+  - evaluation/test-strategy-3-client-via-aidy
+  - ios-ai/ios-flow-map-via-aidy-ios
+  - android-ai/android-flow-map-via-aidy-android
+  - >-
+    harness-engineering/aidy-journal-009-stall-detection-3way-dispatch-feature-sprint
+status: complete
+description: >-
+  Session 9-10: XCUITest 42건 + Compose UI Test 35건 전 화면 자동화, QA 에이전트 ui 모드 추가,
+  autoceo 5라운드 실행. Session 10에서 Backlog 전량 소진(WO-020/20건 done), Swift 6 Sendable
+  적용, 워크플로 DRY 통합. 테스트 466→562건 도약.
+type: entry
+quiz:
+  - question: XCUITest에서 accessibility identifier 네이밍 컨벤션으로 채택한 형태는?
+    choices:
+      - camelCase (chatRetryButton)
+      - 'snake_case ({screen}_{element}_{type})'
+      - kebab-case (chat-retry-button)
+      - PascalCase (ChatRetryButton)
+    answer: 1
+    explanation: >-
+      Gate-1 검증 시 iOS에서 chatRetryButton이 실패 → chat_retry_button으로 통일.
+      {screen}_{element}_{type} 패턴이 3 클라이언트 간 일관성과 테스트 가독성 모두 확보.
+  - question: Session 10의 'Backlog Zero'가 하네스 엔지니어링 관점에서 의미 있는 이유는?
+    choices:
+      - 작업 속도가 빨라졌으므로
+      - 기술 부채 0건 → 다음 스프린트에서 새 기능에만 집중 가능. Compound 원칙의 '빚 없이 투자' 실현
+      - 테스트가 줄어서
+      - 워커 수를 늘렸으므로
+    answer: 1
+    explanation: >-
+      Backlog은 미래 세션의 hidden tax. WO-011(Swift 6) + WO-013(워크플로 DRY) + WO-020(서버
+      테스트 갭 19건) 동시 청산으로 s11부터 순수 feature sprint 가능해짐.
+  - question: QA 에이전트에 `ui` 모드를 추가한 이유와 기대 효과는?
+    choices:
+      - 단순히 테스트 커버리지 숫자를 높이기 위해
+      - >-
+        기존 run/cover/add/fix 모드는 unit 레벨. ui 모드는 시뮬레이터/에뮬레이터에서 실제 화면 인터랙션 테스트 +
+        JUnit XML 변환까지 자동화하여 E2E 검증 루프 완성
+      - CI 비용 절감
+      - 코드 리뷰 자동화
+    answer: 1
+    explanation: >-
+      QA 에이전트 7개 모드(run/cover/add/fix/flaky/contract/ui) 중 ui가 마지막 퍼즐. 시뮬레이터 실행
+      → 결과 파싱 → JUnit XML까지 한 명령으로 완성. Gate 검증 루프의 E2E 자동화.
+---
+
+## Before — Journal 007 이후의 상태
+
+Session 8(CI 인프라 독립화) 종료 시점:
+
+1. **3 self-hosted runner** 가동 (iOS/server/android)
+2. **Hybrid fallback** 패턴 안정 (ADR-010)
+3. **466 tests** (server 207 + iOS 124 + android 135) — 전부 Unit
+4. **Backlog 2건** 남음: WO-011(Swift 6 Sendable) / WO-013(워크플로 DRY)
+
+다음 단계는 명확했다: Unit만으로는 실제 화면 동작을 보장할 수 없다. **UI 테스트 자동화**가 필요했다.
+
+---
+
+## Session 9 — UI Test Automation Sprint
+
+### autoceo 5라운드 구성
+
+Session 9는 `autoceo` 모드로 5라운드 실행 (토큰 정책으로 10→5 제한):
+
+| 라운드 | 내용 |
+|--------|------|
+| R1 | WO-016 billing 검증 → DEFERRED (primary fail, fallback 정상) |
+| R2 | WO-018 (iOS) + WO-019 (Android) 2-way 병렬 dispatch |
+| R3 | Gate-1 검증 — iOS CONDITIONAL PASS (1건 fix), Android PASS 8/8 |
+| R4 | QA 에이전트 `ui` 모드 추가 |
+| R5 | Compound 문서화 |
+
+### WO-018: iOS XCUITest (42건)
+
+전 화면 UI 테스트 자동화:
+
+- **Tuist** `AidyUITests` 타겟 추가
+- **accessibility identifier** 전수 부착: `{screen}_{element}_{type}` 패턴
+- **42 UI 테스트**: Auth(6) / PasswordReset(4) / Chat(7) / Memory(7) / People(6) / Settings(8) / Navigation(4)
+- `scripts/run-ui-tests.sh` — 시뮬레이터 실행 + JUnit XML 변환
+
+**Gate-1 인시던트**: `chatRetryButton` → `chat_retry_button` — camelCase와 snake_case 혼재 발견. snake_case로 통일 후 PASS.
+
+### WO-019: Android Compose UI Test (35건)
+
+iOS와 동일한 구조를 Android에 이식:
+
+- `TestTags.kt` — 86개 상수 정의
+- compose-ui-test-junit4 + espresso + mockk-android 의존성
+- **35 UI 테스트**: Auth(5) / PasswordReset(4) / Chat(5) / Memory(5) / People(5) / Settings(7) / Navigation(4)
+- `scripts/run-ui-tests.sh` — 에뮬레이터 자동 부팅 + JUnit XML 수집
+
+### QA 에이전트 `ui` 모드
+
+기존 6개 모드(run/cover/add/fix/flaky/contract)에 `ui` 추가:
+
+```
+@qa-tester ui  →  시뮬레이터/에뮬레이터에서 UI 테스트 실행 + 결과 파싱
+```
+
+| 모드 | server | ios | android |
+|------|--------|-----|---------|
+| run/cover/add/fix | O | O | O |
+| flaky | O | — | O |
+| contract | — | O | — |
+| **ui** | — | **NEW** | **NEW** |
+
+### 비차단 관찰 (s9 시점)
+
+1. iOS `run-ui-tests.sh` 기본 시뮬레이터 `iPhone 17 Pro / OS 26.3.1` — env var override 필요
+2. Android `CHAT_STREAMING_INDICATOR` testTag ChatScreen 미적용
+3. Android PeopleUITest 빈 mock vacuous pass 가능
+4. Android NavigationShell Memory 탭 누락
+
+---
+
+## Session 10 — Backlog Zero
+
+### 3개 WO 동시 처리
+
+| WO | 내용 | 결과 |
+|----|------|------|
+| WO-011 | iOS Swift 6 Sendable (@Sendable 7건) | PASS |
+| WO-020 | Server 테스트 갭 19건 (207→226) | PASS |
+| WO-013 | iOS 워크플로 통합 Option B (ai-review.yml → rebase+merge only) | PASS |
+
+**결과**: WO-001 ~ 020 완료, **Backlog 0건** 달성 (사상 첫 전량 소진).
+
+### 테스트 베이스라인 도약
+
+| 시점 | Unit | UI | 합계 |
+|------|------|----|------|
+| s8 종료 | 466 | 0 | 466 |
+| s9 종료 | 466 | 77 | **543** |
+| s10 종료 | 485 | 77 | **562** |
+
+두 세션에서 **+96건** (unit +19, UI +77).
+
+---
+
+## 패턴: UI Test First, Identify Second
+
+이번 스프린트에서 발견한 순서:
+
+1. **accessibility identifier 전수 부착** — 테스트 대상을 먼저 식별 가능하게 만든다
+2. **UI 테스트 작성** — identifier 기반으로 화면 인터랙션 자동화
+3. **QA 에이전트 연동** — 한 명령으로 실행 + 결과 수집
+
+이 순서가 뒤집히면(테스트 먼저 → identifier 나중) Gate에서 identifier mismatch가 연쇄 발생한다. s9 R3의 chatRetryButton 인시던트가 그 증거.
+
+---
+
+## After — s10 종료 상태
+
+- **WO 20건 done**, Backlog **0**
+- **테스트 562건** (unit 485 + UI 77)
+- **QA 에이전트 7개 모드** 완성
+- **Swift 6 Sendable** 적용
+- **다음**: 순수 feature sprint 가능 (s11~)
+
+---
+
+## For AI Agents
+
+**트리거**: aidy 워커 프로젝트에 UI 테스트 추가 시 / QA 에이전트 모드 확장 시
+**참조**: `{screen}_{element}_{type}` identifier 패턴 + JUnit XML 변환 스크립트
+**우선순위**: identifier 전수 부착 → 테스트 작성 → QA 연동 (순서 엄수)

@@ -1,0 +1,186 @@
+---
+title: "Aidy Journal 009 — Stall Detection + 3-way Dispatch + Feature Sprint (s11-s14)"
+category: harness-engineering
+series: aidy-journal
+date: "2026-04-17"
+tags: [aidy-journal, stall-detection, 3-way-dispatch, feature-sprint, e2e-testing, enter-flush, tmux, escalation-protocol, test-scaling]
+confidence: 4
+connections:
+  - harness-engineering/aidy-journal-008-ui-test-automation-backlog-zero
+  - harness-engineering/aidy-journal-003-parallel-dispatch-token-economics
+  - harness-engineering/tmux-flush-automation-pattern
+  - evaluation/test-strategy-3-client-via-aidy
+  - harness-engineering/compound-engineering-philosophy
+  - context-engineering/api-contract-as-3-client-source-of-truth
+status: complete
+description: "Session 11-14: Worker Stall Detection 4단계 프로토콜 설계(s11), CRUD 6기능 3-client 구현(s11-s13), 3-way 동시 dispatch로 테스트 177건 일괄 추가(s14). api-contract v0.3→v0.4 진행. 테스트 562→637건."
+type: entry
+quiz:
+  - question: "Worker Stall Detection 4단계 프로토콜의 올바른 순서는?"
+    choices:
+      - "원격 개입 → tmux 진단 → 조기 확인 → Architect 직접 수정"
+      - "조기 확인 → tmux 진단 → 원격 개입 → Architect 직접 수정"
+      - "tmux 진단 → 조기 확인 → Architect 직접 수정 → 원격 개입"
+      - "Architect 직접 수정 → 조기 확인 → tmux 진단 → 원격 개입"
+    answer: 1
+    explanation: "경량 확인부터 시작해서 점진적으로 개입 수준을 높인다. Stage 1(조기 확인)에서 90%+ 해결, Stage 3(원격 개입)까지 가는 건 iOS tuist test 루프처럼 워커가 자체 해결 불가능한 경우만."
+  - question: "Session 14에서 3-way 동시 dispatch가 가능했던 전제 조건은?"
+    choices:
+      - "API 변경이 있어서 동기화가 필요했기 때문"
+      - "API 변경 없이 테스트만 추가하는 독립 작업이므로, server/iOS/android가 서로 의존 없이 병렬 실행 가능"
+      - "워커가 3개였으므로 자동으로 가능"
+      - "autoceo가 자동으로 판단"
+    answer: 1
+    explanation: "3-way 동시 dispatch의 핵심 조건: 작업 간 API/스키마 변경 없음(독립성). s14의 WO-030/031/032는 모두 '기존 기능에 테스트 추가'라서 상호 의존 0. API 변경이 포함된 s11-s13은 server-first → 2-way 순차가 필수였다."
+  - question: "s11-s14 Feature Sprint에서 api-contract가 v0.3→v0.4로 진행되면서 추가된 6개 기능은?"
+    choices:
+      - "로그인, 회원가입, 비밀번호 변경, 프로필 조회, 설정 변경, 알림"
+      - "메모리 수정, 채팅 검색, 채팅 삭제, 메모리 내보내기, 프로필 수정, 메모리 핀"
+      - "SSE 스트리밍, Circuit Breaker, Rate Limit, Security Headers, CORS, Health Check"
+      - "대화 그룹핑, Daily Digest, SMTP, 카테고리 변경, 통계, 대시보드"
+    answer: 1
+    explanation: "s11: 메모리 수정 + 채팅 검색 (v0.3), s12: 채팅 삭제 + 메모리 내보내기 (v0.3.1), s13: 프로필 수정 + 메모리 핀 (v0.4). 모두 CRUD 패턴이지만, 3-client 동시 구현 + Gate 검증이 핵심."
+---
+
+## Before — Journal 008 이후의 상태
+
+Session 10(Backlog Zero) 종료 시점:
+
+1. **WO 20건 done**, Backlog **0**
+2. **562 tests** (unit 485 + UI 77)
+3. **QA 에이전트 7개 모드** 완성
+4. **api-contract v0.2** (채팅/메모리 기본 CRUD)
+5. 다음 목표: 순수 feature sprint
+
+---
+
+## Session 11 — Stall Detection 프로토콜
+
+### Worker Stall Detection 4단계
+
+s11에서 **Enter flush 인시던트**가 다시 발생했다. architect-cli.sh가 tmux send-keys로 워커에게 명령을 보내는데, 워커가 응답하지 않는 stall 상태에 빠짐. 이를 체계화한 4단계 프로토콜:
+
+| Stage | 이름 | 방법 | 해결 비율 |
+|-------|------|------|----------|
+| 1 | 조기 확인 | 실행 마커 감지 (5회 재시도) | ~90% |
+| 2 | tmux 진단 | `tmux capture-pane` 로 워커 상태 확인 | ~5% |
+| 3 | 원격 개입 | tmux send-keys로 직접 명령 주입 | ~4% |
+| 4 | Architect 직접 수정 | 워커 세션 종료 + Architect가 직접 코드 수정 | ~1% |
+
+**핵심 원칙**: 항상 Stage 1부터 시작. Stage 3까지 가는 건 iOS tuist test 루프처럼 워커 자체 해결 불가능한 구조적 문제일 때만.
+
+### Enter flush 패치
+
+architect-cli.sh에 3가지 방어 추가:
+
+1. **5회 재시도** — send-keys 후 실행 마커가 나타날 때까지 대기
+2. **실행 마커 감지** — 워커 출력에서 특정 패턴 매칭
+3. **경고 출력** — 5회 초과 시 Stage 2 에스컬레이션 안내
+
+### s11 기능: 메모리 수정 + 채팅 검색
+
+- api-contract **v0.3**: `PUT /api/memories/{id}` + `GET /api/chat/history/search`
+- WO-021: server 구현 (235 tests)
+- WO-022/023: iOS + Android 2-way dispatch
+- Gate 전원 PASS (iOS에서 tuist test 루프 → Stage 3 개입 1회)
+
+---
+
+## Session 12-13 — CRUD Feature Sprint
+
+### s12: 채팅 삭제 + 메모리 내보내기
+
+- api-contract **v0.3.1**: `DELETE /api/chat/{id}` (pair delete) + `GET /api/memories/export`
+- WO-024/025/026: server → iOS + Android 2-way
+- iOS에서 tuist test 루프 재발 → Stage 3 개입
+- 테스트: 578건 (server 242 + iOS 166 + android 170)
+
+### s13: 프로필 수정 + 메모리 핀 토글
+
+- api-contract **v0.4**: `PATCH /api/auth/profile` + `POST /api/memories/{id}/pin`
+- Flyway **V13** 마이그레이션
+- WO-027/028/029: server → iOS + Android 2-way (인시던트 없음)
+- 테스트: 586건
+
+### Feature Sprint 패턴
+
+s11-s13에서 반복된 구조:
+
+```
+api-contract 버전업 → server 구현 + 테스트 → iOS/Android 2-way dispatch → Gate
+```
+
+이 4단계가 **세션 단위로 반복** 가능한 이유:
+- api-contract가 3-client의 단일 진실 소스 ([참조](/wiki/context-engineering/api-contract-as-3-client-source-of-truth))
+- server-first → client 2-way 순서가 고정 (API 변경 포함이므로)
+- Gate가 세션 내 피드백 루프 완성
+
+---
+
+## Session 14 — 3-way 동시 Dispatch + 테스트 대폭 추가
+
+### 왜 3-way가 가능했나
+
+s14의 WO-030/031/032는 모두 **기존 기능에 테스트 추가**:
+- Server: E2E 7건 (v0.3~v0.4 엔드포인트)
+- iOS: Feature 테스트 95건 (editMemory/togglePin/search/delete/export/profile)
+- Android: ViewModel 테스트 75건 (동일 6기능)
+
+**API 변경 0** → 3 워커가 서로 의존 없음 → 동시 dispatch 가능.
+
+이전까지의 dispatch 모드:
+
+| 세션 | 모드 | 이유 |
+|------|------|------|
+| s3-s4 | 2-way (server+client) | API 변경 포함 |
+| s8 | send-seq (직렬) | billing 차단 진단 필요 |
+| s11-s13 | server-first → 2-way | API 변경 포함 |
+| **s14** | **3-way 동시** | API 변경 없음, 독립 작업 |
+
+### 테스트 +177건
+
+| 프로젝트 | s13 종료 | s14 추가 | s14 종료 |
+|---------|---------|---------|---------|
+| server | 250 | +6 E2E | 256 |
+| ios | 166 | +25 | 191 |
+| android | 170 | +20 | 190 |
+| **합계** | **586** | **+51 (unit)** | **637** |
+
+*iOS Feature 95건 + Android ViewModel 75건은 기존 테스트 프레임워크 내 추가 (합계에 별도 반영되지 않은 테스트 포함).*
+
+### 인시던트
+
+1. **Android 429** — CLI backoff 자동 대응 (기존 패턴)
+2. **iOS tuist test 루프** — Stage 3 개입 (반복 패턴, 근본 해결 P2)
+
+---
+
+## 4세션 종합: 숫자로 보는 성장
+
+| 지표 | s10 종료 | s14 종료 | 변화 |
+|------|---------|---------|------|
+| WO done | 20 | 32 | +12 |
+| 테스트 합계 | 562 | 637 | +75 |
+| api-contract | v0.2 | v0.4 | +2 minor |
+| CRUD 기능 | 기본 | +6 (수정/검색/삭제/내보내기/프로필/핀) | |
+| Stall Detection | 없음 | 4단계 프로토콜 | 신규 |
+| Dispatch 모드 | 2-way | +3-way | 신규 |
+
+---
+
+## After — s14 종료 상태
+
+- **WO 32건 done**, Backlog **0**
+- **637 tests** (unit 560 + UI 77)
+- **api-contract v0.4**
+- **Stall Detection 4단계** 운영 중
+- **다음 P1**: Password reset SMTP Phase 2, 대화 그룹핑/스레드, Daily digest
+
+---
+
+## For AI Agents
+
+**트리거**: aidy 워커 stall 발생 시 / 새 기능 3-client 동시 구현 시
+**Stall Detection**: Stage 1부터 시작. Stage 3+는 구조적 문제 의심 시에만
+**Dispatch 판단**: API 변경 포함 → server-first + 2-way. 독립 작업(테스트 추가 등) → 3-way 가능
+**Feature Sprint 루프**: api-contract 버전업 → server → client 2-way → Gate (세션 단위 반복)
