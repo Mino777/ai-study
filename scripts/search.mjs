@@ -23,6 +23,7 @@
 
 import fs from "fs";
 import path from "path";
+import { routeQuery } from "./lib/query-router.mjs";
 
 const INDEX_FILE = path.join(process.cwd(), "public", "embeddings.json");
 
@@ -39,9 +40,22 @@ async function main() {
   const query = process.argv[2];
   const topK = parseInt(process.argv[3] || "5", 10);
 
+  const forceSearch = process.argv.includes("--force");
+
   if (!query) {
-    console.error("Usage: node scripts/search.mjs \"<query>\" [topK=5]");
+    console.error("Usage: node scripts/search.mjs \"<query>\" [topK=5] [--force]");
     process.exit(1);
+  }
+
+  // 쿼리 라우터 — Phase 2c
+  const route = routeQuery(query);
+  if (!route.shouldSearch && !forceSearch) {
+    console.log(`🚫 검색 스킵 (reason: ${route.reason}, confidence: ${route.confidence})`);
+    console.log("   --force 플래그로 강제 검색 가능");
+    process.exit(0);
+  }
+  if (route.shouldSearch) {
+    console.log(`🔍 라우터: 검색 실행 (reason: ${route.reason}, confidence: ${route.confidence})`);
   }
 
   if (!fs.existsSync(INDEX_FILE)) {
