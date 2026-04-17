@@ -149,7 +149,9 @@ export default function DashboardPage() {
         {/* JIT Search Stats */}
         {manifest.searchHits && manifest.searchHits.totalQueries > 0 && (() => {
           const { totalQueries, hits } = manifest.searchHits;
-          const hitEntries = Object.entries(hits).sort(([, a], [, b]) => b - a);
+          const hitEntries = Object.entries(hits)
+            .filter(([slug]) => entries.some((e) => e.slug === slug))
+            .sort(([, a], [, b]) => b - a);
           const totalHitSlugs = hitEntries.length;
           const neverHit = entries.filter((e) => !hits[e.slug]).length;
           return (
