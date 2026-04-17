@@ -61,11 +61,14 @@
 
 ### 🔴 High — JIT 실전 통합 + 레버 실효 측정
 
-1. **Layer 3 JIT 검색 실전 통합**
-   - Phase 3 벤치마크 통과 (Top-5 93%, 절감 99.8%)
-   - Claude Code 세션에서 쿼리 시 자동으로 관련 청크 주입하는 훅/프리로드 구현
-   - moneyflow/tarosaju 워커에 이식 가능성 검토
-   - 예상 크기: M~L
+1. ~~**Layer 3 JIT 검색 실전 통합**~~ ✅ `--inject` 모드 + CLAUDE.md 지시 완료
+
+1. **JIT 검색 성과 검증 (ai-study 3+ 세션)**
+   - 실전 세션에서 에이전트가 JIT 검색을 실제 사용하는지 관찰
+   - shadow-benchmark 재실행 → 적중률 80%+ 유지 확인
+   - ccusage --instances 비교 → ai-study 비용 변화 추적
+   - 성과 우수 시 → moneyflow(45%) → tarosaju(26%) 순 이식
+   - 예상 크기: S (관찰 + 측정)
 
 2. **A4+C2+D2 레버 실효 측정**
    - 3 사이클 경과 후 `ccusage session --instances`로 프로젝트별 before/after 비교

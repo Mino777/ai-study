@@ -2,7 +2,9 @@
 
 모든 주목할 만한 변경사항을 이 파일에 기록합니다.
 
-## [2026-04-17] 세션 8 최종 — Directive 100% + 일방향 0건 + Phase 3 벤치마크 통과
+## [2026-04-17] 세션 8 최종 — Directive 100% + 일방향 0건 + Phase 3 통과 + JIT 실전 통합
+
+> Karpathy 합류 루프 완성: 인제스트→위키 강화 / 작업 시→JIT 검색 / 작업 후→compound 박제
 
 ### Added
 
@@ -13,6 +15,7 @@
 - **신규 엔트리 2건** — 프로젝트별 비용 패턴 + 병렬 에이전트 패턴
 - **신규 스크립트 2건** — `fix-one-way-connections.mjs` + `shadow-benchmark.mjs`
 - **인제스트 역링크 자동화** — `/ingest` Phase 5b 추가
+- **JIT 위키 검색 실전 통합** — `--inject` 모드 + CLAUDE.md 에이전트 지시 (331K→800 tokens)
 
 ### Fixed
 
