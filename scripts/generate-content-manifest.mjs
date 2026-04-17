@@ -325,13 +325,16 @@ function main() {
   fs.writeFileSync(OUTPUT_FILE, JSON.stringify(manifest, null, 2));
 
   // SearchDialog 전용 슬림 인덱스. 압축 우선이라 minified.
-  const searchIndex = entries.map((e) => ({
-    slug: e.slug,
-    title: e.frontmatter.title,
-    category: e.frontmatter.category,
-    description: e.frontmatter.description,
-    tags: e.frontmatter.tags,
-  }));
+  // 날짜 내림차순 정렬 — 검색 미입력 시 "최근 엔트리" 표시용.
+  const searchIndex = [...entries]
+    .sort((a, b) => b.frontmatter.date.localeCompare(a.frontmatter.date))
+    .map((e) => ({
+      slug: e.slug,
+      title: e.frontmatter.title,
+      category: e.frontmatter.category,
+      description: e.frontmatter.description,
+      tags: e.frontmatter.tags,
+    }));
   fs.mkdirSync(path.dirname(SEARCH_INDEX_FILE), { recursive: true });
   fs.writeFileSync(SEARCH_INDEX_FILE, JSON.stringify(searchIndex));
 
