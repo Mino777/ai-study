@@ -2,6 +2,33 @@
 
 모든 주목할 만한 변경사항을 이 파일에 기록합니다.
 
+## [2026-04-17] 세션 11b — JIT 검색 4프로젝트 이식 + 대시보드 버그 수정
+
+> JIT 검색 파이프라인을 moneyflow/tarosaju/aidy-architect 3프로젝트에 동시 이식
+
+### Added
+
+- **JIT 검색 이식** — 3 프로젝트에 embed-content + search + query-router 배포
+  - moneyflow: 61 .md → 354 청크 (3.1MB)
+  - tarosaju: 38 .md → 227 청크 (~2MB)
+  - aidy-architect: 58 .md → 308 청크 (2.6MB)
+- 각 프로젝트 CLAUDE.md에 JIT 검색 사용법 추가
+
+### Fixed
+
+- **대시보드 JIT 통계** — `solutions/` 경로 엔트리를 Top 조회 목록에서 필터링
+  - 원인: `entries.find(slug)` 매칭 실패 → slug 그대로 표시되던 버그
+
+### Metrics
+
+| 항목 | Before | After |
+|---|---|---|
+| JIT 검색 배포 프로젝트 | 1 (ai-study) | **4** (+moneyflow, tarosaju, aidy-architect) |
+| 총 인덱싱 문서 | 145 | **~290** (4 프로젝트 합산) |
+| 대시보드 FP | solutions 경로 노출 | **content 엔트리만 표시** |
+
+---
+
 ## [2026-04-17] 세션 11 — 스킬 검증 + Aidy Journal s9-s14 박제
 
 > 스킬 dry-run 검증으로 false positive 제거 + aidy-architect 6세션분 위키 박제

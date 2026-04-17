@@ -9,9 +9,9 @@
 
 ## 🕒 작성 시점
 
-- **작성 일시**: 2026-04-17 (Session 11 — 스킬 검증 + Aidy Journal 박제)
-- **작성 주체**: Claude (Session 11)
-- **이유**: NEXT.md 큐 High + Medium 완료 → 다음 세션 부트스트랩
+- **작성 일시**: 2026-04-17 (Session 11b — JIT 검색 4프로젝트 이식)
+- **작성 주체**: Claude (Session 11b)
+- **이유**: 세션 마무리 compound
 
 ---
 
@@ -20,58 +20,45 @@
 ### ai-study Wiki
 - **엔트리 수**: 129
 - **카테고리**: 13 (방법론 4 + 시스템 3 + 평가&인프라 2 + 응용 4)
-- **AI Agent Directive**: **100%** (85/85 non-journal)
-- **슬래시 커맨드**: **11개** (validate-mdx, validate-ai-output, promote-solution 포함)
-- **compound Phase**: 7 Phase (3b/4/4b/6 포함)
-- **Git 상태**: main clean, origin/main 동기 예정
-- **최근 major 변경**:
-  - **스킬 dry-run 검증** — validate-mdx FP 0%로 보강, validate-ai-output clean 확인
-  - **Aidy Journal 008-009** — s9-s14 박제 (UI Test + Stall Detection + 3-way Dispatch)
+- **슬래시 커맨드**: **11개**
+- **Git 상태**: main clean, origin/main 동기
 
-### JIT 히트 카운트 현황
-- **totalQueries**: 6 (아직 축적 초기)
-- **저장소**: `data/search-hits.json` (git 추적)
-- **UI**: 위키 목록/상세 페이지에 "JIT N회" 배지
-- **다음 마일스톤**: 100+ 쿼리 축적 후 0회 엔트리 하이라이트 판단
+### JIT 검색 — 4프로젝트 배포 완료
+- **ai-study**: 1,426 청크 / Top-5 93% / totalQueries 6
+- **moneyflow**: 354 청크 / 측정 중 / docs/v0944-handoff 브랜치
+- **tarosaju**: 227 청크 / 측정 중 / docs/next-plan 브랜치
+- **aidy-architect**: 308 청크 / 측정 중 / main 브랜치
+- **aidy 워커(server/ios/android)**: 미이식 (자체 docs 없음, architect 참조)
 
 ### Tokenomics 현재 상태
 - **RTK 절감**: 53.0M tokens (97.4%)
 - **Cache read**: 98%+
 
-### Layer 3 POC 현재 상태 (변동 없음)
-- **적중률**: Top-5 93%, Top-1 73%, 토큰 절감 99.8%
-- **Phase 3 통과**: ✅
-- **다음**: 실전 관찰 계속 (3+ 세션 검증 중 — 히트 카운트로 관찰성 확보)
-
-### aidy 4 레포 (관제 + 3 워커)
+### aidy 4 레포
 - **최신 상태**: s14 종료, WO 32건 done, 637 tests, api-contract v0.4
-- **다음 aidy 세션 시작점**: `aidy-architect/HANDOFF.md`
-
-### moneyflow / tarosaju (워커 프로젝트)
-- **현재 브랜치**: moneyflow=`docs/v0944-handoff`, tarosaju=`docs/next-plan`
-- **JIT 검색**: ai-study에만 적용. 워커 프로젝트는 미적용
+- **다음 시작점**: `aidy-architect/HANDOFF.md`
 
 ---
 
 ## 🎯 다음 작업 큐 (우선순위 순)
 
-### 🔴 High — 새 콘텐츠 + 검증
+### 🔴 High
 
-1. **validate-mdx Trap 3 stress test**
+1. **JIT 검색 성과 검증 — 4프로젝트 관찰**
+   - 각 프로젝트 `data/search-hits.json`의 totalQueries 추적
+   - ai-study shadow-benchmark 93%+ 유지 확인 (3/3 세션)
+   - 3세션 연속 유지 시 Layer 3 검증 완료 선언
+   - 예상 크기: S (관찰)
+
+2. **validate-mdx Trap 3 stress test**
    - JSX `{}` 패턴이 코드 블록 밀집 파일에서 FP 발생 가능
    - 코드 블록 밀집 엔트리 5개 선정 → dry-run → FP 비율 측정
    - 예상 크기: S
 
-2. **JIT 검색 성과 검증 (3/3 세션)**
-   - totalQueries 추적 + shadow-benchmark 안정성 확인
-   - 3세션 연속 93%+ 유지 시 Layer 3 검증 완료 선언
-   - 예상 크기: S (관찰)
-
-### 🟡 Medium — 유지보수 + 품질
+### 🟡 Medium
 
 3. **히트 카운트 100+ 도달 시 0회 엔트리 표시**
    - totalQueries > 100 이후 판단
-   - 0회 엔트리를 위키 목록에서 시각적으로 구분 (opacity 낮추기 등)
    - 예상 크기: S
 
 4. **미완성 마커 정리**
@@ -79,32 +66,30 @@
    - 빌드 경고 2건 해소
    - 예상 크기: S
 
-### 🟢 Low — 가치 시점 봐서
+### 🟢 Low
 
-5. **Phase 3 — Cross-repo 인덱싱**
-6. **인덱싱 자동화 (pre-commit 또는 CI)**
-7. **Flow Map Part 5 재개 판단** — deferred (실 배포 미구축)
+5. **인덱싱 자동화 (pre-commit 또는 CI)**
+6. **Flow Map Part 5 재개 판단** — deferred
 
 ---
 
 ## ⚠️ 블로커 / 대기 사항
 
-### 코드 결정 대기 (자율 처리 X)
+### 코드 결정 대기
 - **0회 엔트리 하이라이트 방식** — 데이터 충분히 쌓인 후 사용자와 논의
 
 ### 다른 세션 주의
-- moneyflow · tarosaju 자체 세션 가능 — 세션 시작 시 `rtk git fetch`
-- moneyflow는 `docs/v0944-handoff` 브랜치, tarosaju는 `docs/next-plan` 브랜치
-- aidy 4 레포 동시 작업 가능 — `~/Develop/aidy-architect/HANDOFF.md` 확인
+- moneyflow `docs/v0944-handoff` / tarosaju `docs/next-plan` — 브랜치 주의
+- aidy 4 레포 — `~/Develop/aidy-architect/HANDOFF.md` 확인
 
 ---
 
 ## 📋 다음 세션 시작 체크리스트 (18분)
 
 ### Phase 1: 필수 파일 로드 (5분)
-- [ ] `CLAUDE.md` 읽기 (프로젝트 규약)
-- [ ] `SPEC.md` 읽기 (엔티티 + AI Agent Contract)
-- [ ] `content/harness-engineering/ai-agent-start-here.mdx` 읽기 (상황별 라우팅)
+- [ ] `CLAUDE.md` 읽기
+- [ ] `SPEC.md` 읽기
+- [ ] `content/harness-engineering/ai-agent-start-here.mdx` 읽기
 
 ### Phase 2: 이 NEXT.md 읽기 (3분)
 - [ ] 현재 상태 스냅샷 · 큐 · 블로커 확인
@@ -112,48 +97,35 @@
 
 ### Phase 3: Git 동기화 (5분)
 - [ ] `rtk git fetch` (ai-study)
-- [ ] `rtk git -C ~/Develop/mino-moneyflow fetch origin` + **브랜치 확인**
-- [ ] `rtk git -C ~/Develop/mino-tarosaju fetch origin` + **브랜치 확인**
-- [ ] `rtk git -C ~/Develop/aidy-architect fetch origin` + **HANDOFF.md 세션 번호 확인**
-- [ ] 양쪽 main 최신 commit 확인 · 이 NEXT.md 의 스냅샷과 비교
+- [ ] `rtk git -C ~/Develop/mino-moneyflow fetch origin`
+- [ ] `rtk git -C ~/Develop/mino-tarosaju fetch origin`
+- [ ] `rtk git -C ~/Develop/aidy-architect fetch origin`
+- [ ] 4프로젝트 `data/search-hits.json`의 totalQueries 확인
 
 ### Phase 4: 최근 박제 훑기 (3분)
-- [ ] `docs/retros/2026-04-17-session-11.md` (스킬 검증 + Aidy 박제)
-- [ ] `content/harness-engineering/aidy-journal-008-*` (UI Test)
-- [ ] `content/harness-engineering/aidy-journal-009-*` (Stall Detection + 3-way)
+- [ ] `docs/retros/2026-04-17-session-11b.md`
+- [ ] `docs/solutions/next-patterns/2026-04-17-dashboard-jit-stats-solutions-filter.md`
 
 ### Phase 5: 작업 시작 (2분 내)
 - [ ] 새 작업은 `/wt-branch <branch-name>` 으로 시작
-- [ ] 작업 완료 후 `/compound` 로 retro · solution · ADR 박제
-- [ ] 세션 종료 직전 이 NEXT.md 교체 (append 금지)
+- [ ] 작업 완료 후 `/compound`
+- [ ] 세션 종료 직전 이 NEXT.md 교체
 
 ---
 
 ## 📝 부록: 자주 쓰는 명령
 
 ```bash
-# 프로젝트 상태 확인
-rtk git -C ~/Develop/mino-moneyflow fetch origin
-rtk git -C ~/Develop/mino-tarosaju fetch origin
-rtk git -C ~/Develop/aidy-architect fetch origin
+# 4프로젝트 JIT 히트 카운트 확인
+for p in ~/Develop/ai-study ~/Develop/mino-moneyflow ~/Develop/mino-tarosaju ~/Develop/aidy-architect; do
+  echo "$(basename $p): $(cat $p/data/search-hits.json 2>/dev/null | jq -r '.totalQueries // 0')"
+done
 
-# 프로젝트별 비용 분석
-ccusage session --since YYYYMMDD --until YYYYMMDD --instances
-
-# 새 작업 시작 (반드시)
-/wt-branch ai-ops/<new-branch-name>
-
-# ai-study 빌드 + validation
+# ai-study 빌드
 cd ~/Develop/ai-study && rtk npm run build
 
-# vitest 회귀 테스트
-rtk npm test -- scripts/__tests__/
-
-# Layer 3 검색
+# Layer 3 검색 (각 프로젝트에서)
 rtk npm run search -- "query text"
-
-# JIT 히트 카운트 확인
-cat data/search-hits.json | jq '.totalQueries, (.hits | to_entries | sort_by(-.value) | .[:10])'
 
 # 사이클 종료
 /compound
@@ -163,18 +135,16 @@ cat data/search-hits.json | jq '.totalQueries, (.hits | to_entries | sort_by(-.v
 
 ## 💾 이 NEXT.md 의 운영 규칙
 
-- **세션 경계에서 교체** (과거 append-only 운영 폐기)
-- **완료된 큐 항목은 즉시 제거** (docs/retros 또는 docs/solutions 로 승격 후)
-- **갱신 로그는 최근 1개만** — 누적 금지
-- **재사용 가치 있는 학습** → 이 문서 밖 (CLAUDE.md · memory · solutions · retros)
-- **세션 종료 직전** 갱신 후 commit + push
+- **세션 경계에서 교체** (append 금지)
+- **완료된 큐 항목은 즉시 제거**
+- **갱신 로그는 최근 1개만**
+- **재사용 학습** → memory · solutions · retros 로 승격
 
 ---
 
 ## 📜 최근 갱신
 
-### 2026-04-17 (Session 11 — 스킬 검증 + Aidy Journal 박제)
-- **스킬 dry-run 검증 완료** — validate-mdx FP 보강, validate-ai-output clean
-- **Aidy Journal 008-009** — s9-s14 박제 (6세션 → 2 Journal 통합)
-- **JIT 검색** — shadow-benchmark 93% 유지, 히트 카운트 6회
-- **큐 재정렬** — High 2개 완료 → Trap 3 stress test + JIT 3/3 검증으로 교체
+### 2026-04-17 (Session 11b — JIT 검색 4프로젝트 이식)
+- **JIT 검색 이식 완료** — moneyflow(354) + tarosaju(227) + aidy-architect(308)
+- **대시보드 버그 수정** — solutions 경로 필터링
+- **큐 정리** — JIT 이식 완료, 관찰 모드로 전환
