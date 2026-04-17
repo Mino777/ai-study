@@ -2,6 +2,30 @@
 
 모든 주목할 만한 변경사항을 이 파일에 기록합니다.
 
+## [2026-04-17] 세션 7 — Aidy Journal 007 박제 (s8 CI 인프라 독립화)
+
+### Added — 신규 엔트리 1건 (118 → 119)
+
+- `harness-engineering/aidy-journal-007-ci-infra-independence-hybrid-fallback.mdx` — Session 8: WO-012(Node.js 24) billing 차단 재발 → ADR-010 방향 전환 → WO-014/015(server/android self-hosted) + WO-016(Hybrid fallback) 동일 세션 완주. continue-on-error masking 미문서화 버그 발견 → Mark-step 우회 패턴 설계 + 실증. 3 워커 QA 에이전트 배치(466 tests all green). send-seq P3-7 첫 실전 + spec-first-verify-first 원칙 도출
+
+### Changed — 기존 엔트리 역링크 보강
+
+- `aidy-journal-006-ios-ci-self-hosted-runner-migration.mdx` — "후속 WO 3건 (Session 8 대기)" → "후속 WO 3건 → Session 8 완료" + Journal 007 링크
+
+### Metrics
+
+| 항목 | 값 |
+|---|---|
+| 신규 엔트리 | 1 (Journal 007) |
+| 수정 엔트리 | 1 (Journal 006 역링크) |
+| 총 엔트리 수 | 118 → **119** |
+| 박제 대상 (aidy-architect) | `59f8731` + `e3a08ea` v0.8.0 |
+| 박제 교훈 | 5건 (선행 투자 복리 / continue-on-error 지뢰 / spec-first-verify-first / 크로스 워커 전파 / Hybrid 쿼터 최적화) |
+| 빌드 | ✅ 통과 (Next.js 16.2.3, 119 entries) |
+| Mermaid 검증 | ✅ 30 블록, 0 에러 |
+
+---
+
 ## [2026-04-17] 세션 6 — Aidy Journal 006 박제 + 교훈→도구→사례 3단 연결
 
 ### Added — 신규 엔트리 1건 (117 → 118)
