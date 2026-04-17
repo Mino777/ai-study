@@ -53,22 +53,15 @@
 
 ## 🎯 다음 작업 큐 (우선순위 순)
 
-### 🔴 High — Layer 3 Phase 2 핵심 변수
+### 🔴 High — Layer 3 Phase 2 완료 + 다음 변수
 
-1. **다국어 임베딩 모델 비교 (POC Phase 2b)** — **여전히 핵심 큐**
-   - `Xenova/all-MiniLM-L6-v2` vs `Xenova/multilingual-e5-small` vs (옵션) `Xenova/paraphrase-multilingual-MiniLM-L12-v2`
-   - 동일 7개 쿼리 (Phase 1과 동일) 재측정 → 한국어 적중률 비교표
-   - `embed-content.mjs` 의 모델 ID 한 줄 교체 + 인덱스 별도 파일로 (`public/embeddings.{model}.json`)
-   - 메모리 룰: [POC 베이스라인 변수 동시 측정](memory:feedback_poc_baseline_variables) 적용 — 모델 2~3개 동시 베이스라인
+1. ~~**Phase 2b 다국어 모델 비교**~~ ✅ `multilingual-e5-small` 채택 (한국어 0%→60%)
+2. ~~**Phase 2c 쿼리 라우터 v0**~~ ✅ 규칙 기반 라우터 통합 (��러/기술/트리거)
+3. ~~**N=3 룰 박제**~~ ✅ compound-engineering-philosophy 원칙 9
+
+4. **Phase 3 — 섀도우 모드 + 측정**
+   - 기존 전체 로드 vs JIT 주입 출력 차이 (LLM-as-Judge)
    - 예상 크기: M
-
-2. **Phase 2c — 쿼리 라우터 v0 (규칙 기반)**
-   - 에러 키워드 / 명시 트리거 (`/search`) 만 검색 실행 — 일반 대화는 skip
-   - 예상 크기: S (정규식/키워드 매칭)
-
-3. **N=3 룰을 `compound-engineering-philosophy` 엔트리에 명시 추가**
-   - [Journal 024](/wiki/harness-engineering/harness-journal-024-solution-to-validator-promotion) 후속
-   - 예상 크기: S
 
 ### 🟡 Medium — Aidy 후속 (s9) + 꾸준한 박제
 
@@ -179,13 +172,11 @@ rtk npm run embed-content
 
 ## 📜 최근 갱신
 
-### 2026-04-17 (Session 7 — Aidy Journal 007 박제)
-- **Aidy Journal 007 박제** — CI 인프라 독립화 4 WO (012/014/015/016) + ADR-010 Hybrid Fallback + Mark-step 패턴
-  - continue-on-error masking 미문서화 버그 → Mark-step 우회 패턴 설계 + 실증
-  - 3 워커 466 tests all green (server 207 + android 135 + iOS 124)
-  - QA 에이전트 3 워커 배치 (model: sonnet)
-  - send-seq P3-7 첫 실전 성공
-  - 박제 교훈 5건: 선행 투자 복리 / continue-on-error 지뢰 / spec-first-verify-first / 크로스 워커 전파 / Hybrid 쿼터 최적화
-- **Journal 006 역링크 보강** — "Session 8 대기" → "Session 8 완료" + Journal 007 링크
+### 2026-04-17 (Session 7 — Aidy Journal 007 + Layer 3 Phase 2b/2c)
+- **Aidy Journal 007 박제** — CI 인프라 독립화 4 WO + ADR-010 Hybrid Fallback + Mark-step 패턴
+- **Layer 3 Phase 2b** — 3 모델 벤치마크 → `multilingual-e5-small` 채택 (한국어 Top-1 0%→60%)
+- **Layer 3 Phase 2c** — 규칙 기반 쿼리 라우터 v0 (에러/기술/트리거 매칭, 일반 대화 skip)
+- **N=3 룰** — compound-engineering-philosophy 원칙 9에 승격 트리거 명시
+- CLAUDE.md에 Layer 3 인프라 정보 추가
 - 엔트리 수 118 → 119
-- **다음 순위**: Layer 3 Phase 2b(다국어 임베딩 모델 비교)가 최상위
+- **다음 순위**: Phase 3 섀도우 모드 + aidy s9 박제 대기

@@ -2,7 +2,33 @@
 
 모든 주목할 만한 변경사항을 이 파일에 기록합니다.
 
-## [2026-04-17] 세션 7 — Aidy Journal 007 박제 (s8 CI 인프라 독립화)
+## [2026-04-17] 세션 7 후반 — Layer 3 Phase 2b/2c + N=3 룰 박제
+
+### Added — 신규 스크립트 2건
+
+- `scripts/benchmark-models.mjs` — 3 모델 동시 비교 벤치마크 (7 쿼리 × 1287 청크). Phase 2b 산출물
+- `scripts/lib/query-router.mjs` — 규칙 기반 쿼리 라우터 v0 (에러 키워드 / 명시 트리거 / 기술 용어). Phase 2c 산출물
+
+### Changed — Layer 3 핵심 변경 3건
+
+- `scripts/embed-content.mjs` — 모델 교체: `all-MiniLM-L6-v2` → `multilingual-e5-small` (한국어 Top-1 0% → 60%)
+- `scripts/search.mjs` — 쿼리 라우터 통합 (일반 대화 skip, `--force` 옵션)
+- `compound-engineering-philosophy.mdx` — 원칙 9에 N=3 승격 트리거 + warning-only / idempotency 원칙 명시 (Journal 024 후속)
+- `harness-journal-025-jit-retrieval-poc-phase1.mdx` — Phase 2b 갱신 로그 (3 모델 비교 결과표)
+
+### Metrics
+
+| 항목 | 값 |
+|---|---|
+| Phase 2b 모델 비교 | 3 모델 × 7 쿼리 × 1287 청크 |
+| 한국어 적중률 향상 | Top-1 0/5 → **3/5** (multilingual-e5-small) |
+| 영어 적중률 유지 | Top-1 2/2 (변동 없음) |
+| 라우터 규칙 | 명시 트리거 5 + 에러 키워드 20 + 기술 용어 30 + 스킵 2 |
+| 빌드 | ✅ 통과 (119 entries) |
+
+---
+
+## [2026-04-17] 세션 7 전반 — Aidy Journal 007 박제 (s8 CI 인프라 독립화)
 
 ### Added — 신규 엔트리 1건 (118 → 119)
 

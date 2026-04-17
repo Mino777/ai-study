@@ -29,6 +29,7 @@ AI 하네스 엔지니어링 학습 위키 + 포트폴리오. Next.js 15 App Rou
 - **AI Generation:** Gemini 2.5 Flash (daily lesson pipeline)
 - **CI/CD:** GitHub Actions (daily topic suggestion + comment-triggered generation)
 - **Deploy:** Vercel (GitHub auto-deploy, push = 배포)
+- **JIT Retrieval (Layer 3):** 로컬 임베딩 (`Xenova/multilingual-e5-small`, 384d) + JSON brute-force 검색 (1~2ms) + 규칙 기반 쿼리 라우터
 
 ## Pages
 - `/` — 홈 (지식 그래프 풀스크린 히어로)
@@ -45,7 +46,9 @@ AI 하네스 엔지니어링 학습 위키 + 포트폴리오. Next.js 15 App Rou
 ## Project Structure
 ```
 content/           → MDX wiki entries (13 카테고리별 디렉토리)
-scripts/           → prebuild manifest, watch, new-entry CLI, AI 과외 선생님, topic-pool.json
+scripts/           → prebuild manifest, watch, new-entry CLI, AI 과외 선생님, topic-pool.json,
+                     embed-content (Layer 3 인덱서), search (검색 CLI), benchmark-models (모델 비교)
+scripts/lib/       → mermaid-fix (validate 유틸), query-router (JIT 검��� 라우터)
 src/app/           → Next.js App Router (홈, wiki, dashboard, projects)
 src/components/    → header, graph, sidebar, search, summary-card, mermaid,
                      code-block (복사), entry-nav (이전/다음), mobile-nav (하단 탭)
@@ -54,7 +57,8 @@ src/lib/           → schema.ts (zod, 10 categories, quizQuestionSchema),
                      content.ts (manifest/entry loaders),
                      quiz-storage.ts (localStorage attempts + SM-2 SRS schedule)
 src/generated/     → content-manifest.json (gitignored, entries + graph + streak)
-public/            → search-index.json (gitignored, SearchDialog lazy fetch용 슬림 인덱스)
+public/            → search-index.json (gitignored, SearchDialog lazy fetch용 슬림 인덱스),
+                     embeddings.json (gitignored, Layer 3 벡터 인덱스 ~12MB)
 .github/workflows/ → daily-lesson, generate-on-pick, vercel-retry
 ```
 
@@ -65,6 +69,8 @@ public/            → search-index.json (gitignored, SearchDialog lazy fetch용
 - `npm run generate-lesson` — AI 과외 선생님: 주제 3개 추천
 - `npm run generate-lesson generate <slug>` — 특정 주제로 콘텐츠 생성
 - `npm run generate-lesson generate-custom <텍스트>` — 커스텀 주제로 생성 (Gemini가 영문 slug 자동 생성, 한글 slug 금지)
+- `npm run embed-content` — Layer 3 벡터 인덱스 재생성 (multilingual-e5-small, ~100s)
+- `npm run search -- "<query>"` — Layer 3 JIT 검색 (쿼리 라우터 자동 적용, --force로 강제)
 
 ## Content System
 - All content in `content/` as MDX files with frontmatter
