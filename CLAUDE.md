@@ -31,6 +31,22 @@ AI 하네스 엔지니어링 학습 위키 + 포트폴리오. Next.js 15 App Rou
 - **Deploy:** Vercel (GitHub auto-deploy, push = 배포)
 - **JIT Retrieval (Layer 3):** 로컬 임베딩 (`Xenova/multilingual-e5-small`, 384d) + JSON brute-force 검색 (1~2ms) + 규칙 기반 쿼리 라우터
 
+## JIT 위키 검색 (에이전트 필수)
+
+위키 지식이 필요할 때 **MDX 파일을 직접 읽지 말고** 검색을 먼저 실행:
+
+```bash
+npm run search -- "<질문>" 3 --inject
+```
+
+이 명령은 관련 청크만 마크다운으로 출력한다 (전체 위키 331K tokens → JIT ~800 tokens, **99.8% 절감**).
+MDX 전체를 읽어야 할 때만 파일을 직접 열 것. 검색으로 충분하면 검색 결과만 사용.
+
+**언제 사용하나:**
+- 특정 패턴/방법론을 적용해야 할 때 (예: "Circuit Breaker 구현 방법")
+- 에러/버그 해결 시 기존 솔루션이 있는지 확인할 때
+- 엔트리 작성 시 관련 기존 엔트리를 찾을 때
+
 ## Pages
 - `/` — 홈 (지식 그래프 풀스크린 히어로)
 - `/wiki` — 위키 목록 (카테고리별 카드 그리드 + Coming Soon)

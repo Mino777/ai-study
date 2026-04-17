@@ -41,20 +41,22 @@ async function main() {
   const topK = parseInt(process.argv[3] || "5", 10);
 
   const forceSearch = process.argv.includes("--force");
+  const injectMode = process.argv.includes("--inject");
 
   if (!query) {
-    console.error("Usage: node scripts/search.mjs \"<query>\" [topK=5] [--force]");
+    console.error('Usage: node scripts/search.mjs "<query>" [topK=5] [--force] [--inject]');
+    console.error("  --inject: 에이전트 컨텍스트 주입용 — 청크 본문만 출력 (verbose 없음)");
     process.exit(1);
   }
 
   // 쿼리 라우터 — Phase 2c
   const route = routeQuery(query);
-  if (!route.shouldSearch && !forceSearch) {
+  if (!route.shouldSearch && !forceSearch && !injectMode) {
     console.log(`🚫 검색 스킵 (reason: ${route.reason}, confidence: ${route.confidence})`);
     console.log("   --force 플래그로 강제 검색 가능");
     process.exit(0);
   }
-  if (route.shouldSearch) {
+  if (!injectMode && route.shouldSearch) {
     console.log(`🔍 라우터: 검색 실행 (reason: ${route.reason}, confidence: ${route.confidence})`);
   }
 
@@ -64,11 +66,15 @@ async function main() {
     process.exit(1);
   }
 
-  console.log(`🔍 Query: "${query}"`);
-  console.log("📦 Loading index + model...");
+  if (!injectMode) {
+    console.log(`🔍 Query: "${query}"`);
+    console.log("📦 Loading index + model...");
+  }
 
   const index = JSON.parse(fs.readFileSync(INDEX_FILE, "utf-8"));
-  console.log(`   Index: ${index.chunks.length} chunks, ${index.dim}d, model=${index.model}`);
+  if (!injectMode) {
+    console.log(`   Index: ${index.chunks.length} chunks, ${index.dim}d, model=${index.model}`);
+  }
 
   const { pipeline } = await import("@xenova/transformers");
   const extractor = await pipeline("feature-extraction", index.model);
@@ -88,17 +94,39 @@ async function main() {
 
   const top = scored.slice(0, topK);
 
-  console.log(`\n⚡ Top ${topK} (검색 ${elapsed}ms)\n`);
-  for (let i = 0; i < top.length; i++) {
-    const r = top[i];
-    const preview = r.chunk_text.replace(/\n+/g, " ").slice(0, 200);
-    const sourceTag = r.source ? `[${r.source}]` : "";
-    const pathPrefix = r.source === "entry" || !r.source ? "/wiki/" : "/";
-    console.log(`#${i + 1}  score=${r.score.toFixed(4)}  ${sourceTag}`);
-    console.log(`     ${r.title}`);
-    console.log(`     ${pathPrefix}${r.slug} § ${r.h2_title}`);
-    console.log(`     ${preview}${r.chunk_text.length > 200 ? "…" : ""}`);
-    console.log("");
+  if (injectMode) {
+    // 에이전트 컨텍스트 주입 모드: 청크 본문만 구조화 출력
+    // 중복 slug 제거 — 같은 엔트리의 여러 청크는 하나로 합침
+    const bySlug = new Map();
+    for (const r of top) {
+      if (!bySlug.has(r.slug)) bySlug.set(r.slug, []);
+      bySlug.get(r.slug).push(r);
+    }
+    console.log(`<!-- JIT: ${bySlug.size} entries, ${top.length} chunks, ${elapsed}ms -->`);
+    for (const [slug, chunks] of bySlug) {
+      const first = chunks[0];
+      const pathPrefix = first.source === "entry" || !first.source ? "/wiki/" : "/";
+      console.log(`\n## ${first.title} (${pathPrefix}${slug})\n`);
+      for (const c of chunks) {
+        console.log(`### ${c.h2_title}\n`);
+        console.log(c.chunk_text);
+        console.log("");
+      }
+    }
+  } else {
+    // 사람용 verbose 모드
+    console.log(`\n⚡ Top ${topK} (검색 ${elapsed}ms)\n`);
+    for (let i = 0; i < top.length; i++) {
+      const r = top[i];
+      const preview = r.chunk_text.replace(/\n+/g, " ").slice(0, 200);
+      const sourceTag = r.source ? `[${r.source}]` : "";
+      const pathPrefix = r.source === "entry" || !r.source ? "/wiki/" : "/";
+      console.log(`#${i + 1}  score=${r.score.toFixed(4)}  ${sourceTag}`);
+      console.log(`     ${r.title}`);
+      console.log(`     ${pathPrefix}${r.slug} § ${r.h2_title}`);
+      console.log(`     ${preview}${r.chunk_text.length > 200 ? "…" : ""}`);
+      console.log("");
+    }
   }
 }
 
