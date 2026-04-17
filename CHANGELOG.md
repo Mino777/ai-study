@@ -2,6 +2,35 @@
 
 모든 주목할 만한 변경사항을 이 파일에 기록합니다.
 
+## [2026-04-17] 세션 8 — Directive 100% + 프로젝트별 비용 분석 + 인제스트 역링크
+
+### Added — Directive 대량 투입 + 비용 분석
+
+- **AI Agent Directive 100% 커버리지** — 79/79 non-journal 엔트리 모두 Directive 보유 (41% → 100%)
+  - 6개 병렬 에이전트 + 직접 처리로 55개 파일에 Directive 추가
+  - prompt-engineering 4, context-engineering 5, agents 3, evaluation 2, rag 3, harness-engineering 20, frontend-ai 5, ios-ai 4, infrastructure 6, tokenomics 2, fine-tuning 1, backend-ai 0 (기존 보유)
+- **프로젝트별 비용 분석** — `ccusage session --instances`로 첫 프로젝트 분리 측정
+  - moneyflow 45% + tarosaju 26% = 워커 프로젝트가 전체 **70%**
+  - ai-study 15%, aidy 4레포 14%
+- **인제스트 역링크 자동화** — `/ingest` Phase 5b 추가 (크로스 업데이트)
+
+### Changed
+
+- `harness-journal-bootstrap-guide.mdx` — "For AI Agents" → "AI Agent Directive" 표준 헤딩 변환
+- `tokenomics/claude-code-token-levers-applied-log.mdx` — ccusage 재측정 + 프로젝트별 분석 추가
+
+### Metrics
+
+| 항목 | 값 |
+|---|---|
+| Directive 커버리지 | 41% → **100%** (79/79) |
+| 수정 파일 | 55개, +1,274줄 |
+| 프로젝트별 비용 | moneyflow $552/day (45%), tarosaju $315/day (26%) |
+| RTK 누적 절감 | 53.0M tokens (97.4%) |
+| 빌드 | ✅ 통과 (121 entries) |
+
+---
+
 ## [2026-04-17] 세션 7 최종 — Karpathy LLM Wiki 패턴 적용 + SWOT + 토큰 레버
 
 ### Added — 신규 엔트리 2건 + 인프라 3건 (119 → 121)
