@@ -183,10 +183,28 @@ A·B 가 적중률 직접 영향 — Phase 2 의 가장 큰 ROI.
 
 ---
 
+## 갱신 로그
+
+### 2026-04-17 — Phase 2b 완료: 모델 교체 (`multilingual-e5-small`)
+
+`scripts/benchmark-models.mjs` 로 3 모델 동시 베이스라인 측정 (7 쿼리, 1287 청크):
+
+| 모델 | 🇰🇷 Top-1 | 🇺🇸 Top-1 | 전체 Top-1 |
+|------|---------|---------|-----------|
+| all-MiniLM-L6-v2 (baseline) | 0/5 | 2/2 | 2/7 |
+| **multilingual-e5-small** | **3/5** | **2/2** | **5/7** |
+| paraphrase-multilingual-MiniLM-L12-v2 | 0/5 | 1/2 | 1/7 |
+
+**결정**: `embed-content.mjs` 기본 모델을 `Xenova/multilingual-e5-small` 로 교체. 한국어 Top-1 0% → 60%, 영어 유지. 인덱스 크기 동일 (~12MB), 임베딩 시간 +30% (77s → 101s) 허용 범위.
+
+Phase 2 남은 변수: **쿼리 라우터 v0** (Phase 2c, 규칙 기반).
+
+---
+
 ## 출처 / 검증 메모
 
-- 구현: `scripts/embed-content.mjs` (~180줄), `scripts/search.mjs` (~85줄)
-- 의존성: `@xenova/transformers` ^2.x, `Xenova/all-MiniLM-L6-v2` 모델
-- 실측 메트릭: 이 세션 (2026-04-16) embed-content + search 실행 결과
-- 7 쿼리 적중률: 영어 2/2 완벽, 한국어 3/3 적중 실패 (Top-1 무관 엔트리)
-- 관련 솔루션: `docs/solutions/workflow/2026-04-16-solution-to-validator-promotion.md` (N=3 룰) — Phase 2 인덱싱 시 같은 패턴으로 docs/solutions 자동 인덱싱 자동화 후보
+- 구현: `scripts/embed-content.mjs` (~180줄), `scripts/search.mjs` (~85줄), `scripts/benchmark-models.mjs` (~280줄, Phase 2b)
+- 의존성: `@xenova/transformers` ^2.x, `Xenova/multilingual-e5-small` 모델 (Phase 2b 교체)
+- Phase 1 실측: 2026-04-16, 영어 2/2, 한국어 0/3
+- Phase 2b 실측: 2026-04-17, 3 모델 비교 (multilingual-e5-small 승리, 전체 5/7)
+- 관련 솔루션: `docs/solutions/workflow/2026-04-16-solution-to-validator-promotion.md` (N=3 룰)
