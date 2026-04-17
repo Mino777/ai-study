@@ -2,6 +2,39 @@
 
 모든 주목할 만한 변경사항을 이 파일에 기록합니다.
 
+## [2026-04-17] 세션 9 — Superpowers+Hermes+aidy 패턴 이식 + 6프로젝트 배포
+
+> 외부 프레임워크 3개(Superpowers, Hermes, aidy-architect)에서 8개 패턴 평가, 7개 이식, 6개 프로젝트 배포
+
+### Added
+
+- **No-Placeholder Scan** — validate-content.mjs에 미완성 마커 탐지 (정밀도 조정 포함)
+- **Anti-Rationalization Guard** — compound Phase 3b, 16건 회고 분석 기반 3층 방어
+- **SDD 2-Stage Review** — review.md 신규 (Plan 있으면 Spec compliance + Code quality)
+- **Frozen Snapshot 원칙** — CLAUDE.md, 세션 중 수정 금지 + 200줄 제한
+- **프로세스 개선 Phase** — compound Phase 4, 인시던트/병목/비효율 자동 수집
+- **경험→스킬 자동 생성** — compound Phase 4b, docs/solutions N≥3 시 스킬 승격
+- **NEXT.md 교체 Phase** — compound Phase 6
+- **신규 엔트리 2건** — 자기 평가 바이어스 대응 + 크로스 프로젝트 패턴 이식 방법론
+- **6프로젝트 이식** — ai-study/moneyflow/tarosaju/aidy-architect/ios/server/android
+
+### Fixed
+
+- **JSX trap false positive** — `{worker}` backtick 감싸기 (1건→0건)
+- **Directive 100% 복원** — superpowers/hermes 엔트리 Directive 추가
+
+### Metrics
+
+| 항목 | Before | After |
+|---|---|---|
+| 엔트리 수 | 125 | **127** |
+| Directive | 100% | **100%** (85/85) |
+| compound Phase 수 | 5 | **7** (Phase 3b/4/4b/6 추가) |
+| 이식 프로젝트 | 1 | **6** |
+| validate 검출 패턴 | 3 (JSX) | **4** (+Placeholder) |
+
+---
+
 ## [2026-04-17] 세션 8 최종 — Directive 100% + 일방향 0건 + Phase 3 통과 + JIT 실전 통합
 
 > Karpathy 합류 루프 완성: 인제스트→위키 강화 / 작업 시→JIT 검색 / 작업 후→compound 박제

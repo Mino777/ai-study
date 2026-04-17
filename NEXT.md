@@ -9,97 +9,93 @@
 
 ## 🕒 작성 시점
 
-- **작성 일시**: 2026-04-17 (Session 8 — Directive 100% + 프로젝트별 비용 분석)
-- **작성 주체**: Claude (Session 8)
-- **이유**: Directive 100% 달성 + ccusage 프로젝트별 분석 + 인제스트 역링크 자동화 → 다음 세션 부트스트랩
+- **작성 일시**: 2026-04-17 (Session 9 — Superpowers+Hermes+aidy 패턴 이식 + 6프로젝트 배포)
+- **작성 주체**: Claude (Session 9)
+- **이유**: 8개 패턴 평가 / 7개 이식 / 6프로젝트 배포 완료 → 다음 세션 부트스트랩
 
 ---
 
 ## 📸 현재 상태 스냅샷
 
 ### ai-study Wiki
-- **엔트리 수**: 123 (+4, 신규 엔트리 2 + 기존 2 카운트 보정)
+- **엔트리 수**: 127 (+2)
 - **카테고리**: 13 (방법론 4 + 시스템 3 + 평가&인프라 2 + 응용 4)
-- **AI Agent Directive**: **100%** (79/79 non-journal) — 세션 8에서 41%→100% 달성
+- **AI Agent Directive**: **100%** (85/85 non-journal)
+- **compound Phase**: 7 Phase (3b/4/4b/6 신규)
 - **주요 시리즈**:
   - **Harness Journal** (000~025)
   - **iOS Journal** (000~009)
-  - **Multi-Agent Orchestration Journal (Aidy)** (000 ~ 007)
+  - **Multi-Agent Orchestration Journal (Aidy)** (000~007)
   - **Flow Map for iOS Devs** (1·2·3·4·6·7편 완료, 5편 deferred)
 - **Git 상태**: main clean, origin/main 동기
 - **최근 major 변경**:
-  - **Directive 100%** — 6개 병렬 에이전트로 55개 파일 일괄 추가
-  - **프로젝트별 비용 분석** — moneyflow 45% + tarosaju 26% = 워커 70%
-  - **인제스트 역링크** — /ingest Phase 5b 크로스 업데이트 자동화
+  - **Superpowers+Hermes+aidy 패턴 7개 이식** — compound 5→7 Phase
+  - **review 2-Stage** — 6프로젝트 배포
+  - **자기 평가 바이어스 3층 방어** — 16건 회고 분석 기반
 
 ### Tokenomics 현재 상태
-- **일평균 비용**: $194/day (28일 평균, 전 프로젝트 합산)
-- **프로젝트별**: moneyflow $552/day (45%), tarosaju $315/day (26%), ai-study $185/day (15%)
+- **7일 비용**: $5,111 (04/10~17, 세션 8 집중 작업 포함)
+- **프로젝트별**: moneyflow 43%, tarosaju 25%, ai-study 15%, aidy 14%
 - **RTK 절감**: 53.0M tokens (97.4%)
 - **Cache read**: 98%+
-- **레버 적용 상태**: A1(CLAUDE.md −45%) + A4(git 지시문 제거) + C2(MCP 5K) + D2(Haiku 서브에이전트) — 실효 측정 대기 (3 사이클 후)
 
 ### Layer 3 POC 현재 상태 (변동 없음)
-- **인프라**: ✅ 작동 (1~3ms 응답, brute force, JSON 인덱스)
-- **영어 쿼리**: ✅ 적중률 우수 (Top-1 정답)
-- **한국어 쿼리**: ⚠️ 개선됨 (multilingual-e5-small, 0%→60%)
-- **인덱싱 범위**: Phase 2a 완료 (솔루션 Top-1 진입)
-- **다음**: Phase 3 섀도우 모드 + 측정
+- **적중률**: Top-5 93%, Top-1 73%, 토큰 절감 99.8%
+- **Phase 3 통과**: ✅
+- **다음**: 실전 관찰 계속 (3+ 세션 검증 중 1/3)
 
 ### aidy 4 레포 (관제 + 3 워커)
-- **Session 5~8 박제 완료** — Journal 003~007 + 카테고리 엔트리 7건
-- **Runner 현황**: MBA에 3대 운영
+- **이식 완료**: review 2-Stage + Frozen Snapshot (전체), Anti-Rationalization (architect)
 - **다음 aidy 세션(s9) 시작점**: `aidy-architect/HANDOFF.md`
 
 ### moneyflow / tarosaju (워커 프로젝트)
-- **비용 집중**: 전체의 70% — `.claudeignore` 최적화 우선 타겟
-- **Git 상태**: 세션 시작 시 직접 fetch 확인
+- **이식 완료**: compound 업그레이드 + review 2-Stage + Frozen Snapshot
+- **현재 브랜치**: moneyflow=`docs/v0944-handoff`, tarosaju=`docs/next-plan`
+- **주의**: main이 아닌 브랜치에 커밋됨. 머지 시점은 각 프로젝트 세션에서 결정
 
 ---
 
 ## 🎯 다음 작업 큐 (우선순위 순)
 
-### 🔴 High — JIT 실전 통합 + 레버 실효 측정
+### 🔴 High — 스킬 자동 생성 첫 실행 + JIT 검증
 
-1. ~~**Layer 3 JIT 검색 실전 통합**~~ ✅ `--inject` 모드 + CLAUDE.md 지시 완료
+1. **경험→스킬 자동 생성 첫 실행**
+   - workflow(7건), mdx(5건), ai-pipeline(4건) — 3개 카테고리 N≥3
+   - 각 카테고리 솔루션 읽고 공통 패턴 추출 → 스킬 초안 생성
+   - 사람 리뷰 후 `.claude/commands/`에 커밋
+   - 예상 크기: M
 
-1. **JIT 검색 성과 검증 (ai-study 3+ 세션)**
-   - 실전 세션에서 에이전트가 JIT 검색을 실제 사용하는지 관찰
+2. **JIT 검색 성과 검증 (2/3 세션)**
+   - 실전 세션에서 JIT 검색 실제 사용 관찰
    - shadow-benchmark 재실행 → 적중률 80%+ 유지 확인
-   - ccusage --instances 비교 → ai-study 비용 변화 추적
-   - 성과 우수 시 → moneyflow(45%) → tarosaju(26%) 순 이식
-   - 예상 크기: S (관찰 + 측정)
-
-2. **A4+C2+D2 레버 실효 측정**
-   - 3 사이클 경과 후 `ccusage session --instances`로 프로젝트별 before/after 비교
-   - 예상 크기: S
+   - 예상 크기: S (관찰)
 
 ### 🟡 Medium — aidy s9 + 위키 유지보수
 
-4. **aidy Session 9 박제 대기**
-   - s8 backlog: WO-011(Swift 6) / WO-013(워크플로 통합) / WO-016 정상 시나리오
+3. **aidy Session 9 박제 대기**
    - 트리거: aidy-architect에서 s9 완료 + compound
 
-5. **JSX trap detector 정밀도 개선**
-   - `api-contract-as-3-client-source-of-truth.mdx Line ~213` `{worker}` warning 1건 잔존
+4. **이식 전 브랜치 확인 체크리스트 구현**
+   - 크로스 프로젝트 이식 시 각 프로젝트 현재 브랜치 확인 자동화
+   - 예상 크기: S
 
 ### 🟢 Low — 가치 시점 봐서
 
-6. **Phase 3 — Cross-repo 인덱싱**
-7. **인덱싱 자동화 (pre-commit 또는 CI)**
-8. **Flow Map Part 5 재개 판단** — deferred (실 배포 미구축)
+5. **Phase 3 — Cross-repo 인덱싱**
+6. **인덱싱 자동화 (pre-commit 또는 CI)**
+7. **Flow Map Part 5 재개 판단** — deferred (실 배포 미구축)
 
 ---
 
 ## ⚠️ 블로커 / 대기 사항
 
 ### 코드 결정 대기 (자율 처리 X)
-- **레버 실효 측정 시점** — 최소 3 사이클 (세션 3회) 경과 후
-- **일방향 해소 방식** — 스크립트 일괄 vs 인제스트 시 점진적
+- **스킬 자동 생성 초안** — 사람 리뷰 게이트 필수
 - **aidy s9 시작 시점** — 토큰 리밋 여유 확인 후
 
 ### 다른 세션 주의
 - moneyflow · tarosaju 자체 세션 가능 — 세션 시작 시 `rtk git fetch`
+- moneyflow는 `docs/v0944-handoff` 브랜치, tarosaju는 `docs/next-plan` 브랜치
 - aidy 4 레포 동시 작업 가능 — `~/Develop/aidy-architect/HANDOFF.md` 확인
 
 ---
@@ -117,14 +113,14 @@
 
 ### Phase 3: Git 동기화 (5분)
 - [ ] `rtk git fetch` (ai-study)
-- [ ] `rtk git -C ~/Develop/mino-moneyflow fetch origin`
-- [ ] `rtk git -C ~/Develop/mino-tarosaju fetch origin`
+- [ ] `rtk git -C ~/Develop/mino-moneyflow fetch origin` + **브랜치 확인**
+- [ ] `rtk git -C ~/Develop/mino-tarosaju fetch origin` + **브랜치 확인**
 - [ ] 양쪽 main 최신 commit 확인 · 이 NEXT.md 의 스냅샷과 비교
 
 ### Phase 4: 최근 박제 훑기 (3분)
-- [ ] `docs/retros/2026-04-17-session-8.md` (Directive 100% + 비용 분석)
-- [ ] `content/tokenomics/project-level-cost-analysis-pattern.mdx` (프로젝트별 비용 패턴)
-- [ ] `content/harness-engineering/parallel-agent-batch-modification-pattern.mdx` (병렬 에이전트 패턴)
+- [ ] `docs/retros/2026-04-17-session-9.md` (패턴 이식 + 바이어스 대응)
+- [ ] `content/evaluation/agent-self-evaluation-bias-countermeasures.mdx`
+- [ ] `content/harness-engineering/cross-project-pattern-porting-methodology.mdx`
 
 ### Phase 5: 작업 시작 (2분 내)
 - [ ] 새 작업은 `/wt-branch <branch-name>` 으로 시작
@@ -141,7 +137,7 @@ rtk git -C ~/Develop/mino-moneyflow fetch origin
 rtk git -C ~/Develop/mino-tarosaju fetch origin
 rtk git -C ~/Develop/aidy-architect fetch origin
 
-# 프로젝트별 비용 분석 (신규)
+# 프로젝트별 비용 분석
 ccusage session --since YYYYMMDD --until YYYYMMDD --instances
 
 # 새 작업 시작 (반드시)
@@ -174,10 +170,10 @@ rtk npm run search -- "query text"
 
 ## 📜 최근 갱신
 
-### 2026-04-17 (Session 8 — Directive 100% + 프로젝트별 비용)
-- **Directive 100%** — 79/79 non-journal, 6 병렬 에이전트 투입
-- **프로젝트별 비용** — ccusage --instances 첫 활용, moneyflow 45% + tarosaju 26%
-- **인제스트 역링크** — /ingest Phase 5b 크로스 업데이트 자동화
-- **ccusage 재측정** — RTK 53M, 일평균 $194, cache 98%+
-- **엔트리 2건 신규** — 프로젝트별 비용 패턴 + 병렬 에이전트 패턴
-- **다음 순위**: 레버 실효 측정 + Phase 3 섀도우 모드 + 일방향 332건 해소
+### 2026-04-17 (Session 9 — 패턴 이식 + 6프로젝트 배포)
+- **8개 패턴 평가** — Superpowers(3) + Hermes(3) + aidy(2)
+- **7개 이식** — No-Placeholder, Anti-Rationalization, 2-Stage Review, Frozen Snapshot, 프로세스 개선, 스킬 자동 생성, NEXT.md Phase
+- **6프로젝트 배포** — ai-study + moneyflow + tarosaju + aidy 3워커
+- **compound 5→7 Phase** — 3b/4/4b/6 추가
+- **엔트리 2건** — 바이어스 대응 + 패턴 이식 방법론
+- **다음 순위**: 스킬 자동 생성 첫 실행 (workflow 7, mdx 5, ai-pipeline 4)
