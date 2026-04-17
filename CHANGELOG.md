@@ -2,6 +2,36 @@
 
 모든 주목할 만한 변경사항을 이 파일에 기록합니다.
 
+## [2026-04-17] 세션 11 — 스킬 검증 + Aidy Journal s9-s14 박제
+
+> 스킬 dry-run 검증으로 false positive 제거 + aidy-architect 6세션분 위키 박제
+
+### Added
+
+- **Aidy Journal 008** (s9-s10) — UI Test Automation Sprint + Backlog Zero
+  - XCUITest 42건 + Compose UI Test 35건 전 화면 자동화
+  - QA 에이전트 `ui` 모드 추가, Backlog 전량 소진
+- **Aidy Journal 009** (s11-s14) — Stall Detection + 3-way Dispatch + Feature Sprint
+  - Worker Stall Detection 4단계 프로토콜
+  - 3-way 동시 dispatch, CRUD 6기능 3-client 구현, 테스트 562→637건
+
+### Changed
+
+- **validate-mdx** — Trap 2/4 제외 규칙 추가 (이미 따옴표 감싼 valid Mermaid 구문 FP 제거)
+- **가짜 인용구 수정** — agent-self-evaluation-bias-countermeasures.mdx 직접 인용 → 간접 인용 [의역]
+
+### Metrics
+
+| 항목 | Before | After |
+|---|---|---|
+| 엔트리 수 | 127 | **129** (+Aidy Journal 008/009) |
+| validate-mdx FP | 100% (2/2) | **0%** (제외 규칙 보강) |
+| validate-ai-output FP | 0% | 0% (유지) |
+| JIT 적중률 | Top-5 93% | **93% 유지** |
+| 역링크 | — | **+10건** 자동 추가 |
+
+---
+
 ## [2026-04-17] 세션 10 — JIT 히트 카운트 + 스킬 자동 생성 첫 실행
 
 > NEXT.md 큐 🔴 High 1번 실행: solutions N≥3 카테고리에서 스킬 3개 추출 + JIT 검색 관찰성 확보
