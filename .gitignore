@@ -39,4 +39,6 @@ next-env.d.ts
 /src/generated/
 /public/search-index.json
 /public/embeddings.json
+/public/embeddings.*.json
+/public/benchmark-results.json
 .claude/worktrees/

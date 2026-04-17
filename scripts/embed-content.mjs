@@ -11,9 +11,10 @@
  *   public/embeddings.json (gitignore)
  *
  * 설계 결정:
- *  - 모델: @xenova/transformers + Xenova/all-MiniLM-L6-v2
- *    · 100% 로컬, 외부 API 0, 한·영 모두 지원, 384차원
- *    · 첫 실행 시 ~80MB 모델 다운로드 후 ./node_modules/.cache 에 캐시
+ *  - 모델: @xenova/transformers + Xenova/multilingual-e5-small
+ *    · 100% 로컬, 외부 API 0, 94 언어 지원, 384차원
+ *    · Phase 2b 벤치마크(benchmark-models.mjs)에서 3모델 비교 → 한국어 Top-1 3/5 승리
+ *    · 첫 실행 시 ~120MB 모델 다운로드 후 ./node_modules/.cache 에 캐시
  *  - 청킹: H2 (`## `) 단위. 한 .mdx → N 청크
  *    · POC 엔트리 §10 안티패턴 "단일 전체 .mdx 임베딩" 회피
  *    · 청크가 너무 작으면 (< 100자) 다음 H2 와 합침
@@ -151,14 +152,14 @@ function buildEmbeddingText(entryTitle, h2, text) {
 }
 
 async function main() {
-  console.log("📦 Loading embedding model (Xenova/all-MiniLM-L6-v2)...");
-  console.log("   첫 실행 시 ~80MB 다운로드 (이후 캐시)");
+  console.log("📦 Loading embedding model (Xenova/multilingual-e5-small)...");
+  console.log("   첫 실행 시 ~120MB 다운로드 (이후 캐시)");
 
   // dynamic import — top-level await 회피
   const { pipeline } = await import("@xenova/transformers");
   const extractor = await pipeline(
     "feature-extraction",
-    "Xenova/all-MiniLM-L6-v2",
+    "Xenova/multilingual-e5-small",
   );
 
   // Multi-source: content/ + docs/solutions/ + docs/retros/
@@ -242,7 +243,7 @@ async function main() {
 
   // 인덱스 저장
   const index = {
-    model: "Xenova/all-MiniLM-L6-v2",
+    model: "Xenova/multilingual-e5-small",
     dim: vectors[0]?.length || 0,
     created_at: new Date().toISOString(),
     chunks: allChunks.map((meta, i) => ({ ...meta, vector: vectors[i] })),
