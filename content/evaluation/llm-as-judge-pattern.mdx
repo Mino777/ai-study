@@ -127,6 +127,31 @@ void judgeTarotChat(text, cardName, question);
 3. **프롬프트 A/B 테스트**: 프롬프트 변경 전후 quality_score 비교로 효과 측정
 4. **자동 알림**: overall이 특정 임계값(예: 5점) 이하로 떨어지면 알림
 
+## AI Agent Directive
+
+**Trigger**: LLM이 생성한 콘텐츠(분석, 답변, 추천 등)의 **내용 품질**을 사후 평가해야 할 때. 구조적 검증(JSON 파싱)만으로는 부족하고 의미/맥락 품질을 측정해야 하는 경우.
+
+**Prerequisites**:
+- [harness-engineering/ai-output-zod-validation-pattern](/wiki/harness-engineering/ai-output-zod-validation-pattern) — 먼저 구조 검증 (Layer 1-4)
+- [evaluation/llm-evaluation-fundamentals](/wiki/evaluation/llm-evaluation-fundamentals) — 평가 지표 설계 기초
+
+### Actionable Steps
+1. **평가 모델 선택**: 저렴한 모델 추천 (Gemini Flash 또는 Claude Haiku). 비용이 중요하므로 GPT-4o나 Claude 3.5 Sonnet은 피할 것
+2. **도메인별 평가 차원 정의**: 프로젝트의 특성에 맞는 평가 기준 설정 (투자 분석 ≠ 운세 상담). 각 차원에 가중치 부여
+3. **Judge 프롬프트 작성**: 평가 대상, 평가 차원, 점수 범위, 출력 형식(JSON) 명시. 명확한 기준 제시
+4. **Fire-and-Forget 구현**: 주 파이프라인이 완료된 후 → 비동기로 Judge 실행 → 결과를 DB에만 저장 (사용자 응답에 영향 없음)
+5. **에러 처리**: Judge 실패 → 조용히 로깅만 하고 분석 결과는 폐기 금지 (관측 계층이므로 실패해도 영향 최소화)
+6. **품질 데이터 축적**: Judge 점수를 시계열로 저장 → 프롬프트 변경 전후 효과 측정용 baseline 수집
+7. **대시보드 구축**: 평가 점수의 평균, 차원별 분포, 시간 추이 시각화 (개선 방향 파악)
+
+### Anti-patterns
+- Judge를 critical path에 넣기 (사용자 응답 latency 증가)
+- 모든 도메인에 동일한 평가 기준 강제 (의미 있는 점수 아님)
+- Judge 실패 시 원래 분석 결과 폐기 (데이터 손실)
+- 점수만 저장하고 실제 개선 액션 없기 (데이터 낭비)
+
+---
+
 ## For AI Agents
 
 - **트리거**: "evaluation", "judge", "품질 평가", "LLM-as-a-Judge"

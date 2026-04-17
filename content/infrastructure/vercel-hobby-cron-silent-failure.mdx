@@ -195,3 +195,26 @@ async function safeFetch(url: string, options: RequestInit, scope: string) {
   }
 }
 ```
+
+---
+
+## AI Agent Directive
+
+**Trigger**: "모든 cron이 제대로 작동하는데 실제로는 일부만 실행 중" / Telegram · Slack 같은 외부 알림이 간헐적으로 안 올 때 / "에러가 없는데 왜 결과가 없지?" 상황
+**Prerequisites**: [Cron Execution Tracking Pattern](/wiki/infrastructure/cron-execution-tracking-pattern) — silent failure 감지 방법 / [Fixture Silent Failure Trap](/wiki/harness-engineering/fixture-silent-failure-trap) — 에러를 삼키는 패턴
+
+### Actionable Steps
+1. **Vercel Hobby 제약 인식** — 2개 cron만 실행. `vercel.json`에 12개 등록해도 3~12번째는 조용히 무시
+2. **배포 후 'Last Run' 확인** — Vercel 대시보드에서 각 cron의 마지막 실행 시각 확인 (계획과 실제 다를 수 있음)
+3. **fetch resp.ok 필수 체크** — `fetch()` 호출 후 HTTP 4xx/5xx는 throw되지 않음 · 반드시 `if (!resp.ok)` 검증
+4. **외부 서비스 응답 로깅** — 성공만 로깅하지 말고, 실패 시 상태 코드 + 응답 본문도 기록
+5. **복붙 코드 금지** — 같은 함수가 여러 route에 있으면 버그도 N곳에 퍼짐 · 중앙 모듈로 통합
+6. **HTML escape 강제** — Telegram HTML parse_mode 사용 시 `&`, `<`, `>` 반드시 `&amp;`, `&lt;`, `&gt;`로 변환
+7. **DB 이력 기록** — Vercel 로그는 신뢰 불가 · `cron_execution_history` 테이블에 모든 실행을 기록
+
+### Anti-patterns
+- **Hobby 플랜에 10개 이상 cron** — 일부가 조용히 무시됨. Pro 플랜 필수
+- **배포 후 Last Run 확인 안 함** — 등록 ≠ 실행. 실제 동작 확인 필수
+- **fetch 에러 처리 없음** — HTTP 에러도 catch되지 않으므로 에러 처리 코드 불필요 착각 → 버그
+- **Telegram/Slack 전송 후 응답 무시** — 400 에러도 로그가 안 남음 · resp.ok 체크 필수
+- **인증 · 로깅이 각 route마다 다름** — 표준 패턴 부재 · 일부는 에러 삼키고 있을 가능성

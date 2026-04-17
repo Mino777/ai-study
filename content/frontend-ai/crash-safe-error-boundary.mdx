@@ -259,6 +259,26 @@ error.tsx를 작성한 후 확인할 것:
 
 4. **inline style은 못생겼지만 100% 보장된다.** CSS 빌드 실패, CDN 장애, 번들 로딩 실패 — 어떤 상황에서도 inline style은 렌더된다.
 
+## AI Agent Directive
+
+**Trigger**: Next.js 프로젝트에서 `app/error.tsx`를 구현해야 할 때, 또는 error boundary가 crash하는 상황을 방지하고자 할 때
+
+**Prerequisites**: [Frontend + AI 패턴](/wiki/frontend-ai/frontend-ai-patterns), [인앱 브라우저 흰 화면 방어](/wiki/frontend-ai/inapp-browser-white-screen-defense)
+
+### Actionable Steps
+1. error.tsx에 Canvas, Framer Motion, dynamic import, Tailwind CSS 사용 금지 여부 확인
+2. 모든 스타일이 inline `style` 속성으로만 정의되었는지 검증
+3. 외부 리소스(이미지, 폰트, 상수 조회) 의존이 없는지 확인
+4. `<a href>` 네비게이션만 사용, `next/link` 미사용 확인
+5. `useEffect` 내에서만 부수효과(에러 로깅) 수행 확인
+6. Reset 버튼과 홈으로 가기 링크 둘 다 제공되어 있는지 확인
+7. 테스트: 인앱 브라우저/구형 기기에서 error page 렌더링 확인
+
+### Anti-patterns
+- error.tsx 자체에서 throw하는 복잡한 컴포넌트
+- CSS 빌드 실패 시에도 보장되지 않는 Tailwind/CSS import 사용
+- 외부 라이브러리 의존(Canvas, animation, dynamic import)이 fallback에 포함됨
+
 ## 관련 자료
 
 - tarosaju `src/app/error.tsx` — crash-safe 최종 버전

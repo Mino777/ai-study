@@ -243,6 +243,29 @@ Apple Intelligence 연동은 기존 프레임워크(App Intents, CoreSpotlight, 
 
 ---
 
+## AI Agent Directive
+
+**Trigger**: iOS 18+ 앱에서 Apple Intelligence 기능을 통합해야 할 때
+
+**Prerequisites**: [iOS AI 코드 품질 보증 전략](/wiki/ios-ai/ios-ai-code-quality-test-strategy), [iOS Legacy to AI-Ready](/wiki/ios-ai/ios-legacy-to-ai-ready)
+
+### Actionable Steps
+1. 핵심 기능 3~5개를 AppIntent로 구현 (각 perform() 테스트 포함)
+2. AppShortcutsProvider 정의 및 주요 단축어 등록
+3. 사용자 생성 콘텐츠를 CoreSpotlight으로 인덱싱
+4. 항목 삭제 시 CSSearchableIndex에서도 동기 제거
+5. 주요 화면을 NSUserActivity로 인덱싱 (Siri 예측)
+6. Info.plist에 NSUserActivityTypes 등록
+7. UITextView 기반 텍스트 입력은 Writing Tools 자동 지원 확인
+
+### Anti-patterns
+- 존재하지 않는 IntelligenceKit 프레임워크 사용 기대
+- AppIntent의 perform()에 무거운 작업 포함 (비동기 처리 필수)
+- Spotlight 인덱싱 후 항목 삭제 시 인덱스 미동기 제거
+- Writing Tools를 특별히 비활성화할 이유 없이 disable
+
+---
+
 ## 참고 자료
 
 - [App Intents — Apple Developer](https://developer.apple.com/documentation/appintents)

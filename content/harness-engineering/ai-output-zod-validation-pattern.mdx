@@ -334,7 +334,7 @@ const result = await callAIWithValidation(
 
 이 작업들은 [Harness Journal](/harness-journal) 시리즈의 다음 사이클에서 *비대칭 이식*과 함께 진행 예정.
 
-## For AI Agents
+## AI Agent Directive
 
 **Trigger**: LLM 응답을 사용자 또는 다운스트림 시스템에 전달하는 코드 / *입력 검증은 있지만 출력 검증은 없는* 상태
 
@@ -342,7 +342,7 @@ const result = await callAIWithValidation(
 - [AI 호출 패턴](/wiki/harness-engineering/ai-call-patterns-circuit-breaker-fallback)
 - Zod 기본 사용법
 
-**Actionable Steps (5 Layer 적용, 점진적)**:
+### Actionable Steps (5 Layer 적용, 점진적)
 
 *Layer 1+2만 먼저 (30분)*:
 1. 출력 schema 정의 — `z.object({ ... })` with `min/max/enum` 경계 명시
@@ -355,7 +355,8 @@ const result = await callAIWithValidation(
 6. `.refine()`로 cross-field consistency (STRONG_BUY + confidence 50+ 등)
 7. 호출 후 `validateAgainstInput()` 별도 함수 — 입력 심볼을 reasoning에 인용했는지 등
 
-**Anti-patterns**:
+### Anti-patterns
+
 - ❌ `JSON.parse` 직접 사용 (문법 오류에 throw, Claude prompt-based에 흔함)
 - ❌ schema에 제약 없는 `z.string()`, `z.number()` (환각 범위 무한)
 - ❌ 재시도 시 *같은 프롬프트*로 재호출 (실패 이유를 프롬프트에 추가해야 함)

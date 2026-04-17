@@ -107,3 +107,24 @@ function renderStreamingMarkdown(text: string) {
 3. **에러 처리**: 스트림 중간에 에러나면 `controller.error(err)` 호출
 4. **타임아웃**: 클라이언트에서 30초 등 상한 설정
 5. **취소**: `AbortController`로 사용자가 중단할 수 있게
+
+## AI Agent Directive
+
+**Trigger**: Next.js/TypeScript 웹 프로젝트에서 LLM 응답을 실시간으로 스트리밍해야 할 때
+
+**Prerequisites**: [Frontend + AI 패턴](/wiki/frontend-ai/frontend-ai-patterns), [Crash-Safe Error Boundary](/wiki/frontend-ai/crash-safe-error-boundary)
+
+### Actionable Steps
+1. API Route에서 anthropic.messages.stream() 또는 해당 SDK 스트림 메서드 호출
+2. Web ReadableStream으로 변환 (event.delta.type === 'text_delta' 필터)
+3. TextEncoder.encode()로 텍스트를 바이트로 변환 후 controller.enqueue()
+4. Content-Type, Cache-Control 헤더 설정 (no-cache 필수)
+5. 클라이언트에서 response.body.getReader() + TextDecoder로 소비
+6. 에러 시 controller.error() 호출 (명시적 스트림 중단)
+7. AbortController + 타임아웃으로 사용자가 중단 가능하게 구현
+
+### Anti-patterns
+- 전체 응답을 기다린 후 한 번에 전달 (스트리밍 의미 없음)
+- Cache-Control: cache 설정 (재사용 불가한 실시간 응답)
+- 마크다운 파싱 없이 raw 텍스트만 스트리밍 (코드 블록 불완전)
+- 스트림 에러 처리 미흡 (네트워크 불안정 시 무한 대기)

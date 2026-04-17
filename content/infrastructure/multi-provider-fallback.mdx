@@ -104,3 +104,25 @@ function buildFallbackChain(preferredProvider: string) {
 3. **프로바이더 상태 추적** — 성공/실패를 기록하여 건강한 프로바이더 우선
 4. **비용 인식** — fallback 순서를 비용 순으로 (저렴한 것 → 비싼 것)
 5. **로깅 필수** — 어떤 프로바이더가, 왜, 언제 실패했는지 반드시 기록
+
+---
+
+## AI Agent Directive
+
+**Trigger**: 단일 LLM 프로바이더에 의존 중이거나 / API 레이트 리밋 · 타임아웃으로 요청이 실패할 때 / "한 프로바이더가 안 되면 전체 서비스 중단" 상황
+**Prerequisites**: [Multi-Agent Pipeline](/wiki/agents/multi-agent-pipeline) — 멀티 에이전트 오케스트레이션의 일부 / [Tool Use](/wiki/agents/tool-use) — fallback이 tool selection에 영향
+
+### Actionable Steps
+1. **프로바이더 chain 정의** — 3개 이상의 LLM API 선택 후 선호 순서 명시
+2. **Circuit breaker 구현** — 각 프로바이더별 실패 카운트 + cooldown 타이머 설정 (보통 3회 실패 → 2분 차단)
+3. **지수 백오프 재시도** — 레이트 리밋(429) · 서버 에러(503)는 다른 프로바이더로 즉시 전환하지 말고 1초, 2초, 4초 대기 후 같은 프로바이더 재시도
+4. **Structured output 호환성 검증** — Gemini/OpenAI/Claude의 JSON 출력 방식이 다름 · 3단 fallback parser 구현 (직접 parse → 코드 블록 추출 → 정규식)
+5. **프로바이더별 비용 추적** — fallback 순서를 비용 순으로 정렬 (저렴 → 비싼 순)
+6. **상세 로깅** — 각 프로바이더 호출 시 요청/응답/latency/비용을 기록
+
+### Anti-patterns
+- **단일 프로바이더 의존** — "Anthropic만 쓰면 되지" 마음. Rate limit · outage 발생 시 서비스 전체 중단
+- **프로바이더 순환 없이 retry** — 같은 실패를 반복. 첫 실패는 다른 프로바이더 즉시 시도
+- **Circuit breaker 없음** — 장애 프로바이더에 계속 요청 → 리소스 낭비 · 응답 지연
+- **Structured output 검증 부족** — 프로바이더마다 JSON 형식이 약간씩 다름. 파서가 한 형식만 지원하면 실패
+- **비용 무시한 fallback 순서** — 저렴한 프로바이더를 나중에 시도 → 예산 초과

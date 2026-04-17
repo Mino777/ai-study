@@ -248,6 +248,27 @@ KaTeX, PlantUML, D2 등 다른 다이어그램 도구에도 동일한 구조로 
 
 ---
 
+## AI Agent Directive
+
+**Trigger**: Next.js + MDX에서 Shiki와 Mermaid(또는 다른 다이어그램 도구)를 동시에 사용할 때
+
+**Prerequisites**: [Crash-Safe Error Boundary](/wiki/frontend-ai/crash-safe-error-boundary), [Frontend + AI 패턴](/wiki/frontend-ai/frontend-ai-patterns)
+
+### Actionable Steps
+1. rehypeMermaid 플러그인 구현 (Shiki 전에 실행, mermaid `<pre>` → `<div>` 변환)
+2. 차트 텍스트를 `<script type="application/mermaid">` 에 보관
+3. MermaidRenderer 클라이언트 컴포넌트 구현 (DOM 직접 스캔 + SVG 렌더)
+4. compileMDX 설정에서 플러그인 순서 확인: rehypeMermaid → rehypeShiki
+5. 레이아웃에 `<MermaidRenderer />` 배치
+6. 프로덕션 빌드에서 다이어그램 렌더 확인
+7. KaTeX/PlantUML 등 다른 도구 추가 시 동일 패턴 적용
+
+### Anti-patterns
+- MDX components.pre / components.div 오버라이드에만 의존
+- rehype 플러그인이 생성한 속성을 React props로 전달 기대
+- Shiki 후에 rehypeMermaid 실행
+- MermaidRenderer를 SSR 환경에서 실행
+
 ## 자기 점검
 
 1. rehypeMermaid가 Shiki **앞에** 실행되어야 하는 이유는?

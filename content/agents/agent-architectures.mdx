@@ -269,6 +269,31 @@ if __name__ == "__main__":
 
 ---
 
+## AI Agent Directive
+
+**Trigger**: AI 에이전트가 사용자를 대신해 자율적으로 목표를 달성해야 할 때. 특히 다단계 작업(정보 수집 → 판단 → 행동 실행)을 처리해야 하는 경우.
+
+**Prerequisites**: 
+- [prompt-engineering/chain-of-thought](/wiki/prompt-engineering/chain-of-thought) — 추론 단계 체계화
+- [agents/tool-use](/wiki/agents/tool-use) — 외부 도구 호출 방식
+
+### Actionable Steps
+1. 에이전트의 **Sense(인지)** 단계에서 필요한 데이터/환경 정보 정의 (API 호출, 센서 데이터, 사용자 입력 등)
+2. **Memory** 구조 설계: 단기 기억(현재 세션 컨텍스트)과 장기 기억(벡터 DB, 관계형 DB) 분리
+3. **Planner/Reasoning** 단계에서 LLM이 사용할 프롬프트 작성. 목표, 제약, 사용 가능한 도구 명시
+4. **Tool/Action Executor** 구현: 에이전트가 호출할 함수 목록 및 스키마 정의 (Function Calling 형식)
+5. **루프 닫기**: 도구 실행 결과를 다시 메모리에 저장하고 LLM에 피드백. 재귀적 추론 활성화
+6. **Human-in-the-Loop** 지점 추가: 중요 의사결정 단계에서 사용자 승인 요청 (과신 방지)
+7. 에이전트 상태 변화를 UI에 반영 (대기 → 실행 중 → 결과 생성 완료)
+
+### Anti-patterns
+- 에이전트에 너무 많은 도구 노출 (혼란 증가, hallucination 위험)
+- 도구 설명이 모호하거나 복잡 (LLM이 잘못된 도구 선택)
+- 에이전트 자율성만 강조하고 인간 통제 메커니즘 부재 (위험 증가)
+- 단기/장기 메모리 구분 없이 모든 정보 섞기 (컨텍스트 오염)
+
+---
+
 ## 자기 점검
 
 1.  자율 에이전트 아키텍처가 기존의 단순 LLM 직접 활용 방식(예: 단일 프롬프트 질의-응답)과 다른 주요 특징은 무엇인가요?

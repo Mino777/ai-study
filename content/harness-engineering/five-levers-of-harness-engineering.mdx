@@ -241,6 +241,31 @@ GPTers 정리글이 이 아이디어를 한 줄로 요약한다: **"최소한의
 
 나는 이 경고가 특히 필요했다. 뭐든지 최대화하려는 기질이라, 처음에 CLAUDE.md에 프로젝트의 모든 것을 담고 싶은 충동을 참아야 했다.
 
+## AI Agent Directive
+
+**Trigger**: 에이전트 통제 체계를 새로 설계하거나, 기존 CLAUDE.md/훅/MCP 구성을 평가해야 할 때. 5가지 레버의 *우선순위*를 결정해야 할 때.
+
+**Prerequisites**:
+- [Harness Engineering Overview](/wiki/harness-engineering/harness-engineering-overview)
+- [Five-Levers 원문 유튜브/블로그](/www.youtube.com/watch?v=6gvnDSAcZww) (선택)
+
+### Actionable Steps
+1. 현재 프로젝트에서 5가지 레버의 상태 진단 (각각 exists?/mature?)
+2. 레버 1 (CLAUDE.md) — 60줄 체크. 초과면 스킬 파일로 분산
+3. 레버 2 (Skill) — 2-3개부터 시작. "혹시 모르니 다 켜자" 금지
+4. 레버 3 (MCP) — 필수 MCP 3개 결정 후 필요시 추가
+5. 레버 4 (Subagent) — 긴 탐색을 분리하고 요약만 메인으로 받기
+6. 레버 5 (Hook) — pre-commit build 1개, post-push 알림 1개부터
+7. "보고-잡고-되살리기" 3단계 반영 확인 (SSOT → 훅 → 체크포인트)
+8. 안티패턴 4가지 체크리스트로 자가진단 (CLAUDE.md 길이, MCP 과다, 훅 과다, 스킬 미리 다 만들기)
+
+### Anti-patterns
+- ❌ CLAUDE.md를 240줄 이상으로 길게 작성 (중간 규칙 무시)
+- ❌ MCP 서버 10개 다 켜기 ("혹시 모르니")
+- ❌ 훅 10개 동시에 거기 (커밋 10초+ 대기)
+- ❌ 스킬 파일 미리 다 작성 (실제 실수 없이 만든 규칙은 낡음)
+- ❌ 레버 5개를 1주일 안에 다 구축 (한 번에 한 레버)
+
 ## 내 프로젝트에 당장 적용할 수 있는 것
 
 이 주제를 학습한 결과 내가 이 ai-study 프로젝트에 적용할 후속 작업 리스트:

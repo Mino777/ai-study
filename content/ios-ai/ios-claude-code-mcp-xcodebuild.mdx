@@ -258,6 +258,29 @@ struct MCP {
 
 ---
 
+## AI Agent Directive
+
+**Trigger**: iOS 프로젝트에서 LLM을 활용한 로컬 CI/CD 자동화 구축, 또는 AI 에이전트가 `xcodebuild`를 직접 제어해야 할 때
+
+**Prerequisites**: [iOS AI 코드 품질 보증 전략](/wiki/ios-ai/ios-ai-code-quality-test-strategy), [iOS Legacy to AI-Ready](/wiki/ios-ai/ios-legacy-to-ai-ready)
+
+### Actionable Steps
+1. `xcodebuild -list -json` 실행하여 프로젝트 스킴/타겟 정보 추출
+2. XcodeBuildRunner (Process API 래퍼) 구현
+3. 시스템 프롬프트에 xcodebuild 파라미터 정의 추가 (테이블 형식 권장)
+4. ClaudeAPIClient로 LLM 호출 → JSON 형식 xcodebuild 명령 생성
+5. JSON 파싱 → Process 실행 → stdout/stderr/exitCode 수집
+6. 빌드 성공 시 결과 요약, 실패 시 에러 로그를 다시 LLM에 전달
+7. 슬래시 커맨드(/build, /test) 또는 Slack 연동으로 자동화 (선택사항)
+
+### Anti-patterns
+- xcodebuild 파라미터를 LLM이 자유롭게 생성하도록 함 (프롬프트에서 명시 필수)
+- Process 실행 후 결과를 분석하지 않고 출력만 함
+- 대규모 프로젝트(30+ 모듈)에서 MCP 설치 (빌드 가속 기능 부재, 오버헤드만 증가)
+- 프로젝트 컨텍스트(스킴, 타겟) 없이 LLM에만 의존
+
+---
+
 ## 자기 점검
 
 1.  MCP 아키텍처에서 LLM(Claude)의 핵심 역할 두 가지는 무엇인가요?

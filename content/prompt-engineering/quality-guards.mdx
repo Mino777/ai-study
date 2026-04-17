@@ -101,3 +101,21 @@ const systemMessage = options?.agentRole
 - 가드가 너무 많으면 모델의 유용한 출력까지 억제할 수 있음
 - 도메인에 맞는 베이스레이트를 정확하게 제공해야 효과적
 - 가드 효과는 모델 크기에 비례 (소형 모델에서는 지시를 무시할 수 있음)
+
+## AI Agent Directive
+
+**Trigger**: AI 에이전트가 프로덕션용 시스템 프롬프트를 작성하거나, LLM 출력의 환각·편향을 줄여야 할 때
+**Prerequisites**: [Chain-of-Thought](/wiki/prompt-engineering/chain-of-thought), [AI 출력 Zod 검증 패턴](/wiki/harness-engineering/ai-output-zod-validation-pattern)
+
+### Actionable Steps
+1. 현재 시스템 프롬프트에 품질 가드가 몇 개 있는지 확인한다
+2. 프리모템 가드("이 분석이 틀렸다면 어떤 이유일까?") 추가를 검토한다
+3. 인용 태깅 가드(주장마다 출처 표시 강제)로 환각 추적성을 확보한다
+4. 도메인 베이스레이트를 프롬프트에 명시한다 (예: "주식 추천의 성공률은 통상 50~55%")
+5. 가드 개수는 3~5개로 제한하고, 모델 출력 품질이 떨어지면 축소한다
+6. Multi-Agent 파이프라인에서는 공통 가드를 분리하여 모든 에이전트에 주입한다
+
+### Anti-patterns
+- 가드를 10개 이상 쌓아서 모델의 유용한 출력까지 억제하는 것
+- 도메인 베이스레이트 없이 "정확하게 답해줘"만 쓰는 것
+- 소형 모델에서 복잡한 가드를 기대하는 것 (지시 무시 확률 높음)

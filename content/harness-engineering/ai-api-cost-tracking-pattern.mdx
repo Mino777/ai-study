@@ -296,6 +296,30 @@ ORDER BY date DESC, cost_usd DESC;
 - **RLS 정책**: 사용자 데이터라 service_role 격리 필수. 잘못 설정하면 *다른 사용자의 비용 조회 가능* 보안 사고
 - **분기마다 가격 표 검증**: Anthropic/Gemini/OpenAI가 가격을 변경하면 표를 업데이트해야 함. 자동화 안 되면 *측정값과 실제 청구의 갭*
 
+## AI Agent Directive
+
+**Trigger**: 프로덕션 AI API 호출 시스템에서 비용 가시성이 부족한 상태 / 사용량 기반 가격 책정 단계
+
+**Prerequisites**:
+- [AI 호출 패턴 — Circuit Breaker / 폴백](/wiki/harness-engineering/ai-call-patterns-circuit-breaker-fallback)
+- 프로젝트의 데이터베이스(Supabase 또는 유사)
+
+### Actionable Steps
+
+1. **모델별 단가 표 생성** (`src/lib/ai-cost-pricing.ts`) — 모든 사용 모델(Claude/Gemini/OpenAI)의 현재 가격 정리, 1M tokens 기준 USD로 기록
+2. **AI 호출 wrapper에 로깅 추가** — 호출 시점에 `logApiCall()` 비동기 호출 (응답 latency 영향 0)
+3. **데이터베이스 테이블 설계** — `api_calls_log` raw 테이블 + `api_cost_daily` 집계 뷰
+4. **`/cost-check` 슬래시 커맨드 구현** — 일/월 누적 비용 + 모델별 분류 + 임계치 경고
+5. **주간 단가 표 검증** — Anthropic/Google/OpenAI 공식 문서와 대조 (분기마다 가격 변경 확인)
+
+### Anti-patterns
+
+- ❌ 여러 파일에 가격 하드코딩 (분기 update 누락 가능성)
+- ❌ 모든 호출을 비동기 await (응답 latency 증가)
+- ❌ 사용자별 비용 추적 없이 프로덕션 가격 책정 (수익화 불가능)
+
+---
+
 ## 자기 점검
 
 1. *지난 한 달*의 AI API 비용을 *모델별로* 답할 수 있는가?

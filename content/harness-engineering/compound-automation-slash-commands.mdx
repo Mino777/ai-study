@@ -303,6 +303,35 @@ done
 
 이 6가지가 모두 작동하면 *4단계 루프 자동화*가 작동.
 
+## AI Agent Directive
+
+**Trigger**: Compound Engineering의 4단계 루프를 자동화해야 할 때. 슬래시 커맨드를 설계하거나, 기존 커맨드를 다른 프로젝트로 이식해야 할 때. 어떤 작업이 어느 커맨드에 들어가는지 라우팅해야 할 때.
+
+**Prerequisites**:
+- [Compound Engineering Philosophy](/wiki/harness-engineering/compound-engineering-philosophy) — 4단계 루프 원칙
+- [Harness Journal 시리즈](/harness-journal) — 각 커맨드의 실전 사례
+
+### Actionable Steps
+1. 4단계 루프 (Plan → Work → Review → Compound) 확인
+2. 각 단계에 맞는 커맨드 식별:
+   - `/ingest` = Plan 입력 (외부 콘텐츠 가공)
+   - `/wt-branch` = Work 시작 (안전한 worktree 분기)
+   - `/cross-session-review` = Review 게이트 (독립 검증)
+   - `/compound` = Compound 단계 (박제 자동화)
+3. 메인 워크플로: `/autoceo` = 4단계 N라운드 자동 반복
+4. 다중 프로젝트: `/projects-sync` + `/curate-inbound` = 허브-워커 연결
+5. 각 커맨드의 phase 구조 이해 (5~8 단계로 구성)
+6. 이식 전 대상 프로젝트의 git 흐름 베이스라인 박기
+7. `/compound`부터 이식 시작 → 안정되면 다른 커맨드 추가
+8. Dogfooding: 각 커맨드를 한 번씩 호출해서 작동 확인
+
+### Anti-patterns
+- ❌ 슬래시 커맨드를 작은 단위로 쪼개기 (사람이 일부만 실행)
+- ❌ 7개 커맨드를 동시에 이식 (한 번에 1-2개만)
+- ❌ 대상 프로젝트의 git 흐름을 모르고 이식 (함정 신규 생성)
+- ❌ 슬래시 커맨드 경로 하드코딩 (프로젝트마다 수정 필요)
+- ❌ `/autoceo`를 가장 먼저 도입 (다른 커맨드 안정 후)
+
 ## 자기 점검
 
 1. 내가 매 사이클 *반복적으로* 하는 작업이 *슬래시 커맨드*에 박혀 있는가, 아니면 *기억으로* 하는가?

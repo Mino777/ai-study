@@ -63,3 +63,20 @@ Few-shot으로 추론 과정까지 포함된 예시를 제공.
 - 작은 모델에서는 효과가 제한적 (파라미터 100B+ 권장)
 - Few-shot + CoT 조합이 가장 강력
 - 출력 형식을 JSON으로 강제하면 CoT가 억제될 수 있음 — 추론은 별도 필드로 분리
+
+## AI Agent Directive
+
+**Trigger**: AI 에이전트가 복잡한 분석·판단·계산 작업을 수행할 때, 또는 LLM 출력의 논리적 정확도가 중요한 경우
+**Prerequisites**: [Few-shot Prompting](/wiki/prompt-engineering/few-shot-prompting)
+
+### Actionable Steps
+1. 단순 분류가 아닌 다단계 추론이 필요한 작업인지 판단한다
+2. 프롬프트에 "단계별로 생각하라" 또는 구체적 추론 구조를 명시한다
+3. JSON 출력이 필요한 경우, `reasoning` 필드를 별도로 분리하여 CoT를 보존한다
+4. 정확도가 중요하면 Self-Consistency (다수결) 패턴 적용을 고려한다
+5. Few-shot + CoT 조합: 예시 자체에 추론 과정을 포함시킨다
+
+### Anti-patterns
+- 출력 형식을 JSON으로 강제하면서 추론 필드를 분리하지 않아 CoT가 억제되는 것
+- 단순 분류 작업에 CoT를 적용하여 불필요한 토큰을 소비하는 것
+- 소형 모델(100B 미만)에서 CoT 효과를 기대하는 것

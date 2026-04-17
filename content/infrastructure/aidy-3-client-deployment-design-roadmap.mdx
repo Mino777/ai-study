@@ -344,40 +344,27 @@ aidy 의 Architect-Worker 모델에서 배포는 "코드 작성" 이 아니라 "
 
 ---
 
-## 8. AI Agent Directive
+## AI Agent Directive
 
-### Trigger
-- 풀스택 프로젝트가 "로컬만 된다" 상태에서 실제 배포를 고민하기 시작할 때
-- 단일 운영자 · 초기 베타 사용자 · 예산 제한 상황
-- "Vercel 에 Spring Boot 올려도 돼?" 같은 플랫폼 mismatch 질문
-- Secrets 를 env file 로 관리 중 · 로테이션 계획 없음
-- Observability 0 인데 프로덕션 전환 임박
-
-### Prerequisites
-- [Architect Flow Map (Part 4)](/wiki/harness-engineering/architect-flow-map-via-aidy-architect) — Architect 책임 영역 이해
-- [api-contract source of truth (Part 6)](/wiki/context-engineering/api-contract-as-3-client-source-of-truth) — 배포 후 스키마 일관성 유지
-- [Test Strategy 3-client (Part 7)](/wiki/evaluation/test-strategy-3-client-via-aidy) — 배포 전 테스트 Gate
-- [Backend Flow Map](/wiki/backend-ai/backend-flow-map-via-aidy-server) — Request-Id · Circuit Breaker · Rate Limit 운영 요소
-- [Vercel Hobby Cron Silent Failure](/wiki/infrastructure/vercel-hobby-cron-silent-failure) — 플랫폼 제약 이해 사례
+**Trigger**: 풀스택 프로젝트가 "로컬만 된다" 상태에서 실제 배포를 고민하기 시작할 때 / "플랫폼 선택이 맞나?" 의문 / 운영 체계 미확립
+**Prerequisites**: [Architect Flow Map (Part 4)](/wiki/harness-engineering/architect-flow-map-via-aidy-architect) — Architect 책임 영역 / [Vercel Hobby Cron Silent Failure](/wiki/infrastructure/vercel-hobby-cron-silent-failure) — 플랫폼 제약 실패 사례
 
 ### Actionable Steps
-1. **현재 상태 감사** — 3 레포 README 와 `.github/workflows/` 훑고 '무엇이 실제로 되고 안 되는지' 1 페이지 작성
-2. **MSP 정의** — 사용자 수 · SLA · 예산 · 운영자 capa 를 먼저 명문화 (목표가 없으면 옵션 비교 불가)
-3. **ADR 1호 박제** — "왜 managed service 기본값" · "왜 Fly/Railway" · "왜 Neon" — 근거와 함께
-4. **Stage 1~8 순차 진행** — 한 번에 하나 · 각 Stage 베이스라인 + 롤백 문서
-5. **Shadow mode 강제** — DB · 서버 호스팅 전환 시 로컬/프로덕션 동시 실행 + 차이 비교
-6. **Observability 는 Stage 5 고수** — 첫 사용자 받기 전에 완비
-7. **WO 발행 형태** — `WO-INFRA-NNN` 으로 각 Stage 를 표준화
-8. **/compound 매 Stage 완료 시** — retro + solution + ADR
+1. **현재 상태 문서화** — 3 레포 README와 `.github/workflows/` 훑고 '무엇이 실제로 되고 안 되는지' 1페이지 정확히 기록
+2. **MSP 먼저 정의** — 사용자 수 · SLA · 예산 · 단일 운영자 capa를 명문화 (목표 없으면 옵션 비교 불가)
+3. **Stage별 순차 진행** — DB(Stage 1) → Server(2) → CI(3) → Secrets(4) → Observability(5) → 클라 배포(6-7) 순서 고수
+4. **Shadow mode 강제** — 각 Stage 전환 시 로컬과 프로덕션 동시 실행 후 차이 비교
+5. **각 Stage의 베이스라인과 롤백 절차 명문화** — "일단 도입" 금지 · 언제든 복귀 가능해야 함
+6. **ADR 작성** — 각 선택(Neon vs Supabase, Fly vs Railway)의 근거와 Trade-off 박제
+7. **Observability는 Stage 5에서 고수** — 첫 사용자 받기 전에 반드시 완비
 
 ### Anti-patterns
-- **한 번에 여러 Stage 병행** — 의사결정 근거 · 실측 · 롤백 모두 혼란
-- **관측 없이 프로덕션 전환** — 첫 사용자가 첫 버그 발견
-- **자체 호스팅 PostgreSQL 로 시작** — 새벽 장애 감당 불가
-- **플랫폼 mismatch** (Vercel 에 Spring Boot 등) — 재작성 비용
-- **Shadow mode 스킵** — 프로덕션에서 차이 발견 = 다운타임
-- **Secrets 를 CI env · `.env` 로 관리** — 로테이션 불가 · 노출 위험
-- **CI 자동 deploy 를 Stage 2 전에** — 아직 수동 배포 감각이 없는데 자동화 → 디버깅 불가
+- **한 번에 여러 Stage 병행** — 어느 요소가 실패했는지 식별 불가
+- **관측 없이 프로덕션 전환** — 첫 사용자가 버그 발견 (downtime)
+- **Vercel에 Spring Boot 올리기** — 플랫폼 특성 mismatch · 재작성 비용
+- **자체 호스팅 PostgreSQL로 시작** — 새벽 장애 운영 부담 > 프로젝트 가치
+- **Shadow mode 스킵** — 차이를 프로덕션에서 발견
+- **Secrets를 .env 또는 CI env로 관리** — 로테이션 불가 · 노출 위험
 
 ---
 

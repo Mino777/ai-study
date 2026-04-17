@@ -176,6 +176,32 @@ CLAUDE.md에 *세션별 책임 영역*을 명시:
 
 이게 *세션 간 간접 통신*. 사용자가 *메시지 brokering* 역할. 직접 통신은 안 되지만 사용자를 거쳐서 결정이 전파.
 
+## AI Agent Directive
+
+**Trigger**: 같은 프로젝트(또는 같은 사용자의 여러 프로젝트)에서 *다중 Claude 세션*이 동시에 작업할 때. 다른 세션이 남긴 작업 흔적을 감지하고 충돌을 사전 예방해야 할 때.
+
+**Prerequisites**:
+- [Harness Journal 003 - Squash Merge 함정](/wiki/harness-engineering/harness-journal-003-squash-merge-trap-pattern)
+- [Harness Journal 004 - /wt-branch 커맨드](/wiki/harness-engineering/harness-journal-004-wt-branch-command)
+- [Compound Engineering Philosophy](/wiki/harness-engineering/compound-engineering-philosophy)
+
+### Actionable Steps
+1. 다중 세션 환경 확인: 현재 활성 세션 수 파악
+2. **패턴 1** — 한 세션을 main 책임자로 정하기. 다른 세션은 worktree에서만 작업
+3. **패턴 2** — 매 세션 시작 시 `git fetch + git status` 강제 (동기화)
+4. CLAUDE.md에 *세션 책임 영역* 명시 (main 직접 만짐 / worktree 전용 / 보호 파일 공유)
+5. 보호 파일 목록 공유 (.env*, supabase/migrations/*, package.json deps, 설정 파일)
+6. **패턴 4** — 박제와 코드 세션 물리적 분리 (다른 프로젝트에서 작업)
+7. **패턴 5** — 사용자 결정 대기 시 다른 세션에 즉시 전달
+8. 자율 모드 경계 재인식: 다른 세션 코드 영역, cherry-pick 충돌 해결, 멈춘 PR은 건드리지 않기
+
+### Anti-patterns
+- ❌ 모든 세션이 main 브랜치를 직접 만지기 (diverge 필연)
+- ❌ 다른 세션의 작업 흔적 무시하고 자율 진행
+- ❌ cherry-pick 충돌을 자율로 해결 (코드 의도 결정 필요)
+- ❌ 다른 세션이 멈춘 PR을 진행하기 (재개 시 충돌)
+- ❌ 보호 파일을 다른 세션이 함부로 수정하기 (모든 세션 공유 룰)
+
 ## 자율 모드의 경계 — 다중 세션 버전
 
 *자율 모드*가 활성화된 환경에서 *내가 자율로 처리해서는 안 되는 것*:

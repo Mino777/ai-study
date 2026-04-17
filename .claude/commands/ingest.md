@@ -187,6 +187,33 @@ quiz:
 3. `content-manifest.json`에 새 엔트리가 정상 등록됐는지 확인
 4. 새 엔트리의 `connections`가 실제 존재하는 slug를 가리키는지 확인 (dangling 방지)
 
+## Phase 5b: 크로스 업데이트 (역링크 자동화)
+
+새 엔트리가 `connections`로 기존 엔트리를 참조하면, **기존 엔트리도 새 엔트리를 역참조**해야 한다 (Zettelkasten bidirectional 원칙).
+
+### 실행 절차
+
+1. 새 엔트리의 frontmatter `connections` 배열을 읽는다
+2. 각 연결된 엔트리 파일(`content/<slug>.mdx`)을 열어 frontmatter를 파싱한다
+3. 해당 엔트리의 `connections`에 새 엔트리 slug가 **이미 있으면 skip**, 없으면 추가한다
+4. 추가할 때 기존 connections 배열의 **마지막에** append (알파벳 정렬 X — 의미 순서 보존)
+5. 변경된 파일 목록을 기록한다
+
+### 예시
+
+새 엔트리: `rag/semantic-chunking.mdx` (connections: `[rag/vector-db-selection, agents/tool-use]`)
+
+→ `content/rag/vector-db-selection.mdx`의 connections에 `rag/semantic-chunking` 추가
+→ `content/agents/tool-use.mdx`의 connections에 `rag/semantic-chunking` 추가
+
+### 주의사항
+
+- 기존 엔트리에 이미 역링크가 있으면 **중복 추가 금지**
+- connections 배열이 비어있던 엔트리도 정상 업데이트 (`connections: []` → `connections: [rag/semantic-chunking]`)
+- 기존 엔트리의 다른 frontmatter 필드는 **절대 건드리지 않는다**
+- 존재하지 않는 slug(dangling)는 Phase 5에서 이미 걸러졌으므로 여기서는 존재하는 파일만 처리
+- 크로스 업데이트한 파일 수를 Phase 7 보고에 포함한다
+
 ## Phase 6: 커밋 제안
 
 커밋 메시지 초안:
@@ -212,6 +239,7 @@ quiz:
 - 카테고리 선택 근거
 - 교차 검증에 사용한 소스 리스트 (도구 포함: "oembed로 받음", "WebSearch로 교차")
 - 내가 **확인하지 못한** 부분 (트랜스크립트 없는 영상이면 "본문 내용은 블로그 정리 2개에서 교차 확인")
+- 크로스 업데이트: 역링크 추가된 기존 엔트리 목록 (예: "3개 엔트리에 역링크 추가")
 - 애매한 부분이 있으면 사용자 확인 요청
 
 ---

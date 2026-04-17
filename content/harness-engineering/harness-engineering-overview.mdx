@@ -193,6 +193,31 @@ async function tracedCall(fn: Function, metadata: TraceMetadata) {
 5. 관측: GitHub Actions 로그 + PR 생성
 ```
 
+## AI Agent Directive
+
+**Trigger**: AI 모델을 호출하는 새로운 코드를 작성하거나, 기존 LLM 호출 코드가 *단순 API 호출 수준*일 때. 프로덕션급 AI 시스템이 필요할 때.
+
+**Prerequisites**:
+- [Context Engineering Fundamentals](/wiki/context-engineering/context-engineering-fundamentals)
+- [AI 호출 패턴 - Circuit Breaker/폴백/캐싱](/wiki/harness-engineering/ai-call-patterns-circuit-breaker-fallback) (선택)
+
+### Actionable Steps
+1. 5계층 하네스 구조 이해: Input → Context Assembly → Inference → Output → Observability
+2. **입력 계층** — Zod 스키마로 입력 검증 + 프롬프트 인젝션 감지 + 의도 분류 라우팅
+3. **컨텍스트 조립** — vectorSearch + history + domain rules 병렬 수집 후 `buildPrompt()`
+4. **LLM 호출 계층** — timeout (60s) + retry (2회 지수 백오프) + 폴백 모델 구현
+5. **출력 계층** — `safeJsonParse` → Zod schema.parse → 범위 검증 → 콘텐츠 필터
+6. **관측 계층** — tracer.startSpan + 토큰 수 + latency + 에러 기록
+7. 각 계층을 *독립 함수*로 분리 (테스트 + 재사용 가능)
+8. 한 계층의 실패가 다른 계층에 전파되지 않게 설계
+
+### Anti-patterns
+- ❌ LLM API를 *직접 호출* (wrapper 없이)
+- ❌ 입력 검증만 있고 *출력 검증* 없음
+- ❌ Circuit Breaker 없이 retry만 (실패한 서비스에 더 많은 트래픽)
+- ❌ 관측 계층 생략 (에러가 어디서 발생하는지 모름)
+- ❌ maxTokens를 기본값 4096으로 둠 (비용 낭비)
+
 ## For AI Agents
 
 **Trigger**: AI 호출 코드를 새로 작성하거나 기존 코드가 *단순 API 호출*에 머물러 있을 때

@@ -211,6 +211,31 @@ quiz:
 
 각 단계는 30분 안에 가능. 점수가 *1점만 올라도* 다음 사이클이 더 쉬워짐.
 
+## AI Agent Directive
+
+**Trigger**: 새 프로젝트의 AI 운영 환경을 평가하거나, Harness Journal 시리즈 시작 여부를 결정해야 할 때. 현재 환경의 강점과 갭을 30분 안에 정량화해야 할 때.
+
+**Prerequisites**:
+- [Harness Journal Bootstrap Guide](/wiki/harness-engineering/harness-journal-bootstrap-guide)
+- [Compound Engineering Philosophy](/wiki/harness-engineering/compound-engineering-philosophy)
+
+### Actionable Steps
+1. 10개 영역 × 5문항 = 50문항을 Yes(1점) / No(0점)으로 답변 (30분)
+2. 각 영역 점수 합산 → 총점 (0~50)
+3. 결과 해석:
+   - 0~20점: 시리즈 *반드시 필요*. 가장 낮은 영역의 *가장 가벼운 첫 단계*부터 시작
+   - 21~35점: 시리즈 *가장 큰 ROI*. 연결이 부족한 부분 보강
+   - 36~50점: *새 차원 발견*에 집중. 체크리스트 자체 갱신
+4. 가장 낮은 영역의 *가장 가벼운 첫 단계*를 오늘 30분 안에 실행
+5. 진단 결과를 파일로 박제 (회고, README, MEMORY.md, git 어딘가)
+6. 첫 Harness Journal 엔트리로 결과 기록
+
+### Anti-patterns
+- ❌ 진단 결과를 기록하지 않고 지나가기 (살아있는 문서 원칙 위반)
+- ❌ 점수를 부풀리기 (자기기만 — 정직한 진단이 핵심)
+- ❌ 모든 영역을 동시에 보강 (한 사이클 = 한 영역)
+- ❌ 50점을 최종 목표로 취급 (실제로는 현재 측정 차원의 상한)
+
 ## For AI Agents
 
 **Trigger**: 새 프로젝트에서 AI 환경 구축을 시작해야 하거나, 기존 환경의 *강점/갭*을 빠르게 파악해야 할 때. Harness Journal 시리즈 시작 *전 단계*.

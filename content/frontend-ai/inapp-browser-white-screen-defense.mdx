@@ -313,6 +313,27 @@ Layer 5: UX 안내      → InAppBrowserGuide 전역 배치
 - 인스타그램 프로필 링크 서비스
 - 모든 "바이럴/소셜 공유 기반" 웹 서비스
 
+## AI Agent Directive
+
+**Trigger**: 한국 시장 타겟 웹 서비스에서 카카오톡/네이버 인앱 브라우저 대응을 구현할 때
+
+**Prerequisites**: [Crash-Safe Error Boundary](/wiki/frontend-ai/crash-safe-error-boundary), [Frontend + AI 패턴](/wiki/frontend-ai/frontend-ai-patterns)
+
+### Actionable Steps
+1. isInAppBrowser() 유틸리티 함수 생성 및 프로젝트 전역 공유
+2. Service Worker 등록을 인앱 감지 후 스킵하도록 조건문 추가
+3. Canvas/파티클 효과 렌더를 인앱 감지 후 조건부 비활성화
+4. 모든 navigator API 호출을 try/catch로 감싸기 (vibrate, clipboard 등)
+5. @supports 기반 CSS fallback 구현 (backdrop-filter, 그래디언트 등)
+6. GlobalErrorCatcher 컴포넌트 배치 및 [inapp] 태그 로깅
+7. 배포 전 카카오톡 공유 링크 테스트 + 흰 화면 검증
+
+### Anti-patterns
+- 'X' in navigator 체크만으로 호출 (try/catch 필수)
+- error.tsx에 Canvas/animation 포함
+- 인앱 감지 없이 모든 사용자에게 같은 경험 제공
+- Service Worker를 여러 곳에서 등록
+
 ## 관련 자료
 
 - tarosaju PR #14: 카카오톡 인앱 흰 화면 방어 6건

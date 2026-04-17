@@ -38,3 +38,20 @@ Few-shot prompting은 LLM에게 원하는 출력 형식과 내용을 **예시를
 - 컨텍스트 윈도우 제한으로 예시 수에 한계
 - 예시의 품질이 곧 출력의 품질을 결정
 - 복잡한 추론이 필요한 경우 Chain-of-Thought가 더 효과적
+
+## AI Agent Directive
+
+**Trigger**: AI 에이전트가 LLM 프롬프트를 작성할 때 출력 형식이 불안정하거나, 새로운 도메인에서 zero-shot 성능이 부족할 때
+**Prerequisites**: [Context Engineering 기초](/wiki/context-engineering/context-engineering-fundamentals)
+
+### Actionable Steps
+1. 목표 출력 형식에 맞는 예시를 3~5개 준비한다 (입력-출력 쌍)
+2. 예시의 다양성을 확보한다 — edge case, 부정 예시, 긴/짧은 입력 혼합
+3. 예시 순서는 간단→복잡 순으로 배치한다
+4. 입력과 유사한 예시가 필요하면 Dynamic Few-shot (벡터 검색) 패턴을 적용한다
+5. 컨텍스트 윈도우 대비 예시 토큰 비용을 계산하고, 3개 이하로 줄여도 충분한지 테스트한다
+
+### Anti-patterns
+- 예시 없이 "JSON으로 답해줘"만 쓰고 파싱 실패하는 것
+- 모든 예시가 동일한 패턴이라 모델이 하나의 출력만 학습하는 것
+- 예시가 10개 이상으로 컨텍스트를 과도하게 소비하는 것

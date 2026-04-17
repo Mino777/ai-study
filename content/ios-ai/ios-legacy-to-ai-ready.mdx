@@ -425,6 +425,30 @@ navigationController?.pushViewController(hostingController, animated: true)
 
 ---
 
+## AI Agent Directive
+
+**Trigger**: 회사 iOS 레거시 프로젝트에 AI 에이전트 도입 시, 또는 pbxproj 기반 프로젝트의 AI-Ready 마이그레이션
+
+**Prerequisites**: [iOS AI 코드 품질 보증 전략](/wiki/ios-ai/ios-ai-code-quality-test-strategy), [Apple Intelligence API](/wiki/ios-ai/apple-intelligence-api)
+
+### Actionable Steps
+1. 현재 프로젝트의 AI Readiness Level 판단 (0: pbxproj+Storyboard / 1: xcodeproj+SwiftUI / 2: Tuist+SPM / 3: 완전 SPM)
+2. Day 1: CLAUDE.md (500줄 이하), .claudeignore (.build/, DerivedData, *.pbxproj), settings.json 보호 규칙 적용
+3. Week 1: `.githooks/pre-commit` SwiftLint+SwiftFormat 게이트, 7개 슬래시 커맨드 배치
+4. Week 2: Modules/ 디렉토리 생성, 새 feature는 SPM Package.swift로만 정의
+5. Week 3-4: CommonKit/NetworkKit 등 공유 모듈 추출, SPM 계약 테스트 추가
+6. 기존 코드는 UIKit → SwiftUI 점진적 마이그레이션만 (UIHostingController 활용)
+7. Tuist 도입은 팀이 SPM에 익숙해진 후 Week 4 이후에 검토
+
+### Anti-patterns
+- pbxproj 직접 수정 시도 (Tuist까지 기다리기)
+- Day 1에 코드 변경 시작 (도구 세팅만 우선)
+- 모든 모듈을 한 번에 SPM으로 이관 (새 feature부터 점진적)
+- Storyboard constraint AI로 수정 시도
+- Core Data 마이그레이션 AI에게 맡김
+
+---
+
 ## 자기 점검
 
 1. 현재 프로젝트의 AI Readiness Level은? (0-3)
