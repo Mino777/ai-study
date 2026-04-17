@@ -2,32 +2,34 @@
 
 모든 주목할 만한 변경사항을 이 파일에 기록합니다.
 
-## [2026-04-17] 세션 8 — Directive 100% + 프로젝트별 비용 분석 + 인제스트 역링크
+## [2026-04-17] 세션 8 최종 — Directive 100% + 일방향 0건 + Phase 3 벤치마크 통과
 
-### Added — Directive 대량 투입 + 비용 분석
+### Added
 
-- **AI Agent Directive 100% 커버리지** — 79/79 non-journal 엔트리 모두 Directive 보유 (41% → 100%)
-  - 6개 병렬 에이전트 + 직접 처리로 55개 파일에 Directive 추가
-  - prompt-engineering 4, context-engineering 5, agents 3, evaluation 2, rag 3, harness-engineering 20, frontend-ai 5, ios-ai 4, infrastructure 6, tokenomics 2, fine-tuning 1, backend-ai 0 (기존 보유)
-- **프로젝트별 비용 분석** — `ccusage session --instances`로 첫 프로젝트 분리 측정
-  - moneyflow 45% + tarosaju 26% = 워커 프로젝트가 전체 **70%**
-  - ai-study 15%, aidy 4레포 14%
-- **인제스트 역링크 자동화** — `/ingest` Phase 5b 추가 (크로스 업데이트)
+- **AI Agent Directive 100%** — 79/79 non-journal 엔트리 (41% → 100%, 6개 병렬 에이전트)
+- **일방향 연결 0건** — 339건 → 0건, edges 416 → 762 (양방향 완성)
+- **Phase 3 섀도우 벤치마크** — 적중률 Top-5 93%, Top-1 73%, 토큰 절감 99.8%
+- **프로젝트별 비용 분석** — `ccusage --instances` 첫 활용, moneyflow 45% + tarosaju 26%
+- **신규 엔트리 2건** — 프로젝트별 비용 패턴 + 병렬 에이전트 패턴
+- **신규 스크립트 2건** — `fix-one-way-connections.mjs` + `shadow-benchmark.mjs`
+- **인제스트 역링크 자동화** — `/ingest` Phase 5b 추가
 
-### Changed
+### Fixed
 
-- `harness-journal-bootstrap-guide.mdx` — "For AI Agents" → "AI Agent Directive" 표준 헤딩 변환
-- `tokenomics/claude-code-token-levers-applied-log.mdx` — ccusage 재측정 + 프로젝트별 분석 추가
+- **검색 '최근 엔트리' 버그** — search-index.json 알파벳순 → 날짜 내림차순 정렬
 
 ### Metrics
 
-| 항목 | 값 |
-|---|---|
-| Directive 커버리지 | 41% → **100%** (79/79) |
-| 수정 파일 | 55개, +1,274줄 |
-| 프로젝트별 비용 | moneyflow $552/day (45%), tarosaju $315/day (26%) |
-| RTK 누적 절감 | 53.0M tokens (97.4%) |
-| 빌드 | ✅ 통과 (121 entries) |
+| 항목 | Before | After |
+|---|---|---|
+| Directive | 41% (35/86) | **100%** (79/79) |
+| 일방향 연결 | 339건 | **0건** |
+| 그래프 edges | 416 | **762** |
+| Phase 3 적중률 | 미측정 | Top-5 **93%**, Top-1 **73%** |
+| 토큰 절감 (JIT) | 미측정 | **99.8%** (331K → 821 tokens) |
+| 수정 파일 | - | 116개, +6,497줄 |
+| 빌드 | - | ✅ 통과 (123 entries) |
+| 위키 린트 | - | ✅ 이상 없음 |
 
 ---
 

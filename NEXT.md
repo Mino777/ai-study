@@ -59,23 +59,19 @@
 
 ## 🎯 다음 작업 큐 (우선순위 순)
 
-### 🔴 High — 레버 실효 측정 + Layer 3 Phase 3
+### 🔴 High — JIT 실전 통합 + 레버 실효 측정
 
-1. **A4+C2+D2 레버 실효 측정**
+1. **Layer 3 JIT 검색 실전 통합**
+   - Phase 3 벤치마크 통과 (Top-5 93%, 절감 99.8%)
+   - Claude Code 세션에서 쿼리 시 자동으로 관련 청크 주입하는 훅/프리로드 구현
+   - moneyflow/tarosaju 워커에 이식 가능성 검토
+   - 예상 크기: M~L
+
+2. **A4+C2+D2 레버 실효 측정**
    - 3 사이클 경과 후 `ccusage session --instances`로 프로젝트별 before/after 비교
-   - 특히 D2(Haiku 서브에이전트) 품질 저하 여부 관찰
    - 예상 크기: S
 
-2. **Phase 3 — 섀도우 모드 + 측정**
-   - 기존 전체 로드 vs JIT 주입 출력 차이 (LLM-as-Judge)
-   - 예상 크기: M
-
-### 🟡 Medium — 일방향 연결 해소 + aidy s9
-
-3. **일방향 연결 332건 해소**
-   - 인제스트 역링크 자동화(Phase 5b) 실전 첫 투입
-   - 스크립트로 일괄 역링크 추가 검토
-   - 예상 크기: M
+### 🟡 Medium — aidy s9 + 위키 유지보수
 
 4. **aidy Session 9 박제 대기**
    - s8 backlog: WO-011(Swift 6) / WO-013(워크플로 통합) / WO-016 정상 시나리오

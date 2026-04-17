@@ -71,6 +71,8 @@ public/            → search-index.json (gitignored, SearchDialog lazy fetch용
 - `npm run generate-lesson generate-custom <텍스트>` — 커스텀 주제로 생성 (Gemini가 영문 slug 자동 생성, 한글 slug 금지)
 - `npm run embed-content` — Layer 3 벡터 인덱스 재생성 (multilingual-e5-small, ~100s)
 - `npm run search -- "<query>"` — Layer 3 JIT 검색 (쿼리 라우터 자동 적용, --force로 강제)
+- `node scripts/shadow-benchmark.mjs` — Layer 3 Phase 3 섀도우 벤치마크 (적중률 + 토큰 절감 측정)
+- `node scripts/fix-one-way-connections.mjs [--apply]` — 일방향 연결 감지 + 역링크 일괄 추가
 
 ## Content System
 - All content in `content/` as MDX files with frontmatter
