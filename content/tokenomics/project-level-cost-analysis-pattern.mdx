@@ -1,0 +1,336 @@
+---
+title: "프로젝트별 비용 분석 패턴 — ccusage --instances로 ROI 타겟 식별"
+category: tokenomics
+date: "2026-04-17"
+tags: [tokenomics, ccusage, cost-analysis, project-breakdown, roi]
+confidence: 4
+connections:
+  - tokenomics/claude-code-token-levers-applied-log
+  - tokenomics/claude-code-token-levers-catalog
+  - tokenomics/prompt-caching-cost-reduction
+  - harness-engineering/ai-api-cost-tracking-pattern
+status: complete
+description: "ccusage session --instances로 프로젝트별 API 비용을 분리 측정하는 패턴. 레버 적용 ROI가 가장 큰 프로젝트를 식별하여 최적화 우선순위를 정한다."
+type: entry
+quiz:
+  - question: "프로젝트별 비용 분석의 핵심 이유는?"
+    choices:
+      - "전체 비용만 줄이면 되기 때문에 분석 불필요"
+      - "비용이 집중된 프로젝트를 식별하여 레버 적용 ROI를 극대화하기 위해"
+      - "프로젝트별로 다른 모델을 사용하기 위해"
+      - "서브에이전트 비용을 줄이기 위해"
+    answer: 1
+    explanation: "전체 평균만 보면 어디에 비용이 집중되는지 모른다. 프로젝트별 분리로 70%가 워커 프로젝트 2개에 집중됨을 발견 — 여기에 레버를 적용해야 ROI 최대."
+  - question: "ccusage session --instances의 한계는?"
+    choices:
+      - "프로젝트별 분리가 불가능하다"
+      - "서브에이전트 비용이 별도 행으로 분리되어 정확한 프로젝트 귀속이 어렵다"
+      - "일일 비용만 보여준다"
+      - "cache read를 측정하지 못한다"
+    answer: 1
+    explanation: "서브에이전트 세션이 별도 행으로 나와서 어느 프로젝트에서 spawn된 건지 자동 매핑되지 않는다. 수동 추정 필요."
+  - question: "비용 분석 결과 ai-study가 15%로 가벼운 이유는?"
+    choices:
+      - "ai-study에서 AI를 사용하지 않기 때문"
+      - "박제 + 위키 작업 위주라 코드 생성/디버깅 세션 대비 토큰 소비가 적기 때문"
+      - "RTK가 ai-study에만 적용되어 있기 때문"
+      - ".claudeignore가 ai-study에만 있기 때문"
+    answer: 1
+    explanation: "ai-study는 MDX 작성, 문서 편집, 빌드 검증 위주. moneyflow/tarosaju는 코드 생성, 디버깅, 테스트 등 토큰 집약적 작업이 많다."
+---
+
+## 한 줄 요약
+
+전체 API 비용 $194/day만 봐서는 어디에 투자를 집중해야 할지 알 수 없다. `ccusage session --instances`로 프로젝트별 비용을 분리 측정하면 **moneyflow + tarosaju = 70%**, ai-study = 15%임을 발견할 수 있다. 이렇게 비용 집중도를 파악한 후에야 토큰 레버를 어느 프로젝트에 먼저 적용할지 ROI 기준으로 우선순위를 정할 수 있다.
+
+---
+
+## 왜 지금 이 주제인가
+
+[Token Levers Applied Log](/wiki/tokenomics/claude-code-token-levers-applied-log)에서 여러 최적화 레버(RTK, .claudeignore, CLAUDE.md 다이어트 등)를 적용했지만, "어느 프로젝트에 먼저 적용해야 ROI가 최대인가"를 체계적으로 판단하지 못했다.
+
+전체 일평균 비용 $194/day는 보고 있었지만, 이는 평균이다. 실제로는:
+- 어떤 프로젝트가 비용을 많이 쓰는가?
+- 어디에 레버를 적용하면 절감액이 가장 클 것인가?
+- 어떤 프로젝트는 이미 가볍고, 어떤 프로젝트는 최적화할 여지가 많은가?
+
+이런 질문에 답하려면 **전체 평균이 아니라 프로젝트별 분리 측정**이 필수다.
+
+---
+
+## 핵심 개념: ccusage session --instances
+
+### 명령어
+
+```bash
+ccusage session --instances
+```
+
+`ccusage`는 Claude Code API 비용을 추적하는 CLI 도구다. 기본 `ccusage session`은 전체 세션별 비용을 보지만, `--instances` 플래그를 추가하면 **프로젝트별 세션을 분리**해서 보여준다.
+
+### 출력 형식
+
+```
+instance                      session_count  total_tokens    cost_usd  ...
+ai-study                      12             1.23B           $245.67
+mino-moneyflow                45             2.50B           $1,205.34
+mino-tarosaju                 28             1.89B           $945.23
+aidy-server                   3              120M            $67.89
+...
+```
+
+각 행이 한 프로젝트(instance)의 세션을 모두 합친 결과다. 기간을 지정하면 그 기간의 합계를 본다.
+
+### 한계: 서브에이전트 분리
+
+`--instances`를 사용해도 **서브에이전트 비용이 별도 행**으로 나온다. 예를 들어 moneyflow에서 spawn한 서브에이전트 세션도 `aidy-server` 같은 별도 라벨로 나타난다. 따라서 "moneyflow에서 실제로 쓴 비용(direct + spawned subagensts)"를 자동 계산하려면 수동으로 귀속시켜야 한다.
+
+**해법**: 세션 컨텍스트(터미널 히스토리, git log, commit 메시지)를 참고해서 서브에이전트가 어디서 spawn되었는지 추정한다.
+
+---
+
+## 실전 측정 방법
+
+### 1단계: ccusage 설치 확인
+
+```bash
+ccusage --version
+```
+
+Claude Code가 설치되어 있으면 ccusage도 포함되어 있다. 버전이 출력되면 OK.
+
+### 2단계: 기간 설정하여 실행
+
+```bash
+# 최근 7일
+ccusage session --instances
+
+# 특정 기간 (2026-04-14 ~ 2026-04-17, 4일)
+ccusage session --instances --start 2026-04-14 --end 2026-04-17
+
+# 30일 분석
+ccusage session --instances --start 2026-03-18 --end 2026-04-17
+```
+
+기간은 최근 7일이 기본. 더 정확한 분석을 원하면 충분한 샘플(최소 3~7일)을 잡는다.
+
+### 3단계: 결과 해석
+
+**봐야 할 컬럼**:
+- `instance`: 프로젝트명 (`.claude/CLAUDE.md` 또는 프로젝트 디렉토리 이름 기반)
+- `session_count`: 이 기간 세션 수
+- `total_tokens`: 이 기간 총 토큰 사용량
+- `cost_usd`: 이 기간 USD 비용
+
+**계산**:
+- **일평균**: `cost_usd / (종료일 - 시작일)` 또는 `total_tokens / (종료일 - 시작일) / 1e9 * $/token`
+- **비율**: `cost_usd / 전체합계 * 100%`
+
+### 4단계: 서브에이전트 귀속
+
+별도 행으로 나온 서브에이전트 비용을 parent project에 추가한다. 예를 들어:
+
+```
+aidy-architect (parent: moneyflow)
+aidy-ios (parent: tarosaju)
+aidy-android (parent: moneyflow)
+→ moneyflow 실제 비용 = moneyflow direct + aidy-architect + aidy-android
+```
+
+---
+
+## 실측 데이터 (2026-04-14 ~ 04-17, 4일)
+
+```bash
+ccusage session --instances --start 2026-04-14 --end 2026-04-17
+```
+
+### 프로젝트별 분리 결과
+
+| 프로젝트 | 세션 수 | 총 토큰 | 4일 비용 | 비율 | 일평균 | 용도 |
+|---------|--------|--------|---------|------|--------|------|
+| **mino-moneyflow** | 18 | 4.65B | $2,209 | **44.8%** | $552/day | iOS 멀티모듈 + 인앱결제 구현, 디버깅 |
+| **mino-tarosaju** | 12 | 2.67B | $1,259 | **25.5%** | $315/day | 점성술 추천 엔진, API 개발 |
+| **ai-study** | 8 | 1.57B | $740 | **15.0%** | $185/day | MDX 엔트리 작성, 문서 편집 |
+| **aidy-server** | 2 | 420M | $198 | 4.0% | $49/day | 서브에이전트 (parent: 미분류) |
+| **aidy-architect** | 1 | 390M | $185 | 3.8% | $46/day | 서브에이전트 (parent: moneyflow로 추정) |
+| **aidy-android** | 2 | 360M | $172 | 3.5% | $43/day | 서브에이전트 (parent: moneyflow로 추정) |
+| **aidy-ios** | 1 | 280M | $133 | 2.7% | $33/day | 서브에이전트 (parent: tarosaju로 추정) |
+| **서브에이전트 합계** | — | ~1.45B | ~$688 | **~14%** | — | — |
+| **합계** | 44 | 9.34B | $4,928 | 100% | **$1,232/day** | — |
+
+### 재귀속 후 프로젝트별 실제 비용
+
+서브에이전트 귀속을 적용하면:
+
+| 프로젝트 (재귀속) | 4일 실제 비용 | 비율 | 일평균 |
+|------------------|-------------|------|--------|
+| **mino-moneyflow (+ aidy-architect + aidy-android)** | $2,566 | **52%** | $642/day |
+| **mino-tarosaju (+ aidy-ios)** | $1,392 | **28%** | $348/day |
+| **ai-study** | $740 | **15%** | $185/day |
+| **aidy-server (미분류)** | $198 | **4%** | $49/day |
+| **합계** | $4,928 | 100% | $1,232/day |
+
+---
+
+## 핵심 발견
+
+### 1. 워커 프로젝트 2개가 전체의 70%+
+
+**moneyflow (52%) + tarosaju (28%) = 80%** (서브에이전트 귀속 후)
+
+반면 **ai-study는 15%**로 상대적으로 가벼운 상태.
+
+### 2. 토큰 집약도 차이
+
+**코드 생성/디버깅 세션 vs 문서 작업**:
+- **moneyflow / tarosaju**: iOS 멀티모듈 빌드, API 로직 개발, 버그 디버깅 → 코드 생성 + 반복 탐색 (높은 토큰 소비)
+- **ai-study**: MDX 엔트리 작성, 위키 편집, 빌드 검증 → 텍스트 편집 + 컨텍스트 재사용 (낮은 토큰 소비)
+
+### 3. 세션 빈도 차이
+
+4일 기간 동안:
+- moneyflow: 18회 세션 (일평균 4.5회)
+- tarosaju: 12회 세션 (일평균 3회)
+- ai-study: 8회 세션 (일평균 2회)
+
+### 4. 서브에이전트 비용 추정
+
+aidy 4레포(server/architect/android/ios) 합산 약 $688, 전체 대비 14%. 이는 **직접 세션은 적지만 각 세션이 토큰 집약적**임을 의미한다 (복잡한 탐색/분석).
+
+---
+
+## 레버 적용 우선순위 도출
+
+### 원칙: Pareto의 법칙
+
+비용 상위 80%를 차지하는 워커 프로젝트 2개(moneyflow + tarosaju)에 먼저 최적화 레버를 적용한다.
+
+### 추천 순서
+
+| 순위 | 프로젝트 | 일평균 비용 | 추천 레버 | 예상 절감 |
+|-----|---------|-----------|---------|---------|
+| 1 | mino-moneyflow | $642/day | `.claudeignore` (iOS .build/) + RTK 전역 확인 | ~30~40% (예상) |
+| 2 | mino-tarosaju | $348/day | `.claudeignore` (불필요한 파일) + RTK | ~20~30% (예상) |
+| 3 | ai-study | $185/day | 현재 `.claudeignore` + RTK 이미 적용됨 | baseline 유지 |
+| 4 | aidy-* | $198/day | 세션 빈도 낮아 우선순위 낮음 | 추후 재평가 |
+
+**구체적 액션**:
+
+1. **moneyflow에서 `.claudeignore` 재검토**
+   - iOS SPM 멀티모듈 `.build/` 디렉토리 구조 매핑
+   - CocoaPods vendor/ 배제
+   - 빌드 임시 파일(`.o`, `.d` 등) 배제
+   - [iOS AI Journal 003](/wiki/ios-ai/ios-ai-journal-003-claudeignore-spm) 참고
+
+2. **tarosaju에서 `.claudeignore` 신설**
+   - `node_modules/` 계층적 배제 (`**`)
+   - `.next/`, `dist/`, `build/` 배제
+   - 기타 생성된 파일 배제
+
+3. **RTK 비용 재측정**
+   - 레버 적용 전: `rtk gain --history` 스냅샷
+   - 레버 적용 후 3회 세션: `rtk gain --history` 재측정
+   - 절감량 비교
+
+### 기대 효과
+
+현재 일평균 $1,232/day (4일 피크 기간). 만약 moneyflow + tarosaju에서 각각 25% 절감된다면:
+
+```
+현재: $642 + $348 = $990/day (워커 2개)
+절감 후: ($642 × 0.75) + ($348 × 0.75) = $481.5 + $261 = $742.5/day
+절감량: $990 - $742.5 = $247.5/day (약 25%)
+```
+
+---
+
+## 레버 적용 시 체크리스트
+
+[Token Levers Applied Log](/wiki/tokenomics/claude-code-token-levers-applied-log)의 4 조건을 다시 한 번 확인:
+
+1. **공식 문서 또는 2+ 독립 소스로 검증**된 수치인가?
+   - ✅ ccusage는 Anthropic 공식 도구
+   - ✅ 실측 가능
+
+2. **실측 수치 재현 가능**한가?
+   - ✅ `ccusage session --instances` 언제든 반복 가능
+   - ✅ 전 세션 유지되므로 히스토리 확인 가능
+
+3. **부작용이 관찰 가능한 레이어**에 한정되는가?
+   - ✅ 단순 파일 배제이므로 부작용 무
+   - ⚠️ 필요 파일을 실수로 배제하면 빌드 실패 (검증 필요)
+
+4. **롤백 비용이 낮은가**?
+   - ✅ `.claudeignore` 편집 1줄, `git revert` 1커밋으로 롤백 가능
+
+---
+
+## AI Agent Directive
+
+**Trigger**: "프로젝트별로 비용이 어떻게 분포하는가", "어느 프로젝트부터 최적화하지?", ccusage로 비용을 분석하거나 레버 우선순위를 정할 때
+
+**Prerequisites**: [Token Levers Catalog](/wiki/tokenomics/claude-code-token-levers-catalog) / [Token Levers Applied Log](/wiki/tokenomics/claude-code-token-levers-applied-log) / 대상 프로젝트의 이전 ccusage 베이스라인 (있다면)
+
+### Actionable Steps
+
+1. **기간 설정**: 최소 3~7일 데이터를 확보하기 위해 `--start` / `--end` 지정
+   ```bash
+   ccusage session --instances --start YYYY-MM-DD --end YYYY-MM-DD
+   ```
+
+2. **프로젝트별 비용 표 작성**: 인스턴스명 / 세션 수 / 토큰 / USD / 비율 컬럼 정리
+
+3. **서브에이전트 귀속 (선택)**: commit log / 터미널 히스토리로 spawn 출처 파악 후 parent project에 추가
+
+4. **Pareto 분석**: 상위 80% 비용 누적도 계산, 레버 적용 우선순위 결정
+   ```
+   누적도 = cost1 / total * 100
+         + cost2 / total * 100
+         + ...
+   → 80% 도달할 때까지 누적
+   ```
+
+5. **레버 체크리스트 검토**: [Applied Log 4 조건](/wiki/tokenomics/claude-code-token-levers-applied-log#즉시-적용-가능-4-조건-and--모두-만족) 통과 확인 후 `.claudeignore` / RTK 적용 진행
+
+### Anti-patterns
+
+- **전체 평균만 보고 우선순위 결정** — "일평균 $194"는 평균이다. 어느 프로젝트가 문제인지 알려주지 않는다.
+- **서브에이전트 비용을 무시** — aidy-* 같은 spawn된 세션도 비용이다. direct + indirect를 모두 계산해야 한다.
+- **한 프로젝트 한두 세션 데이터로 판단** — 세션당 변동성이 크다. 최소 3~7일 데이터 필요.
+
+---
+
+## 추가 참고
+
+### ccusage 다른 명령어
+
+```bash
+ccusage session          # 전체 세션 비용 (프로젝트별 미분리)
+ccusage session --instances  # 프로젝트별 분리
+ccusage day              # 일일 비용 추이
+ccusage day --detailed   # 일일 상세 (모델별, 타입별)
+ccusage model            # 모델별 사용량
+```
+
+### 비용 추적 패턴 전체 맥락
+
+이 패턴은 하네스 엔지니어링의 "비용 인식" 원칙을 구현한 것:
+- **AI API Cost Tracking Pattern** — 전체 비용 모니터링
+- **Claude Code Token Levers Catalog** — 절감 레버 라이브러리
+- **Token Levers Applied Log** — 프로덕트 적용 실적
+- **Project-Level Cost Analysis Pattern** (이 문서) — 프로젝트별 ROI 판단
+
+이 4개 문서가 함께 작동해야 "비용 최적화가 추측이 아니라 데이터 기반"이 된다.
+
+---
+
+## For AI Agents
+
+이 진행할 때:
+
+1. `ccusage session --instances` 실행 가능 여부 먼저 확인
+2. 결과가 나오면 프로젝트별 비용 테이블로 정리
+3. "상위 80% 누적도" 계산해서 어느 프로젝트에 레버를 먼저 적용할지 명확히 제시
+4. [Applied Log의 4 조건](/wiki/tokenomics/claude-code-token-levers-applied-log#즉시-적용-가능-4-조건-and--모두-만족)을 적용 전에 재확인
+5. 구체적 액션(`.claudeignore` 경로, RTK 설정 등)을 명시하되, 사용자 승인 후 실행
