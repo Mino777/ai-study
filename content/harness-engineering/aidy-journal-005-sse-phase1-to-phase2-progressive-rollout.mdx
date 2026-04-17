@@ -1,9 +1,16 @@
 ---
-title: "Aidy Journal 005 — ADR-008 SSE Phase 1→2 점진 도입 (fake-stream → 실연동)"
+title: Aidy Journal 005 — ADR-008 SSE Phase 1→2 점진 도입 (fake-stream → 실연동)
 category: harness-engineering
 series: aidy-journal
-date: "2026-04-16"
-tags: [aidy-journal, sse, streaming, adr-008, progressive-rollout, feature-flag-free, 0-dep]
+date: '2026-04-16'
+tags:
+  - aidy-journal
+  - sse
+  - streaming
+  - adr-008
+  - progressive-rollout
+  - feature-flag-free
+  - 0-dep
 confidence: 4
 connections:
   - harness-engineering/aidy-journal-002-stability-observability-test-integrity
@@ -11,34 +18,58 @@ connections:
   - ios-ai/urlsession-bytes-sse-subscription
   - android-ai/okhttp-buffered-source-sse
   - backend-ai/spring-boot-ai-circuit-breaker
+  - android-ai/android-flow-map-via-aidy-android
+  - backend-ai/backend-flow-map-via-aidy-server
+  - harness-engineering/aidy-journal-000-architect-worker-baseline
+  - harness-engineering/aidy-journal-006-ios-ci-self-hosted-runner-migration
+  - ios-ai/ios-flow-map-via-aidy-ios
 status: complete
-description: "Session 5 R7에서 ADR-008 Phase 1(fake-stream, 응답 텍스트 분할)을 서버 단독 도입. Session 6 R2~R4에서 Phase 2로 Anthropic streaming 실연동 + 3-클라이언트 SSE 구독. 외부 SSE 라이브러리 0, Circuit Breaker 스트리밍 확장 적용. Feature Flag 없이 Phase 경계만으로 점진 도입한 ADR 운영 실례."
+description: >-
+  Session 5 R7에서 ADR-008 Phase 1(fake-stream, 응답 텍스트 분할)을 서버 단독 도입. Session 6
+  R2~R4에서 Phase 2로 Anthropic streaming 실연동 + 3-클라이언트 SSE 구독. 외부 SSE 라이브러리 0,
+  Circuit Breaker 스트리밍 확장 적용. Feature Flag 없이 Phase 경계만으로 점진 도입한 ADR 운영 실례.
 type: entry
 quiz:
-  - question: "ADR-008에서 WebSocket 대신 SSE를 선택한 이유는?"
+  - question: ADR-008에서 WebSocket 대신 SSE를 선택한 이유는?
     choices:
-      - "WebSocket 라이브러리가 무거워서"
-      - "채팅 응답은 서버→클라 단방향 스트리밍이라 SseEmitter(Spring 내장)로 충분. 양방향 채널 불필요 → 프로토콜 복잡도 감소 + 0 dep"
-      - "iOS가 WebSocket 미지원"
-      - "브라우저 호환성"
+      - WebSocket 라이브러리가 무거워서
+      - >-
+        채팅 응답은 서버→클라 단방향 스트리밍이라 SseEmitter(Spring 내장)로 충분. 양방향 채널 불필요 → 프로토콜 복잡도
+        감소 + 0 dep
+      - iOS가 WebSocket 미지원
+      - 브라우저 호환성
     answer: 1
-    explanation: "AI 응답 토큰 흐름은 서버→클라 단방향이다. SseEmitter는 Spring 기본 제공, 프록시/로드밸런서 HTTP 1.1 친화, 외부 라이브러리 0. WebSocket은 양방향/바이너리/프레임 관리 오버헤드가 있고 이 유즈케이스에 과다. ADR-008에 '단방향이면 SSE' 원칙 박제."
-  - question: "Phase 1(fake-stream) → Phase 2(실연동) 를 Feature Flag 없이 점진 도입한 방식은?"
+    explanation: >-
+      AI 응답 토큰 흐름은 서버→클라 단방향이다. SseEmitter는 Spring 기본 제공, 프록시/로드밸런서 HTTP 1.1 친화,
+      외부 라이브러리 0. WebSocket은 양방향/바이너리/프레임 관리 오버헤드가 있고 이 유즈케이스에 과다. ADR-008에
+      '단방향이면 SSE' 원칙 박제.
+  - question: Phase 1(fake-stream) → Phase 2(실연동) 를 Feature Flag 없이 점진 도입한 방식은?
     choices:
-      - "Phase 1 삭제 후 Phase 2 새로 작성"
-      - "Phase 1을 별도 엔드포인트로 유지하고 Phase 2 추가 배포"
-      - "**동일 엔드포인트**의 내부 구현만 교체 — Phase 1 AiService.chatStream이 응답 텍스트를 공백 분할해 onToken 호출, Phase 2는 Anthropic `stream=true` 실시간 파싱으로 교체. 클라이언트 계약 불변"
-      - "A/B 테스트 프레임워크"
+      - Phase 1 삭제 후 Phase 2 새로 작성
+      - Phase 1을 별도 엔드포인트로 유지하고 Phase 2 추가 배포
+      - >-
+        **동일 엔드포인트**의 내부 구현만 교체 — Phase 1 AiService.chatStream이 응답 텍스트를 공백 분할해
+        onToken 호출, Phase 2는 Anthropic `stream=true` 실시간 파싱으로 교체. 클라이언트 계약 불변
+      - A/B 테스트 프레임워크
     answer: 2
-    explanation: "SSE 엔드포인트(POST /api/chat/stream)와 `(onToken, onDone, onError)` 콜백 계약은 Phase 1/2 동일. 내부 구현만 `executeStreaming` 으로 교체 → 클라는 변경 불필요. Feature Flag 없이도 Phase 경계가 ADR에 명시돼 있어 롤백/논의 가능. 오버엔지니어링 회피."
-  - question: "3-클라이언트 모두 외부 SSE 라이브러리 0을 유지한 기술 선택은?"
+    explanation: >-
+      SSE 엔드포인트(POST /api/chat/stream)와 `(onToken, onDone, onError)` 콜백 계약은
+      Phase 1/2 동일. 내부 구현만 `executeStreaming` 으로 교체 → 클라는 변경 불필요. Feature Flag
+      없이도 Phase 경계가 ADR에 명시돼 있어 롤백/논의 가능. 오버엔지니어링 회피.
+  - question: 3-클라이언트 모두 외부 SSE 라이브러리 0을 유지한 기술 선택은?
     choices:
-      - "서버만 SSE, 클라는 폴링"
-      - "iOS `URLSession.bytes(for:)` + Android `BufferedSource.readUtf8Line()` — 각 플랫폼 표준 API로 SSE 라인 단위 파싱. iOS Combine/RxSwift, Android OkHttp-SSE 등 외부 의존성 0"
-      - "Firebase Realtime Database"
-      - "gRPC streaming"
+      - '서버만 SSE, 클라는 폴링'
+      - >-
+        iOS `URLSession.bytes(for:)` + Android `BufferedSource.readUtf8Line()` —
+        각 플랫폼 표준 API로 SSE 라인 단위 파싱. iOS Combine/RxSwift, Android OkHttp-SSE 등 외부
+        의존성 0
+      - Firebase Realtime Database
+      - gRPC streaming
     answer: 1
-    explanation: "iOS는 iOS 15+ `URLSession.bytes(for:)` 의 AsyncLineSequence로 라인 단위 스트림 수신. Android는 OkHttp Response body의 `BufferedSource.readUtf8Line()` 로 동등. 표준 API로 충분하고 외부 라이브러리는 보안/업데이트 리스크만 추가. ADR-003 (클라이언트 동기화)와 부합."
+    explanation: >-
+      iOS는 iOS 15+ `URLSession.bytes(for:)` 의 AsyncLineSequence로 라인 단위 스트림 수신.
+      Android는 OkHttp Response body의 `BufferedSource.readUtf8Line()` 로 동등. 표준
+      API로 충분하고 외부 라이브러리는 보안/업데이트 리스크만 추가. ADR-003 (클라이언트 동기화)와 부합.
 ---
 
 ## Before — Journal 002 이후의 상태

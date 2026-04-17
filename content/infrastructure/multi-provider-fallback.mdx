@@ -1,12 +1,22 @@
 ---
-title: "멀티 프로바이더 Fallback 아키텍처"
+title: 멀티 프로바이더 Fallback 아키텍처
 category: infrastructure
-date: "2026-04-09"
-tags: [fallback, circuit-breaker, retry, resilience, multi-provider]
+date: '2026-04-09'
+tags:
+  - fallback
+  - circuit-breaker
+  - retry
+  - resilience
+  - multi-provider
 confidence: 3
-connections: [agents/multi-agent-pipeline, agents/tool-use]
+connections:
+  - agents/multi-agent-pipeline
+  - agents/tool-use
+  - infrastructure/streaming-architecture
+  - infrastructure/vercel-hobby-cron-silent-failure
+  - prompt-engineering/structured-output
 status: complete
-description: "여러 LLM 프로바이더를 자동 전환하는 회복 탄력적 아키텍처. Circuit breaker + 지수 백오프."
+description: 여러 LLM 프로바이더를 자동 전환하는 회복 탄력적 아키텍처. Circuit breaker + 지수 백오프.
 type: entry
 ---
 

@@ -1,32 +1,47 @@
 ---
-title: "인앱 브라우저 흰 화면 방어 — 카카오톡/네이버 WebView에서 React 앱이 죽는 이유와 해결"
+title: 인앱 브라우저 흰 화면 방어 — 카카오톡/네이버 WebView에서 React 앱이 죽는 이유와 해결
 category: frontend-ai
-date: "2026-04-12"
-tags: [frontend-ai, inapp-browser, kakaotalk, webview, error-boundary, react, next-js, crash-safe]
+date: '2026-04-12'
+tags:
+  - frontend-ai
+  - inapp-browser
+  - kakaotalk
+  - webview
+  - error-boundary
+  - react
+  - next-js
+  - crash-safe
 confidence: 5
 connections:
   - harness-engineering/harness-engineering-overview
   - frontend-ai/frontend-ai-patterns
+  - frontend-ai/crash-safe-error-boundary
 status: complete
-description: "카카오톡 인앱 브라우저에서 React 앱이 흰 화면이 되는 현상의 root cause와 11건 방어 패턴. 핵심: error boundary가 crash하면 React가 렌더할 곳이 없다."
+description: >-
+  카카오톡 인앱 브라우저에서 React 앱이 흰 화면이 되는 현상의 root cause와 11건 방어 패턴. 핵심: error
+  boundary가 crash하면 React가 렌더할 곳이 없다.
 type: entry
 quiz:
-  - question: "React error boundary에 Canvas나 Framer Motion을 사용하면 안 되는 이유는?"
+  - question: React error boundary에 Canvas나 Framer Motion을 사용하면 안 되는 이유는?
     choices:
-      - "번들 사이즈가 커진다"
-      - "error boundary 자체가 crash하면 React가 렌더할 곳이 없어서 흰 화면이 된다"
-      - "SEO에 불리하다"
-      - "TypeScript 타입 에러가 난다"
+      - 번들 사이즈가 커진다
+      - error boundary 자체가 crash하면 React가 렌더할 곳이 없어서 흰 화면이 된다
+      - SEO에 불리하다
+      - TypeScript 타입 에러가 난다
     answer: 1
-    explanation: "Error boundary는 앱의 *마지막 방어선*. 여기에 실패 가능한 코드(Canvas, animation lib, dynamic import)를 넣으면 에러 시 cascading crash가 발생하고 사용자는 빈 화면만 보게 됨."
-  - question: "인앱 WebView에서 Service Worker 등록이 위험한 이유는?"
+    explanation: >-
+      Error boundary는 앱의 *마지막 방어선*. 여기에 실패 가능한 코드(Canvas, animation lib, dynamic
+      import)를 넣으면 에러 시 cascading crash가 발생하고 사용자는 빈 화면만 보게 됨.
+  - question: 인앱 WebView에서 Service Worker 등록이 위험한 이유는?
     choices:
-      - "SW가 캐시를 너무 많이 써서 메모리 부족"
-      - "보안 정책 위반"
-      - "WebView가 SW를 불완전하게 지원해서 등록이 hang되거나 page load를 block할 수 있음"
-      - "SW가 push 알림을 보내서 사용자 불편"
+      - SW가 캐시를 너무 많이 써서 메모리 부족
+      - 보안 정책 위반
+      - WebView가 SW를 불완전하게 지원해서 등록이 hang되거나 page load를 block할 수 있음
+      - SW가 push 알림을 보내서 사용자 불편
     answer: 2
-    explanation: "카카오톡/네이버 인앱 WebView는 Service Worker를 부분적으로만 지원. registration이 pending 상태로 hang되면 페이지 전체가 block됨."
+    explanation: >-
+      카카오톡/네이버 인앱 WebView는 Service Worker를 부분적으로만 지원. registration이 pending 상태로
+      hang되면 페이지 전체가 block됨.
 ---
 
 ## 배경 — 프로덕션에서 터진 이슈

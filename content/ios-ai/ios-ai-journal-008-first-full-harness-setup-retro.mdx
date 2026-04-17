@@ -1,14 +1,36 @@
 ---
-title: "iOS Harness Journal 008 — iOS 하네스 첫 풀셋업 후기: 프로덕션 코드 0, 에이전트 4 + 스킬 5 + 훅 4 + 커맨드 8"
+title: >-
+  iOS Harness Journal 008 — iOS 하네스 첫 풀셋업 후기: 프로덕션 코드 0, 에이전트 4 + 스킬 5 + 훅 4 +
+  커맨드 8
 category: ios-ai
 series: ios-ai-journal
-date: "2026-04-15"
-tags: [ios-harness-journal, ios, claude-code, harness-engineering, onboarding, agents, skills, hooks, slash-commands, retrospective]
+date: '2026-04-15'
+tags:
+  - ios-harness-journal
+  - ios
+  - claude-code
+  - harness-engineering
+  - onboarding
+  - agents
+  - skills
+  - hooks
+  - slash-commands
+  - retrospective
 confidence: 4
-connections: [ios-ai/ios-ai-journal-000-baseline, ios-ai/ios-ai-journal-005-ios-compound, ios-ai/ios-ai-journal-006-spm-cycle-break, ios-ai/ios-ai-journal-007-claude-hooks-silent-failure, harness-engineering/ai-agent-start-here]
+connections:
+  - ios-ai/ios-ai-journal-000-baseline
+  - ios-ai/ios-ai-journal-005-ios-compound
+  - ios-ai/ios-ai-journal-006-spm-cycle-break
+  - ios-ai/ios-ai-journal-007-claude-hooks-silent-failure
+  - harness-engineering/ai-agent-start-here
+  - ios-ai/ios-ai-journal-009-ai-probe-dual-pipeline
 status: complete
 type: entry
-description: "Journal 000~007이 조각이라면, 이 글은 그 조각들이 처음으로 한 저장소 안에서 모두 맞물리는 모양을 기록한다. 멀티모듈 SPM iOS 앱(moneyflow-ios)에 AI 하네스를 전면 이식한 하루짜리 스프린트. 에이전트 4 / 스킬 5 / 훅 4 / 커맨드 8 / detect-context 스크립트 / 팀 온보딩용 setup.sh까지 — 프로덕션 코드는 한 줄도 안 바꾸고 오로지 `.claude/` + `.githooks/` + `CLAUDE.md`만 건드린 전면 이식. 무엇을 넣었고, 무엇을 일부러 뺐고, 다시 한다면 어떤 순서로 할지."
+description: >-
+  Journal 000~007이 조각이라면, 이 글은 그 조각들이 처음으로 한 저장소 안에서 모두 맞물리는 모양을 기록한다. 멀티모듈 SPM
+  iOS 앱(moneyflow-ios)에 AI 하네스를 전면 이식한 하루짜리 스프린트. 에이전트 4 / 스킬 5 / 훅 4 / 커맨드 8 /
+  detect-context 스크립트 / 팀 온보딩용 setup.sh까지 — 프로덕션 코드는 한 줄도 안 바꾸고 오로지 `.claude/` +
+  `.githooks/` + `CLAUDE.md`만 건드린 전면 이식. 무엇을 넣었고, 무엇을 일부러 뺐고, 다시 한다면 어떤 순서로 할지.
 ---
 
 ## 한 줄 요약

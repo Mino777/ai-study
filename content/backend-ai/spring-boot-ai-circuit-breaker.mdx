@@ -1,34 +1,54 @@
 ---
-title: "Spring Boot AI Circuit Breaker — 0 Dependency In-Memory 구현"
+title: Spring Boot AI Circuit Breaker — 0 Dependency In-Memory 구현
 category: backend-ai
-date: "2026-04-16"
-tags: [spring-boot, kotlin, circuit-breaker, ai-resilience, aidy, adr]
+date: '2026-04-16'
+tags:
+  - spring-boot
+  - kotlin
+  - circuit-breaker
+  - ai-resilience
+  - aidy
+  - adr
 confidence: 4
 connections:
   - agents/multi-provider-circuit-breaker
   - harness-engineering/aidy-journal-002-stability-observability-test-integrity
-  - harness-engineering/aidy-journal-005-sse-phase1-to-phase2-progressive-rollout
+  - >-
+    harness-engineering/aidy-journal-005-sse-phase1-to-phase2-progressive-rollout
   - backend-ai/spring-boot-sse-streaming-0-dep
+  - backend-ai/backend-flow-map-via-aidy-server
 status: complete
-description: "Spring Boot + Kotlin 환경에서 외부 의존성(Resilience4j, Redis) 없이 in-memory Circuit Breaker를 구현하는 패턴. CLOSED/OPEN/HALF_OPEN 3상태 머신 + Sliding Window failure counting. ADR-007 Phase 1 — 단일 서버 + 단일 API key 환경에서의 최소 복잡도 설계."
+description: >-
+  Spring Boot + Kotlin 환경에서 외부 의존성(Resilience4j, Redis) 없이 in-memory Circuit
+  Breaker를 구현하는 패턴. CLOSED/OPEN/HALF_OPEN 3상태 머신 + Sliding Window failure
+  counting. ADR-007 Phase 1 — 단일 서버 + 단일 API key 환경에서의 최소 복잡도 설계.
 type: entry
 quiz:
-  - question: "Phase 1에서 in-memory + 0 dependency Circuit Breaker를 선택한 이유는?"
+  - question: Phase 1에서 in-memory + 0 dependency Circuit Breaker를 선택한 이유는?
     choices:
-      - "Resilience4j가 무거워서"
-      - "단일 서버 인스턴스 + 단일 API key 환경에서 외부 의존성(Redis, Resilience4j) 추가는 Phase 1 범위 초과. ADR-007에 Phase 1(in-memory)/Phase 2(분산) 경계 명시"
-      - "Kotlin에서 라이브러리 호환성 문제"
-      - "비용 때문"
+      - Resilience4j가 무거워서
+      - >-
+        단일 서버 인스턴스 + 단일 API key 환경에서 외부 의존성(Redis, Resilience4j) 추가는 Phase 1 범위
+        초과. ADR-007에 Phase 1(in-memory)/Phase 2(분산) 경계 명시
+      - Kotlin에서 라이브러리 호환성 문제
+      - 비용 때문
     answer: 1
-    explanation: "조기 복잡성 도입 회피. 단일 인스턴스에서는 ConcurrentHashMap 기반 in-memory CB로 충분. 2nd API key 추가 + 멀티 인스턴스 시점에 Phase 2로 Redis/Resilience4j 도입을 검토. ADR-005의 '명시적 보류' 패턴과 동일."
-  - question: "HALF_OPEN 상태가 존재해야 하는 이유는?"
+    explanation: >-
+      조기 복잡성 도입 회피. 단일 인스턴스에서는 ConcurrentHashMap 기반 in-memory CB로 충분. 2nd API
+      key 추가 + 멀티 인스턴스 시점에 Phase 2로 Redis/Resilience4j 도입을 검토. ADR-005의 '명시적 보류'
+      패턴과 동일.
+  - question: HALF_OPEN 상태가 존재해야 하는 이유는?
     choices:
-      - "로깅 편의"
-      - "OPEN에서 CLOSED로 직접 전이하면 아직 복구 안 된 프로바이더에 full traffic이 몰림. HALF_OPEN은 쿨다운 후 1회만 시도하여 복구 여부를 안전하게 자동 감지"
-      - "테스트 작성을 쉽게 하기 위해"
-      - "Spring 요구사항"
+      - 로깅 편의
+      - >-
+        OPEN에서 CLOSED로 직접 전이하면 아직 복구 안 된 프로바이더에 full traffic이 몰림. HALF_OPEN은 쿨다운
+        후 1회만 시도하여 복구 여부를 안전하게 자동 감지
+      - 테스트 작성을 쉽게 하기 위해
+      - Spring 요구사항
     answer: 1
-    explanation: "OPEN→CLOSED 직접 전이는 회복 중인 프로바이더에 부담을 준다. HALF_OPEN은 1회만 허용하여 성공하면 CLOSED, 실패하면 다시 OPEN으로 돌아간다. 이 시험 호출이 복구 자동 감지의 핵심."
+    explanation: >-
+      OPEN→CLOSED 직접 전이는 회복 중인 프로바이더에 부담을 준다. HALF_OPEN은 1회만 허용하여 성공하면 CLOSED,
+      실패하면 다시 OPEN으로 돌아간다. 이 시험 호출이 복구 자동 감지의 핵심.
 ---
 
 ## 갭 / 맥락

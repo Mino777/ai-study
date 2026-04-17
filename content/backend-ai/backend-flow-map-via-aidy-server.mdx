@@ -1,8 +1,14 @@
 ---
-title: "aidy-server로 그리는 백엔드 흐름 맵 — iOS 개발자를 위한 큰 그림"
+title: aidy-server로 그리는 백엔드 흐름 맵 — iOS 개발자를 위한 큰 그림
 category: backend-ai
-date: "2026-04-16"
-tags: [spring-boot, kotlin, backend-fundamentals, aidy, ios-to-backend, learning-path]
+date: '2026-04-16'
+tags:
+  - spring-boot
+  - kotlin
+  - backend-fundamentals
+  - aidy
+  - ios-to-backend
+  - learning-path
 confidence: 2
 connections:
   - backend-ai/spring-boot-ai-circuit-breaker
@@ -10,35 +16,58 @@ connections:
   - backend-ai/password-reset-security-pattern
   - backend-ai/pg-trgm-gin-index-for-like-search
   - harness-engineering/aidy-journal-000-architect-worker-baseline
-  - harness-engineering/aidy-journal-005-sse-phase1-to-phase2-progressive-rollout
+  - >-
+    harness-engineering/aidy-journal-005-sse-phase1-to-phase2-progressive-rollout
+  - android-ai/android-flow-map-via-aidy-android
+  - context-engineering/api-contract-as-3-client-source-of-truth
+  - evaluation/test-strategy-3-client-via-aidy
+  - harness-engineering/architect-flow-map-via-aidy-architect
+  - infrastructure/aidy-3-client-deployment-design-roadmap
+  - ios-ai/ios-flow-map-via-aidy-ios
 status: complete
-description: "iOS 개발자가 aidy-server(Spring Boot + Kotlin) 레포로 백엔드를 학습할 때, 코드 디테일이 아닌 '요청 하나의 여정'을 따라가며 큰 그림을 잡는 학습 경로. 인증/DB/외부 API/에러 처리/운영을 한 묶음으로 이해하기 위한 로드맵과 iOS 대응 매핑표."
+description: >-
+  iOS 개발자가 aidy-server(Spring Boot + Kotlin) 레포로 백엔드를 학습할 때, 코드 디테일이 아닌 '요청 하나의
+  여정'을 따라가며 큰 그림을 잡는 학습 경로. 인증/DB/외부 API/에러 처리/운영을 한 묶음으로 이해하기 위한 로드맵과 iOS 대응
+  매핑표.
 type: entry
 quiz:
-  - question: "백엔드 큰 그림 학습에서 '요청 하나의 여정'을 따라가는 방식을 가장 먼저 추천하는 이유는?"
+  - question: 백엔드 큰 그림 학습에서 '요청 하나의 여정'을 따라가는 방식을 가장 먼저 추천하는 이유는?
     choices:
-      - "코드 파일 수가 적어서"
-      - "파일/계층별로 읽으면 각 조각이 왜 필요한지 맥락을 잃기 쉬움. 한 요청(예: POST /api/chat)을 필터 → 컨트롤러 → 서비스 → DB → 응답까지 관통시키면 모든 조각이 자연스럽게 한 줄기에 꿰인다"
-      - "Spring Boot 공식 문서가 그렇게 추천하기 때문"
-      - "테스트 작성이 쉬워서"
+      - 코드 파일 수가 적어서
+      - >-
+        파일/계층별로 읽으면 각 조각이 왜 필요한지 맥락을 잃기 쉬움. 한 요청(예: POST /api/chat)을 필터 → 컨트롤러 →
+        서비스 → DB → 응답까지 관통시키면 모든 조각이 자연스럽게 한 줄기에 꿰인다
+      - Spring Boot 공식 문서가 그렇게 추천하기 때문
+      - 테스트 작성이 쉬워서
     answer: 1
-    explanation: "Controller, Service, Repository, Filter, Exception Handler를 각각 따로 읽으면 '이게 왜 있어야 하는가'에 대한 감각이 생기지 않는다. 한 요청의 여정은 모든 레이어가 한 번에 호출되는 유일한 관점이라, 큰 그림을 잡는 가장 빠른 경로다."
-  - question: "iOS의 'Interceptor/Middleware' 개념과 가장 가까운 Spring Boot 구성 요소는?"
+    explanation: >-
+      Controller, Service, Repository, Filter, Exception Handler를 각각 따로 읽으면 '이게
+      왜 있어야 하는가'에 대한 감각이 생기지 않는다. 한 요청의 여정은 모든 레이어가 한 번에 호출되는 유일한 관점이라, 큰 그림을 잡는
+      가장 빠른 경로다.
+  - question: iOS의 'Interceptor/Middleware' 개념과 가장 가까운 Spring Boot 구성 요소는?
     choices:
-      - "@Service"
-      - "Filter / Interceptor (JwtAuthenticationFilter, RateLimitInterceptor)"
-      - "Entity"
-      - "Repository"
+      - '@Service'
+      - 'Filter / Interceptor (JwtAuthenticationFilter, RateLimitInterceptor)'
+      - Entity
+      - Repository
     answer: 1
-    explanation: "요청이 Controller에 도달하기 전에 공통 관심사(인증, Request-Id 부여, Rate Limit)를 처리하는 레이어. iOS의 Alamofire RequestInterceptor / URLProtocol 스택과 같은 역할. 개별 Controller가 각자 토큰 검증을 하지 않도록 한다."
-  - question: "Circuit Breaker가 백엔드에서 '큰 그림' 수준에서 중요한 이유는?"
+    explanation: >-
+      요청이 Controller에 도달하기 전에 공통 관심사(인증, Request-Id 부여, Rate Limit)를 처리하는 레이어.
+      iOS의 Alamofire RequestInterceptor / URLProtocol 스택과 같은 역할. 개별 Controller가
+      각자 토큰 검증을 하지 않도록 한다.
+  - question: Circuit Breaker가 백엔드에서 '큰 그림' 수준에서 중요한 이유는?
     choices:
-      - "코드가 예뻐져서"
-      - "외부 API(Claude 등)가 일시 장애일 때 무한 재시도가 rate limit 증폭·비용 폭증·사용자 대기를 일으키므로, 장애를 격리하고 빠르게 503으로 끊어주는 '연쇄 장애 차단기'가 필요하기 때문"
-      - "Spring Boot 필수 기능이라서"
-      - "테스트 커버리지를 높이기 위해"
+      - 코드가 예뻐져서
+      - >-
+        외부 API(Claude 등)가 일시 장애일 때 무한 재시도가 rate limit 증폭·비용 폭증·사용자 대기를 일으키므로,
+        장애를 격리하고 빠르게 503으로 끊어주는 '연쇄 장애 차단기'가 필요하기 때문
+      - Spring Boot 필수 기능이라서
+      - 테스트 커버리지를 높이기 위해
     answer: 1
-    explanation: "단일 장애가 시스템 전체를 주저앉히지 않도록 '의도적 실패 fast-fail'을 만드는 것이 Circuit Breaker. aidy-server는 ADR-007에 따라 in-memory CB로 Claude API 의존성을 격리한다. 외부 의존성을 다루는 모든 백엔드의 공통 주제."
+    explanation: >-
+      단일 장애가 시스템 전체를 주저앉히지 않도록 '의도적 실패 fast-fail'을 만드는 것이 Circuit Breaker.
+      aidy-server는 ADR-007에 따라 in-memory CB로 Claude API 의존성을 격리한다. 외부 의존성을 다루는
+      모든 백엔드의 공통 주제.
 ---
 
 ## 한 줄 요약

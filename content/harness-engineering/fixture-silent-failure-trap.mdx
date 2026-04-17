@@ -1,32 +1,56 @@
 ---
-title: "R38 Silent Failure — fixture가 작동하는 '척'하는 함정"
+title: R38 Silent Failure — fixture가 작동하는 '척'하는 함정
 category: harness-engineering
-date: "2026-04-12"
-tags: [harness-engineering, e2e-testing, fixture, false-positive, playwright, supabase]
+date: '2026-04-12'
+tags:
+  - harness-engineering
+  - e2e-testing
+  - fixture
+  - false-positive
+  - playwright
+  - supabase
 confidence: 5
 connections:
   - harness-engineering/harness-engineering-overview
   - harness-engineering/ai-testing-strategies
+  - harness-engineering/harness-journal-020-promise-timeout-wrapper
+  - harness-engineering/shell-pipe-exit-code-trap
+  - harness-engineering/supabase-realtime-channel-retry-trap
+  - infrastructure/cron-execution-tracking-pattern
 status: complete
-description: "Supabase 세션 fixture가 테스트를 통과시켰지만 실제로는 작동하지 않았던 사례. cookie name mismatch로 인한 silent failure와 false positive의 위험성, 그리고 production-safe testing hook(window.__E2E_AUTH__)으로 직접 검증하는 해결 패턴."
+description: >-
+  Supabase 세션 fixture가 테스트를 통과시켰지만 실제로는 작동하지 않았던 사례. cookie name mismatch로 인한
+  silent failure와 false positive의 위험성, 그리고 production-safe testing
+  hook(window.__E2E_AUTH__)으로 직접 검증하는 해결 패턴.
 type: entry
 quiz:
-  - question: "R38 fixture의 cookie name mismatch가 발생한 근본 원인은?"
+  - question: R38 fixture의 cookie name mismatch가 발생한 근본 원인은?
     choices:
-      - "Playwright가 cookie를 제대로 주입하지 못해서"
-      - "SUPABASE_PROJECT_REF를 'placeholder'로 하드코딩했는데, 로컬 .env.local의 실제 Supabase URL과 달라서 cookie 이름이 불일치"
-      - "Supabase SDK 버전이 달라서"
-      - "base64 인코딩 형식이 잘못돼서"
+      - Playwright가 cookie를 제대로 주입하지 못해서
+      - >-
+        SUPABASE_PROJECT_REF를 'placeholder'로 하드코딩했는데, 로컬 .env.local의 실제 Supabase
+        URL과 달라서 cookie 이름이 불일치
+      - Supabase SDK 버전이 달라서
+      - base64 인코딩 형식이 잘못돼서
     answer: 1
-    explanation: "Supabase의 storageKey는 `sb-${hostname.split('.')[0]}-auth-token` 형식. fixture는 `sb-placeholder-auth-token`으로 cookie를 주입했지만, 실제 앱은 `sb-<실제projectRef>-auth-token`을 읽으므로 cookie를 찾지 못함. 테스트는 '페이지가 렌더됨'만 확인했기에 통과."
-  - question: "Fixture smoke test에서 '간접 검증'과 '직접 검증'의 차이는?"
+    explanation: >-
+      Supabase의 storageKey는 `sb-${hostname.split('.')[0]}-auth-token` 형식.
+      fixture는 `sb-placeholder-auth-token`으로 cookie를 주입했지만, 실제 앱은
+      `sb-<실제projectRef>-auth-token`을 읽으므로 cookie를 찾지 못함. 테스트는 '페이지가 렌더됨'만 확인했기에
+      통과.
+  - question: Fixture smoke test에서 '간접 검증'과 '직접 검증'의 차이는?
     choices:
-      - "간접 검증은 느리고 직접 검증은 빠르다"
-      - "간접 검증은 'cookie가 존재함 + 페이지가 렌더됨'만 확인, 직접 검증은 'useAuth().user === MOCK_USER'처럼 실제 state 변화를 assert"
-      - "간접 검증은 CI에서만, 직접 검증은 로컬에서만 가능하다"
-      - "간접 검증은 unit test, 직접 검증은 E2E test"
+      - 간접 검증은 느리고 직접 검증은 빠르다
+      - >-
+        간접 검증은 'cookie가 존재함 + 페이지가 렌더됨'만 확인, 직접 검증은 'useAuth().user ===
+        MOCK_USER'처럼 실제 state 변화를 assert
+      - '간접 검증은 CI에서만, 직접 검증은 로컬에서만 가능하다'
+      - '간접 검증은 unit test, 직접 검증은 E2E test'
     answer: 1
-    explanation: "R38의 smoke test는 cookie set + 페이지 렌더만 확인(간접). 하지만 cookie 이름이 달라서 앱이 cookie를 무시해도 페이지는 정상 렌더됨(비로그인 상태로). R41에서 window.__E2E_AUTH__로 useAuth().user 값을 직접 assert해야 비로소 fixture의 진짜 효과를 검증."
+    explanation: >-
+      R38의 smoke test는 cookie set + 페이지 렌더만 확인(간접). 하지만 cookie 이름이 달라서 앱이
+      cookie를 무시해도 페이지는 정상 렌더됨(비로그인 상태로). R41에서 window.__E2E_AUTH__로
+      useAuth().user 값을 직접 assert해야 비로소 fixture의 진짜 효과를 검증.
 ---
 
 ## 배경 — 테스트가 통과했는데 아무것도 검증하지 않았다

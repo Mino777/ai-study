@@ -1,40 +1,60 @@
 ---
-title: "Multi-Provider Circuit Breaker — AI 멀티프로바이더 장애 대응 패턴"
+title: Multi-Provider Circuit Breaker — AI 멀티프로바이더 장애 대응 패턴
 category: agents
-date: "2026-04-16"
-tags: [circuit-breaker, multi-provider, resilience, fallback, moneyflow]
+date: '2026-04-16'
+tags:
+  - circuit-breaker
+  - multi-provider
+  - resilience
+  - fallback
+  - moneyflow
 confidence: 4
 connections:
   - harness-engineering/harness-engineering-overview
   - agents/multi-agent-pipeline
+  - agents/trading-agent-9phase-pipeline
+  - backend-ai/spring-boot-ai-circuit-breaker
 status: complete
-description: "Gemini/Claude/OpenAI 3사 프로바이더에 독립 Circuit Breaker를 적용하여 장애 전파 차단 + 자동 복구하는 패턴. moneyflow 실전 운영 기반."
+description: >-
+  Gemini/Claude/OpenAI 3사 프로바이더에 독립 Circuit Breaker를 적용하여 장애 전파 차단 + 자동 복구하는 패턴.
+  moneyflow 실전 운영 기반.
 type: entry
 quiz:
-  - question: "Circuit Breaker의 half-open 상태는 왜 필요한가?"
+  - question: Circuit Breaker의 half-open 상태는 왜 필요한가?
     choices:
-      - "프로바이더가 완전히 복구됐는지 사람이 수동 확인하기 위해"
-      - "쿨다운 후 1회 재시도로 프로바이더 복구 여부를 자동 감지하고, 성공 시 closed로 복귀하기 위해"
-      - "비용 절감을 위해 트래픽을 절반만 보내기 위해"
-      - "로깅을 위해 실패 패턴을 기록하는 중간 단계"
+      - 프로바이더가 완전히 복구됐는지 사람이 수동 확인하기 위해
+      - '쿨다운 후 1회 재시도로 프로바이더 복구 여부를 자동 감지하고, 성공 시 closed로 복귀하기 위해'
+      - 비용 절감을 위해 트래픽을 절반만 보내기 위해
+      - 로깅을 위해 실패 패턴을 기록하는 중간 단계
     answer: 1
-    explanation: "open 상태에서 바로 closed로 돌아가면 아직 복구 안 된 프로바이더에 트래픽이 몰린다. half-open은 쿨다운(2분) 후 1회만 시도해서 성공/실패로 자동 판단하는 안전한 복구 경로."
-  - question: "프로바이더별 독립 Circuit Breaker가 공유 상태보다 나은 이유는?"
+    explanation: >-
+      open 상태에서 바로 closed로 돌아가면 아직 복구 안 된 프로바이더에 트래픽이 몰린다. half-open은 쿨다운(2분) 후
+      1회만 시도해서 성공/실패로 자동 판단하는 안전한 복구 경로.
+  - question: 프로바이더별 독립 Circuit Breaker가 공유 상태보다 나은 이유는?
     choices:
-      - "코드가 더 간단해서"
-      - "Claude 429 에러가 Gemini까지 차단하는 장애 전파를 방지. 각 프로바이더의 장애 패턴이 독립적이므로 상태도 독립 관리해야 함"
-      - "프로바이더 수가 적어서 메모리 부담이 없으므로"
-      - "테스트 작성이 쉬워서"
+      - 코드가 더 간단해서
+      - >-
+        Claude 429 에러가 Gemini까지 차단하는 장애 전파를 방지. 각 프로바이더의 장애 패턴이 독립적이므로 상태도 독립
+        관리해야 함
+      - 프로바이더 수가 적어서 메모리 부담이 없으므로
+      - 테스트 작성이 쉬워서
     answer: 1
-    explanation: "Claude가 피크 시간에 429를 반환해도 Gemini는 정상일 수 있다. 공유 상태로 관리하면 한 프로바이더의 장애가 전체 시스템을 멈추게 된다. 독립 상태 관리가 장애 격리의 핵심."
-  - question: "Circuit Breaker와 단순 retry의 가장 큰 차이는?"
+    explanation: >-
+      Claude가 피크 시간에 429를 반환해도 Gemini는 정상일 수 있다. 공유 상태로 관리하면 한 프로바이더의 장애가 전체
+      시스템을 멈추게 된다. 독립 상태 관리가 장애 격리의 핵심.
+  - question: Circuit Breaker와 단순 retry의 가장 큰 차이는?
     choices:
-      - "retry는 같은 프로바이더에 즉시 재시도, Circuit Breaker는 일정 시간 동안 해당 프로바이더 호출 자체를 차단하여 cascade failure를 방지"
-      - "retry는 비동기, Circuit Breaker는 동기"
-      - "retry는 무료, Circuit Breaker는 비용이 듦"
-      - "retry는 서버 사이드, Circuit Breaker는 클라이언트 사이드"
+      - >-
+        retry는 같은 프로바이더에 즉시 재시도, Circuit Breaker는 일정 시간 동안 해당 프로바이더 호출 자체를 차단하여
+        cascade failure를 방지
+      - 'retry는 비동기, Circuit Breaker는 동기'
+      - 'retry는 무료, Circuit Breaker는 비용이 듦'
+      - 'retry는 서버 사이드, Circuit Breaker는 클라이언트 사이드'
     answer: 0
-    explanation: "단순 retry는 이미 과부하인 프로바이더에 추가 요청을 보내 상황을 악화시킨다. Circuit Breaker는 threshold(3회 연속 실패) 도달 시 해당 프로바이더 호출을 쿨다운 기간 동안 완전 차단하여, 프로바이더 복구 시간을 확보하고 다른 프로바이더로 트래픽을 유도한다."
+    explanation: >-
+      단순 retry는 이미 과부하인 프로바이더에 추가 요청을 보내 상황을 악화시킨다. Circuit Breaker는
+      threshold(3회 연속 실패) 도달 시 해당 프로바이더 호출을 쿨다운 기간 동안 완전 차단하여, 프로바이더 복구 시간을 확보하고
+      다른 프로바이더로 트래픽을 유도한다.
 ---
 
 ## 갭 / 맥락

@@ -1,43 +1,74 @@
 ---
-title: "Aidy Journal 003 — autoceo 병렬 dispatch 토큰 경제성 + 429 순차 재개"
+title: Aidy Journal 003 — autoceo 병렬 dispatch 토큰 경제성 + 429 순차 재개
 category: harness-engineering
 series: aidy-journal
-date: "2026-04-16"
-tags: [aidy-journal, autoceo, token-economics, rate-limit, parallel-dispatch, sequential-fallback]
+date: '2026-04-16'
+tags:
+  - aidy-journal
+  - autoceo
+  - token-economics
+  - rate-limit
+  - parallel-dispatch
+  - sequential-fallback
 confidence: 4
 connections:
   - harness-engineering/aidy-journal-002-stability-observability-test-integrity
   - harness-engineering/aidy-journal-001-20round-autoceo-sprint
   - tokenomics/claude-code-token-levers-catalog
   - harness-engineering/compound-engineering-philosophy
+  - harness-engineering/aidy-journal-000-architect-worker-baseline
+  - harness-engineering/aidy-journal-004-test-evidence-policy-effectiveness
+  - harness-engineering/aidy-journal-006-ios-ci-self-hosted-runner-migration
+  - harness-engineering/aidy-journal-007-ci-infra-independence-hybrid-fallback
+  - harness-engineering/tmux-flush-automation-pattern
+  - harness-engineering/worker-prompts-logging-pattern
 status: complete
-description: "Session 6에서 리밋 리셋 직후 17% 즉시 소비 + 429 rejection 사건. 10라운드 × 3워커 병렬 dispatch가 라운드당 4 Claude 인스턴스를 동시 구동하는 구조. architect 1 : worker 3 소비 비율. R9 유실 후 순차 재개(server → iOS → Android)로 성공. 3-way 병렬이 항상 최적이 아니라는 실측."
+description: >-
+  Session 6에서 리밋 리셋 직후 17% 즉시 소비 + 429 rejection 사건. 10라운드 × 3워커 병렬 dispatch가
+  라운드당 4 Claude 인스턴스를 동시 구동하는 구조. architect 1 : worker 3 소비 비율. R9 유실 후 순차
+  재개(server → iOS → Android)로 성공. 3-way 병렬이 항상 최적이 아니라는 실측.
 type: entry
 quiz:
-  - question: "Session 6에서 토큰 리밋 리셋 직후 17% 즉시 소비가 일어난 근본 원인은?"
+  - question: Session 6에서 토큰 리밋 리셋 직후 17% 즉시 소비가 일어난 근본 원인은?
     choices:
-      - "프롬프트가 너무 길어서"
-      - "autoceo 10라운드 × 3 워커 병렬 dispatch = 라운드당 4 Claude 인스턴스(architect 1 + workers 3)가 동시 활동. 워커는 10~30분짜리 작업을 수행하므로 architect 본인 소비보다 약 15배 많은 백그라운드 소비"
-      - "Anthropic API 장애"
-      - "tmux flush 버그"
+      - 프롬프트가 너무 길어서
+      - >-
+        autoceo 10라운드 × 3 워커 병렬 dispatch = 라운드당 4 Claude 인스턴스(architect 1 +
+        workers 3)가 동시 활동. 워커는 10~30분짜리 작업을 수행하므로 architect 본인 소비보다 약 15배 많은
+        백그라운드 소비
+      - Anthropic API 장애
+      - tmux flush 버그
     answer: 1
-    explanation: "3-way 병렬 dispatch의 실제 비용은 architect 턴 자체가 아니라 뒤따르는 워커 3명의 장시간 백그라운드 소비다. architect 1 : worker 3 비율이 org-level rate limit을 초과시키는 구조적 원인. 리밋 여유 있을 때는 문제 없지만 리셋 직후 시작하면 즉각 429."
-  - question: "R9에서 3-way 병렬 실패 후 선택한 재개 전략은?"
+    explanation: >-
+      3-way 병렬 dispatch의 실제 비용은 architect 턴 자체가 아니라 뒤따르는 워커 3명의 장시간 백그라운드 소비다.
+      architect 1 : worker 3 비율이 org-level rate limit을 초과시키는 구조적 원인. 리밋 여유 있을 때는
+      문제 없지만 리셋 직후 시작하면 즉각 429.
+  - question: R9에서 3-way 병렬 실패 후 선택한 재개 전략은?
     choices:
-      - "전체 R9 스킵, R10(compound)으로 직행"
-      - "서버 solo → iOS+Android 2-way 재시도 → 또 429 → 최종 순차 재개(iOS 단독 → Android 단독). 중단된 워커는 짧은 continue 프롬프트(200자)로 이어붙여 재개 — 전체 재디스패치 불필요"
-      - "모든 워커를 처음부터 재시작"
-      - "다음 세션으로 완전 이월"
+      - '전체 R9 스킵, R10(compound)으로 직행'
+      - >-
+        서버 solo → iOS+Android 2-way 재시도 → 또 429 → 최종 순차 재개(iOS 단독 → Android 단독).
+        중단된 워커는 짧은 continue 프롬프트(200자)로 이어붙여 재개 — 전체 재디스패치 불필요
+      - 모든 워커를 처음부터 재시작
+      - 다음 세션으로 완전 이월
     answer: 1
-    explanation: "429 중간 단절 시에도 워커는 partial 파일 저장 상태로 남아있어, '이어서 계속'이라는 짧은 continue 프롬프트면 문맥 유지 가능. 새 프롬프트로 전체 재디스패치는 토큰 낭비. R9는 이 방식으로 server 207 / iOS 124 / Android 135 = 466 tests 완주."
-  - question: "이번 스프린트에서 도출한 병렬 dispatch 결정 기준은?"
+    explanation: >-
+      429 중간 단절 시에도 워커는 partial 파일 저장 상태로 남아있어, '이어서 계속'이라는 짧은 continue 프롬프트면 문맥
+      유지 가능. 새 프롬프트로 전체 재디스패치는 토큰 낭비. R9는 이 방식으로 server 207 / iOS 124 / Android
+      135 = 466 tests 완주.
+  - question: 이번 스프린트에서 도출한 병렬 dispatch 결정 기준은?
     choices:
-      - "항상 3-way 병렬이 최적"
-      - "항상 순차가 안전"
-      - "리밋 여유 + 작업 크기 함수 — 여유 많을 때는 3-way, 리셋 직후나 큰 작업은 부분/완전 순차. architect-cli.sh에 send-seq 모드 + 429 감지 + backoff + idle 대기로 런타임 적응"
-      - "워커 수를 줄이기"
+      - 항상 3-way 병렬이 최적
+      - 항상 순차가 안전
+      - >-
+        리밋 여유 + 작업 크기 함수 — 여유 많을 때는 3-way, 리셋 직후나 큰 작업은 부분/완전 순차.
+        architect-cli.sh에 send-seq 모드 + 429 감지 + backoff + idle 대기로 런타임 적응
+      - 워커 수를 줄이기
     answer: 2
-    explanation: "병렬 자체가 나쁜 게 아니라 '소비 pattern이 리밋 곡선을 초과하는가'가 판단 기준. 고정 규칙 대신 런타임 적응 — 429 감지 시 5분 backoff + 1회 재시도, send-seq 모드로 idle 대기 직렬 옵션. Session 5(여유)는 10R 완주, Session 6(리셋 직후)은 R9 유실 → 순차로 재개."
+    explanation: >-
+      병렬 자체가 나쁜 게 아니라 '소비 pattern이 리밋 곡선을 초과하는가'가 판단 기준. 고정 규칙 대신 런타임 적응 — 429
+      감지 시 5분 backoff + 1회 재시도, send-seq 모드로 idle 대기 직렬 옵션. Session 5(여유)는 10R
+      완주, Session 6(리셋 직후)은 R9 유실 → 순차로 재개.
 ---
 
 ## Before — Journal 002 이후의 상태

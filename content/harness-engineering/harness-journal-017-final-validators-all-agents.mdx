@@ -1,43 +1,74 @@
 ---
-title: "Harness Journal 017 — 10/10 에이전트 런타임 검증 완료 (Zod 3차 재평가 → type guard 최종)"
+title: Harness Journal 017 — 10/10 에이전트 런타임 검증 완료 (Zod 3차 재평가 → type guard 최종)
 category: harness-engineering
 series: harness-journal
-date: "2026-04-12"
-tags: [harness-journal, harness-engineering, moneyflow, runtime-validation, devils-advocate, research-debate, risk-debate, portfolio-manager, zod-decision]
+date: '2026-04-12'
+tags:
+  - harness-journal
+  - harness-engineering
+  - moneyflow
+  - runtime-validation
+  - devils-advocate
+  - research-debate
+  - risk-debate
+  - portfolio-manager
+  - zod-decision
 confidence: 5
 connections:
   - harness-engineering/harness-journal-015-trader-runtime-validation
   - harness-engineering/harness-journal-013-three-analysts-runtime-validation
   - harness-engineering/harness-journal-012-market-analyst-runtime-validation
   - harness-engineering/ai-output-zod-validation-pattern
+  - harness-engineering/harness-journal-018-layer3-retry-augmentation
 status: complete
-description: "Journal 012에서 시작한 에이전트 런타임 검증 시리즈 완결. devils_advocate(후처리 전 raw output 검증 패턴) + research-debate(bull/bear) + risk-debate(3 관점 중첩) + portfolio-manager(price_targets 중첩) = 4 validator 추가, vitest 40 케이스. custom_prompt 제외 10/10 에이전트 Layer 1+2 완료. Zod 3차 재평가에서 type guard 최종 확정 — 중첩 구조에서도 type guard가 충분했다."
+description: >-
+  Journal 012에서 시작한 에이전트 런타임 검증 시리즈 완결. devils_advocate(후처리 전 raw output 검증 패턴)
+  + research-debate(bull/bear) + risk-debate(3 관점 중첩) +
+  portfolio-manager(price_targets 중첩) = 4 validator 추가, vitest 40 케이스.
+  custom_prompt 제외 10/10 에이전트 Layer 1+2 완료. Zod 3차 재평가에서 type guard 최종 확정 — 중첩
+  구조에서도 type guard가 충분했다.
 type: entry
 quiz:
-  - question: "DevilsAdvocate validator가 다른 에이전트와 다른 점은?"
+  - question: DevilsAdvocate validator가 다른 에이전트와 다른 점은?
     choices:
-      - "Zod를 사용한다"
-      - "parseJSON 후 수동 후처리(activated 설정, counterarguments slice, confidence_penalty clamp)가 있어서 validator를 *LLM raw output*에 적용한다. 다른 에이전트는 parseJSON 결과를 그대로 사용하지만 DevilsAdvocate는 *파싱된 객체 → 후처리 → 최종 반환*이라 validator 적용 시점이 다르다"
-      - "테스트가 더 많다"
-      - "비동기 validator다"
+      - Zod를 사용한다
+      - >-
+        parseJSON 후 수동 후처리(activated 설정, counterarguments slice,
+        confidence_penalty clamp)가 있어서 validator를 *LLM raw output*에 적용한다. 다른
+        에이전트는 parseJSON 결과를 그대로 사용하지만 DevilsAdvocate는 *파싱된 객체 → 후처리 → 최종 반환*이라
+        validator 적용 시점이 다르다
+      - 테스트가 더 많다
+      - 비동기 validator다
     answer: 1
-    explanation: "validator 적용 시점이 핵심. parseJSON(raw, fallback, validator) 3번째 인자로 넘기되, validator는 LLM이 반환한 4 필드(counterarguments, risk_factors, confidence_penalty, summary)만 검증. activated는 코드가 수동 추가하므로 validator 대상이 아니다."
-  - question: "Zod 도입을 3번 재평가한 후 최종 결론은?"
+    explanation: >-
+      validator 적용 시점이 핵심. parseJSON(raw, fallback, validator) 3번째 인자로 넘기되,
+      validator는 LLM이 반환한 4 필드(counterarguments, risk_factors,
+      confidence_penalty, summary)만 검증. activated는 코드가 수동 추가하므로 validator 대상이
+      아니다.
+  - question: Zod 도입을 3번 재평가한 후 최종 결론은?
     choices:
-      - "Zod를 도입했다"
-      - "type guard로 중첩 구조(price_targets, 3 perspectives)까지 충분히 커버 가능. 동시 세션 lock file 위험 + 기존 패턴 일관성 + 실제 구현 결과 코드량 합리적 → Zod 불필요 확정"
-      - "다음 세션으로 미뤘다"
-      - "일부만 Zod로 전환했다"
+      - Zod를 도입했다
+      - >-
+        type guard로 중첩 구조(price_targets, 3 perspectives)까지 충분히 커버 가능. 동시 세션 lock
+        file 위험 + 기존 패턴 일관성 + 실제 구현 결과 코드량 합리적 → Zod 불필요 확정
+      - 다음 세션으로 미뤘다
+      - 일부만 Zod로 전환했다
     answer: 1
-    explanation: "3번 재평가는 교과서적 정답이 아니라 *실제 복잡도 관찰*에 기반. 중첩 구조에서도 checkRiskPerspective 헬퍼 하나로 3 관점 검증을 깔끔하게 처리. Zod의 선언적 이점이 *구현 비용*(dep 추가 + 패턴 이중화)을 넘지 못했다."
-  - question: "Layer 1+2 완료 후 다음 단계(Layer 3-4)는?"
+    explanation: >-
+      3번 재평가는 교과서적 정답이 아니라 *실제 복잡도 관찰*에 기반. 중첩 구조에서도 checkRiskPerspective 헬퍼 하나로
+      3 관점 검증을 깔끔하게 처리. Zod의 선언적 이점이 *구현 비용*(dep 추가 + 패턴 이중화)을 넘지 못했다.
+  - question: Layer 1+2 완료 후 다음 단계(Layer 3-4)는?
     choices:
-      - "에이전트 추가"
-      - "callAI에 maxRetries 옵션 추가 → validator 실패 시 실패 이유를 instruction에 추가해서 LLM에 재요청. 현재는 실패 시 fallback 반환이지만, retry로 *정확한 출력을 유도*하는 단계"
-      - "Zod 전환"
-      - "프론트엔드 표시"
+      - 에이전트 추가
+      - >-
+        callAI에 maxRetries 옵션 추가 → validator 실패 시 실패 이유를 instruction에 추가해서 LLM에
+        재요청. 현재는 실패 시 fallback 반환이지만, retry로 *정확한 출력을 유도*하는 단계
+      - Zod 전환
+      - 프론트엔드 표시
     answer: 1
-    explanation: "5 Layer 패턴에서 Layer 3은 retry, Layer 4는 instruction augmentation. validator의 issues 배열을 LLM 프롬프트에 추가해서 '이 필드가 잘못됐다'고 알려주면 LLM이 고칠 수 있다. 13 에이전트 전체에 영향."
+    explanation: >-
+      5 Layer 패턴에서 Layer 3은 retry, Layer 4는 instruction augmentation. validator의
+      issues 배열을 LLM 프롬프트에 추가해서 '이 필드가 잘못됐다'고 알려주면 LLM이 고칠 수 있다. 13 에이전트 전체에 영향.
 ---
 
 ## 사이클 트리거

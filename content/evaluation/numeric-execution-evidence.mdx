@@ -1,42 +1,64 @@
 ---
-title: "Numeric Execution Evidence — '테스트 통과' 주장의 검증 원칙"
+title: Numeric Execution Evidence — '테스트 통과' 주장의 검증 원칙
 category: evaluation
-date: "2026-04-16"
-tags: [test-integrity, observability, gate-validation, silent-failure, aidy]
+date: '2026-04-16'
+tags:
+  - test-integrity
+  - observability
+  - gate-validation
+  - silent-failure
+  - aidy
 confidence: 4
 connections:
   - evaluation/ai-output-5-layer-defense
   - harness-engineering/aidy-journal-002-stability-observability-test-integrity
   - harness-engineering/aidy-journal-004-test-evidence-policy-effectiveness
   - ios-ai/tuist-spm-testing-trap
+  - evaluation/test-strategy-3-client-via-aidy
+  - harness-engineering/harness-journal-024-solution-to-validator-promotion
 status: complete
-description: "'Tests passed ✅' 같은 주장은 실행됐다는 전제와 통과했다는 결론을 섞는다. 무실행(0 tests executed + exit 0)은 실패로 보고되지 않는 실패다. 숫자 증거가 없는 통과는 Gate에서 FAIL 처리해야 한다 — Aidy Session 4에서 8라운드 동안 놓친 실전 교훈."
+description: >-
+  'Tests passed ✅' 같은 주장은 실행됐다는 전제와 통과했다는 결론을 섞는다. 무실행(0 tests executed + exit
+  0)은 실패로 보고되지 않는 실패다. 숫자 증거가 없는 통과는 Gate에서 FAIL 처리해야 한다 — Aidy Session 4에서 8라운드
+  동안 놓친 실전 교훈.
 type: entry
 quiz:
-  - question: "'Tests passed'가 검증에 불충분한 이유는?"
+  - question: '''Tests passed''가 검증에 불충분한 이유는?'
     choices:
-      - "메시지가 모호해서"
-      - "실행됐는지 여부를 포함하지 않음. 'passed'는 실행 전제 위에 올라간 결론인데, 무실행 상태에서도 exit 0이 반환되면 '통과'로 해석됨"
-      - "다국어 지원이 안 돼서"
-      - "타임스탬프가 없어서"
+      - 메시지가 모호해서
+      - >-
+        실행됐는지 여부를 포함하지 않음. 'passed'는 실행 전제 위에 올라간 결론인데, 무실행 상태에서도 exit 0이 반환되면
+        '통과'로 해석됨
+      - 다국어 지원이 안 돼서
+      - 타임스탬프가 없어서
     answer: 1
-    explanation: "테스트 하네스가 '실행할 테스트가 없다'고 판단하면 exit 0을 반환하는 경우가 많다(xcodebuild, pytest 등). '통과'와 '무실행'은 동일 exit code를 공유하므로, 숫자(NN tests run)가 없으면 둘을 구분할 수 없다."
-  - question: "Numeric Execution Evidence의 최소 포맷은?"
+    explanation: >-
+      테스트 하네스가 '실행할 테스트가 없다'고 판단하면 exit 0을 반환하는 경우가 많다(xcodebuild, pytest 등).
+      '통과'와 '무실행'은 동일 exit code를 공유하므로, 숫자(NN tests run)가 없으면 둘을 구분할 수 없다.
+  - question: Numeric Execution Evidence의 최소 포맷은?
     choices:
-      - "'All tests passed'"
-      - "'Test run with NN tests, K failures' 형태 — 실행 카디널리티(NN)와 실패 수(K)가 모두 숫자로 보여야 함. NN > 0이 필수"
-      - "'✅ OK' 이모지만 있으면 됨"
-      - "JSON 스키마 어떤 형태든 OK"
+      - '''All tests passed'''
+      - >-
+        'Test run with NN tests, K failures' 형태 — 실행 카디널리티(NN)와 실패 수(K)가 모두 숫자로
+        보여야 함. NN > 0이 필수
+      - '''✅ OK'' 이모지만 있으면 됨'
+      - JSON 스키마 어떤 형태든 OK
     answer: 1
-    explanation: "카디널리티(실행 수)와 실패 수가 모두 숫자로 보여야 한다. NN = 0이면 '실행된 테스트 없음'으로 Gate FAIL. K > 0이면 당연히 FAIL. 둘 다 숫자여야 자동 체크 가능."
-  - question: "Silent failure의 정의와 위험도는?"
+    explanation: >-
+      카디널리티(실행 수)와 실패 수가 모두 숫자로 보여야 한다. NN = 0이면 '실행된 테스트 없음'으로 Gate FAIL. K >
+      0이면 당연히 FAIL. 둘 다 숫자여야 자동 체크 가능.
+  - question: Silent failure의 정의와 위험도는?
     choices:
-      - "warning만 뜨고 error가 없는 경우"
-      - "실패가 실패로 보고되지 않는 모든 경우. exit 0 + 'no tests to run' 같은 패턴이 대표적. 사람/AI 모두 '통과'로 해석하여 장기간 누적된 회귀를 놓침"
-      - "로그가 영어로만 출력되는 경우"
-      - "테스트 속도가 느린 경우"
+      - warning만 뜨고 error가 없는 경우
+      - >-
+        실패가 실패로 보고되지 않는 모든 경우. exit 0 + 'no tests to run' 같은 패턴이 대표적. 사람/AI 모두
+        '통과'로 해석하여 장기간 누적된 회귀를 놓침
+      - 로그가 영어로만 출력되는 경우
+      - 테스트 속도가 느린 경우
     answer: 1
-    explanation: "명시적 실패는 잡기 쉽다. 무실행/no-op/fallthrough 같은 silent failure는 성공 신호와 구분이 안 되어 가장 위험하다. Aidy iOS 사례에서 8라운드가 silent failure에 묻혔다."
+    explanation: >-
+      명시적 실패는 잡기 쉽다. 무실행/no-op/fallthrough 같은 silent failure는 성공 신호와 구분이 안 되어 가장
+      위험하다. Aidy iOS 사례에서 8라운드가 silent failure에 묻혔다.
 ---
 
 ## 갭 / 맥락

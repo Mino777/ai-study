@@ -1,42 +1,71 @@
 ---
-title: "Harness Journal 025 — JIT Retrieval POC Phase 1: 인프라 작동, 한국어 모델은 다음 변수"
+title: 'Harness Journal 025 — JIT Retrieval POC Phase 1: 인프라 작동, 한국어 모델은 다음 변수'
 category: harness-engineering
 series: harness-journal
-date: "2026-04-16"
-tags: [harness-journal, jit-retrieval, rag, embedding, vector-search, layer3, poc]
+date: '2026-04-16'
+tags:
+  - harness-journal
+  - jit-retrieval
+  - rag
+  - embedding
+  - vector-search
+  - layer3
+  - poc
 confidence: 4
 connections:
   - context-engineering/context-scaling-3-layer-architecture
   - rag/vector-search-basics
   - harness-engineering/harness-journal-024-solution-to-validator-promotion
+  - context-engineering/karpathy-llm-wiki-pattern-compilation-over-retrieval
+  - context-engineering/llm-wiki-swot-ai-study-vs-karpathy
 status: complete
-description: "[Context Scaling 3-레이어 아키텍처](/wiki/context-engineering/context-scaling-3-layer-architecture) 의 Layer 3(JIT Retrieval) POC Phase 1. 로컬 임베딩(@xenova all-MiniLM-L6-v2) + JSON 인덱스 + brute-force 코사인. 인프라는 1~2ms 응답으로 정상 동작, 영어 쿼리 적중률 우수, 한국어 쿼리는 모델 한계. Phase 2 변수: 다국어 모델 + docs/solutions 인덱싱 + 라우터."
+description: >-
+  [Context Scaling 3-레이어
+  아키텍처](/wiki/context-engineering/context-scaling-3-layer-architecture) 의 Layer
+  3(JIT Retrieval) POC Phase 1. 로컬 임베딩(@xenova all-MiniLM-L6-v2) + JSON 인덱스 +
+  brute-force 코사인. 인프라는 1~2ms 응답으로 정상 동작, 영어 쿼리 적중률 우수, 한국어 쿼리는 모델 한계. Phase 2
+  변수: 다국어 모델 + docs/solutions 인덱싱 + 라우터.
 type: entry
 quiz:
-  - question: "POC Phase 1에서 Chroma/Pinecone 대신 'JSON + brute-force 코사인'을 선택한 근거는?"
+  - question: POC Phase 1에서 Chroma/Pinecone 대신 'JSON + brute-force 코사인'을 선택한 근거는?
     choices:
-      - "Chroma 셋업이 너무 복잡해서"
-      - "vector-search-basics §6 권장 (1000 미만 문서는 ANN 불필요, brute force가 더 빠르고 단순). 923 청크 × 384 float = 8.7MB · 검색 1~2ms로 충분 입증. 외부 서비스 0 + 외부 의존성 최소화로 롤백 비용도 낮춤"
-      - "Chroma가 한국어 미지원이어서"
-      - "Pinecone 비용이 부담스러워서"
+      - Chroma 셋업이 너무 복잡해서
+      - >-
+        vector-search-basics §6 권장 (1000 미만 문서는 ANN 불필요, brute force가 더 빠르고 단순).
+        923 청크 × 384 float = 8.7MB · 검색 1~2ms로 충분 입증. 외부 서비스 0 + 외부 의존성 최소화로 롤백
+        비용도 낮춤
+      - Chroma가 한국어 미지원이어서
+      - Pinecone 비용이 부담스러워서
     answer: 1
-    explanation: "POC Phase 1의 4 조건 중 '롤백 비용 낮음' 을 가장 보수적으로 해석. JSON + brute force는 코드 50줄로 구현 + 삭제도 50줄. ANN은 1000+ 문서 시점에 도입 검토. 현재 923 청크 brute force로 응답 1~2ms이라 ANN 필요성 0."
-  - question: "영어 쿼리는 적중률 우수인데 한국어는 부족한 이유는?"
+    explanation: >-
+      POC Phase 1의 4 조건 중 '롤백 비용 낮음' 을 가장 보수적으로 해석. JSON + brute force는 코드 50줄로
+      구현 + 삭제도 50줄. ANN은 1000+ 문서 시점에 도입 검토. 현재 923 청크 brute force로 응답 1~2ms이라
+      ANN 필요성 0.
+  - question: 영어 쿼리는 적중률 우수인데 한국어는 부족한 이유는?
     choices:
-      - "한국어 텍스트가 부족해서"
-      - "임베딩 모델 all-MiniLM-L6-v2 가 영어 위주 학습 데이터로 훈련됨. 한·영 모두 처리 가능하다고 표시되지만 의미 분리 정밀도는 영어가 훨씬 높음 — Phase 2의 다국어 모델(multilingual-e5-small 등) 비교가 필수 변수"
-      - "한국어는 토큰 분리가 어려워서"
-      - "쿼리 길이가 너무 짧아서"
+      - 한국어 텍스트가 부족해서
+      - >-
+        임베딩 모델 all-MiniLM-L6-v2 가 영어 위주 학습 데이터로 훈련됨. 한·영 모두 처리 가능하다고 표시되지만 의미 분리
+        정밀도는 영어가 훨씬 높음 — Phase 2의 다국어 모델(multilingual-e5-small 등) 비교가 필수 변수
+      - 한국어는 토큰 분리가 어려워서
+      - 쿼리 길이가 너무 짧아서
     answer: 1
-    explanation: "전형적 영어 중심 sentence transformer의 한계. 'prompt caching cost reduction' 쿼리는 정답 엔트리 Top 3 모두 정확히 잡음(score 0.53/0.33/0.33). 같은 의미의 한국어 '프롬프트 캐싱 비용 절감' 은 무관한 quality-guards 엔트리가 1위(score 0.45). Phase 2의 핵심 변수는 모델 교체."
-  - question: "POC가 발견한 '인덱싱 대상 누락' 문제는?"
+    explanation: >-
+      전형적 영어 중심 sentence transformer의 한계. 'prompt caching cost reduction' 쿼리는 정답
+      엔트리 Top 3 모두 정확히 잡음(score 0.53/0.33/0.33). 같은 의미의 한국어 '프롬프트 캐싱 비용 절감' 은
+      무관한 quality-guards 엔트리가 1위(score 0.45). Phase 2의 핵심 변수는 모델 교체.
+  - question: POC가 발견한 '인덱싱 대상 누락' 문제는?
     choices:
-      - ".github/ 스크립트가 빠짐"
-      - "docs/solutions/ 누락 — 가장 high-value JIT 검색 대상(에러 메시지 → 과거 솔루션 매칭)인데 content/ 만 인덱싱하는 스크립트라 빠짐. Phase 2에서 인덱싱 대상 확장 필요"
-      - "node_modules 가 빠짐"
-      - "image 파일이 빠짐"
+      - .github/ 스크립트가 빠짐
+      - >-
+        docs/solutions/ 누락 — 가장 high-value JIT 검색 대상(에러 메시지 → 과거 솔루션 매칭)인데
+        content/ 만 인덱싱하는 스크립트라 빠짐. Phase 2에서 인덱싱 대상 확장 필요
+      - node_modules 가 빠짐
+      - image 파일이 빠짐
     answer: 1
-    explanation: "Layer 3의 핵심 사용처는 '특정 에러 메시지 → 과거 해결법'. 그런 텍스트가 가장 많이 누적된 곳이 docs/solutions/. POC v0가 content/ 만 봤다는 건 첫 인덱싱 범위 결정의 누락. Phase 2 1순위 작업."
+    explanation: >-
+      Layer 3의 핵심 사용처는 '특정 에러 메시지 → 과거 해결법'. 그런 텍스트가 가장 많이 누적된 곳이
+      docs/solutions/. POC v0가 content/ 만 봤다는 건 첫 인덱싱 범위 결정의 누락. Phase 2 1순위 작업.
 ---
 
 ## Before — 무엇이 없었나

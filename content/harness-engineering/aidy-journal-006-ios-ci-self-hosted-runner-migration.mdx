@@ -1,44 +1,74 @@
 ---
-title: "Aidy Journal 006 — WO-010 진단 3회 정정 + ADR-009 iOS CI self-hosted runner 전환"
+title: Aidy Journal 006 — WO-010 진단 3회 정정 + ADR-009 iOS CI self-hosted runner 전환
 category: harness-engineering
 series: aidy-journal
-date: "2026-04-17"
-tags: [aidy-journal, ios-ci, github-actions, self-hosted-runner, adr-009, diagnosis-iteration, token-economics, ci-monitoring]
+date: '2026-04-17'
+tags:
+  - aidy-journal
+  - ios-ci
+  - github-actions
+  - self-hosted-runner
+  - adr-009
+  - diagnosis-iteration
+  - token-economics
+  - ci-monitoring
 confidence: 4
 connections:
   - harness-engineering/aidy-journal-003-parallel-dispatch-token-economics
-  - harness-engineering/aidy-journal-005-sse-phase1-to-phase2-progressive-rollout
+  - >-
+    harness-engineering/aidy-journal-005-sse-phase1-to-phase2-progressive-rollout
   - harness-engineering/tmux-flush-automation-pattern
   - harness-engineering/ai-ops-environment-diagnosis-checklist
   - tokenomics/claude-code-token-levers-catalog
+  - harness-engineering/aidy-journal-007-ci-infra-independence-hybrid-fallback
 status: complete
-description: "Session 6 종료 직후 P3 토큰 경제성 인프라(send-seq + 429 backoff + ci-status.sh) 도구화 → 첫 실행으로 iOS Test 2연속 실패 발견 → 진단 3회 정정(tuist↔macos-14 미스매치 → 결제 차단 → ai-review.yml 알림 폭탄) → self-hosted runner 전환으로 결판. 124 tests / 1m 56s / 4월 macOS 분 ~180min → 0min. 진단 진화 프로세스 자체를 박제."
+description: >-
+  Session 6 종료 직후 P3 토큰 경제성 인프라(send-seq + 429 backoff + ci-status.sh) 도구화 → 첫
+  실행으로 iOS Test 2연속 실패 발견 → 진단 3회 정정(tuist↔macos-14 미스매치 → 결제 차단 → ai-review.yml
+  알림 폭탄) → self-hosted runner 전환으로 결판. 124 tests / 1m 56s / 4월 macOS 분 ~180min →
+  0min. 진단 진화 프로세스 자체를 박제.
 type: entry
 quiz:
-  - question: "`gh run view --log-failed` 로 관찰된 exit 134 의 근본 원인은?"
+  - question: '`gh run view --log-failed` 로 관찰된 exit 134 의 근본 원인은?'
     choices:
-      - "테스트 실패"
-      - "tuist 4.180.0(macOS 15 SDK 빌드)이 runner macos-14(14.8.5)에서 실행 → `libswiftSynchronization.dylib` 누락 → SIGABRT. macOS 15부터 추가된 심볼 의존"
-      - "네트워크 타임아웃"
-      - "메모리 부족"
+      - 테스트 실패
+      - >-
+        tuist 4.180.0(macOS 15 SDK 빌드)이 runner macos-14(14.8.5)에서 실행 →
+        `libswiftSynchronization.dylib` 누락 → SIGABRT. macOS 15부터 추가된 심볼 의존
+      - 네트워크 타임아웃
+      - 메모리 부족
     answer: 1
-    explanation: "`Library not loaded: /usr/lib/swift/libswiftSynchronization.dylib ... built for macOS 15.0 which is newer than running OS`. brew 가 항상 최신 tuist를 설치하는데 macOS 15 SDK 로 빌드된 상태. Runner OS 버전과 도구 체인 ABI 매칭 필요. 1차 진단은 여기서 멈췄다 — macos-14 → macos-15 전환이면 해결될 줄 알았다."
-  - question: "1차 진단(macos-14 미스매치)만 고친 워커 PR이 여전히 실패한 이유는?"
+    explanation: >-
+      `Library not loaded: /usr/lib/swift/libswiftSynchronization.dylib ...
+      built for macOS 15.0 which is newer than running OS`. brew 가 항상 최신 tuist를
+      설치하는데 macOS 15 SDK 로 빌드된 상태. Runner OS 버전과 도구 체인 ABI 매칭 필요. 1차 진단은 여기서 멈췄다
+      — macos-14 → macos-15 전환이면 해결될 줄 알았다.
+  - question: 1차 진단(macos-14 미스매치)만 고친 워커 PR이 여전히 실패한 이유는?
     choices:
-      - "PR이 잘못 작성됨"
-      - "`The job was not started because recent account payments have failed or your spending limit needs to be increased.` — GitHub-hosted runner 자체가 결제 차단으로 기동 안 됨. 분 카운트와 별개 사유"
-      - "macos-15 도 SDK 버전 차이가 있음"
-      - "tuist가 더 새 버전"
+      - PR이 잘못 작성됨
+      - >-
+        `The job was not started because recent account payments have failed or
+        your spending limit needs to be increased.` — GitHub-hosted runner 자체가
+        결제 차단으로 기동 안 됨. 분 카운트와 별개 사유
+      - macos-15 도 SDK 버전 차이가 있음
+      - tuist가 더 새 버전
     answer: 1
-    explanation: "분 한도는 여유 있었지만 카드 결제/spending limit 별개로 차단 상태. '한도 초과 아님' ≠ '결제 정상'. 진단 정정 1회차 — GitHub-hosted 의존 자체를 끊어야 재발 방지."
-  - question: "self-hosted runner 전환에서 `test.yml` 만 바꿨을 때 발생한 알림 폭탄의 원인은?"
+    explanation: >-
+      분 한도는 여유 있었지만 카드 결제/spending limit 별개로 차단 상태. '한도 초과 아님' ≠ '결제 정상'. 진단 정정
+      1회차 — GitHub-hosted 의존 자체를 끊어야 재발 방지.
+  - question: self-hosted runner 전환에서 `test.yml` 만 바꿨을 때 발생한 알림 폭탄의 원인은?
     choices:
-      - "runner 설정 실수"
-      - "같은 push 트리거에 묶인 `ai-review.yml`(`runs-on: macos-latest`)이 매 비-main push마다 결제 차단으로 fail → GitHub가 매번 알림 발송"
-      - "self-hosted runner 불안정"
-      - "GitHub Actions 버그"
+      - runner 설정 실수
+      - >-
+        같은 push 트리거에 묶인 `ai-review.yml`(`runs-on: macos-latest`)이 매 비-main
+        push마다 결제 차단으로 fail → GitHub가 매번 알림 발송
+      - self-hosted runner 불안정
+      - GitHub Actions 버그
     answer: 1
-    explanation: "진단 정정 2회차. PR 1개 = 워크플로 1개 가정이 깨지는 순간. `ci-status.sh --watch` 가 모든 워크플로 fail을 잡아줬기에 발견 가능. test.yml + ai-review.yml 동시 전환으로 해소. 인프라 변경 후 알림 폭탄은 진단 신호다."
+    explanation: >-
+      진단 정정 2회차. PR 1개 = 워크플로 1개 가정이 깨지는 순간. `ci-status.sh --watch` 가 모든 워크플로
+      fail을 잡아줬기에 발견 가능. test.yml + ai-review.yml 동시 전환으로 해소. 인프라 변경 후 알림 폭탄은 진단
+      신호다.
 ---
 
 ## Before — Journal 005 이후의 상태

@@ -1,8 +1,16 @@
 ---
-title: "Karpathy LLM Wiki 패턴 — Compilation > Retrieval, 지식을 '컴파일'하는 두 번째 뇌"
+title: 'Karpathy LLM Wiki 패턴 — Compilation > Retrieval, 지식을 ''컴파일''하는 두 번째 뇌'
 category: context-engineering
-date: "2026-04-17"
-tags: [karpathy, llm-wiki, obsidian, knowledge-base, compilation, rag-alternative, second-brain, context-engineering]
+date: '2026-04-17'
+tags:
+  - karpathy
+  - llm-wiki
+  - obsidian
+  - knowledge-base
+  - compilation
+  - rag-alternative
+  - second-brain
+  - context-engineering
 confidence: 3
 connections:
   - harness-engineering/llm-first-wiki-principles
@@ -10,34 +18,51 @@ connections:
   - context-engineering/context-scaling-3-layer-architecture
   - rag/rag-overview
   - harness-engineering/harness-journal-025-jit-retrieval-poc-phase1
+  - context-engineering/llm-wiki-swot-ai-study-vs-karpathy
 status: complete
-description: "Andrej Karpathy가 2026년 4월 제시한 LLM Wiki 패턴. RAG의 '매번 재검색'과 달리 LLM이 인제스트 시점에 10~15 페이지를 동시 업데이트하는 '컴파일형' 지식 축적. raw/ → wiki/ → index.md 3층 구조 + lint 워크플로. ai-study 위키와의 비교 + 적용 방향."
+description: >-
+  Andrej Karpathy가 2026년 4월 제시한 LLM Wiki 패턴. RAG의 '매번 재검색'과 달리 LLM이 인제스트 시점에
+  10~15 페이지를 동시 업데이트하는 '컴파일형' 지식 축적. raw/ → wiki/ → index.md 3층 구조 + lint 워크플로.
+  ai-study 위키와의 비교 + 적용 방향.
 type: entry
 quiz:
-  - question: "Karpathy LLM Wiki가 RAG와 근본적으로 다른 점은?"
+  - question: Karpathy LLM Wiki가 RAG와 근본적으로 다른 점은?
     choices:
-      - "벡터 DB를 쓰지 않는다"
-      - "RAG는 매 쿼리마다 원본에서 재검색(retrieval)하지만, LLM Wiki는 인제스트 시점에 지식을 '컴파일'하여 위키 페이지로 통합. 합성(synthesis)이 매번이 아니라 한 번 일어나고 축적된다"
-      - "LLM을 쓰지 않는다"
-      - "Obsidian이 필수이다"
+      - 벡터 DB를 쓰지 않는다
+      - >-
+        RAG는 매 쿼리마다 원본에서 재검색(retrieval)하지만, LLM Wiki는 인제스트 시점에 지식을 '컴파일'하여 위키
+        페이지로 통합. 합성(synthesis)이 매번이 아니라 한 번 일어나고 축적된다
+      - LLM을 쓰지 않는다
+      - Obsidian이 필수이다
     answer: 1
-    explanation: "Karpathy 원문: '지식을 매번 re-derive 하는 것이 아니라 한 번 compile 하고 유지한다'. RAG는 reactive(질문할 때 검색), LLM Wiki는 generative + anticipatory(인제스트할 때 선제 통합). 이 차이가 지식 축적 속도를 결정한다."
-  - question: "raw/ → wiki/ → index.md 3층 구조에서 LLM이 절대 수정하면 안 되는 레이어는?"
+    explanation: >-
+      Karpathy 원문: '지식을 매번 re-derive 하는 것이 아니라 한 번 compile 하고 유지한다'. RAG는
+      reactive(질문할 때 검색), LLM Wiki는 generative + anticipatory(인제스트할 때 선제 통합). 이
+      차이가 지식 축적 속도를 결정한다.
+  - question: raw/ → wiki/ → index.md 3층 구조에서 LLM이 절대 수정하면 안 되는 레이어는?
     choices:
-      - "wiki/"
-      - "index.md"
-      - "raw/ — 원본 소스는 immutable(불변). LLM은 wiki/ 레이어만 소유하고, raw/는 출처의 진실 원천(source of truth)으로 보존"
-      - "전부 수정 가능"
+      - wiki/
+      - index.md
+      - >-
+        raw/ — 원본 소스는 immutable(불변). LLM은 wiki/ 레이어만 소유하고, raw/는 출처의 진실
+        원천(source of truth)으로 보존
+      - 전부 수정 가능
     answer: 2
-    explanation: "raw/의 불변성이 핵심 설계. LLM이 요약하면서 원본을 수정하면 출처 추적이 불가능해진다. wiki/는 LLM이 완전 소유하여 자유롭게 업데이트. index.md는 wiki/의 카탈로그라서 wiki/ 변경 시 함께 갱신."
-  - question: "한 소스를 인제스트할 때 10~15 페이지가 동시에 업데이트되는 이유는?"
+    explanation: >-
+      raw/의 불변성이 핵심 설계. LLM이 요약하면서 원본을 수정하면 출처 추적이 불가능해진다. wiki/는 LLM이 완전 소유하여
+      자유롭게 업데이트. index.md는 wiki/의 카탈로그라서 wiki/ 변경 시 함께 갱신.
+  - question: 한 소스를 인제스트할 때 10~15 페이지가 동시에 업데이트되는 이유는?
     choices:
-      - "파일을 복사하니까"
-      - "새 소스의 개념이 기존 위키의 여러 엔티티/컨셉 페이지와 교차하기 때문. LLM이 관련 페이지를 찾아 크로스 레퍼런스를 추가하고, 모순이 있으면 플래그하고, 요약을 갱신한다"
-      - "인덱스를 재생성해서"
-      - "벡터를 재임베딩해서"
+      - 파일을 복사하니까
+      - >-
+        새 소스의 개념이 기존 위키의 여러 엔티티/컨셉 페이지와 교차하기 때문. LLM이 관련 페이지를 찾아 크로스 레퍼런스를 추가하고,
+        모순이 있으면 플래그하고, 요약을 갱신한다
+      - 인덱스를 재생성해서
+      - 벡터를 재임베딩해서
     answer: 1
-    explanation: "이것이 compilation의 핵심. 단순히 새 페이지 1개를 만드는 게 아니라, 기존 지식 그래프 전체와의 연결을 즉시 업데이트. ai-study 위키의 connections 필드와 같은 역할이지만, Karpathy 패턴은 이를 인제스트 시 자동으로 수행."
+    explanation: >-
+      이것이 compilation의 핵심. 단순히 새 페이지 1개를 만드는 게 아니라, 기존 지식 그래프 전체와의 연결을 즉시 업데이트.
+      ai-study 위키의 connections 필드와 같은 역할이지만, Karpathy 패턴은 이를 인제스트 시 자동으로 수행.
 ---
 
 ## 왜 지금 이 주제인가

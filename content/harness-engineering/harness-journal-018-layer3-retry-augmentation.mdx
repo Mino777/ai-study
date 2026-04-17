@@ -1,42 +1,70 @@
 ---
-title: "Harness Journal 018 — Layer 3-4 retry + instruction augmentation (10/10 에이전트 전체 적용)"
+title: >-
+  Harness Journal 018 — Layer 3-4 retry + instruction augmentation (10/10 에이전트
+  전체 적용)
 category: harness-engineering
 series: harness-journal
-date: "2026-04-12"
-tags: [harness-journal, harness-engineering, moneyflow, runtime-validation, retry, instruction-augmentation, layer3, layer4]
+date: '2026-04-12'
+tags:
+  - harness-journal
+  - harness-engineering
+  - moneyflow
+  - runtime-validation
+  - retry
+  - instruction-augmentation
+  - layer3
+  - layer4
 confidence: 5
 connections:
   - harness-engineering/harness-journal-017-final-validators-all-agents
   - harness-engineering/harness-journal-012-market-analyst-runtime-validation
   - harness-engineering/ai-output-zod-validation-pattern
+  - evaluation/llm-as-judge-pattern
+  - harness-engineering/harness-journal-019-mcapp-cross-session-cleanup
 status: complete
-description: "5 Layer 패턴의 Layer 3(retry) + Layer 4(instruction augmentation) 구현. retryWithValidation 순수 함수 + callAIAndValidate 래퍼로 validator 실패 시 issues를 prompt에 추가해서 LLM 재요청. market_analyst 첫 적용 후 나머지 9 에이전트 일괄 전환. 기존 1096 테스트 전체 통과."
+description: >-
+  5 Layer 패턴의 Layer 3(retry) + Layer 4(instruction augmentation) 구현.
+  retryWithValidation 순수 함수 + callAIAndValidate 래퍼로 validator 실패 시 issues를
+  prompt에 추가해서 LLM 재요청. market_analyst 첫 적용 후 나머지 9 에이전트 일괄 전환. 기존 1096 테스트 전체
+  통과.
 type: entry
 quiz:
-  - question: "retryWithValidation을 callAIAndValidate와 분리한 이유는?"
+  - question: retryWithValidation을 callAIAndValidate와 분리한 이유는?
     choices:
-      - "성능 최적화"
-      - "callAI가 같은 모듈 내 함수라 vitest의 모듈 mock이 내부 참조를 가로채지 못함. caller를 주입받는 순수 함수로 분리하면 vi.fn()으로 테스트 가능"
-      - "다른 언어 지원"
-      - "타입 호환성"
+      - 성능 최적화
+      - >-
+        callAI가 같은 모듈 내 함수라 vitest의 모듈 mock이 내부 참조를 가로채지 못함. caller를 주입받는 순수 함수로
+        분리하면 vi.fn()으로 테스트 가능
+      - 다른 언어 지원
+      - 타입 호환성
     answer: 1
-    explanation: "ESM에서 같은 모듈 내 함수는 exports 객체가 아닌 직접 참조로 호출되어 모듈 mock이 안 먹는다. caller 주입 패턴으로 테스트 가능성을 확보하면서 callAIAndValidate는 callAI를 caller로 바인딩하는 편의 래퍼 역할."
-  - question: "instruction augmentation이 LLM에 전달하는 정보는?"
+    explanation: >-
+      ESM에서 같은 모듈 내 함수는 exports 객체가 아닌 직접 참조로 호출되어 모듈 mock이 안 먹는다. caller 주입
+      패턴으로 테스트 가능성을 확보하면서 callAIAndValidate는 callAI를 caller로 바인딩하는 편의 래퍼 역할.
+  - question: instruction augmentation이 LLM에 전달하는 정보는?
     choices:
-      - "전체 스택 트레이스"
-      - "validator의 issues 배열 — '이전 응답에서 이런 필드가 잘못됐다'는 구체적 오류 목록을 프롬프트 끝에 추가해서 LLM이 어떤 필드를 어떻게 고쳐야 하는지 알게 함"
-      - "이전 응답 전체"
-      - "모델 설정 변경"
+      - 전체 스택 트레이스
+      - >-
+        validator의 issues 배열 — '이전 응답에서 이런 필드가 잘못됐다'는 구체적 오류 목록을 프롬프트 끝에 추가해서
+        LLM이 어떤 필드를 어떻게 고쳐야 하는지 알게 함
+      - 이전 응답 전체
+      - 모델 설정 변경
     answer: 1
-    explanation: "issues 배열은 validator가 발견한 구체적 문제(예: 'confidence: number 0-100 required')를 담는다. LLM에 '이전 응답의 JSON 형식 오류' 섹션으로 추가하면 LLM이 어떤 필드를 어떻게 수정해야 하는지 정확히 안다."
-  - question: "maxRetries: 1의 의미와 선택 이유는?"
+    explanation: >-
+      issues 배열은 validator가 발견한 구체적 문제(예: 'confidence: number 0-100 required')를
+      담는다. LLM에 '이전 응답의 JSON 형식 오류' 섹션으로 추가하면 LLM이 어떤 필드를 어떻게 수정해야 하는지 정확히 안다.
+  - question: 'maxRetries: 1의 의미와 선택 이유는?'
     choices:
-      - "1초 딜레이"
-      - "최초 1회 + retry 1회 = 최대 2회 호출. API 비용 대비 효과가 가장 높은 지점 — 대부분의 LLM JSON 형식 오류는 1회 재시도에서 해결되며, 2회 이상은 비용 대비 한계 효용 급감"
-      - "1개 에이전트만 retry"
-      - "1분 타임아웃"
+      - 1초 딜레이
+      - >-
+        최초 1회 + retry 1회 = 최대 2회 호출. API 비용 대비 효과가 가장 높은 지점 — 대부분의 LLM JSON 형식
+        오류는 1회 재시도에서 해결되며, 2회 이상은 비용 대비 한계 효용 급감
+      - 1개 에이전트만 retry
+      - 1분 타임아웃
     answer: 1
-    explanation: "retry 0회는 fallback, 1회는 대부분 복구, 2회 이상은 구조적 문제(프롬프트 자체가 불완전)일 가능성이 높아서 비용만 늘어남. 1회가 cost-effective sweet spot."
+    explanation: >-
+      retry 0회는 fallback, 1회는 대부분 복구, 2회 이상은 구조적 문제(프롬프트 자체가 불완전)일 가능성이 높아서 비용만
+      늘어남. 1회가 cost-effective sweet spot.
 ---
 
 ## 배경

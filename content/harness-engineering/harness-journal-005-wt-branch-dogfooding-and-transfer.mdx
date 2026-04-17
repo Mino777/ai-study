@@ -1,42 +1,71 @@
 ---
-title: "Harness Journal 005 — wt-branch 양쪽 이식, dogfooding 성공, 그리고 시리즈 자체 동력의 첫 라이브 검증"
+title: 'Harness Journal 005 — wt-branch 양쪽 이식, dogfooding 성공, 그리고 시리즈 자체 동력의 첫 라이브 검증'
 category: harness-engineering
 series: harness-journal
-date: "2026-04-12"
-tags: [harness-journal, harness-engineering, git-worktree, dogfooding, transferable-pattern, cross-project-port]
+date: '2026-04-12'
+tags:
+  - harness-journal
+  - harness-engineering
+  - git-worktree
+  - dogfooding
+  - transferable-pattern
+  - cross-project-port
 confidence: 5
 connections:
   - harness-engineering/harness-journal-004-wt-branch-command
   - harness-engineering/harness-journal-003-squash-merge-trap-pattern
   - harness-engineering/compound-engineering-philosophy
+  - harness-engineering/harness-journal-006-tarosaju-anthropic-hardening
+  - harness-engineering/harness-journal-011-concurrent-session-safety
+  - harness-engineering/harness-journal-014-hub-auto-merge-inbound-tips
+  - harness-engineering/wt-branch-structural-safety
 status: complete
-description: "Journal 004에서 정의한 /wt-branch 슬래시 커맨드가 양쪽 프로젝트에 이식되고 첫 dogfooding에 성공. tarosaju는 다른 세션이 *별도 안내 없이* 이식(시리즈 자체 동력의 첫 라이브 검증), moneyflow는 이 사이클에서 *worktree로 dogfood*하며 이식."
+description: >-
+  Journal 004에서 정의한 /wt-branch 슬래시 커맨드가 양쪽 프로젝트에 이식되고 첫 dogfooding에 성공.
+  tarosaju는 다른 세션이 *별도 안내 없이* 이식(시리즈 자체 동력의 첫 라이브 검증), moneyflow는 이 사이클에서
+  *worktree로 dogfood*하며 이식.
 type: entry
 quiz:
-  - question: "이 사이클의 *가장 큰 라이브 메시지*는?"
+  - question: 이 사이클의 *가장 큰 라이브 메시지*는?
     choices:
-      - "wt-branch가 기술적으로 작동했다"
-      - "*다른 세션이 ai-study의 박제 패치를 별도 안내 없이 발견해서 자기 프로젝트(tarosaju)에 이식했다* — 즉, ai-study의 박제가 *자체 동력으로* 다른 세션에 전파되는 것을 첫 라이브로 입증. 시리즈가 *방법론으로서 작동*함을 증명"
-      - "git worktree가 처음 사용됐다"
-      - "PR #94가 머지됐다"
+      - wt-branch가 기술적으로 작동했다
+      - >-
+        *다른 세션이 ai-study의 박제 패치를 별도 안내 없이 발견해서 자기 프로젝트(tarosaju)에 이식했다* — 즉,
+        ai-study의 박제가 *자체 동력으로* 다른 세션에 전파되는 것을 첫 라이브로 입증. 시리즈가 *방법론으로서 작동*함을 증명
+      - git worktree가 처음 사용됐다
+      - 'PR #94가 머지됐다'
     answer: 1
-    explanation: "시리즈의 *진짜 가치*는 기술 자체가 아니라 *그 자산이 다른 세션/다른 프로젝트로 전파되는 것*. Journal 004에서 박제한 이식 패치가 *내가 따로 안내하지 않았는데도* 다른 세션이 발견해서 적용했다는 것은, 시리즈가 *문서 기반 소통 채널*로 작동한다는 첫 증거. 이게 Compound Engineering이 말하는 *다음 작업이 더 쉬워진다*가 *다른 사람에게도* 확장되는 순간."
-  - question: "moneyflow 이식 작업이 *worktree로 진행*된 것이 *단순한 안전 선택* 이상의 의미를 갖는 이유는?"
+    explanation: >-
+      시리즈의 *진짜 가치*는 기술 자체가 아니라 *그 자산이 다른 세션/다른 프로젝트로 전파되는 것*. Journal 004에서 박제한
+      이식 패치가 *내가 따로 안내하지 않았는데도* 다른 세션이 발견해서 적용했다는 것은, 시리즈가 *문서 기반 소통 채널*로 작동한다는
+      첫 증거. 이게 Compound Engineering이 말하는 *다음 작업이 더 쉬워진다*가 *다른 사람에게도* 확장되는 순간.
+  - question: moneyflow 이식 작업이 *worktree로 진행*된 것이 *단순한 안전 선택* 이상의 의미를 갖는 이유는?
     choices:
-      - "worktree가 빠르기 때문"
-      - "*wt-branch 슬래시 커맨드가 정의하는 회피 패턴을 그 커맨드 자체를 이식하는 작업에 적용* — 완벽한 dogfooding. 자신이 정의한 패턴이 자신의 이식 작업에 즉시 적용되는 순환 구조"
-      - "worktree가 main 책임 분리 패턴을 지원하기 때문"
-      - "다른 세션이 아직 작업 중일 가능성 때문"
+      - worktree가 빠르기 때문
+      - >-
+        *wt-branch 슬래시 커맨드가 정의하는 회피 패턴을 그 커맨드 자체를 이식하는 작업에 적용* — 완벽한 dogfooding.
+        자신이 정의한 패턴이 자신의 이식 작업에 즉시 적용되는 순환 구조
+      - worktree가 main 책임 분리 패턴을 지원하기 때문
+      - 다른 세션이 아직 작업 중일 가능성 때문
     answer: 1
-    explanation: "dogfooding의 가장 강한 형태는 *자신의 도구로 자신을 만드는 것*. wt-branch가 정의한 *origin/main에서 깨끗한 분기*를 wt-branch 이식 작업 자체에 적용하면, *이식 작업 자체가 wt-branch의 첫 사용 사례*가 된다. Journal 002의 ai-review.yml이 자기 자신을 검증한 것과 정확히 같은 패턴의 반복 — 이게 시리즈의 *자기 검증 구조*."
-  - question: "양쪽 프로젝트가 이제 *4-게이트 표준 + wt-branch 표준*으로 수렴한 것이 큐에 미치는 영향은?"
+    explanation: >-
+      dogfooding의 가장 강한 형태는 *자신의 도구로 자신을 만드는 것*. wt-branch가 정의한 *origin/main에서
+      깨끗한 분기*를 wt-branch 이식 작업 자체에 적용하면, *이식 작업 자체가 wt-branch의 첫 사용 사례*가 된다.
+      Journal 002의 ai-review.yml이 자기 자신을 검증한 것과 정확히 같은 패턴의 반복 — 이게 시리즈의 *자기 검증
+      구조*.
+  - question: 양쪽 프로젝트가 이제 *4-게이트 표준 + wt-branch 표준*으로 수렴한 것이 큐에 미치는 영향은?
     choices:
-      - "모든 이식이 끝났으므로 시리즈가 종료"
-      - "*비대칭이 줄어들면서 이식 큐가 자동 축소*. 남은 큐는 *양쪽이 아직 미적용*한 패턴(Zod 검증, 비용 추적 등)으로 좁혀짐. 비대칭이 자동 큐를 만들던 시기가 끝나고 *공통 미적용* 영역이 새 큐의 원천이 됨"
-      - "GitHub Actions 비용이 절감됨"
-      - "새 갭이 발견되지 않음"
+      - 모든 이식이 끝났으므로 시리즈가 종료
+      - >-
+        *비대칭이 줄어들면서 이식 큐가 자동 축소*. 남은 큐는 *양쪽이 아직 미적용*한 패턴(Zod 검증, 비용 추적 등)으로 좁혀짐.
+        비대칭이 자동 큐를 만들던 시기가 끝나고 *공통 미적용* 영역이 새 큐의 원천이 됨
+      - GitHub Actions 비용이 절감됨
+      - 새 갭이 발견되지 않음
     answer: 1
-    explanation: "이식이 *끝났다*는 것은 *한쪽의 강점이 양쪽의 강점이 됐다*는 뜻. 비대칭이 줄면 *비대칭 비교표*가 만들던 자동 큐도 줄어든다. 다음 큐는 *양쪽이 함께 미적용*인 영역 — Zod 검증, 비용 추적, Skill 시스템 등 *제안 엔트리*로 이미 박제된 것들이 자연스럽게 다음 사이클의 입력."
+    explanation: >-
+      이식이 *끝났다*는 것은 *한쪽의 강점이 양쪽의 강점이 됐다*는 뜻. 비대칭이 줄면 *비대칭 비교표*가 만들던 자동 큐도 줄어든다.
+      다음 큐는 *양쪽이 함께 미적용*인 영역 — Zod 검증, 비용 추적, Skill 시스템 등 *제안 엔트리*로 이미 박제된 것들이
+      자연스럽게 다음 사이클의 입력.
 ---
 
 ## 갭 (Before)

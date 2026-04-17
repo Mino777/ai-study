@@ -1,14 +1,30 @@
 ---
-title: "iOS Harness Journal 006 — SPM 순환 의존 뇌관 제거: 회고 복리가 3일 만에 실전에서 작동한 날"
+title: 'iOS Harness Journal 006 — SPM 순환 의존 뇌관 제거: 회고 복리가 3일 만에 실전에서 작동한 날'
 category: ios-ai
 series: ios-ai-journal
-date: "2026-04-13"
-tags: [ios-harness-journal, ios, spm, multimodule, architecture, refactoring, compound-engineering, retrospective]
+date: '2026-04-13'
+tags:
+  - ios-harness-journal
+  - ios
+  - spm
+  - multimodule
+  - architecture
+  - refactoring
+  - compound-engineering
+  - retrospective
 confidence: 5
-connections: [ios-ai/ios-ai-journal-005-ios-compound, ios-ai/ios-ai-journal-003-claudeignore-spm, harness-engineering/compound-automation-slash-commands]
+connections:
+  - ios-ai/ios-ai-journal-005-ios-compound
+  - ios-ai/ios-ai-journal-003-claudeignore-spm
+  - harness-engineering/compound-automation-slash-commands
+  - ios-ai/ios-ai-journal-007-claude-hooks-silent-failure
+  - ios-ai/ios-ai-journal-008-first-full-harness-setup-retro
 status: complete
 type: entry
-description: "Journal 005에서 박제한 /compound 회고가 3일 만에 실전에서 복리로 작동했다. 3일 전 회고 문서의 '다음에 적용' 항목 한 줄이 이번 스프린트 방향을 10초 만에 결정했고, 58개 SPM 패키지가 엮인 58-node 그래프에서 `Common → ADomain` 엣지 하나를 외과수술하듯 제거했다. 중간에 grep 패턴 오판으로 빌드가 터진 복구 사이클까지 포함한 실전 기록."
+description: >-
+  Journal 005에서 박제한 /compound 회고가 3일 만에 실전에서 복리로 작동했다. 3일 전 회고 문서의 '다음에 적용' 항목 한
+  줄이 이번 스프린트 방향을 10초 만에 결정했고, 58개 SPM 패키지가 엮인 58-node 그래프에서 `Common → ADomain`
+  엣지 하나를 외과수술하듯 제거했다. 중간에 grep 패턴 오판으로 빌드가 터진 복구 사이클까지 포함한 실전 기록.
 ---
 
 ## 한 줄 요약

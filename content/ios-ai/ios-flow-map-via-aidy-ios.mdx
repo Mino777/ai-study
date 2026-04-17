@@ -1,43 +1,77 @@
 ---
-title: "aidy-ios로 다시 보는 iOS 흐름 맵 — TCA + SwiftUI + Tuist 역방향 학습"
+title: aidy-ios로 다시 보는 iOS 흐름 맵 — TCA + SwiftUI + Tuist 역방향 학습
 category: ios-ai
-date: "2026-04-16"
-tags: [ios, swiftui, tca, tuist, swift, aidy, flow-map-series, learning-path, reverse-learning]
+date: '2026-04-16'
+tags:
+  - ios
+  - swiftui
+  - tca
+  - tuist
+  - swift
+  - aidy
+  - flow-map-series
+  - learning-path
+  - reverse-learning
 confidence: 3
 connections:
   - backend-ai/backend-flow-map-via-aidy-server
   - android-ai/android-flow-map-via-aidy-android
   - ios-ai/ios-ai-journal-000-baseline
   - ios-ai/urlsession-bytes-sse-subscription
-  - harness-engineering/aidy-journal-005-sse-phase1-to-phase2-progressive-rollout
+  - >-
+    harness-engineering/aidy-journal-005-sse-phase1-to-phase2-progressive-rollout
+  - context-engineering/api-contract-as-3-client-source-of-truth
+  - evaluation/test-strategy-3-client-via-aidy
+  - harness-engineering/architect-flow-map-via-aidy-architect
 status: complete
-description: "RIBs/ReactorKit 기반 회사 프로덕션 iOS 앱에 익숙한 개발자가 aidy-ios(TCA + SwiftUI + Tuist)를 통해 같은 플랫폼을 '다른 아키텍처'로 다시 보며 흐름을 정리한다. Flow Map 시리즈의 역방향 학습 편: 메시지 한 번의 여정을 View → Action → Reducer → Effect → State → 재렌더로 관통하고, RIBs/ReactorKit ↔ TCA와 Compose ↔ TCA를 양방향 매핑한다."
+description: >-
+  RIBs/ReactorKit 기반 회사 프로덕션 iOS 앱에 익숙한 개발자가 aidy-ios(TCA + SwiftUI + Tuist)를 통해
+  같은 플랫폼을 '다른 아키텍처'로 다시 보며 흐름을 정리한다. Flow Map 시리즈의 역방향 학습 편: 메시지 한 번의 여정을 View →
+  Action → Reducer → Effect → State → 재렌더로 관통하고, RIBs/ReactorKit ↔ TCA와 Compose
+  ↔ TCA를 양방향 매핑한다.
 type: entry
 quiz:
-  - question: "TCA의 Reducer가 Android(Compose) ViewModel과 가장 본질적으로 다른 점은?"
+  - question: TCA의 Reducer가 Android(Compose) ViewModel과 가장 본질적으로 다른 점은?
     choices:
-      - "Kotlin/Swift 언어 차이"
-      - "TCA Reducer는 State 변경을 순수 함수(State + Action → State)로 명시적으로 모델링하고, 모든 사이드 이펙트를 Effect(.run) 타입으로 반환해 격리한다. ViewModel은 메서드 호출 + 상태 직접 mutation 패턴"
-      - "TCA는 느리다"
-      - "TCA는 SwiftUI 전용이다"
+      - Kotlin/Swift 언어 차이
+      - >-
+        TCA Reducer는 State 변경을 순수 함수(State + Action → State)로 명시적으로 모델링하고, 모든
+        사이드 이펙트를 Effect(.run) 타입으로 반환해 격리한다. ViewModel은 메서드 호출 + 상태 직접 mutation
+        패턴
+      - TCA는 느리다
+      - TCA는 SwiftUI 전용이다
     answer: 1
-    explanation: "TCA의 핵심은 '상태 변경의 단방향화'. Action이 들어오면 Reducer가 State를 어떻게 바꿀지 결정하고, 사이드 이펙트(API, 타이머 등)는 반드시 Effect 타입으로 반환되어 runtime이 관리한다. Android ViewModel은 suspend fun 안에서 자유롭게 state.value = ...를 호출할 수 있어 상태 변경 경로가 분산된다. Redux/Elm 계보의 차이."
-  - question: "aidy-ios의 APIClient가 @DependencyClient 매크로를 쓰는 이유로 가장 본질적인 것은?"
+    explanation: >-
+      TCA의 핵심은 '상태 변경의 단방향화'. Action이 들어오면 Reducer가 State를 어떻게 바꿀지 결정하고, 사이드
+      이펙트(API, 타이머 등)는 반드시 Effect 타입으로 반환되어 runtime이 관리한다. Android ViewModel은
+      suspend fun 안에서 자유롭게 state.value = ...를 호출할 수 있어 상태 변경 경로가 분산된다. Redux/Elm
+      계보의 차이.
+  - question: aidy-ios의 APIClient가 @DependencyClient 매크로를 쓰는 이유로 가장 본질적인 것은?
     choices:
-      - "Swift 매크로가 트렌디해서"
-      - "TestStore 테스트에서 mock 구현을 테스트 함수 안에서 즉석으로 주입 가능하게 하기 위함. Reducer의 @Dependency(\\.apiClient)로 꺼내 쓰는 코드를 바꾸지 않고도 테스트마다 다른 mock을 주입할 수 있다"
-      - "런타임 성능이 좋아서"
-      - "Swinject보다 안전해서"
+      - Swift 매크로가 트렌디해서
+      - >-
+        TestStore 테스트에서 mock 구현을 테스트 함수 안에서 즉석으로 주입 가능하게 하기 위함. Reducer의
+        @Dependency(\.apiClient)로 꺼내 쓰는 코드를 바꾸지 않고도 테스트마다 다른 mock을 주입할 수 있다
+      - 런타임 성능이 좋아서
+      - Swinject보다 안전해서
     answer: 1
-    explanation: "TCA의 DI 철학은 '테스트 시 모든 의존성을 명시적으로 제어'다. @DependencyClient 매크로가 struct의 각 async throws 프로퍼티에 unimplemented 기본값을 자동 생성하므로, TestStore에서는 실제로 호출되는 것만 override하면 된다. 호출 안 한 의존성을 실수로 호출하면 테스트 즉시 실패."
-  - question: "iOS 개발자에게 aidy-ios가 좋은 역방향 학습 재료인 이유는?"
+    explanation: >-
+      TCA의 DI 철학은 '테스트 시 모든 의존성을 명시적으로 제어'다. @DependencyClient 매크로가 struct의 각
+      async throws 프로퍼티에 unimplemented 기본값을 자동 생성하므로, TestStore에서는 실제로 호출되는 것만
+      override하면 된다. 호출 안 한 의존성을 실수로 호출하면 테스트 즉시 실패.
+  - question: iOS 개발자에게 aidy-ios가 좋은 역방향 학습 재료인 이유는?
     choices:
-      - "코드량이 적어서"
-      - "플랫폼(Swift/UIKit/SwiftUI)은 익숙하지만 아키텍처(TCA/Tuist/DependencyClient)가 다른 조합. '같은 플랫폼, 다른 아키텍처'는 순수한 패턴 대비 학습을 가능하게 한다"
-      - "Apple 공식이라서"
-      - "앱스토어 출시가 쉬워서"
+      - 코드량이 적어서
+      - >-
+        플랫폼(Swift/UIKit/SwiftUI)은 익숙하지만 아키텍처(TCA/Tuist/DependencyClient)가 다른 조합.
+        '같은 플랫폼, 다른 아키텍처'는 순수한 패턴 대비 학습을 가능하게 한다
+      - Apple 공식이라서
+      - 앱스토어 출시가 쉬워서
     answer: 1
-    explanation: "RIBs/ReactorKit에서 쌓은 Swift/SwiftUI/UIKit 감각을 유지하면서 상태 관리 축(TCA vs ReactorKit Reactor vs RIBs Interactor)만 바꿔보는 것. 플랫폼 변수가 고정되면 '아키텍처의 본질'이 더 선명하게 드러난다."
+    explanation: >-
+      RIBs/ReactorKit에서 쌓은 Swift/SwiftUI/UIKit 감각을 유지하면서 상태 관리 축(TCA vs
+      ReactorKit Reactor vs RIBs Interactor)만 바꿔보는 것. 플랫폼 변수가 고정되면 '아키텍처의 본질'이 더
+      선명하게 드러난다.
 ---
 
 ## 한 줄 요약

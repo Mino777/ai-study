@@ -1,41 +1,67 @@
 ---
-title: "LLM-First Wiki 설계 원칙 — AI 에이전트를 위한 지식 저장소"
+title: LLM-First Wiki 설계 원칙 — AI 에이전트를 위한 지식 저장소
 category: harness-engineering
-date: "2026-04-12"
-tags: [harness-engineering, llm-first, knowledge-base, zettelkasten, ai-agent, transferable-pattern, meta]
+date: '2026-04-12'
+tags:
+  - harness-engineering
+  - llm-first
+  - knowledge-base
+  - zettelkasten
+  - ai-agent
+  - transferable-pattern
+  - meta
 confidence: 5
 connections:
   - harness-engineering/ai-agent-start-here
   - harness-engineering/compound-engineering-philosophy
   - harness-engineering/harness-journal-000-baseline
+  - context-engineering/claude-md-design-patterns
+  - context-engineering/karpathy-llm-wiki-pattern-compilation-over-retrieval
+  - context-engineering/llm-wiki-swot-ai-study-vs-karpathy
+  - harness-engineering/harness-journal-010-baseline-third-update
 status: complete
-description: "사람 블로그가 아니라 AI 에이전트가 읽고 실행할 수 있는 형태로 설계된 지식 저장소의 5가지 원칙. 이 위키 자체가 LLM-First Wiki의 메타 엔트리."
+description: >-
+  사람 블로그가 아니라 AI 에이전트가 읽고 실행할 수 있는 형태로 설계된 지식 저장소의 5가지 원칙. 이 위키 자체가 LLM-First
+  Wiki의 메타 엔트리.
 type: entry
 quiz:
-  - question: "LLM-First Wiki가 *일반 기술 블로그*와 본질적으로 다른 점은?"
+  - question: LLM-First Wiki가 *일반 기술 블로그*와 본질적으로 다른 점은?
     choices:
-      - "글이 더 길다"
-      - "*AI 에이전트가 1차 독자*. 사람의 이해를 위한 설명이 아니라 *에이전트가 즉시 실행 가능한 형태*의 지식으로 박제. Agent Directive 섹션이 핵심"
-      - "코드 예제가 더 많다"
-      - "MDX를 사용한다"
+      - 글이 더 길다
+      - >-
+        *AI 에이전트가 1차 독자*. 사람의 이해를 위한 설명이 아니라 *에이전트가 즉시 실행 가능한 형태*의 지식으로 박제.
+        Agent Directive 섹션이 핵심
+      - 코드 예제가 더 많다
+      - MDX를 사용한다
     answer: 1
-    explanation: "블로그는 *사람의 이해*가 목적. LLM-First Wiki는 *에이전트의 실행*이 목적. 같은 내용이라도 구조가 다르다 — Trigger(언제), Prerequisites(먼저), Actionable Steps(어떻게), Anti-patterns(피할 것)로 *에이전트가 체크리스트로 쓸 수 있게*."
-  - question: "Zettelkasten의 *atomicity* 원칙이 AI 에이전트에게 왜 결정적인가?"
+    explanation: >-
+      블로그는 *사람의 이해*가 목적. LLM-First Wiki는 *에이전트의 실행*이 목적. 같은 내용이라도 구조가 다르다 —
+      Trigger(언제), Prerequisites(먼저), Actionable Steps(어떻게), Anti-patterns(피할
+      것)로 *에이전트가 체크리스트로 쓸 수 있게*.
+  - question: Zettelkasten의 *atomicity* 원칙이 AI 에이전트에게 왜 결정적인가?
     choices:
-      - "디스크 공간 절약"
-      - "같은 개념이 여러 엔트리에 흩어지면 에이전트가 *어디를 읽어야 하는지* 모름. 하나의 개념 = 하나의 엔트리여야 *정확한 라우팅*이 가능"
-      - "SEO 최적화"
-      - "렌더링 속도"
+      - 디스크 공간 절약
+      - >-
+        같은 개념이 여러 엔트리에 흩어지면 에이전트가 *어디를 읽어야 하는지* 모름. 하나의 개념 = 하나의 엔트리여야 *정확한
+        라우팅*이 가능
+      - SEO 최적화
+      - 렌더링 속도
     answer: 1
-    explanation: "사람은 여러 곳을 *대충 훑어서* 종합할 수 있지만, 에이전트는 *정확한 위치*를 찾아야 한다. atomicity는 에이전트의 *검색 성공률*을 결정. 중복은 에이전트에겐 *혼란 증폭기*."
-  - question: "'살아있는 문서' 원칙이 *append-only*인 이유는?"
+    explanation: >-
+      사람은 여러 곳을 *대충 훑어서* 종합할 수 있지만, 에이전트는 *정확한 위치*를 찾아야 한다. atomicity는 에이전트의 *검색
+      성공률*을 결정. 중복은 에이전트에겐 *혼란 증폭기*.
+  - question: '''살아있는 문서'' 원칙이 *append-only*인 이유는?'
     choices:
-      - "git 커밋 수 늘리기"
-      - "원본을 덮어쓰면 *이전 가설*이 사라져서 *왜 그렇게 결정했는지* 맥락 소실. 베이스라인 + 갱신 로그 구조로 *시간 함수*로 지식이 진화한 흔적을 보존"
-      - "롤백 쉽게 하기"
-      - "파일 크기 관리"
+      - git 커밋 수 늘리기
+      - >-
+        원본을 덮어쓰면 *이전 가설*이 사라져서 *왜 그렇게 결정했는지* 맥락 소실. 베이스라인 + 갱신 로그 구조로 *시간 함수*로
+        지식이 진화한 흔적을 보존
+      - 롤백 쉽게 하기
+      - 파일 크기 관리
     answer: 1
-    explanation: "덮어쓰기는 *결과만 남기고 과정은 지움*. 갱신 로그는 *가설이 어떻게 틀렸고 어떻게 교정됐는지*를 보존. 다음 에이전트가 *같은 실수를 피할* 근거."
+    explanation: >-
+      덮어쓰기는 *결과만 남기고 과정은 지움*. 갱신 로그는 *가설이 어떻게 틀렸고 어떻게 교정됐는지*를 보존. 다음 에이전트가 *같은
+      실수를 피할* 근거.
 ---
 
 ## 왜 LLM-First Wiki인가

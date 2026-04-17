@@ -1,41 +1,65 @@
 ---
-title: "Multi-Session AI Ops — 여러 Claude 세션이 동시에 작업할 때의 함정과 패턴"
+title: Multi-Session AI Ops — 여러 Claude 세션이 동시에 작업할 때의 함정과 패턴
 category: harness-engineering
-date: "2026-04-12"
-tags: [harness-engineering, multi-session, ai-ops, git-worktree, session-coordination, transferable-pattern]
+date: '2026-04-12'
+tags:
+  - harness-engineering
+  - multi-session
+  - ai-ops
+  - git-worktree
+  - session-coordination
+  - transferable-pattern
 confidence: 4
 connections:
   - harness-engineering/harness-journal-003-squash-merge-trap-pattern
   - harness-engineering/harness-journal-004-wt-branch-command
   - harness-engineering/harness-journal-000-baseline
+  - harness-engineering/parallel-agent-batch-modification-pattern
 status: complete
-description: "여러 Claude Code 세션이 같은 프로젝트(또는 같은 사용자의 여러 프로젝트)에서 동시에 작업할 때 발생하는 함정과 회피 패턴. 라이브로 경험한 다중 세션 사고를 박제한 운영 가이드."
+description: >-
+  여러 Claude Code 세션이 같은 프로젝트(또는 같은 사용자의 여러 프로젝트)에서 동시에 작업할 때 발생하는 함정과 회피 패턴.
+  라이브로 경험한 다중 세션 사고를 박제한 운영 가이드.
 type: entry
 quiz:
-  - question: "*단일 세션* 환경에서는 안 보이다가 *다중 세션*에서 즉시 드러나는 함정의 본질은?"
+  - question: '*단일 세션* 환경에서는 안 보이다가 *다중 세션*에서 즉시 드러나는 함정의 본질은?'
     choices:
-      - "API rate limit 공유"
-      - "*git 상태와 working tree*가 *세션마다 다르게 보임* — 한 세션이 squash merge로 origin을 변경해도 다른 세션의 로컬 git 상태는 그것을 모름. 단일 세션에선 *내가 모든 변경을 알고 있어서* 보이지 않던 갭이 다중 세션에서 *세션 간 동기화 부재*로 즉시 드러남"
-      - "메모리 파일 충돌"
-      - "Claude API 동시성 제한"
+      - API rate limit 공유
+      - >-
+        *git 상태와 working tree*가 *세션마다 다르게 보임* — 한 세션이 squash merge로 origin을 변경해도
+        다른 세션의 로컬 git 상태는 그것을 모름. 단일 세션에선 *내가 모든 변경을 알고 있어서* 보이지 않던 갭이 다중 세션에서
+        *세션 간 동기화 부재*로 즉시 드러남
+      - 메모리 파일 충돌
+      - Claude API 동시성 제한
     answer: 1
-    explanation: "단일 세션은 *모든 변경의 단일 source*. 다중 세션은 *각 세션이 부분적인 view*를 가진다. 그 view들이 origin의 *변형*(squash merge, force push, branch reset)을 자동으로 흡수하지 못하면 *서로 다른 세계*에서 작업하다가 push 시점에 충돌."
-  - question: "이 가이드가 권장하는 *세션 책임 분리* 패턴은?"
+    explanation: >-
+      단일 세션은 *모든 변경의 단일 source*. 다중 세션은 *각 세션이 부분적인 view*를 가진다. 그 view들이 origin의
+      *변형*(squash merge, force push, branch reset)을 자동으로 흡수하지 못하면 *서로 다른 세계*에서
+      작업하다가 push 시점에 충돌.
+  - question: 이 가이드가 권장하는 *세션 책임 분리* 패턴은?
     choices:
-      - "모든 세션이 동일한 책임"
-      - "세션 1: 코드 / 세션 2: 박제 / 세션 3: 회고 — 영역별 분리"
-      - "*한 세션이 main의 git 상태 책임* — 다른 세션은 *worktree로 분기*해서 main을 직접 만지지 X. 책임의 단일성이 사고를 막는 가장 강력한 패턴"
-      - "세션마다 별도 프로젝트"
+      - 모든 세션이 동일한 책임
+      - '세션 1: 코드 / 세션 2: 박제 / 세션 3: 회고 — 영역별 분리'
+      - >-
+        *한 세션이 main의 git 상태 책임* — 다른 세션은 *worktree로 분기*해서 main을 직접 만지지 X. 책임의
+        단일성이 사고를 막는 가장 강력한 패턴
+      - 세션마다 별도 프로젝트
     answer: 2
-    explanation: "여러 세션이 *같은 main 브랜치를 동시에 만지면* git diverge가 *반드시* 발생한다. 한 세션을 *main 책임자*로 정하고 다른 세션은 worktree로 분기하면 *각 세션이 자기 영역만* 만진다. 단일 책임은 git 다중 세션의 핵심."
-  - question: "이번 세션이 *다른 세션의 작업을 직접 정리하지 않은* 이유는?"
+    explanation: >-
+      여러 세션이 *같은 main 브랜치를 동시에 만지면* git diverge가 *반드시* 발생한다. 한 세션을 *main 책임자*로
+      정하고 다른 세션은 worktree로 분기하면 *각 세션이 자기 영역만* 만진다. 단일 책임은 git 다중 세션의 핵심.
+  - question: 이번 세션이 *다른 세션의 작업을 직접 정리하지 않은* 이유는?
     choices:
-      - "권한이 없어서"
-      - "다른 세션이 동시에 같은 영역을 만지고 있을 가능성이 있어서, 내가 cherry-pick을 시도하면 *세 번째 사고*를 만들 위험. *자율 모드의 경계*는 *물리적 충돌 위험*까지 포함하고, cherry-pick의 충돌 해결은 *코드 결정*이라 다른 세션 영역"
-      - "cherry-pick 명령이 실패해서"
-      - "Claude Code가 worktree를 지원하지 않아서"
+      - 권한이 없어서
+      - >-
+        다른 세션이 동시에 같은 영역을 만지고 있을 가능성이 있어서, 내가 cherry-pick을 시도하면 *세 번째 사고*를 만들
+        위험. *자율 모드의 경계*는 *물리적 충돌 위험*까지 포함하고, cherry-pick의 충돌 해결은 *코드 결정*이라 다른 세션
+        영역
+      - cherry-pick 명령이 실패해서
+      - Claude Code가 worktree를 지원하지 않아서
     answer: 1
-    explanation: "안전한 자율의 핵심은 *경계 인식*. 자율로 처리할 수 있는 것(분석, 박제, 자기 영역 작업)과 *없는 것*(다른 세션 동시 작업 영역, 코드 의도 결정)을 구분. PR #93 cherry-pick 충돌은 후자라서 박제 + 다른 세션에 전달이 정확한 행동."
+    explanation: >-
+      안전한 자율의 핵심은 *경계 인식*. 자율로 처리할 수 있는 것(분석, 박제, 자기 영역 작업)과 *없는 것*(다른 세션 동시 작업
+      영역, 코드 의도 결정)을 구분. PR #93 cherry-pick 충돌은 후자라서 박제 + 다른 세션에 전달이 정확한 행동.
 ---
 
 ## 갭 (라이브 발견)

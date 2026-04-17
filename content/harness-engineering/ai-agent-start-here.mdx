@@ -1,8 +1,16 @@
 ---
-title: "AI Agent Start Here — 이 위키를 처음 만난 에이전트를 위한 부트스트랩"
+title: AI Agent Start Here — 이 위키를 처음 만난 에이전트를 위한 부트스트랩
 category: harness-engineering
-date: "2026-04-12"
-tags: [harness-engineering, ai-agent, bootstrap, routing, llm-first, meta, ios, web]
+date: '2026-04-12'
+tags:
+  - harness-engineering
+  - ai-agent
+  - bootstrap
+  - routing
+  - llm-first
+  - meta
+  - ios
+  - web
 confidence: 5
 connections:
   - harness-engineering/llm-first-wiki-principles
@@ -12,34 +20,54 @@ connections:
   - ios-ai/ios-ai-code-quality-test-strategy
   - harness-engineering/shell-pipe-exit-code-trap
   - infrastructure/cron-execution-tracking-pattern
+  - context-engineering/claude-md-design-patterns
+  - context-engineering/claudeignore-context-hygiene
+  - ios-ai/ios-ai-journal-008-first-full-harness-setup-retro
+  - ios-ai/ios-ai-journal-009-ai-probe-dual-pipeline
+  - ios-ai/ios-legacy-to-ai-ready
 status: complete
-description: "이 위키를 처음 만난 AI 에이전트가 가장 먼저 읽을 엔트리. 상황별 라우팅 표 + iOS/Web 플랫폼별 하네스 구축 가이드 + 기본 계약 + 주의사항. CLAUDE.md / SPEC.md와 함께 세션 시작 시 반드시 로드."
+description: >-
+  이 위키를 처음 만난 AI 에이전트가 가장 먼저 읽을 엔트리. 상황별 라우팅 표 + iOS/Web 플랫폼별 하네스 구축 가이드 + 기본 계약
+  + 주의사항. CLAUDE.md / SPEC.md와 함께 세션 시작 시 반드시 로드.
 type: entry
 quiz:
-  - question: "AI 에이전트가 이 위키에서 *세션 시작 시 가장 먼저* 읽어야 하는 3개 파일은?"
+  - question: AI 에이전트가 이 위키에서 *세션 시작 시 가장 먼저* 읽어야 하는 3개 파일은?
     choices:
-      - "README.md / package.json / tsconfig.json"
-      - "**CLAUDE.md** (프로젝트 규약) + **SPEC.md** (엔티티 + 데이터 흐름 + 계약) + **이 엔트리** (상황별 라우팅)"
-      - "모든 harness-journal 엔트리"
-      - "랜덤 3개 엔트리"
+      - README.md / package.json / tsconfig.json
+      - >-
+        **CLAUDE.md** (프로젝트 규약) + **SPEC.md** (엔티티 + 데이터 흐름 + 계약) + **이 엔트리**
+        (상황별 라우팅)
+      - 모든 harness-journal 엔트리
+      - 랜덤 3개 엔트리
     answer: 1
-    explanation: "3개 파일이 정확한 로드 순서. CLAUDE.md로 프로젝트 규약, SPEC.md로 데이터 흐름과 계약, 이 엔트리로 *내가 지금 뭘 해야 하는지* 라우팅. 이 순서를 따르지 않으면 *계약 위반*."
-  - question: "*새 프로젝트의 AI 환경을 구축*해야 할 때 에이전트가 따라야 하는 순서는?"
+    explanation: >-
+      3개 파일이 정확한 로드 순서. CLAUDE.md로 프로젝트 규약, SPEC.md로 데이터 흐름과 계약, 이 엔트리로 *내가 지금 뭘
+      해야 하는지* 라우팅. 이 순서를 따르지 않으면 *계약 위반*.
+  - question: '*새 프로젝트의 AI 환경을 구축*해야 할 때 에이전트가 따라야 하는 순서는?'
     choices:
-      - "곧바로 /compound 실행"
-      - "**진단 체크리스트(50문항)** → Bootstrap Guide → 베이스라인 박기 → 첫 사이클. 추측 큐보다 *라이브 사고*가 다음 사이클 만들게 두기"
-      - "모든 엔트리 순서대로 읽기"
-      - "랜덤 슬래시 커맨드 실행"
+      - 곧바로 /compound 실행
+      - >-
+        **진단 체크리스트(50문항)** → Bootstrap Guide → 베이스라인 박기 → 첫 사이클. 추측 큐보다 *라이브
+        사고*가 다음 사이클 만들게 두기
+      - 모든 엔트리 순서대로 읽기
+      - 랜덤 슬래시 커맨드 실행
     answer: 1
-    explanation: "진단 체크리스트로 *시작 가치*부터 점검 → Bootstrap Guide로 베이스라인 박는 법 학습 → 실제 베이스라인 작성 → 첫 사이클. *추측 큐*에 시간을 쓰지 말고 *대략 큐 5개* 정한 뒤 라이브 사고가 정확한 다음 항목을 만들게 두기."
-  - question: "박제를 할 때 에이전트가 *추측 없이 직접 확인한 것만* 박아야 하는 이유는?"
+    explanation: >-
+      진단 체크리스트로 *시작 가치*부터 점검 → Bootstrap Guide로 베이스라인 박는 법 학습 → 실제 베이스라인 작성 → 첫
+      사이클. *추측 큐*에 시간을 쓰지 말고 *대략 큐 5개* 정한 뒤 라이브 사고가 정확한 다음 항목을 만들게 두기.
+  - question: 박제를 할 때 에이전트가 *추측 없이 직접 확인한 것만* 박아야 하는 이유는?
     choices:
-      - "파일 크기 절약"
-      - "*날조는 위키 전체의 신뢰도를 0으로 만듦*. 한 엔트리에 가짜 인용구가 있으면 *같은 위키의 다른 모든 엔트리*도 의심받음. 사고 메시지보다 신뢰도 타격이 훨씬 크다 (2026-04-11 라이브 사고 사례)"
-      - "git 커밋 깔끔함"
-      - "SEO 점수"
+      - 파일 크기 절약
+      - >-
+        *날조는 위키 전체의 신뢰도를 0으로 만듦*. 한 엔트리에 가짜 인용구가 있으면 *같은 위키의 다른 모든 엔트리*도 의심받음.
+        사고 메시지보다 신뢰도 타격이 훨씬 크다 (2026-04-11 라이브 사고 사례)
+      - git 커밋 깔끔함
+      - SEO 점수
     answer: 1
-    explanation: "2026-04-11에 실제로 발생한 사고 — 영상을 시청하지 않은 채로 \"영상에서 ~라는 비유\" 같은 프레임으로 가짜 인용구를 박았던 사례. hotfix로 6개 인용구 제거 + 정보 출처 고지 박스 추가. 이게 `/ingest` 슬래시 커맨드가 *원본 직접 확인*을 강제하게 된 계기."
+    explanation: >-
+      2026-04-11에 실제로 발생한 사고 — 영상을 시청하지 않은 채로 "영상에서 ~라는 비유" 같은 프레임으로 가짜 인용구를 박았던
+      사례. hotfix로 6개 인용구 제거 + 정보 출처 고지 박스 추가. 이게 `/ingest` 슬래시 커맨드가 *원본 직접 확인*을
+      강제하게 된 계기.
 ---
 
 ## 먼저 읽으세요

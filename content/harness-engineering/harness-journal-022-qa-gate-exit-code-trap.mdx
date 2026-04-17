@@ -1,43 +1,74 @@
 ---
-title: "Harness Journal 022 — QA Gate 파이프라인 종료 코드 함정 (빌드 실패가 통과한 라이브 사고)"
+title: Harness Journal 022 — QA Gate 파이프라인 종료 코드 함정 (빌드 실패가 통과한 라이브 사고)
 category: harness-engineering
 series: harness-journal
-date: "2026-04-14"
-tags: [harness-journal, harness-engineering, qa-gate, exit-code, pipe, claude-code-hooks, build-verification, silent-failure]
+date: '2026-04-14'
+tags:
+  - harness-journal
+  - harness-engineering
+  - qa-gate
+  - exit-code
+  - pipe
+  - claude-code-hooks
+  - build-verification
+  - silent-failure
 confidence: 5
 connections:
   - harness-engineering/harness-journal-020-promise-timeout-wrapper
   - harness-engineering/harness-journal-019-mcapp-cross-session-cleanup
   - harness-engineering/harness-journal-021-github-token-deploy-chain-gap
   - harness-engineering/dev-setup-tips-log
+  - ios-ai/ios-ai-journal-007-claude-hooks-silent-failure
 status: complete
-description: "Claude Code hooks의 pre-commit QA gate가 `npm run build | grep | tail; if [ $? -ne 0 ]` 패턴을 사용 — 파이프라인 마지막 명령(tail)의 종료 코드만 검사하므로 빌드 실패를 100% 놓침. Supabase PromiseLike 타입 에러 + Turbopack 'Type error:' 포맷이 겹쳐 3중 방어(hook + 수동 grep + 에이전트 위임) 모두 실패. 수정: 종료 코드 직접 캡처 패턴."
+description: >-
+  Claude Code hooks의 pre-commit QA gate가 `npm run build | grep | tail; if [ $?
+  -ne 0 ]` 패턴을 사용 — 파이프라인 마지막 명령(tail)의 종료 코드만 검사하므로 빌드 실패를 100% 놓침. Supabase
+  PromiseLike 타입 에러 + Turbopack 'Type error:' 포맷이 겹쳐 3중 방어(hook + 수동 grep + 에이전트
+  위임) 모두 실패. 수정: 종료 코드 직접 캡처 패턴.
 type: entry
 quiz:
-  - question: "`npm run build 2>&1 | grep 'error' | tail -3; if [ $? -ne 0 ]`에서 `$?`가 검사하는 것은?"
+  - question: >-
+      `npm run build 2>&1 | grep 'error' | tail -3; if [ $? -ne 0 ]`에서 `$?`가
+      검사하는 것은?
     choices:
-      - "npm run build의 종료 코드"
-      - "grep의 종료 코드"
-      - "**tail의 종료 코드** — 파이프라인에서 `$?`는 마지막 명령의 종료 코드만 반환. tail은 입력이 있으면 항상 0. 따라서 빌드가 실패해도 gate는 항상 통과"
-      - "전체 파이프라인의 종료 코드"
+      - npm run build의 종료 코드
+      - grep의 종료 코드
+      - >-
+        **tail의 종료 코드** — 파이프라인에서 `$?`는 마지막 명령의 종료 코드만 반환. tail은 입력이 있으면 항상 0.
+        따라서 빌드가 실패해도 gate는 항상 통과
+      - 전체 파이프라인의 종료 코드
     answer: 2
-    explanation: "POSIX 쉘에서 `$?`는 *마지막 파이프라인 요소*의 종료 코드만 반환. `set -o pipefail`을 설정하지 않는 한 앞쪽 명령의 실패는 전파되지 않는다. `tail -3`은 stdin에 데이터가 있으면 항상 exit 0. 이 함정은 쉘 스크립팅 초보자부터 10년차까지 반복적으로 빠지는 고전적 버그."
-  - question: "이 사고에서 방어 계층이 3중으로 실패한 이유는?"
+    explanation: >-
+      POSIX 쉘에서 `$?`는 *마지막 파이프라인 요소*의 종료 코드만 반환. `set -o pipefail`을 설정하지 않는 한 앞쪽
+      명령의 실패는 전파되지 않는다. `tail -3`은 stdin에 데이터가 있으면 항상 exit 0. 이 함정은 쉘 스크립팅 초보자부터
+      10년차까지 반복적으로 빠지는 고전적 버그.
+  - question: 이 사고에서 방어 계층이 3중으로 실패한 이유는?
     choices:
-      - "테스트가 부족해서"
-      - "**(1) Hook의 파이프 종료 코드 함정 (2) 수동 grep 패턴이 Turbopack 포맷 불일치 (3) 서브에이전트가 타입 체크를 실행하지 않음** — 3개의 독립적 실패가 동시에 발생하여 모든 방어선이 뚫림"
-      - "Vercel 측 버그"
-      - "TypeScript 설정 문제"
+      - 테스트가 부족해서
+      - >-
+        **(1) Hook의 파이프 종료 코드 함정 (2) 수동 grep 패턴이 Turbopack 포맷 불일치 (3) 서브에이전트가 타입
+        체크를 실행하지 않음** — 3개의 독립적 실패가 동시에 발생하여 모든 방어선이 뚫림
+      - Vercel 측 버그
+      - TypeScript 설정 문제
     answer: 1
-    explanation: "Layer 1(Hook): 파이프 종료 코드 함정. Layer 2(수동 검증): `grep -c 'error TS'`가 Turbopack의 'Type error:' 포맷 불일치. Layer 3(에이전트 위임): 서브에이전트는 코드 수정만 하고 tsc/build를 실행하지 않음. 어느 하나만 정상이었어도 빌드 실패를 잡았지만, 3개가 동시에 실패하면서 false sense of safety 발생."
-  - question: "수정된 패턴의 핵심 원칙은?"
+    explanation: >-
+      Layer 1(Hook): 파이프 종료 코드 함정. Layer 2(수동 검증): `grep -c 'error TS'`가
+      Turbopack의 'Type error:' 포맷 불일치. Layer 3(에이전트 위임): 서브에이전트는 코드 수정만 하고
+      tsc/build를 실행하지 않음. 어느 하나만 정상이었어도 빌드 실패를 잡았지만, 3개가 동시에 실패하면서 false sense
+      of safety 발생.
+  - question: 수정된 패턴의 핵심 원칙은?
     choices:
-      - "더 많은 grep 패턴 추가"
-      - "**종료 코드 직접 캡처** — `cmd > log 2>&1; EXIT=$?; if [ $EXIT -ne 0 ]` 패턴. grep 패턴은 프레임워크마다 달라서 false negative 발생. 종료 코드는 프레임워크 불문 universal truth"
-      - "set -o pipefail 추가"
-      - "빌드를 두 번 실행"
+      - 더 많은 grep 패턴 추가
+      - >-
+        **종료 코드 직접 캡처** — `cmd > log 2>&1; EXIT=$?; if [ $EXIT -ne 0 ]` 패턴. grep
+        패턴은 프레임워크마다 달라서 false negative 발생. 종료 코드는 프레임워크 불문 universal truth
+      - set -o pipefail 추가
+      - 빌드를 두 번 실행
     answer: 1
-    explanation: "grep 패턴 기반 검증은 도구 체인(tsc/turbopack/webpack/esbuild)마다 에러 출력 포맷이 다르므로 유지보수 비용이 높다. 종료 코드는 모든 빌드 도구가 실패 시 non-zero를 반환하는 universal convention. `set -o pipefail`도 좋지만, Claude Code hooks는 단일 명령 실행이라 파이프라인을 아예 피하는 것이 더 안전."
+    explanation: >-
+      grep 패턴 기반 검증은 도구 체인(tsc/turbopack/webpack/esbuild)마다 에러 출력 포맷이 다르므로 유지보수
+      비용이 높다. 종료 코드는 모든 빌드 도구가 실패 시 non-zero를 반환하는 universal convention. `set -o
+      pipefail`도 좋지만, Claude Code hooks는 단일 명령 실행이라 파이프라인을 아예 피하는 것이 더 안전.
 ---
 
 ## 한 줄 요약

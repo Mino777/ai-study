@@ -1,40 +1,62 @@
 ---
-title: "AI Output 5-Layer Defense — LLM 출력 검증 아키텍처"
+title: AI Output 5-Layer Defense — LLM 출력 검증 아키텍처
 category: evaluation
-date: "2026-04-16"
-tags: [ai-output, validation, zod, llm-as-judge, quality-gate, tarosaju]
+date: '2026-04-16'
+tags:
+  - ai-output
+  - validation
+  - zod
+  - llm-as-judge
+  - quality-gate
+  - tarosaju
 confidence: 4
 connections:
   - harness-engineering/harness-engineering-overview
   - evaluation/llm-as-judge-pattern
+  - agents/trading-agent-9phase-pipeline
+  - backend-ai/password-reset-security-pattern
+  - evaluation/numeric-execution-evidence
+  - harness-engineering/aidy-journal-001-20round-autoceo-sprint
 status: complete
-description: "Text Guard → Zod Type → Range Constraint → Cross-field → LLM-as-Judge 5단계로 AI 출력을 검증하는 방어적 아키텍처. tarosaju 실전 기반."
+description: >-
+  Text Guard → Zod Type → Range Constraint → Cross-field → LLM-as-Judge 5단계로 AI
+  출력을 검증하는 방어적 아키텍처. tarosaju 실전 기반.
 type: entry
 quiz:
-  - question: "5-Layer 중 Layer 1~4(동기)와 Layer 5(비동기)를 분리하는 이유는?"
+  - question: 5-Layer 중 Layer 1~4(동기)와 Layer 5(비동기)를 분리하는 이유는?
     choices:
-      - "Layer 5가 가장 비싸서 비용 절감"
-      - "Layer 1~4는 응답 전 차단(사용자에게 잘못된 결과 노출 방지), Layer 5는 응답 후 품질 측정(프롬프트 개선 데이터 수집). 목적이 다르므로 실행 시점도 달라야 함"
-      - "Layer 5는 테스트가 어려워서 분리"
-      - "동기/비동기 혼합 시 JavaScript 런타임 이슈"
+      - Layer 5가 가장 비싸서 비용 절감
+      - >-
+        Layer 1~4는 응답 전 차단(사용자에게 잘못된 결과 노출 방지), Layer 5는 응답 후 품질 측정(프롬프트 개선 데이터
+        수집). 목적이 다르므로 실행 시점도 달라야 함
+      - Layer 5는 테스트가 어려워서 분리
+      - 동기/비동기 혼합 시 JavaScript 런타임 이슈
     answer: 1
-    explanation: "Layer 1~4는 '이 응답을 사용자에게 보여줘도 되는가?'를 판단하는 게이트(차단). Layer 5는 '보여준 응답의 품질이 어떤가?'를 측정하는 센서(관측). 게이트는 동기, 센서는 비동기(fire-and-forget)가 자연스럽다."
-  - question: "Layer 4(Cross-field Validation)가 잡는 문제의 예시는?"
+    explanation: >-
+      Layer 1~4는 '이 응답을 사용자에게 보여줘도 되는가?'를 판단하는 게이트(차단). Layer 5는 '보여준 응답의 품질이
+      어떤가?'를 측정하는 센서(관측). 게이트는 동기, 센서는 비동기(fire-and-forget)가 자연스럽다.
+  - question: Layer 4(Cross-field Validation)가 잡는 문제의 예시는?
     choices:
-      - "JSON 파싱 실패"
-      - "overall_score가 개별 점수 최대값보다 높거나, 긍정적 운세인데 경고 메시지가 포함되는 등 필드 간 논리적 모순"
-      - "응답 길이 초과"
-      - "금칙어 포함"
+      - JSON 파싱 실패
+      - 'overall_score가 개별 점수 최대값보다 높거나, 긍정적 운세인데 경고 메시지가 포함되는 등 필드 간 논리적 모순'
+      - 응답 길이 초과
+      - 금칙어 포함
     answer: 1
-    explanation: "Layer 2(타입)와 Layer 3(범위)를 통과해도 필드 간 의미적 일관성은 깨질 수 있다. 예: 종합 점수 9/10인데 개별 항목이 모두 3/10이면 모순. Layer 4가 이런 cross-field 논리를 잡는다."
-  - question: "parseAIResponse()의 3-stage JSON 추출이 필요한 이유는?"
+    explanation: >-
+      Layer 2(타입)와 Layer 3(범위)를 통과해도 필드 간 의미적 일관성은 깨질 수 있다. 예: 종합 점수 9/10인데 개별
+      항목이 모두 3/10이면 모순. Layer 4가 이런 cross-field 논리를 잡는다.
+  - question: parseAIResponse()의 3-stage JSON 추출이 필요한 이유는?
     choices:
-      - "JSON 스키마가 3가지여서"
-      - "LLM이 항상 깨끗한 JSON만 반환하지 않기 때문. 직접 파싱 → 코드 블록 추출 → 중괄호 매칭 순서로 시도하여 다양한 응답 포맷에 대응"
-      - "3개 프로바이더의 응답 포맷이 다르기 때문"
-      - "보안을 위해 3중으로 검증"
+      - JSON 스키마가 3가지여서
+      - >-
+        LLM이 항상 깨끗한 JSON만 반환하지 않기 때문. 직접 파싱 → 코드 블록 추출 → 중괄호 매칭 순서로 시도하여 다양한 응답
+        포맷에 대응
+      - 3개 프로바이더의 응답 포맷이 다르기 때문
+      - 보안을 위해 3중으로 검증
     answer: 1
-    explanation: "Claude가 때로는 순수 JSON을, 때로는 ```json 블록 안에, 때로는 텍스트 + JSON 혼합으로 반환한다. 3-stage 추출은 이 변동성을 흡수하여 어떤 형태로 오든 JSON을 안전하게 꺼내는 defensive 패턴."
+    explanation: >-
+      Claude가 때로는 순수 JSON을, 때로는 ```json 블록 안에, 때로는 텍스트 + JSON 혼합으로 반환한다. 3-stage
+      추출은 이 변동성을 흡수하여 어떤 형태로 오든 JSON을 안전하게 꺼내는 defensive 패턴.
 ---
 
 ## 갭 / 맥락

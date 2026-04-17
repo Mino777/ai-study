@@ -1,43 +1,73 @@
 ---
-title: "Harness Journal 014 — 허브에 자동 머지 이식 + 워커 → 허브 꿀팁 PR 흐름"
+title: Harness Journal 014 — 허브에 자동 머지 이식 + 워커 → 허브 꿀팁 PR 흐름
 category: harness-engineering
 series: harness-journal
-date: "2026-04-12"
-tags: [harness-journal, harness-engineering, ai-review, ai-study, hub, worker-to-hub, inbound-pr, living-catalog]
+date: '2026-04-12'
+tags:
+  - harness-journal
+  - harness-engineering
+  - ai-review
+  - ai-study
+  - hub
+  - worker-to-hub
+  - inbound-pr
+  - living-catalog
 confidence: 5
 connections:
   - harness-engineering/harness-journal-011-concurrent-session-safety
   - harness-engineering/harness-journal-002-inline-test-gate
   - harness-engineering/harness-journal-005-wt-branch-dogfooding-and-transfer
   - harness-engineering/dev-setup-tips-log
+  - harness-engineering/compound-automation-slash-commands
+  - harness-engineering/harness-journal-021-github-token-deploy-chain-gap
 status: complete
-description: "moneyflow(002) → tarosaju(011) → ai-study(014): ai-review.yml 허브 이식. 워커 세션들이 발견한 환경 팁을 허브(ai-study)로 *inbound PR*로 계속 쏘는 흐름을 인프라 수준에서 박제. 박제 전이성 4회째 + 허브-워커 모델의 양방향 확장."
+description: >-
+  moneyflow(002) → tarosaju(011) → ai-study(014): ai-review.yml 허브 이식. 워커 세션들이
+  발견한 환경 팁을 허브(ai-study)로 *inbound PR*로 계속 쏘는 흐름을 인프라 수준에서 박제. 박제 전이성 4회째 +
+  허브-워커 모델의 양방향 확장.
 type: entry
 quiz:
-  - question: "왜 워커 세션이 *허브에* PR을 쏘는 흐름이 Journal 011의 허브-워커 모델을 *확장*하는가?"
+  - question: 왜 워커 세션이 *허브에* PR을 쏘는 흐름이 Journal 011의 허브-워커 모델을 *확장*하는가?
     choices:
-      - "PR 수가 늘어서"
-      - "Journal 011~013은 *허브가 워커를 분석/작업*하는 단방향이었는데, 이 흐름은 *워커가 허브에 증언을 기록*하는 반대 방향. 양방향이 다 작동해야 허브가 진정한 *지식 저장소*가 된다 — 관찰자만이 아니라 수집자의 역할"
-      - "PR 크기가 작아서"
-      - "관리가 편해서"
+      - PR 수가 늘어서
+      - >-
+        Journal 011~013은 *허브가 워커를 분석/작업*하는 단방향이었는데, 이 흐름은 *워커가 허브에 증언을 기록*하는 반대
+        방향. 양방향이 다 작동해야 허브가 진정한 *지식 저장소*가 된다 — 관찰자만이 아니라 수집자의 역할
+      - PR 크기가 작아서
+      - 관리가 편해서
     answer: 1
-    explanation: "단방향 관찰은 허브를 *snapshot 도구*로 만든다. 양방향이면 허브가 *누적되는 살아있는 저장소*가 된다. 워커들이 발견한 자잘한 지식이 허브에 모이면 *박제의 복리 효과*가 한 방향이 아니라 양쪽에서 작동한다."
-  - question: "첫 허브 이식 PR이 moneyflow의 ai-review.yml을 *거의 그대로* 복사한 이유는?"
+    explanation: >-
+      단방향 관찰은 허브를 *snapshot 도구*로 만든다. 양방향이면 허브가 *누적되는 살아있는 저장소*가 된다. 워커들이 발견한
+      자잘한 지식이 허브에 모이면 *박제의 복리 효과*가 한 방향이 아니라 양쪽에서 작동한다.
+  - question: 첫 허브 이식 PR이 moneyflow의 ai-review.yml을 *거의 그대로* 복사한 이유는?
     choices:
-      - "시간 절약"
-      - "박제 전이성의 본질은 *검증된 패턴의 복제*다. moneyflow(Journal 002)에서 *이미 검증된* 구조(Find-or-Create → Rebase → Test Gate → Squash → Reset)를 바꿀 이유가 없다. 바꿀 부분은 *Test Gate 내용*(ai-study는 npm test + npm run build, moneyflow는 npx vitest + npm run build)뿐"
-      - "리뷰 편의성"
-      - "디자인 일관성"
+      - 시간 절약
+      - >-
+        박제 전이성의 본질은 *검증된 패턴의 복제*다. moneyflow(Journal 002)에서 *이미 검증된*
+        구조(Find-or-Create → Rebase → Test Gate → Squash → Reset)를 바꿀 이유가 없다. 바꿀
+        부분은 *Test Gate 내용*(ai-study는 npm test + npm run build, moneyflow는 npx
+        vitest + npm run build)뿐
+      - 리뷰 편의성
+      - 디자인 일관성
     answer: 1
-    explanation: "이식 사이클은 *재설계*가 아니라 *복제*다. 원본이 이미 여러 사이클 동안 검증됐다면 그 구조를 유지하는 게 사고 재발률을 0으로 유지하는 최단 경로. 바뀌어야 하는 부분만 바꾼다 — 이게 박제 전이성의 엄격한 규칙."
-  - question: "*dev-setup-tips-log*가 Harness Journal 시리즈와 *별도 파일*로 존재하는 이유 (카탈로그형 vs 서사형)는 이 흐름에서 왜 중요한가?"
+    explanation: >-
+      이식 사이클은 *재설계*가 아니라 *복제*다. 원본이 이미 여러 사이클 동안 검증됐다면 그 구조를 유지하는 게 사고 재발률을 0으로
+      유지하는 최단 경로. 바뀌어야 하는 부분만 바꾼다 — 이게 박제 전이성의 엄격한 규칙.
+  - question: >-
+      *dev-setup-tips-log*가 Harness Journal 시리즈와 *별도 파일*로 존재하는 이유 (카탈로그형 vs
+      서사형)는 이 흐름에서 왜 중요한가?
     choices:
-      - "파일 수 제한"
-      - "워커 세션이 쏘는 PR은 *1 사이클을 이루지 않는 소형 팁*이다. Journal 포맷(why → what → lesson + quiz + 보통 200~500줄)으로 쓰기엔 과하고, 카탈로그 섹션(증상 → 수정 → 검증 + 30줄)이 적절. 포맷이 맞아야 진입 장벽이 낮아져서 워커가 *실제로* 쏜다"
-      - "Markdown 렌더 성능"
-      - "AI 검색 속도"
+      - 파일 수 제한
+      - >-
+        워커 세션이 쏘는 PR은 *1 사이클을 이루지 않는 소형 팁*이다. Journal 포맷(why → what → lesson +
+        quiz + 보통 200~500줄)으로 쓰기엔 과하고, 카탈로그 섹션(증상 → 수정 → 검증 + 30줄)이 적절. 포맷이 맞아야
+        진입 장벽이 낮아져서 워커가 *실제로* 쏜다
+      - Markdown 렌더 성능
+      - AI 검색 속도
     answer: 1
-    explanation: "포맷의 마찰이 기여 빈도를 결정한다. Journal은 한 사이클이 끝나야 쓸 수 있지만, dev-setup-tips-log는 *10분짜리 QoL 수정*도 바로 append할 수 있어야 유용하다. 단위가 다르면 파일도 달라야 한다."
+    explanation: >-
+      포맷의 마찰이 기여 빈도를 결정한다. Journal은 한 사이클이 끝나야 쓸 수 있지만, dev-setup-tips-log는
+      *10분짜리 QoL 수정*도 바로 append할 수 있어야 유용하다. 단위가 다르면 파일도 달라야 한다.
 ---
 
 ## 사이클 트리거

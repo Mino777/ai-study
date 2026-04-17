@@ -1,42 +1,64 @@
 ---
-title: "Harness Journal 009 — Text Output Guards (Zod가 맞지 않을 때의 대안)"
+title: Harness Journal 009 — Text Output Guards (Zod가 맞지 않을 때의 대안)
 category: harness-engineering
 series: harness-journal
-date: "2026-04-12"
-tags: [harness-journal, harness-engineering, output-validation, text-guards, anthropic, tarosaju]
+date: '2026-04-12'
+tags:
+  - harness-journal
+  - harness-engineering
+  - output-validation
+  - text-guards
+  - anthropic
+  - tarosaju
 confidence: 4
 connections:
   - harness-engineering/ai-output-zod-validation-pattern
   - harness-engineering/harness-journal-006-tarosaju-anthropic-hardening
   - harness-engineering/harness-journal-000-baseline
+  - harness-engineering/harness-journal-023-closed-loop-ai-quality
 status: complete
-description: "Zod 출력 검증이 *JSON 구조화 응답*에 맞지만 tarosaju의 자연어 응답(fortune/tarot-chat)에는 부적합. 대신 text-level 검증(길이 + 금지 용어 + 위기 re-check) 도입. *도구가 맞지 않으면 다른 도구를 만든다*는 라이브 판단."
+description: >-
+  Zod 출력 검증이 *JSON 구조화 응답*에 맞지만 tarosaju의 자연어 응답(fortune/tarot-chat)에는 부적합. 대신
+  text-level 검증(길이 + 금지 용어 + 위기 re-check) 도입. *도구가 맞지 않으면 다른 도구를 만든다*는 라이브 판단.
 type: entry
 quiz:
-  - question: "이 사이클이 *Zod 출력 검증을 tarosaju에 적용하려다 포기*한 이유는?"
+  - question: 이 사이클이 *Zod 출력 검증을 tarosaju에 적용하려다 포기*한 이유는?
     choices:
-      - "Zod 라이브러리 버전 충돌"
-      - "*응답 형태가 다름* — Zod는 JSON 객체 검증인데 tarosaju의 fortune/ai와 tarot-chat은 *자연어 텍스트* 응답. 도구가 데이터 형식에 맞지 않으면 *다른 도구*를 만드는 것이 정답"
-      - "TypeScript 타입 추론 문제"
-      - "Anthropic API가 Zod를 지원하지 않아서"
+      - Zod 라이브러리 버전 충돌
+      - >-
+        *응답 형태가 다름* — Zod는 JSON 객체 검증인데 tarosaju의 fortune/ai와 tarot-chat은 *자연어
+        텍스트* 응답. 도구가 데이터 형식에 맞지 않으면 *다른 도구*를 만드는 것이 정답
+      - TypeScript 타입 추론 문제
+      - Anthropic API가 Zod를 지원하지 않아서
     answer: 1
-    explanation: "원래 Journal 009 큐는 'tarosaju Zod 출력 검증'이었지만, 실제 코드 구조를 보니 *응답이 JSON이 아닌 자연어*라는 것을 발견. 계획된 도구를 억지로 끼워맞추는 대신 *text-level 검증*이라는 다른 도구를 만드는 것이 올바른 판단. 계획이 현실과 맞지 않으면 *계획을 바꾼다*."
-  - question: "Text output guard의 *3가지 검증 축*은?"
+    explanation: >-
+      원래 Journal 009 큐는 'tarosaju Zod 출력 검증'이었지만, 실제 코드 구조를 보니 *응답이 JSON이 아닌
+      자연어*라는 것을 발견. 계획된 도구를 억지로 끼워맞추는 대신 *text-level 검증*이라는 다른 도구를 만드는 것이 올바른
+      판단. 계획이 현실과 맞지 않으면 *계획을 바꾼다*.
+  - question: Text output guard의 *3가지 검증 축*은?
     choices:
-      - "문법 / 철자 / 어휘"
-      - "**길이 범위** (너무 짧거나 긴 응답 차단) + **금지 용어** (의학/법률/단정 표현) + **위기 제안 re-check** (AI가 위기 단어 트리거하지 않도록)"
-      - "감정 / 톤 / 스타일"
-      - "속도 / 토큰 / 비용"
+      - 문법 / 철자 / 어휘
+      - >-
+        **길이 범위** (너무 짧거나 긴 응답 차단) + **금지 용어** (의학/법률/단정 표현) + **위기 제안
+        re-check** (AI가 위기 단어 트리거하지 않도록)
+      - 감정 / 톤 / 스타일
+      - 속도 / 토큰 / 비용
     answer: 1
-    explanation: "길이는 합리성, 금지 용어는 *도메인 적합성*, 위기 re-check는 *입력 crisis-detector와 별개로 출력에 대한 검증*. 3가지가 중첩되어 환각이 사용자에게 도달하지 못하도록."
-  - question: "가드 실패 시 *throw가 아닌 SAFE_FALLBACK 반환*을 택한 이유는?"
+    explanation: >-
+      길이는 합리성, 금지 용어는 *도메인 적합성*, 위기 re-check는 *입력 crisis-detector와 별개로 출력에 대한
+      검증*. 3가지가 중첩되어 환각이 사용자에게 도달하지 못하도록.
+  - question: 가드 실패 시 *throw가 아닌 SAFE_FALLBACK 반환*을 택한 이유는?
     choices:
-      - "throw가 TypeScript에서 작동하지 않음"
-      - "*콘텐츠 도메인*은 거래/결제와 달리 *무응답*보다 *안전한 대체 응답*이 사용자 경험에 더 낫기 때문. 점술 앱에서 '오류'를 보여주는 것보다 '평온한 하루'라는 기본 메시지가 더 적합. throw는 거래 도메인에 적합"
-      - "fallback이 더 빠름"
-      - "에러 로그를 줄이기 위함"
+      - throw가 TypeScript에서 작동하지 않음
+      - >-
+        *콘텐츠 도메인*은 거래/결제와 달리 *무응답*보다 *안전한 대체 응답*이 사용자 경험에 더 낫기 때문. 점술 앱에서 '오류'를
+        보여주는 것보다 '평온한 하루'라는 기본 메시지가 더 적합. throw는 거래 도메인에 적합
+      - fallback이 더 빠름
+      - 에러 로그를 줄이기 위함
     answer: 1
-    explanation: "도메인별 fail 전략이 다름. 거래 시스템은 *잘못된 결과보다 명확한 실패*가 안전(throw). 콘텐츠/점술은 *무응답보다 부드러운 대체*가 사용자 경험 유지(fallback). 둘 다 환각 노출은 금지."
+    explanation: >-
+      도메인별 fail 전략이 다름. 거래 시스템은 *잘못된 결과보다 명확한 실패*가 안전(throw). 콘텐츠/점술은 *무응답보다
+      부드러운 대체*가 사용자 경험 유지(fallback). 둘 다 환각 노출은 금지.
 ---
 
 ## 갭 (Before)

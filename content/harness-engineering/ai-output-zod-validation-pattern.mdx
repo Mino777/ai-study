@@ -1,41 +1,74 @@
 ---
-title: "AI 출력 Zod 검증 패턴 — schema.parse로 환각을 거르는 5 layer"
+title: AI 출력 Zod 검증 패턴 — schema.parse로 환각을 거르는 5 layer
 category: harness-engineering
-date: "2026-04-12"
-tags: [harness-engineering, zod, output-validation, hallucination-guard, ai-client, transferable-pattern]
+date: '2026-04-12'
+tags:
+  - harness-engineering
+  - zod
+  - output-validation
+  - hallucination-guard
+  - ai-client
+  - transferable-pattern
 confidence: 4
 connections:
   - harness-engineering/ai-call-patterns-circuit-breaker-fallback
   - harness-engineering/harness-journal-000-baseline
   - harness-engineering/harness-engineering-overview
+  - evaluation/llm-as-judge-pattern
+  - harness-engineering/harness-journal-009-text-output-guards
+  - harness-engineering/harness-journal-012-market-analyst-runtime-validation
+  - harness-engineering/harness-journal-013-three-analysts-runtime-validation
+  - harness-engineering/harness-journal-015-trader-runtime-validation
+  - harness-engineering/harness-journal-017-final-validators-all-agents
+  - harness-engineering/harness-journal-018-layer3-retry-augmentation
+  - harness-engineering/harness-journal-020-promise-timeout-wrapper
+  - harness-engineering/harness-journal-023-closed-loop-ai-quality
+  - ios-ai/ios-ai-code-quality-test-strategy
 status: complete
-description: "Journal 000 갭 #2 회피 메커니즘. 양쪽 프로젝트 모두 *입력*은 Zod로 검증하지만 *LLM 응답*은 그대로 사용 → 환각이 통과. 5 layer 출력 검증 패턴 정의 + 양쪽 적용 가이드."
+description: >-
+  Journal 000 갭 #2 회피 메커니즘. 양쪽 프로젝트 모두 *입력*은 Zod로 검증하지만 *LLM 응답*은 그대로 사용 → 환각이
+  통과. 5 layer 출력 검증 패턴 정의 + 양쪽 적용 가이드.
 type: entry
 quiz:
-  - question: "*입력 검증*은 잘 갖춰진 시스템에서 *출력 검증*이 빠지면 발생하는 가장 위험한 사고는?"
+  - question: '*입력 검증*은 잘 갖춰진 시스템에서 *출력 검증*이 빠지면 발생하는 가장 위험한 사고는?'
     choices:
-      - "LLM API 비용 증가"
-      - "*확신 있게 틀린* 응답이 사용자에게 그대로 노출. 입력은 안전하지만 LLM이 환각으로 만든 잘못된 숫자/카테고리/추론이 *형식 검증을 통과*하는 모양으로 반환되면 다운스트림 시스템이 그대로 신뢰"
-      - "JSON 파싱 실패"
-      - "rate limit 초과"
+      - LLM API 비용 증가
+      - >-
+        *확신 있게 틀린* 응답이 사용자에게 그대로 노출. 입력은 안전하지만 LLM이 환각으로 만든 잘못된 숫자/카테고리/추론이 *형식
+        검증을 통과*하는 모양으로 반환되면 다운스트림 시스템이 그대로 신뢰
+      - JSON 파싱 실패
+      - rate limit 초과
     answer: 1
-    explanation: "LLM의 본질적 위험은 *자신감 있게 틀리는 것*. 입력 검증은 *쓰레기를 안 받는 것*이지 *쓰레기를 안 만드는 것*이 아니다. STRONG_BUY 추천에 confidence 30, 주가 $150인데 목표가 $15,000 같은 사례가 *형식적으로는 valid*하지만 *의미적으로는 환각*. 출력 검증이 그 사이를 막는다."
-  - question: "5 layer 출력 검증 중 *Cross-field consistency* layer가 다루는 것은?"
+    explanation: >-
+      LLM의 본질적 위험은 *자신감 있게 틀리는 것*. 입력 검증은 *쓰레기를 안 받는 것*이지 *쓰레기를 안 만드는 것*이 아니다.
+      STRONG_BUY 추천에 confidence 30, 주가 $150인데 목표가 $15,000 같은 사례가 *형식적으로는
+      valid*하지만 *의미적으로는 환각*. 출력 검증이 그 사이를 막는다.
+  - question: 5 layer 출력 검증 중 *Cross-field consistency* layer가 다루는 것은?
     choices:
-      - "JSON 형식이 valid한지"
-      - "*같은 응답 안의 필드들이 서로 모순되지 않는지* — 예: rating이 STRONG_BUY인데 confidence가 30%, 또는 risk_level이 HIGH인데 stop_loss가 0.5% 같은 *내부 일관성 위반*"
-      - "응답이 입력 데이터와 일치하는지"
-      - "응답 길이가 적정한지"
+      - JSON 형식이 valid한지
+      - >-
+        *같은 응답 안의 필드들이 서로 모순되지 않는지* — 예: rating이 STRONG_BUY인데 confidence가 30%,
+        또는 risk_level이 HIGH인데 stop_loss가 0.5% 같은 *내부 일관성 위반*
+      - 응답이 입력 데이터와 일치하는지
+      - 응답 길이가 적정한지
     answer: 1
-    explanation: "내부 일관성은 *형식과 범위가 모두 통과해도 발생*. LLM이 한 필드를 만들 때 다른 필드의 함의를 고려하지 못하는 경우가 많다. STRONG_BUY + confidence 30은 *각각은 valid*이지만 *함께는 의미 모순*. 이걸 schema.refine으로 잡는 것이 4번째 layer."
-  - question: "출력 검증이 *실패*했을 때의 *가장 안전한* 대응은?"
+    explanation: >-
+      내부 일관성은 *형식과 범위가 모두 통과해도 발생*. LLM이 한 필드를 만들 때 다른 필드의 함의를 고려하지 못하는 경우가 많다.
+      STRONG_BUY + confidence 30은 *각각은 valid*이지만 *함께는 의미 모순*. 이걸 schema.refine으로
+      잡는 것이 4번째 layer.
+  - question: 출력 검증이 *실패*했을 때의 *가장 안전한* 대응은?
     choices:
-      - "응답을 그대로 사용자에게 노출 + 경고 표시"
-      - "에러 throw 후 호출자가 처리"
-      - "*재시도(다른 모델 또는 더 강한 instruction)* → 그래도 실패면 *안전한 기본값*(예: HOLD, confidence 0). 절대 *invalid 응답을 그대로 반환*하지 X"
-      - "기본값으로 첫 번째 enum 값 사용"
+      - 응답을 그대로 사용자에게 노출 + 경고 표시
+      - 에러 throw 후 호출자가 처리
+      - >-
+        *재시도(다른 모델 또는 더 강한 instruction)* → 그래도 실패면 *안전한 기본값*(예: HOLD, confidence
+        0). 절대 *invalid 응답을 그대로 반환*하지 X
+      - 기본값으로 첫 번째 enum 값 사용
     answer: 2
-    explanation: "출력 검증의 책임은 *invalid를 valid로 만드는 것*이 아니라 *invalid가 다운스트림으로 가지 않게 하는 것*. 재시도는 *다른 시도를 기대*하는 것이고, 안전 기본값은 *명확하게 \"답을 못 함\"을 표현*. 두 옵션 모두 사용자에게 *환각을 그대로 보여주지 않는다*."
+    explanation: >-
+      출력 검증의 책임은 *invalid를 valid로 만드는 것*이 아니라 *invalid가 다운스트림으로 가지 않게 하는 것*.
+      재시도는 *다른 시도를 기대*하는 것이고, 안전 기본값은 *명확하게 "답을 못 함"을 표현*. 두 옵션 모두 사용자에게 *환각을
+      그대로 보여주지 않는다*.
 ---
 
 ## 갭 (현시점)

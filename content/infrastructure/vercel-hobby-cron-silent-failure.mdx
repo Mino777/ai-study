@@ -1,38 +1,57 @@
 ---
-title: "Vercel Hobby Cron Silent Failure — 3중 함정 사례"
+title: Vercel Hobby Cron Silent Failure — 3중 함정 사례
 category: infrastructure
-date: "2026-04-12"
-tags: [vercel, cron, silent-failure, telegram, html-escape, fetch, infra-trap, debugging]
+date: '2026-04-12'
+tags:
+  - vercel
+  - cron
+  - silent-failure
+  - telegram
+  - html-escape
+  - fetch
+  - infra-trap
+  - debugging
 confidence: 5
-connections: [infrastructure/multi-provider-fallback]
+connections:
+  - infrastructure/multi-provider-fallback
+  - infrastructure/aidy-3-client-deployment-design-roadmap
+  - infrastructure/cron-execution-tracking-pattern
 status: complete
-description: "Vercel Hobby 플랜의 cron 2개 제한이 에러 없이 나머지를 무시. Telegram HTML escape 누락 + fetch resp.ok 미체크가 겹쳐 3중 silent failure. 진단 과정과 구조적 차단 패턴."
+description: >-
+  Vercel Hobby 플랜의 cron 2개 제한이 에러 없이 나머지를 무시. Telegram HTML escape 누락 + fetch
+  resp.ok 미체크가 겹쳐 3중 silent failure. 진단 과정과 구조적 차단 패턴.
 type: entry
 quiz:
-  - question: "Vercel Hobby에서 vercel.json에 12개 cron을 등록하면?"
+  - question: Vercel Hobby에서 vercel.json에 12개 cron을 등록하면?
     choices:
-      - "빌드 에러로 배포 실패"
-      - "처음 2개만 실행, 나머지는 에러 없이 무시 (silent failure)"
-      - "12개 모두 실행"
-      - "Vercel 대시보드에 경고 표시"
+      - 빌드 에러로 배포 실패
+      - '처음 2개만 실행, 나머지는 에러 없이 무시 (silent failure)'
+      - 12개 모두 실행
+      - Vercel 대시보드에 경고 표시
     answer: 1
-    explanation: "Hobby 플랜은 2개 cron만 허용. 초과분은 빌드 에러도 대시보드 경고도 없이 조용히 무시된다."
-  - question: "fetch()의 가장 흔한 실수는?"
+    explanation: Hobby 플랜은 2개 cron만 허용. 초과분은 빌드 에러도 대시보드 경고도 없이 조용히 무시된다.
+  - question: fetch()의 가장 흔한 실수는?
     choices:
-      - "async를 안 붙이는 것"
-      - "HTTP 4xx/5xx를 throw로 착각 — fetch는 네트워크 에러만 throw하고 HTTP 에러는 resp.ok=false로 resolve"
-      - "URL을 잘못 쓰는 것"
-      - "body를 stringify 안 하는 것"
+      - async를 안 붙이는 것
+      - >-
+        HTTP 4xx/5xx를 throw로 착각 — fetch는 네트워크 에러만 throw하고 HTTP 에러는
+        resp.ok=false로 resolve
+      - URL을 잘못 쓰는 것
+      - body를 stringify 안 하는 것
     answer: 1
-    explanation: "fetch('url')은 HTTP 400이든 500이든 정상 resolve한다. try-catch에 안 걸리므로 반드시 resp.ok를 체크해야 한다."
-  - question: "Telegram HTML parse_mode에서 S&P 500이 실패하는 이유는?"
+    explanation: >-
+      fetch('url')은 HTTP 400이든 500이든 정상 resolve한다. try-catch에 안 걸리므로 반드시
+      resp.ok를 체크해야 한다.
+  - question: Telegram HTML parse_mode에서 S&P 500이 실패하는 이유는?
     choices:
-      - "메시지 길이 초과"
-      - "&P가 유효하지 않은 HTML entity로 해석되어 파서가 거부 (400 Bad Request)"
-      - "S&P가 금지어"
-      - "숫자 500이 에러코드로 해석"
+      - 메시지 길이 초과
+      - '&P가 유효하지 않은 HTML entity로 해석되어 파서가 거부 (400 Bad Request)'
+      - S&P가 금지어
+      - 숫자 500이 에러코드로 해석
     answer: 1
-    explanation: "HTML에서 & 뒤에 오는 텍스트는 entity 참조로 해석된다. &amp; &lt; &gt; 등이 유효한 entity이고, &P는 아니다."
+    explanation: >-
+      HTML에서 & 뒤에 오는 텍스트는 entity 참조로 해석된다. &amp; &lt; &gt; 등이 유효한 entity이고, &P는
+      아니다.
 ---
 
 ## 사건

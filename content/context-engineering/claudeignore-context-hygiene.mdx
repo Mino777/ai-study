@@ -1,42 +1,57 @@
 ---
-title: ".claudeignore 실전 가이드 — 컨텍스트 오염을 막는 파일 위생"
+title: .claudeignore 실전 가이드 — 컨텍스트 오염을 막는 파일 위생
 category: context-engineering
-date: "2026-04-15"
-tags: [context-engineering, claudeignore, context-window, token-optimization, ios, nextjs]
+date: '2026-04-15'
+tags:
+  - context-engineering
+  - claudeignore
+  - context-window
+  - token-optimization
+  - ios
+  - nextjs
 confidence: 5
 connections:
   - context-engineering/context-engineering-fundamentals
   - tokenomics/claude-code-token-levers-catalog
   - ios-ai/ios-ai-journal-003-claudeignore-spm
   - harness-engineering/ai-agent-start-here
+  - context-engineering/claude-md-design-patterns
 status: complete
-description: ".claudeignore로 불필요한 파일을 컨텍스트에서 제외하는 실전 패턴. iOS(SPM .build/ 130GB), Web(node_modules, package-lock), 공통(DerivedData, .next). 3 프로젝트 실측 데이터 포함."
+description: >-
+  .claudeignore로 불필요한 파일을 컨텍스트에서 제외하는 실전 패턴. iOS(SPM .build/ 130GB),
+  Web(node_modules, package-lock), 공통(DerivedData, .next). 3 프로젝트 실측 데이터 포함.
 type: entry
 quiz:
-  - question: "SPM 멀티모듈 iOS 프로젝트에서 .claudeignore에 .build/ 대신 **/.build/ 를 써야 하는 이유는?"
+  - question: SPM 멀티모듈 iOS 프로젝트에서 .claudeignore에 .build/ 대신 **/.build/ 를 써야 하는 이유는?
     choices:
-      - ".build/ 패턴이 작동하지 않아서"
-      - "루트의 .build/만 제외되고 각 모듈 디렉토리 안의 .build/는 제외되지 않아서"
-      - "glob 문법이 다르기 때문에"
-      - "빌드 속도가 달라져서"
+      - .build/ 패턴이 작동하지 않아서
+      - 루트의 .build/만 제외되고 각 모듈 디렉토리 안의 .build/는 제외되지 않아서
+      - glob 문법이 다르기 때문에
+      - 빌드 속도가 달라져서
     answer: 1
-    explanation: "SPM 멀티모듈에서 각 모듈(Modules/FeatureA/, Modules/FeatureB/ 등)마다 독립 .build/ 디렉토리가 생긴다. .build/만 쓰면 루트의 것만 제외되고 20+ 모듈의 .build/ (모듈당 6-7GB)가 컨텍스트에 유입된다."
-  - question: ".claudeignore와 settings.json permissions.deny의 차이점은?"
+    explanation: >-
+      SPM 멀티모듈에서 각 모듈(Modules/FeatureA/, Modules/FeatureB/ 등)마다 독립 .build/ 디렉토리가
+      생긴다. .build/만 쓰면 루트의 것만 제외되고 20+ 모듈의 .build/ (모듈당 6-7GB)가 컨텍스트에 유입된다.
+  - question: .claudeignore와 settings.json permissions.deny의 차이점은?
     choices:
-      - "둘 다 동일한 기능이다"
-      - ".claudeignore는 자동 탐색에서 제외, permissions.deny는 읽기 자체를 차단한다"
-      - ".claudeignore가 더 강력하다"
-      - "permissions.deny는 쓰기만 차단한다"
+      - 둘 다 동일한 기능이다
+      - '.claudeignore는 자동 탐색에서 제외, permissions.deny는 읽기 자체를 차단한다'
+      - .claudeignore가 더 강력하다
+      - permissions.deny는 쓰기만 차단한다
     answer: 1
-    explanation: ".claudeignore는 자동 파일 탐색에서 제외하지만 명시적 검색으로는 접근 가능. permissions.deny는 Read/Edit/Write 자체를 차단하므로 진짜 민감 파일(.env, Secrets.swift)에 적합."
-  - question: "ai-study 프로젝트에서 .claudeignore로 약 50% 컨텍스트를 축소한 주요 원인은?"
+    explanation: >-
+      .claudeignore는 자동 파일 탐색에서 제외하지만 명시적 검색으로는 접근 가능. permissions.deny는
+      Read/Edit/Write 자체를 차단하므로 진짜 민감 파일(.env, Secrets.swift)에 적합.
+  - question: ai-study 프로젝트에서 .claudeignore로 약 50% 컨텍스트를 축소한 주요 원인은?
     choices:
-      - "src/ 디렉토리가 너무 커서"
-      - "package-lock.json(117K tokens) + src/generated/(48K) + docs/*(29K)를 제외해서"
-      - "node_modules/를 제외해서"
-      - "이미지 파일을 제외해서"
+      - src/ 디렉토리가 너무 커서
+      - package-lock.json(117K tokens) + src/generated/(48K) + docs/*(29K)를 제외해서
+      - node_modules/를 제외해서
+      - 이미지 파일을 제외해서
     answer: 1
-    explanation: "package-lock.json 하나만 117K tokens. src/generated/와 docs/* 합쳐서 약 194K tokens를 절감. 프로젝트 텍스트 전체 약 384K tokens 대비 50% 축소."
+    explanation: >-
+      package-lock.json 하나만 117K tokens. src/generated/와 docs/* 합쳐서 약 194K
+      tokens를 절감. 프로젝트 텍스트 전체 약 384K tokens 대비 50% 축소.
 ---
 
 ## 한 줄 요약

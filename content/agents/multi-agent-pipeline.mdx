@@ -1,12 +1,27 @@
 ---
-title: "Multi-Agent Pipeline 설계"
+title: Multi-Agent Pipeline 설계
 category: agents
-date: "2026-04-09"
-tags: [multi-agent, pipeline, debate, consensus, orchestration]
+date: '2026-04-09'
+tags:
+  - multi-agent
+  - pipeline
+  - debate
+  - consensus
+  - orchestration
 confidence: 3
-connections: [agents/tool-use, prompt-engineering/few-shot-prompting]
+connections:
+  - agents/tool-use
+  - prompt-engineering/few-shot-prompting
+  - agents/agent-architectures
+  - agents/multi-provider-circuit-breaker
+  - agents/trading-agent-9phase-pipeline
+  - harness-engineering/ai-call-patterns-circuit-breaker-fallback
+  - harness-engineering/parallel-agent-batch-modification-pattern
+  - infrastructure/multi-provider-fallback
+  - prompt-engineering/quality-guards
+  - prompt-engineering/structured-output
 status: complete
-description: "여러 AI 에이전트가 협업하여 하나의 결론을 도출하는 파이프라인 아키텍처. 실전 사례 포함."
+description: 여러 AI 에이전트가 협업하여 하나의 결론을 도출하는 파이프라인 아키텍처. 실전 사례 포함.
 type: entry
 ---
 

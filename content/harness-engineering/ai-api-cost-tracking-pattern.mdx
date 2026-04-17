@@ -1,41 +1,68 @@
 ---
-title: "AI API 비용 추적 패턴 — 호출 로깅, 모델별 단가 표, /cost-check 슬래시 커맨드"
+title: 'AI API 비용 추적 패턴 — 호출 로깅, 모델별 단가 표, /cost-check 슬래시 커맨드'
 category: harness-engineering
-date: "2026-04-12"
-tags: [harness-engineering, ai-cost, observability, anthropic, gemini, openai, transferable-pattern]
+date: '2026-04-12'
+tags:
+  - harness-engineering
+  - ai-cost
+  - observability
+  - anthropic
+  - gemini
+  - openai
+  - transferable-pattern
 confidence: 3
 connections:
   - harness-engineering/harness-journal-000-baseline
   - harness-engineering/ai-call-patterns-circuit-breaker-fallback
   - harness-engineering/harness-engineering-overview
+  - harness-engineering/harness-journal-007-008-ai-cost-tracking
+  - infrastructure/cron-execution-tracking-pattern
+  - tokenomics/claude-code-token-levers-applied-log
+  - tokenomics/claude-code-token-levers-catalog
+  - tokenomics/project-level-cost-analysis-pattern
 status: complete
-description: "양쪽 프로젝트(mino-moneyflow, mino-tarosaju) 모두 *비용 가시성 0* 상태. 매 호출에 토큰/비용을 로깅하고 일/월 집계 + 슬래시 커맨드로 즉시 확인하는 패턴 제안. Journal 000 갭 #4의 회피 메커니즘 정의."
+description: >-
+  양쪽 프로젝트(mino-moneyflow, mino-tarosaju) 모두 *비용 가시성 0* 상태. 매 호출에 토큰/비용을 로깅하고 일/월
+  집계 + 슬래시 커맨드로 즉시 확인하는 패턴 제안. Journal 000 갭 #4의 회피 메커니즘 정의.
 type: entry
 quiz:
-  - question: "*비용을 추적하지 않는* AI 호출 시스템이 *반드시* 한 번은 만나는 사고는?"
+  - question: '*비용을 추적하지 않는* AI 호출 시스템이 *반드시* 한 번은 만나는 사고는?'
     choices:
-      - "rate limit 429"
-      - "한 달 청구서를 받기 전까지 *얼마 썼는지 모르는* 상태에서 어느 새 일 한도를 초과 → 갑작스러운 비용 폭발 (특히 maxTokens 기본값 4096을 그대로 둔 경우)"
-      - "응답 형식 불일치"
-      - "모델 ID 변경으로 인한 deprecation"
+      - rate limit 429
+      - >-
+        한 달 청구서를 받기 전까지 *얼마 썼는지 모르는* 상태에서 어느 새 일 한도를 초과 → 갑작스러운 비용 폭발 (특히
+        maxTokens 기본값 4096을 그대로 둔 경우)
+      - 응답 형식 불일치
+      - 모델 ID 변경으로 인한 deprecation
     answer: 1
-    explanation: "비용 가시성 부재의 본질은 *알 수 없는 상태*. 사고가 발생해야 알게 되고, 그때는 이미 큰 청구서를 받은 후. *측정하지 않으면 통제할 수 없다*는 원칙이 가장 정직하게 드러나는 영역."
-  - question: "프롬프트 캐싱(Claude cache_control)을 적용한 시스템에서 비용 추적이 *더 중요*해지는 이유는?"
+    explanation: >-
+      비용 가시성 부재의 본질은 *알 수 없는 상태*. 사고가 발생해야 알게 되고, 그때는 이미 큰 청구서를 받은 후. *측정하지 않으면
+      통제할 수 없다*는 원칙이 가장 정직하게 드러나는 영역.
+  - question: 프롬프트 캐싱(Claude cache_control)을 적용한 시스템에서 비용 추적이 *더 중요*해지는 이유는?
     choices:
-      - "캐싱이 비용을 증가시키기 때문"
-      - "캐시 히트율을 측정하지 않으면 *캐시가 작동하는지 알 수 없음*. system message가 단 한 글자만 달라도 캐시 미스가 되는데, 이를 *비용 차이*로만 감지 가능"
-      - "캐싱은 GPT만 지원하기 때문"
-      - "캐싱이 무료가 되기 때문"
+      - 캐싱이 비용을 증가시키기 때문
+      - >-
+        캐시 히트율을 측정하지 않으면 *캐시가 작동하는지 알 수 없음*. system message가 단 한 글자만 달라도 캐시 미스가
+        되는데, 이를 *비용 차이*로만 감지 가능
+      - 캐싱은 GPT만 지원하기 때문
+      - 캐싱이 무료가 되기 때문
     answer: 1
-    explanation: "캐싱은 *prefix exact match*. 코드 변경이 system message에 미세한 영향을 줘서 캐시 미스가 발생해도 *호출 자체는 계속 작동*한다. 비용을 추적하지 않으면 *조용히* 90% 절감이 사라진다. 캐싱이 작동하는지 확인하는 *유일한 방법*이 비용 측정."
-  - question: "양쪽 프로젝트 모두 *비용 추적 0*인 상황에서 *수익화 단계*가 가까울수록 시급해지는 이유는?"
+    explanation: >-
+      캐싱은 *prefix exact match*. 코드 변경이 system message에 미세한 영향을 줘서 캐시 미스가 발생해도
+      *호출 자체는 계속 작동*한다. 비용을 추적하지 않으면 *조용히* 90% 절감이 사라진다. 캐싱이 작동하는지 확인하는 *유일한
+      방법*이 비용 측정.
+  - question: 양쪽 프로젝트 모두 *비용 추적 0*인 상황에서 *수익화 단계*가 가까울수록 시급해지는 이유는?
     choices:
-      - "수익화하면 더 많은 사람이 사용해서 비용이 증가하기 때문"
-      - "사용자당 비용 구조를 모르면 *가격 책정 자체가 불가능*. 무료/유료 티어 분기, 일 사용량 한도, 사용량별 할인 등 *제품 결정 전부*가 비용 측정 위에 쌓임"
-      - "투자자가 비용 데이터를 요구하기 때문"
-      - "Anthropic이 수익화 시 비용 추적을 강제하기 때문"
+      - 수익화하면 더 많은 사람이 사용해서 비용이 증가하기 때문
+      - >-
+        사용자당 비용 구조를 모르면 *가격 책정 자체가 불가능*. 무료/유료 티어 분기, 일 사용량 한도, 사용량별 할인 등 *제품 결정
+        전부*가 비용 측정 위에 쌓임
+      - 투자자가 비용 데이터를 요구하기 때문
+      - Anthropic이 수익화 시 비용 추적을 강제하기 때문
     answer: 1
-    explanation: "수익화는 *비용 가시성을 전제*한다. 사용자가 1번 호출할 때 0.01달러 드는지 1달러 드는지 모르면 가격을 매길 수 없다. moneyflow는 트레이딩 SaaS, tarosaju는 점술 SaaS — 둘 다 *사용량 기반 결제*가 가능한 모델이라 시급."
+    explanation: >-
+      수익화는 *비용 가시성을 전제*한다. 사용자가 1번 호출할 때 0.01달러 드는지 1달러 드는지 모르면 가격을 매길 수 없다.
+      moneyflow는 트레이딩 SaaS, tarosaju는 점술 SaaS — 둘 다 *사용량 기반 결제*가 가능한 모델이라 시급.
 ---
 
 ## 갭 (현시점)

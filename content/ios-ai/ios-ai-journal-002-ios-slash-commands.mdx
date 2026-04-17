@@ -1,14 +1,30 @@
 ---
-title: "iOS Harness Journal 002 — iOS 특화 슬래시 커맨드 7종 (병렬 Agent 패턴 포함)"
+title: iOS Harness Journal 002 — iOS 특화 슬래시 커맨드 7종 (병렬 Agent 패턴 포함)
 category: ios-ai
 series: ios-ai-journal
-date: "2026-04-13"
-tags: [ios-harness-journal, ios, slash-commands, ios-triage, ios-review, ios-investigate, ios-ship, ios-arch, ios-bugfix, compound]
+date: '2026-04-13'
+tags:
+  - ios-harness-journal
+  - ios
+  - slash-commands
+  - ios-triage
+  - ios-review
+  - ios-investigate
+  - ios-ship
+  - ios-arch
+  - ios-bugfix
+  - compound
 confidence: 4
-connections: [ios-ai/ios-ai-journal-001-swift-lint-hook, harness-engineering/skill-system-introduction]
+connections:
+  - ios-ai/ios-ai-journal-001-swift-lint-hook
+  - harness-engineering/skill-system-introduction
+  - ios-ai/ios-ai-journal-003-claudeignore-spm
+  - ios-ai/ios-ai-journal-004-ios-triage
 status: complete
 type: entry
-description: "iOS 프로젝트에 특화된 슬래시 커맨드 7종 + 병렬 Agent 패턴(2 Agent / 3 Agent) 설계. 일반 /review, /investigate로는 RIBs 위반·메모리 누수·앱스토어 심사를 못 잡는다. 단방향 커밋과 '추측 금지' 원칙으로 사이클을 구조화한다."
+description: >-
+  iOS 프로젝트에 특화된 슬래시 커맨드 7종 + 병렬 Agent 패턴(2 Agent / 3 Agent) 설계. 일반 /review,
+  /investigate로는 RIBs 위반·메모리 누수·앱스토어 심사를 못 잡는다. 단방향 커밋과 '추측 금지' 원칙으로 사이클을 구조화한다.
 ---
 
 ## 한 줄 요약

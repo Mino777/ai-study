@@ -1,32 +1,51 @@
 ---
-title: "Tuist + SPM Testing Trap — productTypes 미설정이 만든 8라운드 Silent Failure"
+title: Tuist + SPM Testing Trap — productTypes 미설정이 만든 8라운드 Silent Failure
 category: ios-ai
-date: "2026-04-16"
-tags: [tuist, spm, testing, silent-failure, xcodebuild, ios, aidy]
+date: '2026-04-16'
+tags:
+  - tuist
+  - spm
+  - testing
+  - silent-failure
+  - xcodebuild
+  - ios
+  - aidy
 confidence: 4
 connections:
   - evaluation/numeric-execution-evidence
   - harness-engineering/aidy-journal-002-stability-observability-test-integrity
+  - evaluation/test-strategy-3-client-via-aidy
 status: complete
-description: "Tuist + Swift Package Manager 환경에서 productTypes를 .framework로 명시하지 않으면 SPM 의존성이 static library로 빌드되어 테스트 번들 리소스 경로가 깨진다. xcodebuild는 이를 'no tests to run'으로 처리하고 exit 0을 반환 — 8라운드 동안 Aidy iOS 테스트가 무실행으로 '통과' 처리된 실전 사례."
+description: >-
+  Tuist + Swift Package Manager 환경에서 productTypes를 .framework로 명시하지 않으면 SPM 의존성이
+  static library로 빌드되어 테스트 번들 리소스 경로가 깨진다. xcodebuild는 이를 'no tests to run'으로
+  처리하고 exit 0을 반환 — 8라운드 동안 Aidy iOS 테스트가 무실행으로 '통과' 처리된 실전 사례.
 type: entry
 quiz:
-  - question: "Tuist에서 SPM 의존성이 기본적으로 static library로 빌드되는 것이 왜 테스트 실행에 문제가 되는가?"
+  - question: Tuist에서 SPM 의존성이 기본적으로 static library로 빌드되는 것이 왜 테스트 실행에 문제가 되는가?
     choices:
-      - "static library는 느려서"
-      - "테스트 번들이 SPM 의존성의 리소스 번들 경로를 런타임에 찾아야 하는데, static 링킹 시 번들이 앱 번들에 병합되지 않아 경로 해석 실패 → 테스트 번들 로딩 실패"
-      - "Swift 언어 제약"
-      - "Xcode 버그"
+      - static library는 느려서
+      - >-
+        테스트 번들이 SPM 의존성의 리소스 번들 경로를 런타임에 찾아야 하는데, static 링킹 시 번들이 앱 번들에 병합되지 않아
+        경로 해석 실패 → 테스트 번들 로딩 실패
+      - Swift 언어 제약
+      - Xcode 버그
     answer: 1
-    explanation: "TCA, Sharing 등 의존성은 내부적으로 resource bundle을 사용한다. static library로 빌드되면 번들 경로가 런타임에 찾아지지 않아 테스트 번들이 로딩되지 않고, xcodebuild는 이를 'no tests' 상태로 처리한다."
-  - question: "xcodebuild에서 -project 대신 -workspace를 써야 하는 이유는?"
+    explanation: >-
+      TCA, Sharing 등 의존성은 내부적으로 resource bundle을 사용한다. static library로 빌드되면 번들
+      경로가 런타임에 찾아지지 않아 테스트 번들이 로딩되지 않고, xcodebuild는 이를 'no tests' 상태로 처리한다.
+  - question: xcodebuild에서 -project 대신 -workspace를 써야 하는 이유는?
     choices:
-      - "최신 문법이어서"
-      - "Tuist는 xcodeproj + xcworkspace를 함께 생성하는데, SPM 의존성은 workspace 레벨에서 해석됨. -project로 호출하면 workspace 설정이 무시되어 SPM 의존성 누락"
-      - "-workspace가 더 빠름"
-      - "CI 호환성"
+      - 최신 문법이어서
+      - >-
+        Tuist는 xcodeproj + xcworkspace를 함께 생성하는데, SPM 의존성은 workspace 레벨에서 해석됨.
+        -project로 호출하면 workspace 설정이 무시되어 SPM 의존성 누락
+      - '-workspace가 더 빠름'
+      - CI 호환성
     answer: 1
-    explanation: "Tuist generate가 만드는 workspace에는 SPM 의존성 해석 설정이 포함되어 있다. -project만 사용하면 이 설정이 적용되지 않아 빌드는 되지만 SPM 의존성의 리소스가 누락된 상태로 실행된다."
+    explanation: >-
+      Tuist generate가 만드는 workspace에는 SPM 의존성 해석 설정이 포함되어 있다. -project만 사용하면 이
+      설정이 적용되지 않아 빌드는 되지만 SPM 의존성의 리소스가 누락된 상태로 실행된다.
 ---
 
 ## 갭 / 맥락

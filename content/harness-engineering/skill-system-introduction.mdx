@@ -1,41 +1,70 @@
 ---
-title: "Skill 시스템 도입 — 슬래시 커맨드 vs Skill, 어느 것을 언제 쓰는가"
+title: 'Skill 시스템 도입 — 슬래시 커맨드 vs Skill, 어느 것을 언제 쓰는가'
 category: harness-engineering
-date: "2026-04-12"
-tags: [harness-engineering, claude-code, slash-command, skills, ai-ops, transferable-pattern]
+date: '2026-04-12'
+tags:
+  - harness-engineering
+  - claude-code
+  - slash-command
+  - skills
+  - ai-ops
+  - transferable-pattern
 confidence: 3
 connections:
   - harness-engineering/harness-journal-000-baseline
   - harness-engineering/harness-journal-004-wt-branch-command
   - harness-engineering/compound-engineering-philosophy
+  - ios-ai/ios-ai-journal-002-ios-slash-commands
 status: complete
-description: "Claude Code의 .claude/skills/ 디렉터리는 양쪽 프로젝트 모두 미활용. 슬래시 커맨드와 Skill의 차이, 어떤 작업이 어느 것에 적합한지, 도입 가이드. Journal 000 갭 #8의 회피 메커니즘 정의."
+description: >-
+  Claude Code의 .claude/skills/ 디렉터리는 양쪽 프로젝트 모두 미활용. 슬래시 커맨드와 Skill의 차이, 어떤 작업이
+  어느 것에 적합한지, 도입 가이드. Journal 000 갭 #8의 회피 메커니즘 정의.
 type: entry
 quiz:
-  - question: "Claude Code에서 *슬래시 커맨드*와 *Skill*의 본질적 차이는?"
+  - question: Claude Code에서 *슬래시 커맨드*와 *Skill*의 본질적 차이는?
     choices:
-      - "슬래시 커맨드는 사용자가 호출, Skill은 자동으로 실행"
-      - "슬래시 커맨드는 *명시적 호출이 필요한 워크플로*(사용자/AI가 의도를 가진 작업), Skill은 *AI가 작업 맥락에 따라 자동 매칭하는 작은 능력 단위*. 슬래시 커맨드가 *동사*라면 Skill은 *조사할 수 있는 명사*"
-      - "슬래시 커맨드는 markdown, Skill은 JSON"
-      - "슬래시 커맨드는 프로젝트별, Skill은 전역"
+      - '슬래시 커맨드는 사용자가 호출, Skill은 자동으로 실행'
+      - >-
+        슬래시 커맨드는 *명시적 호출이 필요한 워크플로*(사용자/AI가 의도를 가진 작업), Skill은 *AI가 작업 맥락에 따라 자동
+        매칭하는 작은 능력 단위*. 슬래시 커맨드가 *동사*라면 Skill은 *조사할 수 있는 명사*
+      - '슬래시 커맨드는 markdown, Skill은 JSON'
+      - '슬래시 커맨드는 프로젝트별, Skill은 전역'
     answer: 1
-    explanation: "슬래시 커맨드는 *호출 의도*가 명확한 단위 — `/compound`, `/wt-branch`, `/cost-check` 같은 워크플로. Skill은 더 작은 단위로, AI가 *작업 종류에 따라 자동으로 가져다 쓰는* 능력. 예: \"테스트 실패 분석\" 작업 시 적절한 Skill이 자동 매칭. 슬래시 커맨드 = 사용자가 부르는 도구함, Skill = AI가 사용하는 손."
-  - question: "양쪽 프로젝트(mino-moneyflow, mino-tarosaju)에 *.claude/skills/ 디렉터리가 없는* 것이 *우연이 아닌* 이유는?"
+    explanation: >-
+      슬래시 커맨드는 *호출 의도*가 명확한 단위 — `/compound`, `/wt-branch`, `/cost-check` 같은
+      워크플로. Skill은 더 작은 단위로, AI가 *작업 종류에 따라 자동으로 가져다 쓰는* 능력. 예: "테스트 실패 분석" 작업 시
+      적절한 Skill이 자동 매칭. 슬래시 커맨드 = 사용자가 부르는 도구함, Skill = AI가 사용하는 손.
+  - question: >-
+      양쪽 프로젝트(mino-moneyflow, mino-tarosaju)에 *.claude/skills/ 디렉터리가 없는* 것이 *우연이
+      아닌* 이유는?
     choices:
-      - "Claude Code가 Skill을 지원하지 않기 때문"
-      - "두 프로젝트가 작아서 Skill이 필요 없기 때문"
-      - "*슬래시 커맨드 7개(/compound, /autoceo, /wt-branch, /ingest, /cross-session-review, /curate-inbound, /projects-sync)*로 시작해서 점점 그 안에 모든 워크플로를 박는 패턴이 굳어졌기 때문. 작은 단위를 *분리*할 필요를 느끼기 전에 *통합 워크플로*에 익숙해짐. 이게 미활용의 경로 의존성"
-      - "Skill은 GPT 전용 기능이기 때문"
+      - Claude Code가 Skill을 지원하지 않기 때문
+      - 두 프로젝트가 작아서 Skill이 필요 없기 때문
+      - >-
+        *슬래시 커맨드 7개(/compound, /autoceo, /wt-branch, /ingest,
+        /cross-session-review, /curate-inbound, /projects-sync)*로 시작해서 점점 그 안에
+        모든 워크플로를 박는 패턴이 굳어졌기 때문. 작은 단위를 *분리*할 필요를 느끼기 전에 *통합 워크플로*에 익숙해짐. 이게
+        미활용의 경로 의존성
+      - Skill은 GPT 전용 기능이기 때문
     answer: 2
-    explanation: "초기에 슬래시 커맨드로 시작하면 *모든 자동화를 슬래시 커맨드에 박는* 습관이 생긴다. /compound에 회고+솔루션+CHANGELOG+메모리 4가지가 다 들어간 게 그 예. 현재 7개(/compound, /autoceo, /wt-branch, /ingest, /cross-session-review, /curate-inbound, /projects-sync)로 늘어났지만 .claude/skills/는 여전히 비어 있다. 작은 재사용 단위로 분리하는 *비용*이 통합된 워크플로의 *익숙함*보다 커 보인다. 이게 *경로 의존성* — 시작점이 그 후 모든 결정을 좁힌다."
-  - question: "Skill 도입의 *첫 한 가지*로 가장 좋은 후보는?"
+    explanation: >-
+      초기에 슬래시 커맨드로 시작하면 *모든 자동화를 슬래시 커맨드에 박는* 습관이 생긴다. /compound에
+      회고+솔루션+CHANGELOG+메모리 4가지가 다 들어간 게 그 예. 현재 7개(/compound, /autoceo,
+      /wt-branch, /ingest, /cross-session-review, /curate-inbound,
+      /projects-sync)로 늘어났지만 .claude/skills/는 여전히 비어 있다. 작은 재사용 단위로 분리하는 *비용*이
+      통합된 워크플로의 *익숙함*보다 커 보인다. 이게 *경로 의존성* — 시작점이 그 후 모든 결정을 좁힌다.
+  - question: Skill 도입의 *첫 한 가지*로 가장 좋은 후보는?
     choices:
-      - "/compound을 쪼개서 4개 Skill로 만들기"
-      - "*다른 워크플로에서 자주 재사용되는 작은 단위* — 예: \"git status 깨끗 확인\", \"TypeScript 에러 분류\", \"PR 코멘트 작성\" 같은 것. 슬래시 커맨드를 쪼개기보다 *새 작은 능력*을 추가하는 것이 진입 비용이 낮음"
-      - "모든 슬래시 커맨드를 Skill로 변환"
-      - "tarosaju 전용 도메인 Skill (사주/타로 분석)"
+      - /compound을 쪼개서 4개 Skill로 만들기
+      - >-
+        *다른 워크플로에서 자주 재사용되는 작은 단위* — 예: "git status 깨끗 확인", "TypeScript 에러 분류",
+        "PR 코멘트 작성" 같은 것. 슬래시 커맨드를 쪼개기보다 *새 작은 능력*을 추가하는 것이 진입 비용이 낮음
+      - 모든 슬래시 커맨드를 Skill로 변환
+      - tarosaju 전용 도메인 Skill (사주/타로 분석)
     answer: 1
-    explanation: "기존 슬래시 커맨드를 쪼개는 건 *작동하는 것을 깨는* 작업이라 위험. 새 작은 능력을 *0에서* 추가하는 게 진입 비용 압도적으로 낮음. \"git status 깨끗 확인\" 같은 게 첫 후보 — 모든 워크플로의 시작에서 재사용되는 단위."
+    explanation: >-
+      기존 슬래시 커맨드를 쪼개는 건 *작동하는 것을 깨는* 작업이라 위험. 새 작은 능력을 *0에서* 추가하는 게 진입 비용 압도적으로
+      낮음. "git status 깨끗 확인" 같은 게 첫 후보 — 모든 워크플로의 시작에서 재사용되는 단위.
 ---
 
 ## 갭 (현시점)

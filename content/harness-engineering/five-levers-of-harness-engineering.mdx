@@ -1,42 +1,61 @@
 ---
-title: "하네스 엔지니어링 5가지 레버 — AI 에이전트에 고삐를 채우는 법"
+title: 하네스 엔지니어링 5가지 레버 — AI 에이전트에 고삐를 채우는 법
 category: harness-engineering
-date: "2026-04-11"
-tags: [harness-engineering, ai-agent, claude-code, system-prompt, skills, mcp, hooks, subagent]
+date: '2026-04-11'
+tags:
+  - harness-engineering
+  - ai-agent
+  - claude-code
+  - system-prompt
+  - skills
+  - mcp
+  - hooks
+  - subagent
 confidence: 2
 connections:
   - harness-engineering/harness-engineering-overview
   - context-engineering/context-compression
   - agents/agent-architectures
   - agents/tool-use
+  - context-engineering/context-scaling-3-layer-architecture
+  - harness-engineering/architect-flow-map-via-aidy-architect
+  - harness-engineering/harness-journal-000-baseline
 status: complete
-description: "프롬프트도 컨텍스트도 아닌, 에이전트를 감싸는 시스템을 설계하라. 실밸개발자 유튜브 영상을 계기로 한국어 정리 자료들을 교차 확인해 정리한 하네스의 5가지 레버와 '보고-잡고-되살리기' 3단계 제어법."
+description: >-
+  프롬프트도 컨텍스트도 아닌, 에이전트를 감싸는 시스템을 설계하라. 실밸개발자 유튜브 영상을 계기로 한국어 정리 자료들을 교차 확인해 정리한
+  하네스의 5가지 레버와 '보고-잡고-되살리기' 3단계 제어법.
 type: entry
 quiz:
-  - question: "하네스 엔지니어링의 시스템 프롬프트(CLAUDE.md)에 대한 '60줄 이하' 원칙이 중요한 가장 직접적인 이유는?"
+  - question: 하네스 엔지니어링의 시스템 프롬프트(CLAUDE.md)에 대한 '60줄 이하' 원칙이 중요한 가장 직접적인 이유는?
     choices:
-      - "깃허브 파일 크기 제한 때문에 60줄을 넘을 수 없다"
-      - "시스템 프롬프트가 매 턴 컨텍스트에 주입되므로 토큰 비용과 주의 희석을 줄여야 한다"
-      - "60줄 이하일 때만 Claude가 규칙을 인식하도록 설계되어 있다"
-      - "길이가 60줄 초과이면 MDX 컴파일 에러가 발생한다"
+      - 깃허브 파일 크기 제한 때문에 60줄을 넘을 수 없다
+      - 시스템 프롬프트가 매 턴 컨텍스트에 주입되므로 토큰 비용과 주의 희석을 줄여야 한다
+      - 60줄 이하일 때만 Claude가 규칙을 인식하도록 설계되어 있다
+      - 길이가 60줄 초과이면 MDX 컴파일 에러가 발생한다
     answer: 1
-    explanation: "CLAUDE.md는 에이전트의 매 턴 입력에 포함되므로 길어질수록 비용이 선형 증가하고, 긴 규칙 목록의 중간이 무시되는 'lost in the middle' 문제가 생긴다. 나머지 선택지는 기술적 사실이 아니다."
-  - question: "'보고-잡고-되살리기' 3단계 제어 시스템에서 '되살리기(Recover)' 단계가 해결하려는 핵심 문제는?"
+    explanation: >-
+      CLAUDE.md는 에이전트의 매 턴 입력에 포함되므로 길어질수록 비용이 선형 증가하고, 긴 규칙 목록의 중간이 무시되는 'lost
+      in the middle' 문제가 생긴다. 나머지 선택지는 기술적 사실이 아니다.
+  - question: '''보고-잡고-되살리기'' 3단계 제어 시스템에서 ''되살리기(Recover)'' 단계가 해결하려는 핵심 문제는?'
     choices:
-      - "에이전트가 현재 작업 위치를 잊는 컨텍스트 드리프트"
-      - "에러 발생 시 에이전트가 같은 실수를 폭주하듯 반복하는 문제"
-      - "망친 상태에서 안전한 이전 상태로 복원할 방법의 부재"
-      - "MCP 도구 설명문이 시스템 프롬프트를 잠식하는 문제"
+      - 에이전트가 현재 작업 위치를 잊는 컨텍스트 드리프트
+      - 에러 발생 시 에이전트가 같은 실수를 폭주하듯 반복하는 문제
+      - 망친 상태에서 안전한 이전 상태로 복원할 방법의 부재
+      - MCP 도구 설명문이 시스템 프롬프트를 잠식하는 문제
     answer: 2
-    explanation: "'보고'는 위치 파악(SSOT), '잡고'는 에러 인터셉트(훅/서브에이전트), '되살리기'는 체크포인트/git worktree를 통한 안전한 롤백이다. 각 단계가 서로 다른 문제를 해결한다."
-  - question: "하네스 '과적합(over-fitting)' 안티패턴으로 가장 적절한 예시는?"
+    explanation: >-
+      '보고'는 위치 파악(SSOT), '잡고'는 에러 인터셉트(훅/서브에이전트), '되살리기'는 체크포인트/git worktree를 통한
+      안전한 롤백이다. 각 단계가 서로 다른 문제를 해결한다.
+  - question: 하네스 '과적합(over-fitting)' 안티패턴으로 가장 적절한 예시는?
     choices:
-      - "CLAUDE.md에 프로젝트의 모든 디렉터리 구조와 라이브러리 사용법을 꼼꼼히 나열한다"
-      - "실패한 케이스가 생길 때마다 스킬 파일에 경고 블록을 추가한다"
-      - "pre-commit 훅으로 npm run build를 자동 실행해 빌드 실패 시 커밋을 차단한다"
-      - "긴 탐색 작업을 서브에이전트에 위임하고 메인에는 요약만 돌려받는다"
+      - CLAUDE.md에 프로젝트의 모든 디렉터리 구조와 라이브러리 사용법을 꼼꼼히 나열한다
+      - 실패한 케이스가 생길 때마다 스킬 파일에 경고 블록을 추가한다
+      - pre-commit 훅으로 npm run build를 자동 실행해 빌드 실패 시 커밋을 차단한다
+      - 긴 탐색 작업을 서브에이전트에 위임하고 메인에는 요약만 돌려받는다
     answer: 0
-    explanation: "하네스 과적합은 '모든 것을 미리 적어두자' 함정이다. 디렉터리 구조/라이브러리 사용법을 나열하면 금방 낡고 중간 규칙이 무시된다. 나머지 3개는 모두 건강한 하네스 패턴이다."
+    explanation: >-
+      하네스 과적합은 '모든 것을 미리 적어두자' 함정이다. 디렉터리 구조/라이브러리 사용법을 나열하면 금방 낡고 중간 규칙이 무시된다.
+      나머지 3개는 모두 건강한 하네스 패턴이다.
 ---
 
 > **📝 정보 출처에 대한 솔직한 고백**

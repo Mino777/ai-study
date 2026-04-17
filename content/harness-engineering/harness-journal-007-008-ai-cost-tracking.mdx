@@ -1,42 +1,68 @@
 ---
-title: "Harness Journal 007+008 — AI API 비용 추적 인프라 양쪽 이식"
+title: Harness Journal 007+008 — AI API 비용 추적 인프라 양쪽 이식
 category: harness-engineering
 series: harness-journal
-date: "2026-04-12"
-tags: [harness-journal, harness-engineering, ai-cost, observability, anthropic, gemini, openai, cross-project-port]
+date: '2026-04-12'
+tags:
+  - harness-journal
+  - harness-engineering
+  - ai-cost
+  - observability
+  - anthropic
+  - gemini
+  - openai
+  - cross-project-port
 confidence: 4
 connections:
   - harness-engineering/ai-api-cost-tracking-pattern
   - harness-engineering/harness-journal-006-tarosaju-anthropic-hardening
   - harness-engineering/harness-journal-000-baseline
+  - harness-engineering/harness-journal-023-closed-loop-ai-quality
 status: complete
-description: "Journal 000 갭 #4(비용 가시성 0) 양쪽 해소. tarosaju(007) + moneyflow(008) 두 사이클을 한 엔트리에 묶어서 박제. 로깅 인프라만 (DB/대시보드는 다음 사이클). 3-provider 단가 표 + fire-and-forget 로깅."
+description: >-
+  Journal 000 갭 #4(비용 가시성 0) 양쪽 해소. tarosaju(007) + moneyflow(008) 두 사이클을 한 엔트리에
+  묶어서 박제. 로깅 인프라만 (DB/대시보드는 다음 사이클). 3-provider 단가 표 + fire-and-forget 로깅.
 type: entry
 quiz:
-  - question: "이 두 사이클이 *한 엔트리에 묶인* 이유는?"
+  - question: 이 두 사이클이 *한 엔트리에 묶인* 이유는?
     choices:
-      - "분량 줄이기"
-      - "같은 패턴을 양쪽 프로젝트에 *연속 이식*한 작업 — 한 메시지(*비용 가시성 확보*)로 묶이고, 이식 순서가 거의 기계적(tarosaju 단순 → moneyflow 3-provider). 분할하면 *같은 메시지*를 두 번 박제하는 중복"
-      - "PR 번호가 연속이라"
-      - "빌드를 한 번만 돌리기 위해"
+      - 분량 줄이기
+      - >-
+        같은 패턴을 양쪽 프로젝트에 *연속 이식*한 작업 — 한 메시지(*비용 가시성 확보*)로 묶이고, 이식 순서가 거의
+        기계적(tarosaju 단순 → moneyflow 3-provider). 분할하면 *같은 메시지*를 두 번 박제하는 중복
+      - PR 번호가 연속이라
+      - 빌드를 한 번만 돌리기 위해
     answer: 1
-    explanation: "사이클 분할 원칙은 *메시지 단위*. 같은 메시지의 양쪽 이식은 한 엔트리로 묶는 게 중복 방지 + 비교 표 유지. [Journal 006](/wiki/harness-engineering/harness-journal-006-tarosaju-anthropic-hardening)이 006+007을 묶은 것과 같은 원칙."
-  - question: "*로깅 인프라만* 먼저 도입하고 DB/대시보드를 미룬 이유는?"
+    explanation: >-
+      사이클 분할 원칙은 *메시지 단위*. 같은 메시지의 양쪽 이식은 한 엔트리로 묶는 게 중복 방지 + 비교 표 유지. [Journal
+      006](/wiki/harness-engineering/harness-journal-006-tarosaju-anthropic-hardening)이
+      006+007을 묶은 것과 같은 원칙.
+  - question: '*로깅 인프라만* 먼저 도입하고 DB/대시보드를 미룬 이유는?'
     choices:
-      - "DB 마이그레이션이 복잡해서"
-      - "*측정 자체*가 가장 큰 단일 이득. 로깅만으로 하루 청구서 예측 가능해짐. DB/대시보드는 *2차 가치*(장기 트렌드, 리포트). 2차 가치에 시간 쓰기 전에 *1차 가치(가시성)*부터 확보"
-      - "Supabase가 별도 프로젝트라"
-      - "권한 부족"
+      - DB 마이그레이션이 복잡해서
+      - >-
+        *측정 자체*가 가장 큰 단일 이득. 로깅만으로 하루 청구서 예측 가능해짐. DB/대시보드는 *2차 가치*(장기 트렌드,
+        리포트). 2차 가치에 시간 쓰기 전에 *1차 가치(가시성)*부터 확보
+      - Supabase가 별도 프로젝트라
+      - 권한 부족
     answer: 1
-    explanation: "가장 큰 단일 이득은 *\"얼마 쓰는지 실제로 보이는 것\"*. 이걸 위해 DB/대시보드/집계가 *필요하지 않음*. console 출력만으로도 하루 몇 건 호출했는지 / 어느 모델이 비싼지 / 에러율이 얼마인지 모두 실시간으로 보임. 다음 사이클에 DB 저장하면 장기 트렌드가 추가되지만 *오늘 당장의 결정*은 console만으로 가능."
-  - question: "세 프로바이더(Gemini/Claude/OpenAI)의 *usage response 구조가 모두 다름*을 어떻게 다뤘는가?"
+    explanation: >-
+      가장 큰 단일 이득은 *"얼마 쓰는지 실제로 보이는 것"*. 이걸 위해 DB/대시보드/집계가 *필요하지 않음*. console
+      출력만으로도 하루 몇 건 호출했는지 / 어느 모델이 비싼지 / 에러율이 얼마인지 모두 실시간으로 보임. 다음 사이클에 DB 저장하면
+      장기 트렌드가 추가되지만 *오늘 당장의 결정*은 console만으로 가능.
+  - question: 세 프로바이더(Gemini/Claude/OpenAI)의 *usage response 구조가 모두 다름*을 어떻게 다뤘는가?
     choices:
-      - "하나의 통일 response 타입 강제"
-      - "*프로바이더별로 각기 다른 파싱 경로*를 각 함수(callGemini/callClaude/callOpenAI) 내부에 둠. 공통 `TokenUsage` 타입으로 정규화한 뒤 공통 `logApiCall()` 호출. 추상화는 *출력 쪽*(로그 형식)에만, 입력 쪽은 *각자의 형식 존중*"
-      - "모든 프로바이더가 OpenAI 형식을 따르도록 요청"
-      - "Claude만 지원"
+      - 하나의 통일 response 타입 강제
+      - >-
+        *프로바이더별로 각기 다른 파싱 경로*를 각 함수(callGemini/callClaude/callOpenAI) 내부에 둠. 공통
+        `TokenUsage` 타입으로 정규화한 뒤 공통 `logApiCall()` 호출. 추상화는 *출력 쪽*(로그 형식)에만, 입력
+        쪽은 *각자의 형식 존중*
+      - 모든 프로바이더가 OpenAI 형식을 따르도록 요청
+      - Claude만 지원
     answer: 1
-    explanation: "각 프로바이더는 자기 API 형식이 있고 이걸 우리가 통일할 수 없음. 파싱은 *프로바이더별*, 출력은 *공통*. 이게 adapter 패턴의 실전 적용."
+    explanation: >-
+      각 프로바이더는 자기 API 형식이 있고 이걸 우리가 통일할 수 없음. 파싱은 *프로바이더별*, 출력은 *공통*. 이게 adapter
+      패턴의 실전 적용.
 ---
 
 ## 갭 (Before)

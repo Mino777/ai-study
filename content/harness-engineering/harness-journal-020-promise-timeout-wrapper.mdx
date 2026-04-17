@@ -1,9 +1,17 @@
 ---
-title: "Harness Journal 020 — Promise 타임아웃 래퍼 + 자가 fix 사이클"
+title: Harness Journal 020 — Promise 타임아웃 래퍼 + 자가 fix 사이클
 category: harness-engineering
 series: harness-journal
-date: "2026-04-13"
-tags: [harness-journal, promise, timeout, async, self-fix-cycle, type-inference, api-routes, moneyflow]
+date: '2026-04-13'
+tags:
+  - harness-journal
+  - promise
+  - timeout
+  - async
+  - self-fix-cycle
+  - type-inference
+  - api-routes
+  - moneyflow
 confidence: 5
 connections:
   - harness-engineering/ai-call-patterns-circuit-breaker-fallback
@@ -11,34 +19,66 @@ connections:
   - harness-engineering/harness-journal-002-inline-test-gate
   - harness-engineering/harness-journal-019-mcapp-cross-session-cleanup
   - harness-engineering/fixture-silent-failure-trap
+  - harness-engineering/harness-journal-021-github-token-deploy-chain-gap
+  - harness-engineering/harness-journal-022-qa-gate-exit-code-trap
 status: complete
-description: "moneyflow 백엔드 API 15 routes에 Promise 타임아웃 래퍼 3종(withTimeout / allSettledWithTimeout / raceWithTimeout) 적용 사이클. 무한 대기 방지 + 30분 windowed 자가 fix 사이클(구조 붕괴 1 + 타입 붕괴 3)이 inline test gate로 catch된 실전 박제. /curate-inbound 슬래시 커맨드 첫 dogfooding 결과물."
+description: >-
+  moneyflow 백엔드 API 15 routes에 Promise 타임아웃 래퍼 3종(withTimeout /
+  allSettledWithTimeout / raceWithTimeout) 적용 사이클. 무한 대기 방지 + 30분 windowed 자가
+  fix 사이클(구조 붕괴 1 + 타입 붕괴 3)이 inline test gate로 catch된 실전 박제. /curate-inbound
+  슬래시 커맨드 첫 dogfooding 결과물.
 type: entry
 quiz:
-  - question: "`allSettledWithTimeout<T>(promises: Promise<T>[], ...)` 시그니처가 *이종* Promise 배열과 함께 쓰일 때 타입 붕괴가 나는 이유는?"
+  - question: >-
+      `allSettledWithTimeout<T>(promises: Promise<T>[], ...)` 시그니처가 *이종* Promise
+      배열과 함께 쓰일 때 타입 붕괴가 나는 이유는?
     choices:
-      - "TypeScript 버전이 낮아서"
-      - "제네릭 `T` 하나로는 서로 다른 Promise 반환 타입을 커버 못한다. TypeScript가 모든 원소를 공통 상위 타입으로 넓혀서 `T = unknown`이 되거나 명시 annotation 시 `Record<string, unknown>`로 붕괴. 해결책은 `tuple` overload 또는 호출부에서 각 promise를 래핑해서 동일 반환 타입으로 정규화"
-      - "`Promise.race`가 race condition을 만들어서"
-      - "`setTimeout`이 micro-task가 아니어서"
+      - TypeScript 버전이 낮아서
+      - >-
+        제네릭 `T` 하나로는 서로 다른 Promise 반환 타입을 커버 못한다. TypeScript가 모든 원소를 공통 상위 타입으로
+        넓혀서 `T = unknown`이 되거나 명시 annotation 시 `Record<string, unknown>`로 붕괴.
+        해결책은 `tuple` overload 또는 호출부에서 각 promise를 래핑해서 동일 반환 타입으로 정규화
+      - '`Promise.race`가 race condition을 만들어서'
+      - '`setTimeout`이 micro-task가 아니어서'
     answer: 1
-    explanation: "제네릭 `<T>` 하나는 *한 가지 타입만* 표현한다. `[fetchUser(), fetchPosts(), fetchStats()]`처럼 이종 Promise를 넘기면 TS가 `User | Post | Stats` 합 타입이 아니라 *공통 상위 타입*으로 넓혀버린다. 명시 annotation을 `<any>` / `<Record<string, unknown>>`로 주면 `.value`가 unknown이 되어 이후 사용 시점에서 타입 체크가 전부 깨진다. 해결: (1) tuple overload `<T1, T2, T3>(p1: P<T1>, p2: P<T2>, ...)` 추가, (2) 호출부에서 각 promise를 `.then(r => ({ kind: 'foo', r }))`로 discriminated union으로 정규화."
-  - question: "30분 안에 터진 자가 fix 사이클(#114 → #115)이 *인프라 실패*가 아니라 *인프라 성공*인 이유는?"
+    explanation: >-
+      제네릭 `<T>` 하나는 *한 가지 타입만* 표현한다. `[fetchUser(), fetchPosts(),
+      fetchStats()]`처럼 이종 Promise를 넘기면 TS가 `User | Post | Stats` 합 타입이 아니라 *공통
+      상위 타입*으로 넓혀버린다. 명시 annotation을 `<any>` / `<Record<string, unknown>>`로 주면
+      `.value`가 unknown이 되어 이후 사용 시점에서 타입 체크가 전부 깨진다. 해결: (1) tuple overload
+      `<T1, T2, T3>(p1: P<T1>, p2: P<T2>, ...)` 추가, (2) 호출부에서 각 promise를
+      `.then(r => ({ kind: 'foo', r }))`로 discriminated union으로 정규화.
+  - question: '30분 안에 터진 자가 fix 사이클(#114 → #115)이 *인프라 실패*가 아니라 *인프라 성공*인 이유는?'
     choices:
-      - "빠르게 고쳤으니까"
-      - "'inline test gate'가 PR #114 머지 직후 *빌드 실패 + tsc 11 errors*를 즉시 감지했고, 30분 안에 #115가 교정 PR을 올려 자동 머지됨. 이게 없었다면 프로덕션 배포까지 도달 후 롤백이 필요했을 것. *사고 발생률은 0이 아니지만 사고 → 복구 시간이 짧아지는* 게 Compound Engineering의 핵심 목표 중 하나"
-      - "두 번째 PR이 작아서"
-      - "자동 머지 속도가 빨라서"
+      - 빠르게 고쳤으니까
+      - >-
+        'inline test gate'가 PR #114 머지 직후 *빌드 실패 + tsc 11 errors*를 즉시 감지했고, 30분
+        안에 #115가 교정 PR을 올려 자동 머지됨. 이게 없었다면 프로덕션 배포까지 도달 후 롤백이 필요했을 것. *사고 발생률은
+        0이 아니지만 사고 → 복구 시간이 짧아지는* 게 Compound Engineering의 핵심 목표 중 하나
+      - 두 번째 PR이 작아서
+      - 자동 머지 속도가 빨라서
     answer: 1
-    explanation: "Compound Engineering은 *사고 0*을 목표로 하지 않는다 (불가능하니까). 목표는 *사고 → 감지 → 복구 시간*을 구조적으로 단축하는 것. Harness Journal 002의 inline test gate가 이 사이클의 게이트. 가드 없이 #114가 머지됐다면 realestate/analyze 빌드 실패가 프로덕션까지 도달해서 롤백 + hotfix 사이클 필요. 30분 자가 fix는 *가드가 제대로 작동한 증거*."
-  - question: "타임아웃 값을 endpoint 타입별로 3 그룹(dashboard 8-10s, background 5-8s, batch 90s)으로 나눈 이유는?"
+    explanation: >-
+      Compound Engineering은 *사고 0*을 목표로 하지 않는다 (불가능하니까). 목표는 *사고 → 감지 → 복구 시간*을
+      구조적으로 단축하는 것. Harness Journal 002의 inline test gate가 이 사이클의 게이트. 가드 없이
+      #114가 머지됐다면 realestate/analyze 빌드 실패가 프로덕션까지 도달해서 롤백 + hotfix 사이클 필요. 30분
+      자가 fix는 *가드가 제대로 작동한 증거*.
+  - question: >-
+      타임아웃 값을 endpoint 타입별로 3 그룹(dashboard 8-10s, background 5-8s, batch 90s)으로
+      나눈 이유는?
     choices:
-      - "구현 편의"
-      - "UX 응답성 / 비용 / 완결성 trade-off가 endpoint 종류마다 다르다. Dashboard는 사용자 대기 중이라 빨라야 하고 (8-10s가 UI 불안 한계), background job은 실패해도 재시도 가능하니 더 짧게 (5-8s), batch는 *완결*이 중요하니 길게 허용 (90s). 단일 타임아웃 값으로 통일하면 세 종류 모두 비효율"
-      - "서버 자원 분리"
-      - "로그 필터링 용이성"
+      - 구현 편의
+      - >-
+        UX 응답성 / 비용 / 완결성 trade-off가 endpoint 종류마다 다르다. Dashboard는 사용자 대기 중이라
+        빨라야 하고 (8-10s가 UI 불안 한계), background job은 실패해도 재시도 가능하니 더 짧게 (5-8s),
+        batch는 *완결*이 중요하니 길게 허용 (90s). 단일 타임아웃 값으로 통일하면 세 종류 모두 비효율
+      - 서버 자원 분리
+      - 로그 필터링 용이성
     answer: 1
-    explanation: "타임아웃은 *무한 대기 방지*뿐 아니라 *응답 실패의 의미*를 결정한다. Dashboard에서 8s 초과는 'UI가 느리다'는 신호 → 사용자가 새로고침. Background job에서 5s 초과는 '재시도 가능' 신호 → cron이 다음 사이클에 재실행. Batch에서 90s 초과는 '작업 설계 문제' 신호 → 알림. 통일된 값은 이 신호 분리를 지운다."
+    explanation: >-
+      타임아웃은 *무한 대기 방지*뿐 아니라 *응답 실패의 의미*를 결정한다. Dashboard에서 8s 초과는 'UI가 느리다'는 신호
+      → 사용자가 새로고침. Background job에서 5s 초과는 '재시도 가능' 신호 → cron이 다음 사이클에 재실행.
+      Batch에서 90s 초과는 '작업 설계 문제' 신호 → 알림. 통일된 값은 이 신호 분리를 지운다.
 ---
 
 ## 한 줄 요약

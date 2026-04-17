@@ -1,41 +1,72 @@
 ---
-title: "tmux flush 자동화 — paste-buffer + C-m 재시도 3회 + 429 backoff + idle 대기"
+title: tmux flush 자동화 — paste-buffer + C-m 재시도 3회 + 429 backoff + idle 대기
 category: harness-engineering
-date: "2026-04-17"
-tags: [harness-engineering, tmux, dispatch, autoceo, 429-handling, sequential-dispatch, architect-cli]
+date: '2026-04-17'
+tags:
+  - harness-engineering
+  - tmux
+  - dispatch
+  - autoceo
+  - 429-handling
+  - sequential-dispatch
+  - architect-cli
 confidence: 4
 connections:
   - harness-engineering/aidy-journal-003-parallel-dispatch-token-economics
   - harness-engineering/aidy-journal-000-architect-worker-baseline
   - harness-engineering/worker-prompts-logging-pattern
+  - harness-engineering/aidy-journal-006-ios-ci-self-hosted-runner-migration
+  - harness-engineering/aidy-journal-007-ci-infra-independence-hybrid-fallback
 status: complete
-description: "Architect가 tmux pane에서 구동 중인 워커 Claude에게 긴 프롬프트를 안정적으로 전달하는 실전 패턴. paste-buffer 경유 전송 + C-m(Enter) 최대 3회 재시도 + Pasted text 감지 루프 + 429/rate-limit 패턴 감지 + 5분 backoff + idle 대기 순차 모드. Aidy Session 5 R2/R3 flush 실패 경험 → s6 R1 자동화."
+description: >-
+  Architect가 tmux pane에서 구동 중인 워커 Claude에게 긴 프롬프트를 안정적으로 전달하는 실전 패턴.
+  paste-buffer 경유 전송 + C-m(Enter) 최대 3회 재시도 + Pasted text 감지 루프 + 429/rate-limit
+  패턴 감지 + 5분 backoff + idle 대기 순차 모드. Aidy Session 5 R2/R3 flush 실패 경험 → s6 R1
+  자동화.
 type: entry
 quiz:
-  - question: "`tmux send-keys -t <pane> '<long prompt>' C-m` 직접 전송이 긴 프롬프트에서 실패하는 이유는?"
+  - question: '`tmux send-keys -t <pane> ''<long prompt>'' C-m` 직접 전송이 긴 프롬프트에서 실패하는 이유는?'
     choices:
-      - "tmux 버그"
-      - "긴 문자열은 bracketed paste 모드로 pane에 들어가는데, 이 상태에선 `C-m` 이 paste 내부 newline으로 해석되고 실제 Enter/submit은 pending 상태. Claude CLI는 paste 종료 신호 전까지 submit 대기 → prompt가 보내졌지만 실행 안 되는 침묵 실패"
-      - "문자열 길이 제한"
-      - "tmux 버전"
+      - tmux 버그
+      - >-
+        긴 문자열은 bracketed paste 모드로 pane에 들어가는데, 이 상태에선 `C-m` 이 paste 내부
+        newline으로 해석되고 실제 Enter/submit은 pending 상태. Claude CLI는 paste 종료 신호 전까지
+        submit 대기 → prompt가 보내졌지만 실행 안 되는 침묵 실패
+      - 문자열 길이 제한
+      - tmux 버전
     answer: 1
-    explanation: "tmux의 bracketed paste 모드에서 `\\e[200~` ... `\\e[201~` 사이의 내용은 paste로 처리된다. 긴 프롬프트 + 마지막 C-m이 이 블록 안에 갇혀 pane은 paste 내용을 '아직 붙여넣는 중'으로 인식. `paste-buffer` 명령으로 별도 전송한 뒤 별개의 `C-m` 을 pane에 보내야 submit 트리거됨."
-  - question: "`tmux_send` 에서 C-m 재시도 3회가 필요한 시나리오는?"
+    explanation: >-
+      tmux의 bracketed paste 모드에서 `\e[200~` ... `\e[201~` 사이의 내용은 paste로 처리된다. 긴
+      프롬프트 + 마지막 C-m이 이 블록 안에 갇혀 pane은 paste 내용을 '아직 붙여넣는 중'으로 인식.
+      `paste-buffer` 명령으로 별도 전송한 뒤 별개의 `C-m` 을 pane에 보내야 submit 트리거됨.
+  - question: '`tmux_send` 에서 C-m 재시도 3회가 필요한 시나리오는?'
     choices:
-      - "tmux 불안정성"
-      - "paste-buffer 붙이기 직후 pane이 아직 paste 처리 중일 수 있음. 첫 C-m은 paste 내부로 흡수되고 두번째/세번째 C-m 이 submit을 트리거. 매 시도 전 pane 마지막 줄 검사해 `Pasted text` 남아있으면 재시도, 사라지면 break"
-      - "네트워크 지연"
-      - "Claude CLI 처리 속도"
+      - tmux 불안정성
+      - >-
+        paste-buffer 붙이기 직후 pane이 아직 paste 처리 중일 수 있음. 첫 C-m은 paste 내부로 흡수되고
+        두번째/세번째 C-m 이 submit을 트리거. 매 시도 전 pane 마지막 줄 검사해 `Pasted text` 남아있으면
+        재시도, 사라지면 break
+      - 네트워크 지연
+      - Claude CLI 처리 속도
     answer: 1
-    explanation: "paste-buffer가 pane에 내용을 흘려넣는 데 수백 ms 걸릴 수 있다. 그 사이 C-m은 paste 완료 전이라 흡수된다. `tmux capture-pane -p | tail -3` 로 `Pasted text` 마커 확인해 paste 완료 여부 판정 → 완료면 break, 아니면 0.4s 대기 후 다시 C-m. 3회면 실무 커버."
-  - question: "`AIDY_SEND_429_DETECT=1` 감지 로직이 dispatch 직후 30초 윈도우를 감시하는 이유는?"
+    explanation: >-
+      paste-buffer가 pane에 내용을 흘려넣는 데 수백 ms 걸릴 수 있다. 그 사이 C-m은 paste 완료 전이라 흡수된다.
+      `tmux capture-pane -p | tail -3` 로 `Pasted text` 마커 확인해 paste 완료 여부 판정 →
+      완료면 break, 아니면 0.4s 대기 후 다시 C-m. 3회면 실무 커버.
+  - question: '`AIDY_SEND_429_DETECT=1` 감지 로직이 dispatch 직후 30초 윈도우를 감시하는 이유는?'
     choices:
-      - "30초가 예쁜 숫자"
-      - "429/rate-limit은 dispatch 즉시 반환되는 에러 — 워커 Claude CLI가 pane에 'Claude usage limit reached' 등을 출력. 이 메시지가 pane에 나타나는 데 걸리는 시간 커버. 30초면 API 응답 지연 + tmux 버퍼 flush 커버하면서 다음 라운드 블로킹은 최소"
-      - "Anthropic API 요구사항"
-      - "tmux 기본값"
+      - 30초가 예쁜 숫자
+      - >-
+        429/rate-limit은 dispatch 즉시 반환되는 에러 — 워커 Claude CLI가 pane에 'Claude usage
+        limit reached' 등을 출력. 이 메시지가 pane에 나타나는 데 걸리는 시간 커버. 30초면 API 응답 지연 +
+        tmux 버퍼 flush 커버하면서 다음 라운드 블로킹은 최소
+      - Anthropic API 요구사항
+      - tmux 기본값
     answer: 1
-    explanation: "429는 API가 즉시 반환 → Claude CLI 표시 → tmux pane capture 가능까지 보통 1~5초. 30s 윈도우는 변동성 흡수. 너무 길면 매 dispatch마다 30s 블로킹 → 라운드 시간 증가. AIDY_SEND_429_WATCH 로 조절 가능."
+    explanation: >-
+      429는 API가 즉시 반환 → Claude CLI 표시 → tmux pane capture 가능까지 보통 1~5초. 30s 윈도우는
+      변동성 흡수. 너무 길면 매 dispatch마다 30s 블로킹 → 라운드 시간 증가. AIDY_SEND_429_WATCH 로 조절
+      가능.
 ---
 
 ## 컨텍스트

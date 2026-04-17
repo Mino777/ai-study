@@ -1,42 +1,80 @@
 ---
-title: "Harness Journal 000 — 두 프로젝트 AI 운영 인프라 베이스라인"
+title: Harness Journal 000 — 두 프로젝트 AI 운영 인프라 베이스라인
 category: harness-engineering
 series: harness-journal
-date: "2026-04-12"
-tags: [harness-journal, harness-engineering, ai-ops, baseline, audit, compound-engineering]
+date: '2026-04-12'
+tags:
+  - harness-journal
+  - harness-engineering
+  - ai-ops
+  - baseline
+  - audit
+  - compound-engineering
 confidence: 4
 connections:
   - harness-engineering/harness-engineering-overview
   - harness-engineering/five-levers-of-harness-engineering
   - harness-engineering/compound-engineering-philosophy
+  - harness-engineering/ai-agent-start-here
+  - harness-engineering/ai-api-cost-tracking-pattern
+  - harness-engineering/ai-call-patterns-circuit-breaker-fallback
+  - harness-engineering/ai-ops-environment-diagnosis-checklist
+  - harness-engineering/ai-output-zod-validation-pattern
+  - harness-engineering/aidy-journal-000-architect-worker-baseline
+  - harness-engineering/compound-automation-slash-commands
+  - harness-engineering/compound-loop-break
+  - harness-engineering/harness-journal-001-ci-merge-gate
+  - harness-engineering/harness-journal-002-inline-test-gate
+  - harness-engineering/harness-journal-003-squash-merge-trap-pattern
+  - harness-engineering/harness-journal-006-tarosaju-anthropic-hardening
+  - harness-engineering/harness-journal-007-008-ai-cost-tracking
+  - harness-engineering/harness-journal-009-text-output-guards
+  - harness-engineering/harness-journal-010-baseline-third-update
+  - harness-engineering/harness-journal-012-market-analyst-runtime-validation
+  - harness-engineering/harness-journal-bootstrap-guide
+  - harness-engineering/llm-first-wiki-principles
+  - harness-engineering/multi-session-ai-ops-patterns
+  - harness-engineering/skill-system-introduction
+  - ios-ai/ios-ai-journal-000-baseline
 status: complete
-description: "Harness Journal 시리즈의 출발점. mino-moneyflow와 mino-tarosaju 두 프로젝트의 AI 운영 인프라를 병렬 감사로 전수 조사하고, 공통 갭 8개와 첫 5 사이클 큐를 정의."
+description: >-
+  Harness Journal 시리즈의 출발점. mino-moneyflow와 mino-tarosaju 두 프로젝트의 AI 운영 인프라를 병렬
+  감사로 전수 조사하고, 공통 갭 8개와 첫 5 사이클 큐를 정의.
 type: entry
 quiz:
-  - question: "Harness Journal 시리즈의 0번 엔트리(베이스라인)가 왜 *코드 변경 전*에 작성되어야 하는가?"
+  - question: Harness Journal 시리즈의 0번 엔트리(베이스라인)가 왜 *코드 변경 전*에 작성되어야 하는가?
     choices:
-      - "코드 변경이 빠르고 베이스라인 작성은 느리기 때문에 분리 처리"
-      - "다음 에피소드들이 가리킬 명확한 출발점이 없으면 개선 효과를 측정할 수 없고, 첫 갭 식별 자체가 가짜가 될 수 있기 때문"
-      - "GitHub Actions 워크플로가 베이스라인 파일을 요구하기 때문"
-      - "사용자가 명시적으로 요청한 형식 규약이기 때문"
+      - 코드 변경이 빠르고 베이스라인 작성은 느리기 때문에 분리 처리
+      - '다음 에피소드들이 가리킬 명확한 출발점이 없으면 개선 효과를 측정할 수 없고, 첫 갭 식별 자체가 가짜가 될 수 있기 때문'
+      - GitHub Actions 워크플로가 베이스라인 파일을 요구하기 때문
+      - 사용자가 명시적으로 요청한 형식 규약이기 때문
     answer: 1
-    explanation: "베이스라인은 \"무엇이 있고 무엇이 없는지\"를 *추측 없이* 박제하는 작업이다. 추측으로 시작하면 첫 갭 식별부터 가짜가 되고, 효과 측정의 비교 기준점이 사라진다. 시리즈 전체가 베이스라인에 의존한다."
-  - question: "두 프로젝트의 AI 운영 인프라 감사에서 가장 자주 등장한 *공통* 갭은?"
+    explanation: >-
+      베이스라인은 "무엇이 있고 무엇이 없는지"를 *추측 없이* 박제하는 작업이다. 추측으로 시작하면 첫 갭 식별부터 가짜가 되고, 효과
+      측정의 비교 기준점이 사라진다. 시리즈 전체가 베이스라인에 의존한다.
+  - question: 두 프로젝트의 AI 운영 인프라 감사에서 가장 자주 등장한 *공통* 갭은?
     choices:
-      - "테스트 커버리지가 50% 미만"
-      - "AI 출력을 Zod 같은 스키마로 검증하는 게이트가 부재 (입력 검증은 있지만 출력 검증 없음)"
-      - "TypeScript strict 모드가 꺼져 있음"
-      - "GitHub Actions 워크플로 자체가 없음"
+      - 테스트 커버리지가 50% 미만
+      - AI 출력을 Zod 같은 스키마로 검증하는 게이트가 부재 (입력 검증은 있지만 출력 검증 없음)
+      - TypeScript strict 모드가 꺼져 있음
+      - GitHub Actions 워크플로 자체가 없음
     answer: 1
-    explanation: "양쪽 모두 입력 검증(Zod, parseJsonBody)은 잘 갖췄지만, *LLM 응답 자체*를 schema.parse로 거르지 않는다. moneyflow의 13 에이전트 출력, tarosaju의 fortune/tarot-chat 모두 동일. 환각이 그대로 사용자에게 반환될 수 있는 구조."
-  - question: "두 프로젝트가 \"비대칭\"이라는 게 왜 *복리 효과의 출발점*인가?"
+    explanation: >-
+      양쪽 모두 입력 검증(Zod, parseJsonBody)은 잘 갖췄지만, *LLM 응답 자체*를 schema.parse로 거르지
+      않는다. moneyflow의 13 에이전트 출력, tarosaju의 fortune/tarot-chat 모두 동일. 환각이 그대로
+      사용자에게 반환될 수 있는 구조.
+  - question: 두 프로젝트가 "비대칭"이라는 게 왜 *복리 효과의 출발점*인가?
     choices:
-      - "프로젝트가 다르면 코드도 다르므로 호환이 안 돼서 별도 작업이 필요"
-      - "한쪽에 이미 검증된 자산(예: moneyflow의 Circuit Breaker, tarosaju의 RLS 정적 감사)이 다른 쪽에는 없다는 뜻이고, 그 이식 작업이 곧바로 다음 사이클의 큐가 되기 때문"
-      - "비대칭 자체가 위험 신호이므로 즉시 통일해야 함"
-      - "비대칭이 있는 쪽이 항상 품질이 낮으므로 개선 우선순위가 명확해짐"
+      - 프로젝트가 다르면 코드도 다르므로 호환이 안 돼서 별도 작업이 필요
+      - >-
+        한쪽에 이미 검증된 자산(예: moneyflow의 Circuit Breaker, tarosaju의 RLS 정적 감사)이 다른
+        쪽에는 없다는 뜻이고, 그 이식 작업이 곧바로 다음 사이클의 큐가 되기 때문
+      - 비대칭 자체가 위험 신호이므로 즉시 통일해야 함
+      - 비대칭이 있는 쪽이 항상 품질이 낮으므로 개선 우선순위가 명확해짐
     answer: 1
-    explanation: "한쪽이 이미 만들어둔 패턴은 *증명된 자산*이다. 다른 쪽으로 이식하는 작업은 처음부터 만드는 것보다 훨씬 싸다. Compound Engineering이 말하는 \"다음 작업이 더 쉬워진다\"가 *프로젝트 간*에도 작동한다는 첫 사례."
+    explanation: >-
+      한쪽이 이미 만들어둔 패턴은 *증명된 자산*이다. 다른 쪽으로 이식하는 작업은 처음부터 만드는 것보다 훨씬 싸다. Compound
+      Engineering이 말하는 "다음 작업이 더 쉬워진다"가 *프로젝트 간*에도 작동한다는 첫 사례.
 ---
 
 ## 시리즈를 시작하며

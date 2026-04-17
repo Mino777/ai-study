@@ -1,42 +1,68 @@
 ---
-title: "Harness Journal 013 — 3 analyst 런타임 검증 확장 (news / sentiment / fundamentals)"
+title: Harness Journal 013 — 3 analyst 런타임 검증 확장 (news / sentiment / fundamentals)
 category: harness-engineering
 series: harness-journal
-date: "2026-04-12"
-tags: [harness-journal, harness-engineering, moneyflow, runtime-validation, pattern-replication, type-guard]
+date: '2026-04-12'
+tags:
+  - harness-journal
+  - harness-engineering
+  - moneyflow
+  - runtime-validation
+  - pattern-replication
+  - type-guard
 confidence: 5
 connections:
   - harness-engineering/harness-journal-012-market-analyst-runtime-validation
   - harness-engineering/ai-output-zod-validation-pattern
   - harness-engineering/harness-journal-011-concurrent-session-safety
+  - harness-engineering/harness-journal-015-trader-runtime-validation
+  - harness-engineering/harness-journal-017-final-validators-all-agents
 status: complete
-description: "Journal 012의 market_analyst validator 패턴을 3개 analyst 에이전트(news/sentiment/fundamentals)에 1:1 복제. 4 analyst validator 완성. 패턴 복제 작업을 한 사이클로 묶는 원칙의 두 번째 적용."
+description: >-
+  Journal 012의 market_analyst validator 패턴을 3개 analyst
+  에이전트(news/sentiment/fundamentals)에 1:1 복제. 4 analyst validator 완성. 패턴 복제 작업을 한
+  사이클로 묶는 원칙의 두 번째 적용.
 type: entry
 quiz:
-  - question: "Journal 013이 *한 사이클에 3 에이전트*를 묶은 결정의 근거는?"
+  - question: Journal 013이 *한 사이클에 3 에이전트*를 묶은 결정의 근거는?
     choices:
-      - "시간 절약"
-      - "*패턴 복제*는 *패턴 정의*와 다른 작업 단위. Journal 012가 정의한 validator 패턴을 1:1 복제하는 건 *한 패턴의 확장*이고, 스코프·리스크·리뷰 부담이 한 덩어리라 분할이 인위적이다. Journal 007+008 양쪽 이식 패턴과 동일"
-      - "사용자 요청"
-      - "CI 시간 제한"
+      - 시간 절약
+      - >-
+        *패턴 복제*는 *패턴 정의*와 다른 작업 단위. Journal 012가 정의한 validator 패턴을 1:1 복제하는 건 *한
+        패턴의 확장*이고, 스코프·리스크·리뷰 부담이 한 덩어리라 분할이 인위적이다. Journal 007+008 양쪽 이식 패턴과 동일
+      - 사용자 요청
+      - CI 시간 제한
     answer: 1
-    explanation: "한 사이클 한 박제 원칙의 본질은 *한 번에 검토할 수 있는 인지 부하 단위*를 유지하는 것. 패턴 복제는 개별 검토가 필요한 *다른 결정*이 아니라 *같은 결정의 반복 적용*이라 한 덩어리가 자연스럽다."
-  - question: "`checkAgentReportBase` 함수를 *4 validator가 공유*하도록 설계한 이유는?"
+    explanation: >-
+      한 사이클 한 박제 원칙의 본질은 *한 번에 검토할 수 있는 인지 부하 단위*를 유지하는 것. 패턴 복제는 개별 검토가 필요한 *다른
+      결정*이 아니라 *같은 결정의 반복 적용*이라 한 덩어리가 자연스럽다.
+  - question: '`checkAgentReportBase` 함수를 *4 validator가 공유*하도록 설계한 이유는?'
     choices:
-      - "파일 크기 절감"
-      - "*변경 단일 지점* 원칙. 기본 필드(signal, confidence, summary, key_points, reasoning) 검증 규칙이 바뀔 때 4곳을 모두 수정하는 게 아니라 1곳만 수정하면 된다. 또 4 validator가 *같은 base 규칙*을 따름을 *타입 수준*에서 보장"
-      - "성능 개선"
-      - "테스트 간소화"
+      - 파일 크기 절감
+      - >-
+        *변경 단일 지점* 원칙. 기본 필드(signal, confidence, summary, key_points, reasoning)
+        검증 규칙이 바뀔 때 4곳을 모두 수정하는 게 아니라 1곳만 수정하면 된다. 또 4 validator가 *같은 base 규칙*을
+        따름을 *타입 수준*에서 보장
+      - 성능 개선
+      - 테스트 간소화
     answer: 1
-    explanation: "공유 base 체크가 중앙 집중화되면 규칙 일관성이 구조적으로 유지된다. Journal 014에서 debate/judge/trader 등 base 규칙이 다른 에이전트를 다룰 때 이 분리가 명확해진다."
-  - question: "AI 출력 Zod 검증 5 Layer 중 이 Journal들이 *아직 구현하지 않은 Layer*와 그 이유는?"
+    explanation: >-
+      공유 base 체크가 중앙 집중화되면 규칙 일관성이 구조적으로 유지된다. Journal 014에서 debate/judge/trader
+      등 base 규칙이 다른 에이전트를 다룰 때 이 분리가 명확해진다.
+  - question: AI 출력 Zod 검증 5 Layer 중 이 Journal들이 *아직 구현하지 않은 Layer*와 그 이유는?
     choices:
-      - "Layer 1-5 전부 구현"
-      - "*Layer 3(retry + instruction augmentation), Layer 4(format prompt guard)* 미구현. 이유: (a) 큐 분할 원칙 — 한 사이클에 너무 많은 변경은 리뷰 부담, (b) Layer 3는 callAI 시그니처 변경이 필요해 13 에이전트 전체에 영향, 범용화 시점에 맞추는 게 맞음, (c) 현재 Layer 1+2+5로도 AI 응답 대부분의 shape drift를 잡을 수 있음"
-      - "Layer 3만 구현"
-      - "Layer 1만 구현"
+      - Layer 1-5 전부 구현
+      - >-
+        *Layer 3(retry + instruction augmentation), Layer 4(format prompt
+        guard)* 미구현. 이유: (a) 큐 분할 원칙 — 한 사이클에 너무 많은 변경은 리뷰 부담, (b) Layer 3는
+        callAI 시그니처 변경이 필요해 13 에이전트 전체에 영향, 범용화 시점에 맞추는 게 맞음, (c) 현재 Layer
+        1+2+5로도 AI 응답 대부분의 shape drift를 잡을 수 있음
+      - Layer 3만 구현
+      - Layer 1만 구현
     answer: 1
-    explanation: "레이어를 분할해서 단계적으로 도입하는 게 자동 머지 리듬에 더 잘 맞는다. 5 Layer를 한 번에 도입하면 한 PR이 너무 커서 Test Gate 실패 시 원인 파악이 어렵다. *작은 변화를 여러 사이클에 분산*하는 게 박제의 속도를 높인다."
+    explanation: >-
+      레이어를 분할해서 단계적으로 도입하는 게 자동 머지 리듬에 더 잘 맞는다. 5 Layer를 한 번에 도입하면 한 PR이 너무 커서
+      Test Gate 실패 시 원인 파악이 어렵다. *작은 변화를 여러 사이클에 분산*하는 게 박제의 속도를 높인다.
 ---
 
 ## 사이클 트리거

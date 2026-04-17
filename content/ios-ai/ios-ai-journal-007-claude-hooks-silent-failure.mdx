@@ -1,14 +1,31 @@
 ---
-title: "iOS Harness Journal 007 — '훅 복구 완료'는 거짓말이었다: Claude Code 훅 4중 wiring 무음 실패"
+title: 'iOS Harness Journal 007 — ''훅 복구 완료''는 거짓말이었다: Claude Code 훅 4중 wiring 무음 실패'
 category: ios-ai
 series: ios-ai-journal
-date: "2026-04-15"
-tags: [ios-harness-journal, ios, claude-code, hooks, git-hooks, silent-failure, compound-engineering, self-diagnostic]
+date: '2026-04-15'
+tags:
+  - ios-harness-journal
+  - ios
+  - claude-code
+  - hooks
+  - git-hooks
+  - silent-failure
+  - compound-engineering
+  - self-diagnostic
 confidence: 5
-connections: [ios-ai/ios-ai-journal-001-swift-lint-hook, ios-ai/ios-ai-journal-006-spm-cycle-break, harness-engineering/harness-journal-022-qa-gate-exit-code-trap]
+connections:
+  - ios-ai/ios-ai-journal-001-swift-lint-hook
+  - ios-ai/ios-ai-journal-006-spm-cycle-break
+  - harness-engineering/harness-journal-022-qa-gate-exit-code-trap
+  - ios-ai/ios-ai-journal-008-first-full-harness-setup-retro
+  - ios-ai/ios-ai-journal-009-ai-probe-dual-pipeline
 status: complete
 type: entry
-description: "Journal 001에서 '설정 완료'라고 선언한 pre-commit 훅이 수개월 동안 한 번도 실행된 적이 없었다. 이번 AI Harness 재감사에서 드러난 이유는 단 하나의 이유가 아니라 네 가지 조건이 동시에 꺼져 있었기 때문. 파일 존재 / 실행권한 / settings.json wiring / core.hooksPath — 네 레이어 중 하나만 빠져도 훅 시스템은 비명을 지르지 않고 그냥 skip한다. 복구 과정과, 다음 세션에서 즉시 드러나게 만든 self-diagnostic 방어막을 박제한다."
+description: >-
+  Journal 001에서 '설정 완료'라고 선언한 pre-commit 훅이 수개월 동안 한 번도 실행된 적이 없었다. 이번 AI
+  Harness 재감사에서 드러난 이유는 단 하나의 이유가 아니라 네 가지 조건이 동시에 꺼져 있었기 때문. 파일 존재 / 실행권한 /
+  settings.json wiring / core.hooksPath — 네 레이어 중 하나만 빠져도 훅 시스템은 비명을 지르지 않고 그냥
+  skip한다. 복구 과정과, 다음 세션에서 즉시 드러나게 만든 self-diagnostic 방어막을 박제한다.
 ---
 
 ## 한 줄 요약

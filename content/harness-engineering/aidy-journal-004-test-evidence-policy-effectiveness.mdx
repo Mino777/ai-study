@@ -1,9 +1,15 @@
 ---
-title: "Aidy Journal 004 — Test Evidence 정책 실효성 관찰 (s4 → s5 전후 비교)"
+title: Aidy Journal 004 — Test Evidence 정책 실효성 관찰 (s4 → s5 전후 비교)
 category: harness-engineering
 series: aidy-journal
-date: "2026-04-16"
-tags: [aidy-journal, gate-validation, test-policy, governance, policy-effectiveness, voluntary-compliance]
+date: '2026-04-16'
+tags:
+  - aidy-journal
+  - gate-validation
+  - test-policy
+  - governance
+  - policy-effectiveness
+  - voluntary-compliance
 confidence: 4
 connections:
   - harness-engineering/aidy-journal-002-stability-observability-test-integrity
@@ -11,34 +17,52 @@ connections:
   - evaluation/numeric-execution-evidence
   - evaluation/test-strategy-3-client-via-aidy
   - harness-engineering/compound-engineering-philosophy
+  - harness-engineering/aidy-journal-000-architect-worker-baseline
 status: complete
-description: "Session 4의 '테스트가 8라운드 동안 무실행이었다' 사건으로 Gate 1에 '테스트 실행 증거(숫자)'를 추가. Session 5에서 워커 3명이 **자발적으로** 매 커밋 메시지에 `NN tests, 0 failures`를 포함 — QA 라운드 없이 10R 완주. 정책이 행동 레벨에서 즉시 내재화된 드문 케이스."
+description: >-
+  Session 4의 '테스트가 8라운드 동안 무실행이었다' 사건으로 Gate 1에 '테스트 실행 증거(숫자)'를 추가. Session 5에서
+  워커 3명이 **자발적으로** 매 커밋 메시지에 `NN tests, 0 failures`를 포함 — QA 라운드 없이 10R 완주. 정책이
+  행동 레벨에서 즉시 내재화된 드문 케이스.
 type: entry
 quiz:
-  - question: "Session 4의 'Test Evidence' 정책이 어떤 형태로 박제됐나?"
+  - question: Session 4의 'Test Evidence' 정책이 어떤 형태로 박제됐나?
     choices:
-      - "CI 스크립트에만 추가"
-      - "아키텍트 메모리에만 기록"
-      - "gates/test-policy.md 4종(universal + server/ios/android) + CLAUDE.md 참조 라인 + architect-cli.sh build_prompt 의 기본 요구사항. 정책이 *문서 · 도구 · 프롬프트* 3층에 동시에 박혔음"
-      - "Slack 채널 공지"
+      - CI 스크립트에만 추가
+      - 아키텍트 메모리에만 기록
+      - >-
+        gates/test-policy.md 4종(universal + server/ios/android) + CLAUDE.md 참조
+        라인 + architect-cli.sh build_prompt 의 기본 요구사항. 정책이 *문서 · 도구 · 프롬프트* 3층에
+        동시에 박혔음
+      - Slack 채널 공지
     answer: 2
-    explanation: "정책이 효과를 내려면 문서만으로는 부족하다. `gates/test-policy.md` 4종 신설 + 4 레포 CLAUDE.md 참조 라인 + `architect-cli.sh build_prompt` 가 매 dispatch 프롬프트에 테스트 숫자 요구를 자동 삽입 — 3층 박제가 자발적 준수를 가능하게 했다."
-  - question: "Session 5에서 QA 라운드가 불필요했던 이유는?"
+    explanation: >-
+      정책이 효과를 내려면 문서만으로는 부족하다. `gates/test-policy.md` 4종 신설 + 4 레포 CLAUDE.md 참조
+      라인 + `architect-cli.sh build_prompt` 가 매 dispatch 프롬프트에 테스트 숫자 요구를 자동 삽입 —
+      3층 박제가 자발적 준수를 가능하게 했다.
+  - question: Session 5에서 QA 라운드가 불필요했던 이유는?
     choices:
-      - "운이 좋았다"
-      - "매 라운드 커밋 메시지에 '170 passed', '92 passed' 같은 숫자 증거가 자발적으로 포함 → architect가 Gate에서 즉시 검증 가능 → R10까지 한 번도 테스트 무실행 의심 발생 안 함"
-      - "iOS 테스트를 모두 제거했다"
-      - "CI가 자동으로 블로킹"
+      - 운이 좋았다
+      - >-
+        매 라운드 커밋 메시지에 '170 passed', '92 passed' 같은 숫자 증거가 자발적으로 포함 → architect가
+        Gate에서 즉시 검증 가능 → R10까지 한 번도 테스트 무실행 의심 발생 안 함
+      - iOS 테스트를 모두 제거했다
+      - CI가 자동으로 블로킹
     answer: 1
-    explanation: "s4 QA 라운드는 '8라운드 동안 테스트 무실행' 사건 때문에 필요했다. s5에서는 매 라운드 숫자 증거가 커밋 메시지 · retro · Gate 로그 3곳에 남아 의심의 여지가 없었음. 정책이 내재화되면 감시 비용이 0에 수렴한다."
-  - question: "이 정책 실효성 패턴을 다른 하네스에 이식할 때 핵심 요소는?"
+    explanation: >-
+      s4 QA 라운드는 '8라운드 동안 테스트 무실행' 사건 때문에 필요했다. s5에서는 매 라운드 숫자 증거가 커밋 메시지 ·
+      retro · Gate 로그 3곳에 남아 의심의 여지가 없었음. 정책이 내재화되면 감시 비용이 0에 수렴한다.
+  - question: 이 정책 실효성 패턴을 다른 하네스에 이식할 때 핵심 요소는?
     choices:
-      - "정책 문서만 복사"
-      - "'관측 가능한 증거(숫자/파일/해시)' + '모든 dispatch 프롬프트에 자동 삽입' + '참조 링크를 CLAUDE.md에 고정' — 정책을 행동 경로(프롬프트) 위에 두어야 자발적 준수 발생"
-      - "CI 파이프라인 강제화"
-      - "리뷰어 역할 분리"
+      - 정책 문서만 복사
+      - >-
+        '관측 가능한 증거(숫자/파일/해시)' + '모든 dispatch 프롬프트에 자동 삽입' + '참조 링크를 CLAUDE.md에
+        고정' — 정책을 행동 경로(프롬프트) 위에 두어야 자발적 준수 발생
+      - CI 파이프라인 강제화
+      - 리뷰어 역할 분리
     answer: 1
-    explanation: "정책이 'dispatch 프롬프트'에 자동 포함되면 워커가 매번 정책을 보게 되고, CLAUDE.md에 참조되면 다음 세션 시작 시 context 로드 단계에서 로드된다. 체크리스트 문서만 두면 참조하지 않는다 — 행동 경로 위에 박아야 내재화."
+    explanation: >-
+      정책이 'dispatch 프롬프트'에 자동 포함되면 워커가 매번 정책을 보게 되고, CLAUDE.md에 참조되면 다음 세션 시작 시
+      context 로드 단계에서 로드된다. 체크리스트 문서만 두면 참조하지 않는다 — 행동 경로 위에 박아야 내재화.
 ---
 
 ## Before — Session 4의 사건

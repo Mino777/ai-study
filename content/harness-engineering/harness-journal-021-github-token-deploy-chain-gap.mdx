@@ -1,43 +1,77 @@
 ---
-title: "Harness Journal 021 — GITHUB_TOKEN 정책으로 침묵하는 deploy 체인 (ai-review.yml 맹점)"
+title: Harness Journal 021 — GITHUB_TOKEN 정책으로 침묵하는 deploy 체인 (ai-review.yml 맹점)
 category: harness-engineering
 series: harness-journal
-date: "2026-04-13"
-tags: [harness-journal, ci-cd, github-actions, ai-review, deploy, workflow-chaining, github-token, silent-failure]
+date: '2026-04-13'
+tags:
+  - harness-journal
+  - ci-cd
+  - github-actions
+  - ai-review
+  - deploy
+  - workflow-chaining
+  - github-token
+  - silent-failure
 confidence: 4
 connections:
   - harness-engineering/harness-journal-003-squash-merge-trap-pattern
   - harness-engineering/harness-journal-014-hub-auto-merge-inbound-tips
   - harness-engineering/harness-journal-020-promise-timeout-wrapper
   - harness-engineering/compound-engineering-philosophy
+  - harness-engineering/harness-journal-022-qa-gate-exit-code-trap
 status: complete
-description: "ai-review.yml 기반 auto-merge 파이프라인을 쓰는 모든 프로젝트는 squash merge가 downstream on: push 워크플로우(예: deploy.yml)를 조용히 건너뛴다. 원인은 GitHub의 GITHUB_TOKEN 정책(무한 루프 방지). 4번 연속 머지 후 프로덕션 stale 상태로 유저가 500 마주친 후에야 드러남. 3 수정 옵션 + 즉시 복구 스니펫 + 일반화."
+description: >-
+  ai-review.yml 기반 auto-merge 파이프라인을 쓰는 모든 프로젝트는 squash merge가 downstream on:
+  push 워크플로우(예: deploy.yml)를 조용히 건너뛴다. 원인은 GitHub의 GITHUB_TOKEN 정책(무한 루프 방지). 4번
+  연속 머지 후 프로덕션 stale 상태로 유저가 500 마주친 후에야 드러남. 3 수정 옵션 + 즉시 복구 스니펫 + 일반화.
 type: entry
 quiz:
-  - question: "`ai-review.yml`이 `GITHUB_TOKEN`으로 squash merge한 뒤 `deploy.yml`(on: push: main)이 자동 실행되지 않는 이유는?"
+  - question: >-
+      `ai-review.yml`이 `GITHUB_TOKEN`으로 squash merge한 뒤 `deploy.yml`(on: push:
+      main)이 자동 실행되지 않는 이유는?
     choices:
-      - "권한 부족"
-      - "Rate limit"
-      - "GitHub의 명시적 정책 — `GITHUB_TOKEN`으로 발생한 `push` 이벤트는 **다운스트림 워크플로우를 깨우지 않는다** (무한 루프 방지용)"
-      - "네트워크 지연"
+      - 권한 부족
+      - Rate limit
+      - >-
+        GitHub의 명시적 정책 — `GITHUB_TOKEN`으로 발생한 `push` 이벤트는 **다운스트림 워크플로우를 깨우지
+        않는다** (무한 루프 방지용)
+      - 네트워크 지연
     answer: 2
-    explanation: "GitHub Actions 공식 문서: *\"events triggered by the GITHUB_TOKEN, with the exception of workflow_dispatch and repository_dispatch, will not create a new workflow run.\"* 재귀 워크플로우 루프 방지를 위해 의도적으로 설계된 정책. 예외는 `workflow_dispatch`와 `repository_dispatch` 두 개뿐. 구조적 제약이라 권한/토큰 문제가 아니고 해결 불가능한 bug도 아님 — *우회* 필요."
-  - question: "이 사이런트 체인 실패가 *왜 일찍 감지되지 않았나*의 핵심은?"
+    explanation: >-
+      GitHub Actions 공식 문서: *"events triggered by the GITHUB_TOKEN, with the
+      exception of workflow_dispatch and repository_dispatch, will not create a
+      new workflow run."* 재귀 워크플로우 루프 방지를 위해 의도적으로 설계된 정책. 예외는
+      `workflow_dispatch`와 `repository_dispatch` 두 개뿐. 구조적 제약이라 권한/토큰 문제가 아니고 해결
+      불가능한 bug도 아님 — *우회* 필요.
+  - question: 이 사이런트 체인 실패가 *왜 일찍 감지되지 않았나*의 핵심은?
     choices:
-      - "테스트가 부족해서"
-      - "**merge 성공 ≠ deploy 성공**이지만 UI는 둘을 구분하지 않음. GitHub Merged 배지 / git log 최신 커밋 / CI 초록불 모두 *배포됐다*는 잘못된 시그널을 준다. 사용자가 페이지를 여는 순간 500이 뜰 때까지 드러나지 않는다"
-      - "로그가 부족해서"
-      - "Vercel 측 버그"
+      - 테스트가 부족해서
+      - >-
+        **merge 성공 ≠ deploy 성공**이지만 UI는 둘을 구분하지 않음. GitHub Merged 배지 / git log
+        최신 커밋 / CI 초록불 모두 *배포됐다*는 잘못된 시그널을 준다. 사용자가 페이지를 여는 순간 500이 뜰 때까지 드러나지
+        않는다
+      - 로그가 부족해서
+      - Vercel 측 버그
     answer: 1
-    explanation: "관찰 가능성의 세 층(머지 상태 / 배포 상태 / 프로덕션 상태)이 UI에 섞여 있으면 실제로는 다른 것임에도 *같은 것*으로 인식된다. 이게 바로 사일런트 실패의 본질. 처방: 회고/compound 체크리스트에 *머지 성공 + deploy 실행 확인 + 프로덕션 200* 3단계를 명시적으로 분리해야 함."
-  - question: "3 수정 옵션(workflow_dispatch / workflow_run / PAT) 중 *권장되는 옵션 1 (workflow_dispatch)*의 가장 큰 장점은?"
+    explanation: >-
+      관찰 가능성의 세 층(머지 상태 / 배포 상태 / 프로덕션 상태)이 UI에 섞여 있으면 실제로는 다른 것임에도 *같은 것*으로
+      인식된다. 이게 바로 사일런트 실패의 본질. 처방: 회고/compound 체크리스트에 *머지 성공 + deploy 실행 확인 +
+      프로덕션 200* 3단계를 명시적으로 분리해야 함.
+  - question: >-
+      3 수정 옵션(workflow_dispatch / workflow_run / PAT) 중 *권장되는 옵션 1
+      (workflow_dispatch)*의 가장 큰 장점은?
     choices:
-      - "실행 속도"
-      - "코드량이 가장 적음"
-      - "**의도가 코드에 남음** — \"여기서 deploy를 일부러 깨운다\"는 명시적 step이 있어 다음 사람이 읽을 때 체인을 추적하기 쉬움. 기존 GITHUB_TOKEN 권한으로 실행 가능 (PAT 불필요)"
-      - "Vercel 호환성"
+      - 실행 속도
+      - 코드량이 가장 적음
+      - >-
+        **의도가 코드에 남음** — "여기서 deploy를 일부러 깨운다"는 명시적 step이 있어 다음 사람이 읽을 때 체인을
+        추적하기 쉬움. 기존 GITHUB_TOKEN 권한으로 실행 가능 (PAT 불필요)
+      - Vercel 호환성
     answer: 2
-    explanation: "옵션 2(workflow_run)는 deploy.yml 쪽에 트리거를 숨겨서 \"왜 이 deploy가 실행됐지?\" 추적이 어렵다. 옵션 3(PAT)은 *새로운 사일런트 실패 모드*를 만든다 — PAT 만료 시 전체 체인이 조용히 깨짐. 옵션 1은 코드에 *의도*가 선명하게 남아 Compound Engineering의 \"행동에 박는 가드 > 기억에 의존하는 가드\" 원칙과 일치."
+    explanation: >-
+      옵션 2(workflow_run)는 deploy.yml 쪽에 트리거를 숨겨서 "왜 이 deploy가 실행됐지?" 추적이 어렵다. 옵션
+      3(PAT)은 *새로운 사일런트 실패 모드*를 만든다 — PAT 만료 시 전체 체인이 조용히 깨짐. 옵션 1은 코드에 *의도*가
+      선명하게 남아 Compound Engineering의 "행동에 박는 가드 > 기억에 의존하는 가드" 원칙과 일치.
 ---
 
 ## 한 줄 요약

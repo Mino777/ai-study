@@ -1,8 +1,18 @@
 ---
-title: "aidy 3-client 배포 파이프라인 설계 로드맵 — 로컬 단일 머신 → 다중 환경 프로덕션 (현재 미구축 상태에서 시작하는 법)"
+title: aidy 3-client 배포 파이프라인 설계 로드맵 — 로컬 단일 머신 → 다중 환경 프로덕션 (현재 미구축 상태에서 시작하는 법)
 category: infrastructure
-date: "2026-04-16"
-tags: [aidy, deployment, infrastructure, design-roadmap, neon, vercel, fly, testflight, play-console, ios-to-infrastructure]
+date: '2026-04-16'
+tags:
+  - aidy
+  - deployment
+  - infrastructure
+  - design-roadmap
+  - neon
+  - vercel
+  - fly
+  - testflight
+  - play-console
+  - ios-to-infrastructure
 confidence: 2
 connections:
   - harness-engineering/architect-flow-map-via-aidy-architect
@@ -11,34 +21,56 @@ connections:
   - backend-ai/backend-flow-map-via-aidy-server
   - infrastructure/vercel-hobby-cron-silent-failure
   - harness-engineering/harness-engineering-overview
+  - backend-ai/pg-trgm-gin-index-for-like-search
 status: complete
-description: "Flow Map 시리즈 5편은 실제 배포가 미구축이라 'Flow Map' 장르 대신 '설계 로드맵' 장르로 대체. aidy 풀스택(Server Kotlin + iOS + Android)이 로컬 단일 머신에서 다중 환경 프로덕션으로 전환할 때의 의사결정을 순서대로 펼친다. 서버 호스팅 선택지(Fly/Railway/Render vs Vercel) · DB 호스팅(Neon vs Supabase vs 자체 PostgreSQL) · iOS/Android 배포 채널 · Secrets 관리 · Observability 도입 순서 · 4 조건 게이트 기준 POC 로드맵."
+description: >-
+  Flow Map 시리즈 5편은 실제 배포가 미구축이라 'Flow Map' 장르 대신 '설계 로드맵' 장르로 대체. aidy
+  풀스택(Server Kotlin + iOS + Android)이 로컬 단일 머신에서 다중 환경 프로덕션으로 전환할 때의 의사결정을 순서대로
+  펼친다. 서버 호스팅 선택지(Fly/Railway/Render vs Vercel) · DB 호스팅(Neon vs Supabase vs 자체
+  PostgreSQL) · iOS/Android 배포 채널 · Secrets 관리 · Observability 도입 순서 · 4 조건 게이트
+  기준 POC 로드맵.
 type: entry
 quiz:
-  - question: "'실제 배포가 미구축된 상태' 에서 배포 로드맵을 설계하는 가장 건강한 접근은?"
+  - question: '''실제 배포가 미구축된 상태'' 에서 배포 로드맵을 설계하는 가장 건강한 접근은?'
     choices:
-      - "당장 모든 것을 한 번에 셋업"
-      - "예상되는 최종 구성을 먼저 정한 뒤 역방향 구현"
-      - "가장 *롤백 비용이 낮은* 요소부터 1개씩 도입하며 매 단계 실측. aidy 의 4 조건 게이트(카탈로그) 와 동일 원리 — '설정 한 줄 수준' → '서비스 1개 도입' → '파이프라인 통합' 순서. 한 번에 여러 요소를 바꾸면 원인 파악 불가"
-      - "커뮤니티 추천 스택 그대로 복사"
+      - 당장 모든 것을 한 번에 셋업
+      - 예상되는 최종 구성을 먼저 정한 뒤 역방향 구현
+      - >-
+        가장 *롤백 비용이 낮은* 요소부터 1개씩 도입하며 매 단계 실측. aidy 의 4 조건 게이트(카탈로그) 와 동일 원리 —
+        '설정 한 줄 수준' → '서비스 1개 도입' → '파이프라인 통합' 순서. 한 번에 여러 요소를 바꾸면 원인 파악 불가
+      - 커뮤니티 추천 스택 그대로 복사
     answer: 2
-    explanation: "배포 인프라는 '모든 것이 서로 의존' 하는 특성상 병렬 도입 시 어느 요소가 문제인지 식별 불가. DB → 서버 호스팅 → CI → secrets → monitoring → 클라 배포 채널 순서로 단계적 도입 + 각 단계 베이스라인 측정 + 롤백 용이성 유지. '4 조건 게이트' 가 토큰 최적화뿐 아니라 인프라 도입에도 그대로 작동."
-  - question: "aidy 가 Neon(서버리스 Postgres) 과 자체 호스팅 PostgreSQL 중 선택해야 할 때 결정 기준은?"
+    explanation: >-
+      배포 인프라는 '모든 것이 서로 의존' 하는 특성상 병렬 도입 시 어느 요소가 문제인지 식별 불가. DB → 서버 호스팅 → CI →
+      secrets → monitoring → 클라 배포 채널 순서로 단계적 도입 + 각 단계 베이스라인 측정 + 롤백 용이성 유지. '4
+      조건 게이트' 가 토큰 최적화뿐 아니라 인프라 도입에도 그대로 작동.
+  - question: aidy 가 Neon(서버리스 Postgres) 과 자체 호스팅 PostgreSQL 중 선택해야 할 때 결정 기준은?
     choices:
-      - "가격만"
-      - "'운영 부담 대비 프로젝트 수명 주기' 트레이드오프. 단일 운영자(미노 혼자) 체제에서 Neon 은 백업·업데이트·스케일링·모니터링을 managed 로 떠안아 주고 설정 1줄로 롤백 가능. 자체 호스팅은 학습 가치는 있지만 새벽 2시 장애 알람이 본인에게 감 — 4 조건의 '롤백 비용 낮음' 기준 위배"
-      - "속도"
-      - "ORM 호환성"
+      - 가격만
+      - >-
+        '운영 부담 대비 프로젝트 수명 주기' 트레이드오프. 단일 운영자(미노 혼자) 체제에서 Neon 은
+        백업·업데이트·스케일링·모니터링을 managed 로 떠안아 주고 설정 1줄로 롤백 가능. 자체 호스팅은 학습 가치는 있지만 새벽
+        2시 장애 알람이 본인에게 감 — 4 조건의 '롤백 비용 낮음' 기준 위배
+      - 속도
+      - ORM 호환성
     answer: 1
-    explanation: "의사결정 기준은 'DB 가 무엇이냐' 가 아니라 '운영 주체가 누구이고 장애 발생 시 대응 캐파가 있는가' 다. 1인 운영 체제는 managed service 가 기본값. 자체 호스팅 PostgreSQL 로 '공부' 하려면 별도 학습 프로젝트로 분리. aidy 는 프로덕트라 안정성 우선."
-  - question: "'배포 파이프라인' 이 실제로는 존재하지 않는데 이 글이 쓰이는 이유는?"
+    explanation: >-
+      의사결정 기준은 'DB 가 무엇이냐' 가 아니라 '운영 주체가 누구이고 장애 발생 시 대응 캐파가 있는가' 다. 1인 운영 체제는
+      managed service 가 기본값. 자체 호스팅 PostgreSQL 로 '공부' 하려면 별도 학습 프로젝트로 분리. aidy 는
+      프로덕트라 안정성 우선.
+  - question: '''배포 파이프라인'' 이 실제로는 존재하지 않는데 이 글이 쓰이는 이유는?'
     choices:
-      - "완성품처럼 포장하려고"
-      - "현재 아키텍처 결정을 미리 박제해 두지 않으면, 도입 시점에 '왜 이 선택인가' 맥락 유실 → 즉흥 결정으로 덮어쓰기. 설계 로드맵을 먼저 글로 남기면 실제 도입 때 의사결정 근거가 남아 있어 일관성 유지 가능 — ADR 과 같은 성격의 선제적 박제"
-      - "SEO 를 위해"
-      - "다른 사람 보여주려고"
+      - 완성품처럼 포장하려고
+      - >-
+        현재 아키텍처 결정을 미리 박제해 두지 않으면, 도입 시점에 '왜 이 선택인가' 맥락 유실 → 즉흥 결정으로 덮어쓰기. 설계
+        로드맵을 먼저 글로 남기면 실제 도입 때 의사결정 근거가 남아 있어 일관성 유지 가능 — ADR 과 같은 성격의 선제적 박제
+      - SEO 를 위해
+      - 다른 사람 보여주려고
     answer: 1
-    explanation: "Compound Engineering 관점에서 '이 결정을 왜 이렇게 할 것인가' 가 결정 시점보다 **명확한 시점** 에 박제되는 게 중요하다. 도입 당일엔 시간 압박 · 컨텍스트 혼재로 '일단 Neon' 같은 선택을 근거 없이 내리기 쉬움. 미리 로드맵을 두면 도입 시점엔 체크리스트 따라 실행만 하면 됨."
+    explanation: >-
+      Compound Engineering 관점에서 '이 결정을 왜 이렇게 할 것인가' 가 결정 시점보다 **명확한 시점** 에 박제되는
+      게 중요하다. 도입 당일엔 시간 압박 · 컨텍스트 혼재로 '일단 Neon' 같은 선택을 근거 없이 내리기 쉬움. 미리 로드맵을 두면
+      도입 시점엔 체크리스트 따라 실행만 하면 됨.
 ---
 
 ## 왜 이 글이 Flow Map 이 아닌가

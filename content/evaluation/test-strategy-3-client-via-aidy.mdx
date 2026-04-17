@@ -1,8 +1,16 @@
 ---
-title: "aidy 3-client 테스트 전략 — '컴파일 성공 = 테스트 통과' 오신 끊기 (Flow Map 7편)"
+title: aidy 3-client 테스트 전략 — '컴파일 성공 = 테스트 통과' 오신 끊기 (Flow Map 7편)
 category: evaluation
-date: "2026-04-16"
-tags: [aidy, flow-map-series, learning-path, ios-to-test-strategy, testing, test-policy, integration-testing, error-code-coverage]
+date: '2026-04-16'
+tags:
+  - aidy
+  - flow-map-series
+  - learning-path
+  - ios-to-test-strategy
+  - testing
+  - test-policy
+  - integration-testing
+  - error-code-coverage
 confidence: 3
 connections:
   - harness-engineering/architect-flow-map-via-aidy-architect
@@ -14,34 +22,57 @@ connections:
   - harness-engineering/aidy-journal-004-test-evidence-policy-effectiveness
   - evaluation/numeric-execution-evidence
   - ios-ai/tuist-spm-testing-trap
+  - infrastructure/aidy-3-client-deployment-design-roadmap
 status: complete
-description: "Flow Map 시리즈 7편. iOS 개발자가 회사에서 체화한 'XCTest + CI 통과 = 안전' 관성을 벗고, aidy 3-client(Server Kotlin + iOS Swift/TCA + Android Compose)가 공통 universal 정책 위에서 각자 스택 고유 규율을 지키는 구조를 '한 WO 의 테스트 여정'으로 관통. 핵심: '실행 증거 제출 필수 · 빌드 성공은 증거 아님 · api-contract Error Code 100% 커버리지 · 외부 의존성(Anthropic API, DB) 완전 격리'. 실제 사고 사례 'iOS 테스트가 한 번도 안 돈 Session 4 버그' 포함."
+description: >-
+  Flow Map 시리즈 7편. iOS 개발자가 회사에서 체화한 'XCTest + CI 통과 = 안전' 관성을 벗고, aidy
+  3-client(Server Kotlin + iOS Swift/TCA + Android Compose)가 공통 universal 정책 위에서
+  각자 스택 고유 규율을 지키는 구조를 '한 WO 의 테스트 여정'으로 관통. 핵심: '실행 증거 제출 필수 · 빌드 성공은 증거 아님 ·
+  api-contract Error Code 100% 커버리지 · 외부 의존성(Anthropic API, DB) 완전 격리'. 실제 사고 사례
+  'iOS 테스트가 한 번도 안 돈 Session 4 버그' 포함.
 type: entry
 quiz:
-  - question: "aidy 테스트 정책의 P2('실행 증거 제출')가 가장 강력하게 잡아내는 사고 유형은?"
+  - question: aidy 테스트 정책의 P2('실행 증거 제출')가 가장 강력하게 잡아내는 사고 유형은?
     choices:
-      - "테스트 작성 누락"
-      - "'빌드 성공 = 테스트 통과' 오신으로 인한 가짜 안전감. 예: iOS 에서 Tuist/SPM 설정 문제로 'BUILD SUCCEEDED' 가 나왔지만 실제론 Test Suite 가 한 번도 실행되지 않은 사고 (aidy Session 4 발견)"
-      - "테스트 속도 저하"
-      - "flaky 테스트"
+      - 테스트 작성 누락
+      - >-
+        '빌드 성공 = 테스트 통과' 오신으로 인한 가짜 안전감. 예: iOS 에서 Tuist/SPM 설정 문제로 'BUILD
+        SUCCEEDED' 가 나왔지만 실제론 Test Suite 가 한 번도 실행되지 않은 사고 (aidy Session 4 발견)
+      - 테스트 속도 저하
+      - flaky 테스트
     answer: 1
-    explanation: "컴파일/빌드 성공은 '코드 구조가 문법적으로 맞다' 까지만 증명한다. 테스트 바이너리가 실제로 돌았는지 · 어떤 테스트가 얼마나 통과했는지는 별개. aidy 정책은 '실행 결과 숫자 (NN passed / 0 failed)' 를 커밋 메시지에 포함하도록 강제해서 이 갭을 구조적으로 막는다. 'no tests to run' 로그가 나오면 심각한 버그로 분류."
-  - question: "aidy 서버 테스트 정책에서 'Error Code 커버리지 규칙' 의 본질은?"
+    explanation: >-
+      컴파일/빌드 성공은 '코드 구조가 문법적으로 맞다' 까지만 증명한다. 테스트 바이너리가 실제로 돌았는지 · 어떤 테스트가 얼마나
+      통과했는지는 별개. aidy 정책은 '실행 결과 숫자 (NN passed / 0 failed)' 를 커밋 메시지에 포함하도록 강제해서
+      이 갭을 구조적으로 막는다. 'no tests to run' 로그가 나오면 심각한 버그로 분류.
+  - question: aidy 서버 테스트 정책에서 'Error Code 커버리지 규칙' 의 본질은?
     choices:
-      - "테스트 커버리지 숫자를 높이기 위함"
-      - "api-contract.md 의 Error Codes 표에 있는 *모든* 코드에 대해 '실제로 이 코드를 만들어내는' 테스트가 최소 1개 존재함을 강제 — 계약-구현-테스트 3 축이 동일 진실에 수렴. 한 코드라도 테스트가 없으면 '선언은 됐지만 실제론 안 나오는 유령 에러' 가 생길 수 있다"
-      - "QA 팀이 요구해서"
-      - "문서화 목적"
+      - 테스트 커버리지 숫자를 높이기 위함
+      - >-
+        api-contract.md 의 Error Codes 표에 있는 *모든* 코드에 대해 '실제로 이 코드를 만들어내는' 테스트가
+        최소 1개 존재함을 강제 — 계약-구현-테스트 3 축이 동일 진실에 수렴. 한 코드라도 테스트가 없으면 '선언은 됐지만 실제론 안
+        나오는 유령 에러' 가 생길 수 있다
+      - QA 팀이 요구해서
+      - 문서화 목적
     answer: 1
-    explanation: "많은 프로젝트에서 Error Code enum 이 정의만 되고 실제 경로는 한 번도 타지 않는 유령 코드가 생긴다. aidy 는 api-contract 의 Error Codes 표와 테스트 파일을 1:1 매핑해서 이 상태를 차단. 클라이언트가 '이 코드 오면 재시도 버튼' UI 를 만들 때 해당 코드가 실제로 생성 가능한지 보장된다."
-  - question: "iOS 워커가 'View 테스트는 어렵고 XCUI 는 느리니 스킵해도 되죠?' 라고 주장할 때 올바른 대응은?"
+    explanation: >-
+      많은 프로젝트에서 Error Code enum 이 정의만 되고 실제 경로는 한 번도 타지 않는 유령 코드가 생긴다. aidy 는
+      api-contract 의 Error Codes 표와 테스트 파일을 1:1 매핑해서 이 상태를 차단. 클라이언트가 '이 코드 오면
+      재시도 버튼' UI 를 만들 때 해당 코드가 실제로 생성 가능한지 보장된다.
+  - question: iOS 워커가 'View 테스트는 어렵고 XCUI 는 느리니 스킵해도 되죠?' 라고 주장할 때 올바른 대응은?
     choices:
-      - "UI 테스트니까 스킵 허용"
-      - "View 는 Reducer 에 state/action 만 위임하도록 설계하면 'UI 테스트'가 아니라 'Feature(Reducer) 테스트' 로 동등한 커버리지 달성 가능. TCA 의 TestStore 로 state 전이·effect·dependency injection 을 전부 검증. 'UI 라 불가' 는 잘못된 구조의 증상"
-      - "스냅샷 테스트로 대체"
-      - "통합 테스트로만 커버"
+      - UI 테스트니까 스킵 허용
+      - >-
+        View 는 Reducer 에 state/action 만 위임하도록 설계하면 'UI 테스트'가 아니라
+        'Feature(Reducer) 테스트' 로 동등한 커버리지 달성 가능. TCA 의 TestStore 로 state
+        전이·effect·dependency injection 을 전부 검증. 'UI 라 불가' 는 잘못된 구조의 증상
+      - 스냅샷 테스트로 대체
+      - 통합 테스트로만 커버
     answer: 1
-    explanation: "TCA 의 강점이 여기서 드러난다. View 는 `@Bindable store` 를 렌더링만 하고, 로직은 전부 Reducer 에 있으므로 TestStore 로 state/action 시퀀스를 그대로 검증할 수 있다. '뷰가 테스트 어려움' 이라는 주장은 대개 로직이 뷰에 섞인 설계의 징후 — 스킵 이유가 아니라 리팩터 신호."
+    explanation: >-
+      TCA 의 강점이 여기서 드러난다. View 는 `@Bindable store` 를 렌더링만 하고, 로직은 전부 Reducer 에
+      있으므로 TestStore 로 state/action 시퀀스를 그대로 검증할 수 있다. '뷰가 테스트 어려움' 이라는 주장은 대개
+      로직이 뷰에 섞인 설계의 징후 — 스킵 이유가 아니라 리팩터 신호.
 ---
 
 ## 한 줄 요약

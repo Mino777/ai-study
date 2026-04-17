@@ -1,8 +1,18 @@
 ---
-title: "API 계약이 코드보다 먼저 — api-contract.md 한 장으로 Server · iOS · Android 3-client 동기화 (Flow Map 6편)"
+title: >-
+  API 계약이 코드보다 먼저 — api-contract.md 한 장으로 Server · iOS · Android 3-client 동기화
+  (Flow Map 6편)
 category: context-engineering
-date: "2026-04-16"
-tags: [aidy, flow-map-series, learning-path, ios-to-context-engineering, api-contract, spec-driven, 3-client-sync, source-of-truth]
+date: '2026-04-16'
+tags:
+  - aidy
+  - flow-map-series
+  - learning-path
+  - ios-to-context-engineering
+  - api-contract
+  - spec-driven
+  - 3-client-sync
+  - source-of-truth
 confidence: 3
 connections:
   - harness-engineering/architect-flow-map-via-aidy-architect
@@ -12,34 +22,61 @@ connections:
   - harness-engineering/aidy-journal-000-architect-worker-baseline
   - context-engineering/context-engineering-fundamentals
   - context-engineering/claude-md-design-patterns
+  - evaluation/test-strategy-3-client-via-aidy
+  - infrastructure/aidy-3-client-deployment-design-roadmap
 status: complete
-description: "Flow Map 시리즈 6편. iOS 개발자가 '코드가 source of truth' 관성을 벗고, api-contract.md 마크다운 한 장이 3-client(Server/iOS/Android)를 동기화하는 구조를 이해하도록 관통한다. Swagger/OpenAPI 없이도 계약 일관성을 유지하는 법, Gate 1 line-by-line 대조 프로토콜, 워커가 스펙을 변경하려 할 때의 inbox 흐름, 계약 변경이 3-client 전체에 전파되는 여정을 다룬다."
+description: >-
+  Flow Map 시리즈 6편. iOS 개발자가 '코드가 source of truth' 관성을 벗고, api-contract.md 마크다운 한
+  장이 3-client(Server/iOS/Android)를 동기화하는 구조를 이해하도록 관통한다. Swagger/OpenAPI 없이도 계약
+  일관성을 유지하는 법, Gate 1 line-by-line 대조 프로토콜, 워커가 스펙을 변경하려 할 때의 inbox 흐름, 계약 변경이
+  3-client 전체에 전파되는 여정을 다룬다.
 type: entry
 quiz:
-  - question: "aidy 모델에서 'api-contract.md 마크다운 한 장이 source of truth' 라는 규약이 주는 가장 본질적 이점은?"
+  - question: >-
+      aidy 모델에서 'api-contract.md 마크다운 한 장이 source of truth' 라는 규약이 주는 가장 본질적
+      이점은?
     choices:
-      - "서류 작업이 줄어든다"
-      - "AI 에이전트(Claude 워커)가 읽기 최적화된 단일 문서를 매 세션 프리픽스로 로드할 수 있고, 3-client 구현이 이 한 장 기준으로 Gate 1에서 line-by-line 대조 가능하다. OpenAPI 스펙은 머신 읽기에 최적화됐지만 LLM 컨텍스트에 통째로 넣기엔 과잉 · 비효율이다"
-      - "Swagger 설정이 복잡해서"
-      - "코드 자동 생성이 가능해서"
+      - 서류 작업이 줄어든다
+      - >-
+        AI 에이전트(Claude 워커)가 읽기 최적화된 단일 문서를 매 세션 프리픽스로 로드할 수 있고, 3-client 구현이 이 한
+        장 기준으로 Gate 1에서 line-by-line 대조 가능하다. OpenAPI 스펙은 머신 읽기에 최적화됐지만 LLM
+        컨텍스트에 통째로 넣기엔 과잉 · 비효율이다
+      - Swagger 설정이 복잡해서
+      - 코드 자동 생성이 가능해서
     answer: 1
-    explanation: "전통적 '코드 + OpenAPI' 모델은 (a) 코드가 발전, (b) OpenAPI가 뒤따라감, (c) 문서가 또 뒤따라감 — 3 중 동기화 실패. aidy 모델은 (a) 마크다운 계약을 먼저 확정, (b) 3-client가 이걸 똑같이 구현, (c) Gate 1이 line-by-line으로 검증. LLM이 한 번에 흡수 가능한 크기 · 포맷으로 유지되는 게 필수 조건."
-  - question: "Gate 1 검증 시 '서버 구현을 보고 iOS 기대값을 추론' 하는 방식은 왜 안티패턴인가?"
+    explanation: >-
+      전통적 '코드 + OpenAPI' 모델은 (a) 코드가 발전, (b) OpenAPI가 뒤따라감, (c) 문서가 또 뒤따라감 — 3 중
+      동기화 실패. aidy 모델은 (a) 마크다운 계약을 먼저 확정, (b) 3-client가 이걸 똑같이 구현, (c) Gate 1이
+      line-by-line으로 검증. LLM이 한 번에 흡수 가능한 크기 · 포맷으로 유지되는 게 필수 조건.
+  - question: Gate 1 검증 시 '서버 구현을 보고 iOS 기대값을 추론' 하는 방식은 왜 안티패턴인가?
     choices:
-      - "느려서"
-      - "계약의 방향이 뒤집힘 — 계약은 *구현의 전제*이지 *구현의 결과*가 아니다. 서버 코드에서 iOS 기대값을 추론하면 계약은 서버가 자의적으로 변경 가능한 종속 변수가 되고, Architect가 3-client를 독립 관제하는 구조가 붕괴. 항상 api-contract.md → 코드 방향으로만 대조"
-      - "iOS 개발자가 싫어해서"
-      - "타입 체크가 안 돼서"
+      - 느려서
+      - >-
+        계약의 방향이 뒤집힘 — 계약은 *구현의 전제*이지 *구현의 결과*가 아니다. 서버 코드에서 iOS 기대값을 추론하면 계약은
+        서버가 자의적으로 변경 가능한 종속 변수가 되고, Architect가 3-client를 독립 관제하는 구조가 붕괴. 항상
+        api-contract.md → 코드 방향으로만 대조
+      - iOS 개발자가 싫어해서
+      - 타입 체크가 안 돼서
     answer: 1
-    explanation: "Gate 1의 임무는 '코드가 계약에 부합하는가' 이지 '계약이 코드에 부합하는가' 가 아니다. 만약 코드가 계약과 다르면 Gate 1 FAIL → 워커 수정 (계약 변경 X). 만약 계약 자체가 잘못된 것 같으면 워커는 inbox로 스펙 변경 요청 → Architect가 api-contract.md 먼저 업데이트 → 새 계약 기준 재검증. 방향이 한쪽이어야 3-client 독립성이 유지됨."
-  - question: "iOS 개발자가 'Response에 totalCount 필드 하나만 더 있으면 편할 텐데' 싶을 때 올바른 행동은?"
+    explanation: >-
+      Gate 1의 임무는 '코드가 계약에 부합하는가' 이지 '계약이 코드에 부합하는가' 가 아니다. 만약 코드가 계약과 다르면 Gate
+      1 FAIL → 워커 수정 (계약 변경 X). 만약 계약 자체가 잘못된 것 같으면 워커는 inbox로 스펙 변경 요청 →
+      Architect가 api-contract.md 먼저 업데이트 → 새 계약 기준 재검증. 방향이 한쪽이어야 3-client 독립성이
+      유지됨.
+  - question: iOS 개발자가 'Response에 totalCount 필드 하나만 더 있으면 편할 텐데' 싶을 때 올바른 행동은?
     choices:
-      - "iOS 코드에서 로컬 계산으로 해결"
-      - "서버 워커에게 슬랙으로 추가 요청"
-      - "inbox/ios-request.md 로 Architect에게 스펙 변경 제안. Architect가 승인하면 api-contract.md 수정 → 3-client 모두에 WO 발행. 거절되면 이유와 함께 response. 그 사이 iOS 작업은 블로킹하거나 기존 계약 기준 우회 구현"
-      - "임시로 서버 응답을 파싱해서 계산"
+      - iOS 코드에서 로컬 계산으로 해결
+      - 서버 워커에게 슬랙으로 추가 요청
+      - >-
+        inbox/ios-request.md 로 Architect에게 스펙 변경 제안. Architect가 승인하면
+        api-contract.md 수정 → 3-client 모두에 WO 발행. 거절되면 이유와 함께 response. 그 사이 iOS
+        작업은 블로킹하거나 기존 계약 기준 우회 구현
+      - 임시로 서버 응답을 파싱해서 계산
     answer: 2
-    explanation: "각 클라이언트가 '이 필드 있으면 좋겠는데' 로 직접 수정하기 시작하면 api-contract 의 절대성이 무너진다. 변경 경로는 오직 하나 — inbox → Architect 평가 → contract 업데이트 → 3-client WO 재발행. 이 경로가 길어 보여도 실제로는 5~10분 이내 완료되며, 장기적으로 3-client 일관성 유지 비용을 극도로 낮춘다."
+    explanation: >-
+      각 클라이언트가 '이 필드 있으면 좋겠는데' 로 직접 수정하기 시작하면 api-contract 의 절대성이 무너진다. 변경 경로는
+      오직 하나 — inbox → Architect 평가 → contract 업데이트 → 3-client WO 재발행. 이 경로가 길어
+      보여도 실제로는 5~10분 이내 완료되며, 장기적으로 3-client 일관성 유지 비용을 극도로 낮춘다.
 ---
 
 ## 한 줄 요약

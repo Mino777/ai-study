@@ -1,42 +1,73 @@
 ---
-title: "Harness Journal 006 — tarosaju Anthropic 클라이언트 wrapper 이식 (timeout + retry + 에러 분류)"
+title: >-
+  Harness Journal 006 — tarosaju Anthropic 클라이언트 wrapper 이식 (timeout + retry +
+  에러 분류)
 category: harness-engineering
 series: harness-journal
-date: "2026-04-12"
-tags: [harness-journal, harness-engineering, anthropic, circuit-breaker, timeout, retry, cross-project-port]
+date: '2026-04-12'
+tags:
+  - harness-journal
+  - harness-engineering
+  - anthropic
+  - circuit-breaker
+  - timeout
+  - retry
+  - cross-project-port
 confidence: 4
 connections:
   - harness-engineering/ai-call-patterns-circuit-breaker-fallback
   - harness-engineering/harness-journal-005-wt-branch-dogfooding-and-transfer
   - harness-engineering/harness-journal-000-baseline
+  - harness-engineering/harness-journal-007-008-ai-cost-tracking
+  - harness-engineering/harness-journal-009-text-output-guards
+  - harness-engineering/harness-journal-023-closed-loop-ai-quality
 status: complete
-description: "Journal 000 갭 #3(Circuit Breaker 비대칭)의 첫 이식 사이클. moneyflow의 검증된 ai-client.ts 패턴을 tarosaju로 이식 — timeout + retry + 에러 분류 + prompt caching 지원. Journal 006+007(원래 두 사이클로 계획했던 것)을 한 사이클에 통합."
+description: >-
+  Journal 000 갭 #3(Circuit Breaker 비대칭)의 첫 이식 사이클. moneyflow의 검증된 ai-client.ts
+  패턴을 tarosaju로 이식 — timeout + retry + 에러 분류 + prompt caching 지원. Journal
+  006+007(원래 두 사이클로 계획했던 것)을 한 사이클에 통합.
 type: entry
 quiz:
-  - question: "이 사이클이 *Journal 006과 007을 한 사이클로 묶은* 이유는?"
+  - question: 이 사이클이 *Journal 006과 007을 한 사이클로 묶은* 이유는?
     choices:
-      - "사용자가 요구해서"
-      - "timeout + retry + 에러 분류는 *같은 wrapper 파일 한 곳*에 구현되므로 *쪼개면 오히려 통합 비용이 증가*. 한 파일에 박을 수 있는 것은 한 사이클로 묶는 게 실전 효율"
-      - "Anthropic SDK가 둘을 한 번에 요구해서"
-      - "PR 수를 줄이기 위해"
+      - 사용자가 요구해서
+      - >-
+        timeout + retry + 에러 분류는 *같은 wrapper 파일 한 곳*에 구현되므로 *쪼개면 오히려 통합 비용이 증가*.
+        한 파일에 박을 수 있는 것은 한 사이클로 묶는 게 실전 효율
+      - Anthropic SDK가 둘을 한 번에 요구해서
+      - PR 수를 줄이기 위해
     answer: 1
-    explanation: "사이클 분할의 원칙은 *한 가지 메시지*인데, *한 파일 안에서 서로를 전제로 하는 기능들*은 분할이 오히려 비용. timeout 없이 retry만 있거나, retry 없이 에러 분류만 있는 건 *실전에서 쓸 수 없는 중간 상태*. 한 번에 묶는 게 맞음."
-  - question: "이 사이클에서 *Circuit Breaker를 의도적으로 제외*한 이유는?"
+    explanation: >-
+      사이클 분할의 원칙은 *한 가지 메시지*인데, *한 파일 안에서 서로를 전제로 하는 기능들*은 분할이 오히려 비용. timeout
+      없이 retry만 있거나, retry 없이 에러 분류만 있는 건 *실전에서 쓸 수 없는 중간 상태*. 한 번에 묶는 게 맞음.
+  - question: 이 사이클에서 *Circuit Breaker를 의도적으로 제외*한 이유는?
     choices:
-      - "구현이 어려워서"
-      - "tarosaju는 단일 프로바이더(Anthropic)만 사용하므로 *프로바이더 간 폴백이 불가능*. Circuit Breaker의 상태 기반 차단은 *다른 프로바이더로 전환할 수 있을 때* 가장 큰 가치. 단일 프로바이더 환경에선 timeout + retry가 더 실용적"
-      - "Anthropic이 Circuit Breaker를 지원하지 않아서"
-      - "moneyflow에서 가져올 수 없어서"
+      - 구현이 어려워서
+      - >-
+        tarosaju는 단일 프로바이더(Anthropic)만 사용하므로 *프로바이더 간 폴백이 불가능*. Circuit Breaker의
+        상태 기반 차단은 *다른 프로바이더로 전환할 수 있을 때* 가장 큰 가치. 단일 프로바이더 환경에선 timeout + retry가
+        더 실용적
+      - Anthropic이 Circuit Breaker를 지원하지 않아서
+      - moneyflow에서 가져올 수 없어서
     answer: 1
-    explanation: "Circuit Breaker의 본질은 *실패한 서비스에 더 많은 요청을 안 보내는 것*. moneyflow는 Gemini/Claude/OpenAI 3개 프로바이더 중 하나가 open이면 다른 것으로 폴백. tarosaju는 Anthropic 하나뿐이라 open해도 *대안이 없음*. 그래서 timeout + retry + 안전한 에러 메시지가 더 가치."
-  - question: "tarosaju PR #3이 *이 사이클의 검증*이라고 할 수 있는 이유는?"
+    explanation: >-
+      Circuit Breaker의 본질은 *실패한 서비스에 더 많은 요청을 안 보내는 것*. moneyflow는
+      Gemini/Claude/OpenAI 3개 프로바이더 중 하나가 open이면 다른 것으로 폴백. tarosaju는 Anthropic
+      하나뿐이라 open해도 *대안이 없음*. 그래서 timeout + retry + 안전한 에러 메시지가 더 가치.
+  - question: 'tarosaju PR #3이 *이 사이클의 검증*이라고 할 수 있는 이유는?'
     choices:
-      - "PR 번호가 3이라서"
-      - "tarosaju의 test.yml이 PR에 자동으로 unit + lint + build + typecheck + e2e 5 jobs를 돌림. 이 중 *하나라도* 실패하면 PR check fail → 머지 차단. 즉 *자동화된 게이트가 내 wrapper 코드를 검증*하는 구조"
-      - "사용자가 수동으로 확인했으므로"
-      - "머지되면 자동 배포되므로"
+      - PR 번호가 3이라서
+      - >-
+        tarosaju의 test.yml이 PR에 자동으로 unit + lint + build + typecheck + e2e 5
+        jobs를 돌림. 이 중 *하나라도* 실패하면 PR check fail → 머지 차단. 즉 *자동화된 게이트가 내 wrapper
+        코드를 검증*하는 구조
+      - 사용자가 수동으로 확인했으므로
+      - 머지되면 자동 배포되므로
     answer: 1
-    explanation: "Harness Journal 001/002에서 구축한 CI 게이트가 이 사이클의 *검증자*. 내가 로컬에서 브라우저 QA를 못 하더라도 test.yml이 *자동으로* unit/lint/build/typecheck/e2e를 돌린다. 게이트가 쌓이면 *사람 검토 없이도* 높은 신뢰로 머지 가능 — Compound Engineering이 말하는 *다음 작업이 더 쉬워진다*의 실전 형태."
+    explanation: >-
+      Harness Journal 001/002에서 구축한 CI 게이트가 이 사이클의 *검증자*. 내가 로컬에서 브라우저 QA를 못
+      하더라도 test.yml이 *자동으로* unit/lint/build/typecheck/e2e를 돌린다. 게이트가 쌓이면 *사람 검토
+      없이도* 높은 신뢰로 머지 가능 — Compound Engineering이 말하는 *다음 작업이 더 쉬워진다*의 실전 형태.
 ---
 
 ## 갭 (Before)

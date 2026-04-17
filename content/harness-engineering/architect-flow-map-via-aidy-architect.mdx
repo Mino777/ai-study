@@ -1,8 +1,16 @@
 ---
-title: "aidy-architect로 보는 멀티 세션 오케스트레이션 — 한 명이 3-client 풀스택을 병렬로 짓는 법"
+title: aidy-architect로 보는 멀티 세션 오케스트레이션 — 한 명이 3-client 풀스택을 병렬로 짓는 법
 category: harness-engineering
-date: "2026-04-16"
-tags: [aidy, flow-map-series, learning-path, ios-to-orchestration, architect-worker, multi-agent, gate-validation, spec-driven]
+date: '2026-04-16'
+tags:
+  - aidy
+  - flow-map-series
+  - learning-path
+  - ios-to-orchestration
+  - architect-worker
+  - multi-agent
+  - gate-validation
+  - spec-driven
 confidence: 3
 connections:
   - backend-ai/backend-flow-map-via-aidy-server
@@ -11,34 +19,55 @@ connections:
   - harness-engineering/aidy-journal-000-architect-worker-baseline
   - harness-engineering/compound-engineering-philosophy
   - harness-engineering/five-levers-of-harness-engineering
+  - context-engineering/api-contract-as-3-client-source-of-truth
+  - evaluation/test-strategy-3-client-via-aidy
+  - infrastructure/aidy-3-client-deployment-design-roadmap
 status: complete
-description: "Flow Map 시리즈 4편. iOS 주력 개발자가 'aidy-architect'(tmux + Claude Code 4-pane) 구조로 Server/iOS/Android 3-client를 혼자서 병렬 개발하는 법을 'WO 한 건의 여정'으로 관통한다. Architect는 코드를 쓰지 않고 스펙·Work Order·Gate 검증·Compound만 담당한다. PR 리뷰 + Tech Lead + 스프린트 진행 역할을 AI 하네스에 이식하는 설계."
+description: >-
+  Flow Map 시리즈 4편. iOS 주력 개발자가 'aidy-architect'(tmux + Claude Code 4-pane) 구조로
+  Server/iOS/Android 3-client를 혼자서 병렬 개발하는 법을 'WO 한 건의 여정'으로 관통한다. Architect는
+  코드를 쓰지 않고 스펙·Work Order·Gate 검증·Compound만 담당한다. PR 리뷰 + Tech Lead + 스프린트 진행
+  역할을 AI 하네스에 이식하는 설계.
 type: entry
 quiz:
-  - question: "aidy-architect 모델에서 Architect가 '직접 코드를 작성하지 않는다'는 규칙의 본질적 이유는?"
+  - question: aidy-architect 모델에서 Architect가 '직접 코드를 작성하지 않는다'는 규칙의 본질적 이유는?
     choices:
-      - "코드 품질이 나쁠 것을 걱정해서"
-      - "Architect가 코드를 쓰기 시작하면 단일 세션 프로젝트로 회귀해 3-client 병렬 확장이 구조적으로 불가능해지고, 스펙·검증·Compound 라는 '관제 레이어'의 책임이 흐려진다"
-      - "Claude API 비용을 줄이려고"
-      - "워커 세션이 부담스러워하기 때문"
+      - 코드 품질이 나쁠 것을 걱정해서
+      - >-
+        Architect가 코드를 쓰기 시작하면 단일 세션 프로젝트로 회귀해 3-client 병렬 확장이 구조적으로 불가능해지고,
+        스펙·검증·Compound 라는 '관제 레이어'의 책임이 흐려진다
+      - Claude API 비용을 줄이려고
+      - 워커 세션이 부담스러워하기 때문
     answer: 1
-    explanation: "병렬성은 '역할을 쪼개서 문맥을 분리'할 때 성립한다. Architect가 코드를 쓰는 순간 그 세션의 컨텍스트가 코드 디테일로 오염되고, 3개 워커가 동시에 돌 때 필요한 스펙 결정·Gate 검증·크로스 호환성 판단을 잃는다. 역할 경계가 곧 병렬 용량이다."
-  - question: "Gate 1 (스펙 준수)과 Gate 2 (통합 검증)의 가장 중요한 차이는?"
+    explanation: >-
+      병렬성은 '역할을 쪼개서 문맥을 분리'할 때 성립한다. Architect가 코드를 쓰는 순간 그 세션의 컨텍스트가 코드 디테일로
+      오염되고, 3개 워커가 동시에 돌 때 필요한 스펙 결정·Gate 검증·크로스 호환성 판단을 잃는다. 역할 경계가 곧 병렬 용량이다.
+  - question: Gate 1 (스펙 준수)과 Gate 2 (통합 검증)의 가장 중요한 차이는?
     choices:
-      - "Gate 1은 빠르고 Gate 2는 느리다"
-      - "Gate 1은 한 워커의 코드를 api-contract.md와 line-by-line 대조하는 단일 워커 검증이고, Gate 2는 빌드·테스트·다른 워커 프로젝트와의 스키마 호환성까지 포함하는 통합 검증이다. 순서도 결과도 다르다"
-      - "Gate 1은 Architect가 하고 Gate 2는 워커가 한다"
-      - "Gate 1은 선택이고 Gate 2만 필수"
+      - Gate 1은 빠르고 Gate 2는 느리다
+      - >-
+        Gate 1은 한 워커의 코드를 api-contract.md와 line-by-line 대조하는 단일 워커 검증이고, Gate 2는
+        빌드·테스트·다른 워커 프로젝트와의 스키마 호환성까지 포함하는 통합 검증이다. 순서도 결과도 다르다
+      - Gate 1은 Architect가 하고 Gate 2는 워커가 한다
+      - Gate 1은 선택이고 Gate 2만 필수
     answer: 1
-    explanation: "Gate 1은 '계약 대조' — 스펙에 써있는 필드·에러 코드·네이밍이 코드에 그대로 있는지를 확인한다. Gate 2는 '실행 검증' — 빌드와 테스트를 실제로 돌리고, 다른 워커(서버 vs iOS)의 Request/Response 스키마가 맞물리는지까지 확인한다. Gate 1만 통과하고 Gate 2를 스킵하면 '타이핑은 맞는데 실제로는 안 도는' 코드가 머지된다."
-  - question: "iOS 팀에서 일하던 개발자에게 aidy-architect의 역할이 가장 가깝게 매핑되는 것은?"
+    explanation: >-
+      Gate 1은 '계약 대조' — 스펙에 써있는 필드·에러 코드·네이밍이 코드에 그대로 있는지를 확인한다. Gate 2는 '실행 검증'
+      — 빌드와 테스트를 실제로 돌리고, 다른 워커(서버 vs iOS)의 Request/Response 스키마가 맞물리는지까지 확인한다.
+      Gate 1만 통과하고 Gate 2를 스킵하면 '타이핑은 맞는데 실제로는 안 도는' 코드가 머지된다.
+  - question: iOS 팀에서 일하던 개발자에게 aidy-architect의 역할이 가장 가깝게 매핑되는 것은?
     choices:
-      - "시니어 iOS 개발자"
-      - "QA 엔지니어"
-      - "Tech Lead + PM의 결합 — 스펙 결정, 작업 분배, PR/QA 게이트, 회고 주관을 한 사람이 하되 '코드 작성 권한'만 빠진 역할"
-      - "빌드 엔지니어"
+      - 시니어 iOS 개발자
+      - QA 엔지니어
+      - >-
+        Tech Lead + PM의 결합 — 스펙 결정, 작업 분배, PR/QA 게이트, 회고 주관을 한 사람이 하되 '코드 작성
+        권한'만 빠진 역할
+      - 빌드 엔지니어
     answer: 2
-    explanation: "Architect의 실질적 업무 = api-contract 결정(PM) + Work Order 발행(Tech Lead 업무 분배) + Gate 검증(PR 리뷰어) + /compound(스프린트 회고 주관). 유일하게 빠진 것이 '직접 코드 작성'. 이 경계가 지켜져야 한 사람이 3-client를 병렬 관제할 수 있다."
+    explanation: >-
+      Architect의 실질적 업무 = api-contract 결정(PM) + Work Order 발행(Tech Lead 업무 분배) +
+      Gate 검증(PR 리뷰어) + /compound(스프린트 회고 주관). 유일하게 빠진 것이 '직접 코드 작성'. 이 경계가 지켜져야
+      한 사람이 3-client를 병렬 관제할 수 있다.
 ---
 
 ## 한 줄 요약

@@ -1,14 +1,28 @@
 ---
-title: "iOS Harness Journal 001 — git pre-commit 훅으로 코드 규칙 차단"
+title: iOS Harness Journal 001 — git pre-commit 훅으로 코드 규칙 차단
 category: ios-ai
 series: ios-ai-journal
-date: "2026-04-13"
-tags: [ios-harness-journal, ios, swiftlint, swiftformat, git-hook, pre-commit, harness-engineering]
+date: '2026-04-13'
+tags:
+  - ios-harness-journal
+  - ios
+  - swiftlint
+  - swiftformat
+  - git-hook
+  - pre-commit
+  - harness-engineering
 confidence: 4
-connections: [ios-ai/ios-ai-journal-000-baseline, harness-engineering/harness-journal-002-inline-test-gate]
+connections:
+  - ios-ai/ios-ai-journal-000-baseline
+  - harness-engineering/harness-journal-002-inline-test-gate
+  - ios-ai/ios-ai-code-quality-test-strategy
+  - ios-ai/ios-ai-journal-002-ios-slash-commands
+  - ios-ai/ios-ai-journal-007-claude-hooks-silent-failure
 status: complete
 type: entry
-description: "Swift 코드 규칙은 Claude의 PreToolUse 훅이 아니라 git pre-commit 훅(.githooks/)이 차단한다. AI 안전망보다 git 안전망이 우선. Claude 훅은 커밋 전 미리보기 5줄만 출력하는 보조 신호일 뿐이다."
+description: >-
+  Swift 코드 규칙은 Claude의 PreToolUse 훅이 아니라 git pre-commit 훅(.githooks/)이 차단한다. AI
+  안전망보다 git 안전망이 우선. Claude 훅은 커밋 전 미리보기 5줄만 출력하는 보조 신호일 뿐이다.
 ---
 
 ## 한 줄 요약

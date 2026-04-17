@@ -1,42 +1,71 @@
 ---
-title: "AI 호출 패턴 — Circuit Breaker, Multi-Provider 폴백, 프롬프트 캐싱"
+title: 'AI 호출 패턴 — Circuit Breaker, Multi-Provider 폴백, 프롬프트 캐싱'
 category: harness-engineering
-date: "2026-04-12"
-tags: [harness-engineering, ai-client, circuit-breaker, fallback, prompt-caching, multi-provider, transferable-pattern]
+date: '2026-04-12'
+tags:
+  - harness-engineering
+  - ai-client
+  - circuit-breaker
+  - fallback
+  - prompt-caching
+  - multi-provider
+  - transferable-pattern
 confidence: 4
 connections:
   - harness-engineering/harness-engineering-overview
   - harness-engineering/harness-journal-000-baseline
   - agents/multi-agent-pipeline
   - agents/agent-architectures
+  - harness-engineering/ai-api-cost-tracking-pattern
+  - harness-engineering/ai-output-zod-validation-pattern
+  - harness-engineering/harness-journal-006-tarosaju-anthropic-hardening
+  - harness-engineering/harness-journal-020-promise-timeout-wrapper
+  - harness-engineering/supabase-realtime-channel-retry-trap
 status: complete
-description: "두 프로젝트 중 한 곳에 검증된 AI 호출 자산(Circuit Breaker, 멀티 프로바이더 폴백, 프롬프트 캐싱)을 정리. 다른 한 곳의 부재 영역을 비교해서 다음 이식 사이클의 큐로 만든다."
+description: >-
+  두 프로젝트 중 한 곳에 검증된 AI 호출 자산(Circuit Breaker, 멀티 프로바이더 폴백, 프롬프트 캐싱)을 정리. 다른 한 곳의
+  부재 영역을 비교해서 다음 이식 사이클의 큐로 만든다.
 type: entry
 quiz:
-  - question: "Circuit Breaker가 *단순 retry*보다 본질적으로 다른 점은?"
+  - question: Circuit Breaker가 *단순 retry*보다 본질적으로 다른 점은?
     choices:
-      - "더 많은 retry를 허용한다"
-      - "*상태*를 가진다 — 연속 실패를 카운트해서 임계치 초과 시 *쿨다운 동안 호출 자체를 차단*. retry는 매번 새로 시도하지만 circuit breaker는 *시스템이 회복할 시간*을 준다"
-      - "지수 백오프를 자동으로 적용한다"
-      - "GitHub Actions와 통합된다"
+      - 더 많은 retry를 허용한다
+      - >-
+        *상태*를 가진다 — 연속 실패를 카운트해서 임계치 초과 시 *쿨다운 동안 호출 자체를 차단*. retry는 매번 새로 시도하지만
+        circuit breaker는 *시스템이 회복할 시간*을 준다
+      - 지수 백오프를 자동으로 적용한다
+      - GitHub Actions와 통합된다
     answer: 1
-    explanation: "Circuit Breaker의 핵심은 *상태 머신* — closed(정상) / open(차단) / half-open(시험적 회복). 단순 retry는 실패한 서비스를 *계속 두드리는* 반면, circuit breaker는 *실패가 누적되면 잠시 멈춘다*. 실패한 시스템에 더 많은 트래픽을 보내는 것이 회복을 늦추기 때문."
-  - question: "프롬프트 캐싱(Claude의 cache_control: ephemeral)이 *비용을 90% 절감*하는 메커니즘은?"
+    explanation: >-
+      Circuit Breaker의 핵심은 *상태 머신* — closed(정상) / open(차단) / half-open(시험적 회복).
+      단순 retry는 실패한 서비스를 *계속 두드리는* 반면, circuit breaker는 *실패가 누적되면 잠시 멈춘다*. 실패한
+      시스템에 더 많은 트래픽을 보내는 것이 회복을 늦추기 때문.
+  - question: '프롬프트 캐싱(Claude의 cache_control: ephemeral)이 *비용을 90% 절감*하는 메커니즘은?'
     choices:
-      - "프롬프트 자체를 압축해서 토큰 수를 줄인다"
-      - "*반복되는 시스템 메시지*(품질 가드, 페르소나, 도메인 지식)를 5분간 캐싱. 같은 역할의 에이전트가 연속 호출되면 *cached input tokens*는 *uncached input의 10% 가격*으로 청구된다"
-      - "응답 자체를 캐싱해서 같은 요청에 같은 응답 반환"
-      - "여러 프로바이더 중 가장 싼 것을 자동 선택한다"
+      - 프롬프트 자체를 압축해서 토큰 수를 줄인다
+      - >-
+        *반복되는 시스템 메시지*(품질 가드, 페르소나, 도메인 지식)를 5분간 캐싱. 같은 역할의 에이전트가 연속 호출되면
+        *cached input tokens*는 *uncached input의 10% 가격*으로 청구된다
+      - 응답 자체를 캐싱해서 같은 요청에 같은 응답 반환
+      - 여러 프로바이더 중 가장 싼 것을 자동 선택한다
     answer: 1
-    explanation: "Claude API의 prompt caching은 *입력 토큰 중 캐시된 부분*에 대해 10% 가격을 청구한다. 시스템 프롬프트가 매 호출마다 동일하다면 그 부분이 캐시 히트되어 90% 할인. 응답 캐싱이 아니라 *입력의 반복 부분*을 캐싱한다는 게 핵심."
-  - question: "moneyflow의 ai-client.ts에는 Circuit Breaker가 있고 tarosaju의 Anthropic 호출에는 *timeout조차 없는* 비대칭이 *복리 효과의 출발점*인 이유는?"
+    explanation: >-
+      Claude API의 prompt caching은 *입력 토큰 중 캐시된 부분*에 대해 10% 가격을 청구한다. 시스템 프롬프트가 매
+      호출마다 동일하다면 그 부분이 캐시 히트되어 90% 할인. 응답 캐싱이 아니라 *입력의 반복 부분*을 캐싱한다는 게 핵심.
+  - question: >-
+      moneyflow의 ai-client.ts에는 Circuit Breaker가 있고 tarosaju의 Anthropic 호출에는
+      *timeout조차 없는* 비대칭이 *복리 효과의 출발점*인 이유는?
     choices:
-      - "tarosaju가 더 작은 프로젝트라 패턴이 필요 없기 때문"
-      - "한쪽에 *이미 검증된 자산*이 다른 쪽에 없다는 건, 그 자산을 *처음부터 만들 필요 없이 이식만 하면 되는* 작업이 큐에 쌓인다는 뜻. Compound Engineering이 말하는 \"다음 작업이 더 쉬워진다\"가 *프로젝트 간*에도 작동하는 첫 사례"
-      - "tarosaju가 다른 패턴을 사용하기 때문"
-      - "비대칭은 위험하므로 즉시 통일해야 하기 때문"
+      - tarosaju가 더 작은 프로젝트라 패턴이 필요 없기 때문
+      - >-
+        한쪽에 *이미 검증된 자산*이 다른 쪽에 없다는 건, 그 자산을 *처음부터 만들 필요 없이 이식만 하면 되는* 작업이 큐에
+        쌓인다는 뜻. Compound Engineering이 말하는 "다음 작업이 더 쉬워진다"가 *프로젝트 간*에도 작동하는 첫 사례
+      - tarosaju가 다른 패턴을 사용하기 때문
+      - 비대칭은 위험하므로 즉시 통일해야 하기 때문
     answer: 1
-    explanation: "비대칭은 *위험 신호*이자 *기회*다. 한쪽이 *이미 만들어둔 검증된 자산*을 다른 쪽으로 옮기는 작업은 처음부터 만드는 것보다 압도적으로 싸다. 시리즈의 다음 사이클 큐가 *자동으로* 이런 비대칭에서 만들어진다."
+    explanation: >-
+      비대칭은 *위험 신호*이자 *기회*다. 한쪽이 *이미 만들어둔 검증된 자산*을 다른 쪽으로 옮기는 작업은 처음부터 만드는 것보다
+      압도적으로 싸다. 시리즈의 다음 사이클 큐가 *자동으로* 이런 비대칭에서 만들어진다.
 ---
 
 ## 왜 이 패턴인가

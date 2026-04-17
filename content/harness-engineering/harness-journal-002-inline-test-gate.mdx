@@ -1,42 +1,80 @@
 ---
-title: "Harness Journal 002 — inline Test Gate, dogfooding 성공, 그리고 squash merge가 만든 두 번째 라이브 사고"
+title: >-
+  Harness Journal 002 — inline Test Gate, dogfooding 성공, 그리고 squash merge가 만든 두
+  번째 라이브 사고
 category: harness-engineering
 series: harness-journal
-date: "2026-04-12"
-tags: [harness-journal, harness-engineering, ci-cd, github-actions, ai-review, git-worktree, dogfooding]
+date: '2026-04-12'
+tags:
+  - harness-journal
+  - harness-engineering
+  - ci-cd
+  - github-actions
+  - ai-review
+  - git-worktree
+  - dogfooding
 confidence: 4
 connections:
   - harness-engineering/harness-journal-000-baseline
   - harness-engineering/harness-journal-001-ci-merge-gate
   - harness-engineering/compound-engineering-philosophy
+  - harness-engineering/harness-journal-003-squash-merge-trap-pattern
+  - harness-engineering/harness-journal-004-wt-branch-command
+  - harness-engineering/harness-journal-011-concurrent-session-safety
+  - harness-engineering/harness-journal-014-hub-auto-merge-inbound-tips
+  - harness-engineering/harness-journal-020-promise-timeout-wrapper
+  - harness-engineering/shell-pipe-exit-code-trap
+  - ios-ai/ios-ai-journal-001-swift-lint-hook
 status: complete
-description: "Journal 001에서 발견한 라이브 사고를 polling 없이 inline 실행으로 해결. 그 PR이 자기 자신을 검증하는 dogfooding에 성공. 그러나 첫 시도에서 squash merge가 만든 또 다른 라이브 사고를 만나고, git worktree로 회피하는 패턴까지 박제."
+description: >-
+  Journal 001에서 발견한 라이브 사고를 polling 없이 inline 실행으로 해결. 그 PR이 자기 자신을 검증하는
+  dogfooding에 성공. 그러나 첫 시도에서 squash merge가 만든 또 다른 라이브 사고를 만나고, git worktree로
+  회피하는 패턴까지 박제.
 type: entry
 quiz:
-  - question: "ai-review.yml에 *inline test gate*를 박는 방식이 *polling 방식*보다 단순한 이유는?"
+  - question: ai-review.yml에 *inline test gate*를 박는 방식이 *polling 방식*보다 단순한 이유는?
     choices:
-      - "polling은 GitHub Actions가 지원하지 않는 패턴이기 때문"
-      - "inline은 step 의존성(이전 fail → 다음 skip)을 그대로 활용하므로 polling 로직, GITHUB_TOKEN 권한 우회, 무한 루프 위험을 모두 제거할 수 있고, 같은 SHA에서 직접 검증하므로 rebase 후 race condition도 없기 때문"
-      - "polling은 GitHub Actions의 기본 기능이라 작성이 쉽지만 비용이 비싸기 때문"
-      - "inline은 vitest와 next build를 *동시*에 실행할 수 있기 때문"
+      - polling은 GitHub Actions가 지원하지 않는 패턴이기 때문
+      - >-
+        inline은 step 의존성(이전 fail → 다음 skip)을 그대로 활용하므로 polling 로직, GITHUB_TOKEN
+        권한 우회, 무한 루프 위험을 모두 제거할 수 있고, 같은 SHA에서 직접 검증하므로 rebase 후 race condition도
+        없기 때문
+      - polling은 GitHub Actions의 기본 기능이라 작성이 쉽지만 비용이 비싸기 때문
+      - inline은 vitest와 next build를 *동시*에 실행할 수 있기 때문
     answer: 1
-    explanation: "inline은 검증 결과가 step.outcome으로 즉시 반영되고, 그 다음 step의 if 조건이 자동으로 success() 함수와 AND되므로 실패 시 자동 skip된다. polling은 별도 워크플로의 check runs를 *기다리는* 복잡도를 추가하는데, GITHUB_TOKEN으로 push된 commit에는 워크플로가 트리거되지 않을 수 있다는 GitHub 보안 동작 때문에 polling이 영원히 timeout되는 edge case가 발생한다."
-  - question: "PR #91이 squash merge 충돌로 close된 진짜 원인은?"
+    explanation: >-
+      inline은 검증 결과가 step.outcome으로 즉시 반영되고, 그 다음 step의 if 조건이 자동으로 success()
+      함수와 AND되므로 실패 시 자동 skip된다. polling은 별도 워크플로의 check runs를 *기다리는* 복잡도를
+      추가하는데, GITHUB_TOKEN으로 push된 commit에는 워크플로가 트리거되지 않을 수 있다는 GitHub 보안 동작 때문에
+      polling이 영원히 timeout되는 edge case가 발생한다.
+  - question: 'PR #91이 squash merge 충돌로 close된 진짜 원인은?'
     choices:
-      - "ai-review.yml의 yaml 문법 오류로 워크플로 자체가 실행되지 않음"
-      - "Journal 001 PR #90이 *squash merge*로 들어가면서 commit history가 압축됐고, 로컬에 남은 *원본 commit(squash 전)*에서 분기한 002 브랜치가 origin/main(squash 후)과 diverge했기 때문"
-      - "main 브랜치 protection rule이 활성화돼서 머지가 차단됨"
-      - "test-gate.yml이 inline test gate와 충돌하는 yaml job 이름을 사용함"
+      - ai-review.yml의 yaml 문법 오류로 워크플로 자체가 실행되지 않음
+      - >-
+        Journal 001 PR #90이 *squash merge*로 들어가면서 commit history가 압축됐고, 로컬에 남은
+        *원본 commit(squash 전)*에서 분기한 002 브랜치가 origin/main(squash 후)과 diverge했기 때문
+      - main 브랜치 protection rule이 활성화돼서 머지가 차단됨
+      - test-gate.yml이 inline test gate와 충돌하는 yaml job 이름을 사용함
     answer: 1
-    explanation: "AI가 자동 squash merge한 직후 *로컬 git 상태*는 그것을 모른다. 로컬 브랜치가 여전히 squash 전 commit을 가리키고 있고, 그 위에 새 브랜치를 분기하면 origin/main과 충돌이 발생한다. 이게 *AI 자동 머지 워크플로의 함정*이다 — 사람이 매번 git fetch + reset to origin/main을 해야 한다."
-  - question: "git worktree가 이 사고에서 결정적 회피 패턴이 된 이유는?"
+    explanation: >-
+      AI가 자동 squash merge한 직후 *로컬 git 상태*는 그것을 모른다. 로컬 브랜치가 여전히 squash 전 commit을
+      가리키고 있고, 그 위에 새 브랜치를 분기하면 origin/main과 충돌이 발생한다. 이게 *AI 자동 머지 워크플로의 함정*이다
+      — 사람이 매번 git fetch + reset to origin/main을 해야 한다.
+  - question: git worktree가 이 사고에서 결정적 회피 패턴이 된 이유는?
     choices:
-      - "git worktree가 git의 표준 명령이라 안정적이기 때문"
-      - "원본 working tree(stale changes 포함)를 전혀 건드리지 않고 *별도 디렉터리*에서 origin/main으로부터 깨끗한 분기를 만들 수 있기 때문. stash·reset·checkout이 만드는 working tree 충돌 위험을 0으로 만든다"
-      - "worktree가 디스크를 절약하기 때문"
-      - "GitHub Actions가 worktree를 자동으로 인식하기 때문"
+      - git worktree가 git의 표준 명령이라 안정적이기 때문
+      - >-
+        원본 working tree(stale changes 포함)를 전혀 건드리지 않고 *별도 디렉터리*에서
+        origin/main으로부터 깨끗한 분기를 만들 수 있기 때문. stash·reset·checkout이 만드는 working
+        tree 충돌 위험을 0으로 만든다
+      - worktree가 디스크를 절약하기 때문
+      - GitHub Actions가 worktree를 자동으로 인식하기 때문
     answer: 1
-    explanation: "moneyflow의 working tree에는 사용자/다른 세션의 stale changes가 잔뜩 있었다. stash나 reset --hard는 그것을 손실시킬 위험이 있다. worktree는 원본을 건드리지 않고 *별도 디렉터리*에 새 작업 공간을 만들어서, 작업이 끝나면 worktree만 제거하면 된다. AI가 다른 사람/세션의 작업과 *충돌하지 않으면서* 자신의 작업을 진행할 수 있는 핵심 패턴."
+    explanation: >-
+      moneyflow의 working tree에는 사용자/다른 세션의 stale changes가 잔뜩 있었다. stash나 reset
+      --hard는 그것을 손실시킬 위험이 있다. worktree는 원본을 건드리지 않고 *별도 디렉터리*에 새 작업 공간을 만들어서,
+      작업이 끝나면 worktree만 제거하면 된다. AI가 다른 사람/세션의 작업과 *충돌하지 않으면서* 자신의 작업을 진행할 수 있는
+      핵심 패턴.
 ---
 
 ## 갭 (Before)

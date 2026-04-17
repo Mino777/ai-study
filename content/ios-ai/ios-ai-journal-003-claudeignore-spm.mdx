@@ -1,14 +1,31 @@
 ---
-title: "iOS Harness Journal 003 — .claudeignore와 SPM 멀티모듈 함정"
+title: iOS Harness Journal 003 — .claudeignore와 SPM 멀티모듈 함정
 category: ios-ai
 series: ios-ai-journal
-date: "2026-04-13"
-tags: [ios-harness-journal, ios, claudeignore, spm, multimodule, tokenomics, context-engineering]
+date: '2026-04-13'
+tags:
+  - ios-harness-journal
+  - ios
+  - claudeignore
+  - spm
+  - multimodule
+  - tokenomics
+  - context-engineering
 confidence: 5
-connections: [ios-ai/ios-ai-journal-002-ios-slash-commands, harness-engineering/wt-branch-structural-safety, tokenomics/claude-code-token-levers-applied-log]
+connections:
+  - ios-ai/ios-ai-journal-002-ios-slash-commands
+  - harness-engineering/wt-branch-structural-safety
+  - tokenomics/claude-code-token-levers-applied-log
+  - context-engineering/claudeignore-context-hygiene
+  - ios-ai/ios-ai-journal-004-ios-triage
+  - ios-ai/ios-ai-journal-006-spm-cycle-break
+  - ios-ai/ios-legacy-to-ai-ready
 status: complete
 type: entry
-description: "SPM 멀티모듈 iOS에서 .claudeignore 없이 Claude를 쓰면 컨텍스트 130GB 폭발. .build/만 ignore하면 99% 놓친다. **/.build/ 글로브 패턴이 필수이고, vendor/ · external-spm/ · *.xcodeproj/까지 함께 차단해야 한다."
+description: >-
+  SPM 멀티모듈 iOS에서 .claudeignore 없이 Claude를 쓰면 컨텍스트 130GB 폭발. .build/만 ignore하면
+  99% 놓친다. **/.build/ 글로브 패턴이 필수이고, vendor/ · external-spm/ · *.xcodeproj/까지 함께
+  차단해야 한다.
 ---
 
 ## 한 줄 요약

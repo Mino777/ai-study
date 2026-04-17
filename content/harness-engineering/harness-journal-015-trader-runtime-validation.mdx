@@ -1,42 +1,72 @@
 ---
-title: "Harness Journal 015 — Trader 런타임 검증 (debate 9 에이전트 중 첫 1개, Zod 재평가)"
+title: 'Harness Journal 015 — Trader 런타임 검증 (debate 9 에이전트 중 첫 1개, Zod 재평가)'
 category: harness-engineering
 series: harness-journal
-date: "2026-04-12"
-tags: [harness-journal, harness-engineering, moneyflow, runtime-validation, trader, debate-agents, zod-decision]
+date: '2026-04-12'
+tags:
+  - harness-journal
+  - harness-engineering
+  - moneyflow
+  - runtime-validation
+  - trader
+  - debate-agents
+  - zod-decision
 confidence: 5
 connections:
   - harness-engineering/harness-journal-012-market-analyst-runtime-validation
   - harness-engineering/harness-journal-013-three-analysts-runtime-validation
   - harness-engineering/ai-output-zod-validation-pattern
+  - harness-engineering/harness-journal-017-final-validators-all-agents
 status: complete
-description: "13 에이전트 validator 진행 5/13 (market + news + sentiment + fundamentals + trader). Journal 013 이후 처음으로 debate 9 에이전트 스코프 진입. Zod 도입 vs type guard 결정 지점에서 /projects-sync 결과 + 4 analyst 패턴 일관성을 근거로 type guard 유지. 가장 단순한 TraderProposal(평면 구조) 먼저 적용."
+description: >-
+  13 에이전트 validator 진행 5/13 (market + news + sentiment + fundamentals + trader).
+  Journal 013 이후 처음으로 debate 9 에이전트 스코프 진입. Zod 도입 vs type guard 결정 지점에서
+  /projects-sync 결과 + 4 analyst 패턴 일관성을 근거로 type guard 유지. 가장 단순한
+  TraderProposal(평면 구조) 먼저 적용.
 type: entry
 quiz:
-  - question: "Journal 013 → 015 사이에 Zod 도입 결정을 *다시* 한 이유는?"
+  - question: Journal 013 → 015 사이에 Zod 도입 결정을 *다시* 한 이유는?
     choices:
-      - "4 analyst를 끝냈으니 새 패턴 시도"
-      - "debate 9 에이전트는 중첩 구조를 포함해서(ResearchDebate의 rounds 배열, RiskDebate의 messages 배열 + var_result 중첩, PortfolioManager의 price_targets 중첩) type guard가 길어질 가능성이 있다. *이 복잡도 증가*가 Zod 도입 가치를 재평가할 만한 트리거"
-      - "요구사항 변경"
-      - "성능 개선"
+      - 4 analyst를 끝냈으니 새 패턴 시도
+      - >-
+        debate 9 에이전트는 중첩 구조를 포함해서(ResearchDebate의 rounds 배열, RiskDebate의
+        messages 배열 + var_result 중첩, PortfolioManager의 price_targets 중첩) type
+        guard가 길어질 가능성이 있다. *이 복잡도 증가*가 Zod 도입 가치를 재평가할 만한 트리거
+      - 요구사항 변경
+      - 성능 개선
     answer: 1
-    explanation: "결정의 *재평가 타이밍*은 복잡도가 *임계점*을 넘을 때. 4 analyst는 평면 구조라 type guard로 충분했지만, debate 에이전트는 중첩 구조가 있어서 Zod의 선언적 표현력이 *진짜로* 가치를 만든다. Journal 015는 이 결정을 *선제적으로* 재평가하는 사이클 — 실제 결정은 이번엔 type guard 유지지만, 다음(Journal 016) 중첩 구조에서 재평가 예정."
-  - question: "이번 사이클에서 type guard를 *유지*하기로 한 3 근거는?"
+    explanation: >-
+      결정의 *재평가 타이밍*은 복잡도가 *임계점*을 넘을 때. 4 analyst는 평면 구조라 type guard로 충분했지만,
+      debate 에이전트는 중첩 구조가 있어서 Zod의 선언적 표현력이 *진짜로* 가치를 만든다. Journal 015는 이 결정을
+      *선제적으로* 재평가하는 사이클 — 실제 결정은 이번엔 type guard 유지지만, 다음(Journal 016) 중첩 구조에서
+      재평가 예정.
+  - question: 이번 사이클에서 type guard를 *유지*하기로 한 3 근거는?
     choices:
-      - "속도, 메모리, 보안"
-      - "(a) /projects-sync 결과 moneyflow 상태가 Journal 012 시점과 거의 동일 (7 active worktree + Conductor la-paz), lock file 편집 위험 지속, (b) 기존 4 analyst와 동일 패턴 유지로 인지 부하 일관성, (c) TraderProposal이 평면 구조라 type guard로 충분 — 재평가는 *다음 중첩 구조 에이전트*에서"
-      - "TypeScript 호환성"
-      - "테스트 용이성"
+      - '속도, 메모리, 보안'
+      - >-
+        (a) /projects-sync 결과 moneyflow 상태가 Journal 012 시점과 거의 동일 (7 active
+        worktree + Conductor la-paz), lock file 편집 위험 지속, (b) 기존 4 analyst와 동일
+        패턴 유지로 인지 부하 일관성, (c) TraderProposal이 평면 구조라 type guard로 충분 — 재평가는 *다음
+        중첩 구조 에이전트*에서
+      - TypeScript 호환성
+      - 테스트 용이성
     answer: 1
-    explanation: "3 근거가 모두 *맥락 기반*. 제약(동시 세션), 일관성(기존 패턴), 구조(TraderProposal 평면)가 각각 독립적으로 Zod 도입을 보류할 이유를 준다. 이게 `/projects-sync`가 만든 실시간 제약 기반 결정의 두 번째 사례."
-  - question: "Trader가 debate 9 중 *첫 1개*로 선정된 기준은?"
+    explanation: >-
+      3 근거가 모두 *맥락 기반*. 제약(동시 세션), 일관성(기존 패턴), 구조(TraderProposal 평면)가 각각 독립적으로
+      Zod 도입을 보류할 이유를 준다. 이게 `/projects-sync`가 만든 실시간 제약 기반 결정의 두 번째 사례.
+  - question: Trader가 debate 9 중 *첫 1개*로 선정된 기준은?
     choices:
-      - "알파벳 순서"
-      - "AgentReport 확장이 없는 가장 단순한 평면 구조 + types.ts에 interface가 명확히 정의돼 있어서 validator 작성이 직선적. 중첩 배열/객체 없이 enum 2개(action, time_horizon) + number 범위(position_size_pct) + 문자열 3개만 체크하면 됨"
-      - "사용 빈도"
-      - "우선순위 요청"
+      - 알파벳 순서
+      - >-
+        AgentReport 확장이 없는 가장 단순한 평면 구조 + types.ts에 interface가 명확히 정의돼 있어서
+        validator 작성이 직선적. 중첩 배열/객체 없이 enum 2개(action, time_horizon) + number
+        범위(position_size_pct) + 문자열 3개만 체크하면 됨
+      - 사용 빈도
+      - 우선순위 요청
     answer: 1
-    explanation: "첫 1개는 *가장 단순한 것*을 고른다. 그래야 *패턴 구현 자체에 집중*하고 나중에 중첩 구조는 별도 사이클에서 깊이 다룰 수 있다. Journal 012의 market_analyst 선정 기준과 동일 원칙."
+    explanation: >-
+      첫 1개는 *가장 단순한 것*을 고른다. 그래야 *패턴 구현 자체에 집중*하고 나중에 중첩 구조는 별도 사이클에서 깊이 다룰 수
+      있다. Journal 012의 market_analyst 선정 기준과 동일 원칙.
 ---
 
 ## 사이클 트리거

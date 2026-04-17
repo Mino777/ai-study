@@ -1,40 +1,64 @@
 ---
-title: "LLM-as-a-Judge — AI 출력 품질 자동 평가 패턴"
+title: LLM-as-a-Judge — AI 출력 품질 자동 평가 패턴
 category: evaluation
-date: "2026-04-12"
-tags: [evaluation, llm-as-judge, quality, moneyflow, tarosaju, observability]
+date: '2026-04-12'
+tags:
+  - evaluation
+  - llm-as-judge
+  - quality
+  - moneyflow
+  - tarosaju
+  - observability
 confidence: 4
 connections:
   - harness-engineering/ai-output-zod-validation-pattern
   - harness-engineering/harness-journal-018-layer3-retry-augmentation
+  - evaluation/ai-output-5-layer-defense
 status: complete
-description: "AI 출력의 shape은 validator로 검증하지만, *내용의 품질*은 별도 LLM이 판정해야 한다. 저렴한 LLM(Gemini Flash / Claude Haiku)으로 도메인별 평가 차원을 정의하고 fire-and-forget으로 채점. moneyflow(투자 분석)와 tarosaju(운세/타로) 두 프로젝트에 적용."
+description: >-
+  AI 출력의 shape은 validator로 검증하지만, *내용의 품질*은 별도 LLM이 판정해야 한다. 저렴한 LLM(Gemini
+  Flash / Claude Haiku)으로 도메인별 평가 차원을 정의하고 fire-and-forget으로 채점. moneyflow(투자
+  분석)와 tarosaju(운세/타로) 두 프로젝트에 적용.
 type: entry
 quiz:
-  - question: "LLM-as-a-Judge가 runtime validator(Layer 1-4)와 다른 점은?"
+  - question: LLM-as-a-Judge가 runtime validator(Layer 1-4)와 다른 점은?
     choices:
-      - "더 비싸다"
-      - "validator는 *구조(shape)*를 검증하고, judge는 *내용(quality)*을 평가한다. validator는 'confidence가 0-100 숫자인가?'를 보지만, judge는 '이 confidence 72가 데이터 근거에 비해 적절한가?'를 본다"
-      - "더 느리다"
-      - "validator를 대체한다"
+      - 더 비싸다
+      - >-
+        validator는 *구조(shape)*를 검증하고, judge는 *내용(quality)*을 평가한다. validator는
+        'confidence가 0-100 숫자인가?'를 보지만, judge는 '이 confidence 72가 데이터 근거에 비해
+        적절한가?'를 본다
+      - 더 느리다
+      - validator를 대체한다
     answer: 1
-    explanation: "Layer 1-4(파싱 → 검증 → retry → augmentation)는 구조적 정합성 보장. Judge는 그 위에 의미적 품질을 채점하는 별도 레이어. 둘은 대체가 아니라 보완 관계."
-  - question: "Judge를 fire-and-forget으로 실행하는 이유는?"
+    explanation: >-
+      Layer 1-4(파싱 → 검증 → retry → augmentation)는 구조적 정합성 보장. Judge는 그 위에 의미적 품질을
+      채점하는 별도 레이어. 둘은 대체가 아니라 보완 관계.
+  - question: Judge를 fire-and-forget으로 실행하는 이유는?
     choices:
-      - "코드가 단순해서"
-      - "Judge 결과가 사용자 응답에 영향을 주지 않으므로 — 판정은 이미 끝났고 judge는 *사후 품질 기록*. 실패해도 분석 결과에 영향 없고, 성공하면 품질 데이터가 쌓여서 추후 프롬프트 개선/A/B 테스트의 근거가 됨"
-      - "API 비용 절감"
-      - "에러 핸들링 불필요"
+      - 코드가 단순해서
+      - >-
+        Judge 결과가 사용자 응답에 영향을 주지 않으므로 — 판정은 이미 끝났고 judge는 *사후 품질 기록*. 실패해도 분석
+        결과에 영향 없고, 성공하면 품질 데이터가 쌓여서 추후 프롬프트 개선/A/B 테스트의 근거가 됨
+      - API 비용 절감
+      - 에러 핸들링 불필요
     answer: 1
-    explanation: "Judge는 관측(observability) 레이어. 분석 파이프라인의 critical path에 넣으면 latency만 늘어나고 사용자 경험에 도움이 안 됨. fire-and-forget + error swallow로 zero-impact 보장."
-  - question: "도메인별 평가 차원이 다른 이유는?"
+    explanation: >-
+      Judge는 관측(observability) 레이어. 분석 파이프라인의 critical path에 넣으면 latency만 늘어나고
+      사용자 경험에 도움이 안 됨. fire-and-forget + error swallow로 zero-impact 보장.
+  - question: 도메인별 평가 차원이 다른 이유는?
     choices:
-      - "프로젝트가 다르니까"
-      - "같은 '품질'이라도 도메인마다 중요한 축이 다르다. 투자 분석은 data_accuracy(정량적 근거)가 30%로 가장 중요하지만, 운세/타로는 empathy(공감 어투)와 safety(위험 발언 배제)가 핵심. 하나의 범용 평가 기준으로는 도메인 특수 품질을 측정할 수 없다"
-      - "API가 다르니까"
-      - "비용 최적화"
+      - 프로젝트가 다르니까
+      - >-
+        같은 '품질'이라도 도메인마다 중요한 축이 다르다. 투자 분석은 data_accuracy(정량적 근거)가 30%로 가장
+        중요하지만, 운세/타로는 empathy(공감 어투)와 safety(위험 발언 배제)가 핵심. 하나의 범용 평가 기준으로는 도메인
+        특수 품질을 측정할 수 없다
+      - API가 다르니까
+      - 비용 최적화
     answer: 1
-    explanation: "Judge 프롬프트의 평가 차원 = 도메인 전문가가 '이게 좋은 결과인가?'를 판단할 때 보는 기준. 투자 분석가와 타로 상담사는 완전히 다른 기준으로 품질을 판단한다."
+    explanation: >-
+      Judge 프롬프트의 평가 차원 = 도메인 전문가가 '이게 좋은 결과인가?'를 판단할 때 보는 기준. 투자 분석가와 타로 상담사는
+      완전히 다른 기준으로 품질을 판단한다.
 ---
 
 ## 핵심 개념

@@ -1,41 +1,66 @@
 ---
-title: "AI 운영 환경 진단 체크리스트 — 30분 안에 자기 환경 점검"
+title: AI 운영 환경 진단 체크리스트 — 30분 안에 자기 환경 점검
 category: harness-engineering
-date: "2026-04-12"
-tags: [harness-engineering, ai-ops, diagnosis, checklist, transferable-pattern, audit]
+date: '2026-04-12'
+tags:
+  - harness-engineering
+  - ai-ops
+  - diagnosis
+  - checklist
+  - transferable-pattern
+  - audit
 confidence: 4
 connections:
   - harness-engineering/harness-journal-000-baseline
   - harness-engineering/harness-journal-bootstrap-guide
   - harness-engineering/compound-engineering-philosophy
+  - harness-engineering/ai-agent-start-here
+  - harness-engineering/aidy-journal-006-ios-ci-self-hosted-runner-migration
+  - harness-engineering/dev-setup-tips-log
+  - tokenomics/claude-code-token-levers-catalog
 status: complete
-description: "어떤 프로젝트든 자기 AI 운영 환경의 강점과 갭을 30분 안에 진단할 수 있는 체크리스트. Journal 000 베이스라인 구조를 *재사용 가능한 진단 도구*로 응축한 것."
+description: >-
+  어떤 프로젝트든 자기 AI 운영 환경의 강점과 갭을 30분 안에 진단할 수 있는 체크리스트. Journal 000 베이스라인 구조를 *재사용
+  가능한 진단 도구*로 응축한 것.
 type: entry
 quiz:
-  - question: "이 진단 체크리스트가 *Journal 000 베이스라인 작성*과 다른 점은?"
+  - question: 이 진단 체크리스트가 *Journal 000 베이스라인 작성*과 다른 점은?
     choices:
-      - "체크리스트는 더 짧다"
-      - "베이스라인은 *작성하는 데 1-2시간 + 사람마다 형식이 다를 수 있는 자유 형식*. 체크리스트는 *30분 + 표준 점수*. 베이스라인은 *시리즈의 출발점*이고 체크리스트는 *시리즈 시작 여부 자체를 결정*하는 빠른 점검"
-      - "체크리스트는 자동으로 채점된다"
-      - "체크리스트는 코드 변경을 자동 생성한다"
+      - 체크리스트는 더 짧다
+      - >-
+        베이스라인은 *작성하는 데 1-2시간 + 사람마다 형식이 다를 수 있는 자유 형식*. 체크리스트는 *30분 + 표준 점수*.
+        베이스라인은 *시리즈의 출발점*이고 체크리스트는 *시리즈 시작 여부 자체를 결정*하는 빠른 점검
+      - 체크리스트는 자동으로 채점된다
+      - 체크리스트는 코드 변경을 자동 생성한다
     answer: 1
-    explanation: "체크리스트는 *진단의 진단* — 빠른 점검으로 *시리즈를 시작할 가치가 있는지*를 먼저 결정한다. 점수가 낮으면 시리즈 가치가 큼, 점수가 매우 높으면 다른 영역에 시간을 쓰는 게 나을 수 있음. 베이스라인 박제 *전 단계*."
-  - question: "10개 영역 중 *가장 자주 무시되는 영역*은? (저자의 관찰)"
+    explanation: >-
+      체크리스트는 *진단의 진단* — 빠른 점검으로 *시리즈를 시작할 가치가 있는지*를 먼저 결정한다. 점수가 낮으면 시리즈 가치가 큼,
+      점수가 매우 높으면 다른 영역에 시간을 쓰는 게 나을 수 있음. 베이스라인 박제 *전 단계*.
+  - question: 10개 영역 중 *가장 자주 무시되는 영역*은? (저자의 관찰)
     choices:
-      - "테스트 게이트"
-      - "**메모리/세션 연속성** — 매 세션이 *처음부터* 시작하면 같은 작업을 반복. CLAUDE.md 또는 메모리 파일이 없으면 AI는 매 세션 *어제 한 일을 모른다*"
-      - "GitHub Actions"
-      - "비용 추적"
+      - 테스트 게이트
+      - >-
+        **메모리/세션 연속성** — 매 세션이 *처음부터* 시작하면 같은 작업을 반복. CLAUDE.md 또는 메모리 파일이 없으면
+        AI는 매 세션 *어제 한 일을 모른다*
+      - GitHub Actions
+      - 비용 추적
     answer: 1
-    explanation: "메모리/세션 연속성은 *눈에 보이지 않는다*. 메모리 없는 시스템도 매 세션이 *작동은 한다*. 그러나 같은 사고를 N번 반복하고, 어제의 결정을 오늘 다시 내린다. 측정 어려운 결함이라 가장 자주 무시된다."
-  - question: "이 체크리스트의 *총 점수가 매우 높은(45/50+) 환경*에서 *다음 우선순위*는?"
+    explanation: >-
+      메모리/세션 연속성은 *눈에 보이지 않는다*. 메모리 없는 시스템도 매 세션이 *작동은 한다*. 그러나 같은 사고를 N번 반복하고,
+      어제의 결정을 오늘 다시 내린다. 측정 어려운 결함이라 가장 자주 무시된다.
+  - question: 이 체크리스트의 *총 점수가 매우 높은(45/50+) 환경*에서 *다음 우선순위*는?
     choices:
-      - "더 많은 자동화 추가"
-      - "점수 100을 향해 더 박차"
-      - "*점수가 아직 안 잡는 새 차원*을 발견하는 것 — 체크리스트 자체를 갱신. 이 체크리스트는 *현시점 베이스라인*이고, 진짜 고도화는 *측정되지 않던 차원*에서 일어남"
-      - "다른 프로젝트로 이식"
+      - 더 많은 자동화 추가
+      - 점수 100을 향해 더 박차
+      - >-
+        *점수가 아직 안 잡는 새 차원*을 발견하는 것 — 체크리스트 자체를 갱신. 이 체크리스트는 *현시점 베이스라인*이고, 진짜
+        고도화는 *측정되지 않던 차원*에서 일어남
+      - 다른 프로젝트로 이식
     answer: 2
-    explanation: "체크리스트는 *알려진 차원*만 측정한다. 점수가 높다는 것은 *알려진 차원에서 잘 함*이라는 뜻이지 *모든 차원에서 잘 함*이 아니다. 진짜 고도화는 *체크리스트가 잡지 못하는 차원*을 발견하는 것 — 그게 바로 [Harness Journal](/harness-journal) 시리즈의 본질."
+    explanation: >-
+      체크리스트는 *알려진 차원*만 측정한다. 점수가 높다는 것은 *알려진 차원에서 잘 함*이라는 뜻이지 *모든 차원에서 잘 함*이
+      아니다. 진짜 고도화는 *체크리스트가 잡지 못하는 차원*을 발견하는 것 — 그게 바로 [Harness
+      Journal](/harness-journal) 시리즈의 본질.
 ---
 
 ## 왜 진단인가

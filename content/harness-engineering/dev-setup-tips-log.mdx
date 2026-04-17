@@ -1,40 +1,67 @@
 ---
-title: "Dev Setup Tips 로그 — 작은 환경 셋업 박제"
+title: Dev Setup Tips 로그 — 작은 환경 셋업 박제
 category: harness-engineering
-date: "2026-04-12"
-tags: [dev-setup, claude-code, vscode, terminal, env, living-document, append-only]
+date: '2026-04-12'
+tags:
+  - dev-setup
+  - claude-code
+  - vscode
+  - terminal
+  - env
+  - living-document
+  - append-only
 confidence: 5
 connections:
   - harness-engineering/ai-ops-environment-diagnosis-checklist
   - harness-engineering/harness-engineering-overview
+  - harness-engineering/harness-journal-014-hub-auto-merge-inbound-tips
+  - harness-engineering/harness-journal-019-mcapp-cross-session-cleanup
+  - harness-engineering/harness-journal-022-qa-gate-exit-code-trap
+  - harness-engineering/security-hardening-checklist
+  - tokenomics/claude-code-token-levers-applied-log
+  - tokenomics/claude-code-token-levers-catalog
 status: complete
-description: "세션 하나짜리로 지나쳐버리기 쉬운 '작은 셋업 팁'들을 한 엔트리에 누적. 터미널 스크롤 점프, CLAUDE.md 크기 초과 같은 QoL 수정을 발견한 날짜 기준으로 박제. 새 팁은 섹션 단위 append-only."
+description: >-
+  세션 하나짜리로 지나쳐버리기 쉬운 '작은 셋업 팁'들을 한 엔트리에 누적. 터미널 스크롤 점프, CLAUDE.md 크기 초과 같은 QoL
+  수정을 발견한 날짜 기준으로 박제. 새 팁은 섹션 단위 append-only.
 type: entry
 quiz:
-  - question: "이 로그가 Harness Journal 시리즈와 *별도*로 존재하는 이유는?"
+  - question: 이 로그가 Harness Journal 시리즈와 *별도*로 존재하는 이유는?
     choices:
-      - "카테고리가 달라서"
-      - "Journal은 1 사이클 = 1 엔트리라는 서사 단위인데, 자잘한 환경 팁은 사이클을 이루지 않는 *단발성 QoL 수정*이라 묶일 곳이 없었다 — 잃어버리면 다시 30분씩 검색하게 된다"
-      - "작성자가 달라서"
-      - "AI가 못 읽어서"
+      - 카테고리가 달라서
+      - >-
+        Journal은 1 사이클 = 1 엔트리라는 서사 단위인데, 자잘한 환경 팁은 사이클을 이루지 않는 *단발성 QoL 수정*이라
+        묶일 곳이 없었다 — 잃어버리면 다시 30분씩 검색하게 된다
+      - 작성자가 달라서
+      - AI가 못 읽어서
     answer: 1
-    explanation: "Journal은 서사형(why → what → lesson), 이 로그는 카탈로그형(증상 → 수정 → 검증). 단위가 다르기 때문에 같은 엔트리에 섞으면 양쪽 다 읽기 어려워진다. 분리해서 append-only 로그로 관리하는 게 정답."
-  - question: "`CLAUDE_CODE_NO_FLICKER=1`이 단순히 깜빡임만 고치는 게 아닌 이유는?"
+    explanation: >-
+      Journal은 서사형(why → what → lesson), 이 로그는 카탈로그형(증상 → 수정 → 검증). 단위가 다르기 때문에
+      같은 엔트리에 섞으면 양쪽 다 읽기 어려워진다. 분리해서 append-only 로그로 관리하는 게 정답.
+  - question: '`CLAUDE_CODE_NO_FLICKER=1`이 단순히 깜빡임만 고치는 게 아닌 이유는?'
     choices:
-      - "메모리 사용량 증가"
-      - "alternate screen(전체 화면) 렌더링 경로로 전환되면서 *스크롤 위치 보존*과 메모리 절감도 같이 따라온다 — 깜빡임은 부수 효과 중 하나"
-      - "로그 저장 기능"
-      - "프롬프트 캐싱 활성화"
+      - 메모리 사용량 증가
+      - >-
+        alternate screen(전체 화면) 렌더링 경로로 전환되면서 *스크롤 위치 보존*과 메모리 절감도 같이 따라온다 —
+        깜빡임은 부수 효과 중 하나
+      - 로그 저장 기능
+      - 프롬프트 캐싱 활성화
     answer: 1
-    explanation: "이름은 no-flicker지만 실질은 '전통적 라인 추가 방식' → 'alternate screen 모드'로의 렌더링 경로 전환. 이 경로가 스크롤 튐, 깜빡임, 불필요한 리드로우를 모두 한 번에 해결한다. 이름만 보고 판단하면 안 되는 env var의 전형."
-  - question: "CLAUDE.md가 40k를 넘었을 때 *그냥 줄이지 말고* `docs/FEATURES.md`로 추출하는 이유는?"
+    explanation: >-
+      이름은 no-flicker지만 실질은 '전통적 라인 추가 방식' → 'alternate screen 모드'로의 렌더링 경로 전환. 이
+      경로가 스크롤 튐, 깜빡임, 불필요한 리드로우를 모두 한 번에 해결한다. 이름만 보고 판단하면 안 되는 env var의 전형.
+  - question: CLAUDE.md가 40k를 넘었을 때 *그냥 줄이지 말고* `docs/FEATURES.md`로 추출하는 이유는?
     choices:
-      - "파일 수 제한"
-      - "기능 상세는 *모든 세션*에 필요한 게 아니라 *해당 모듈을 건드릴 때만* 필요하다 — on-demand 로드로 분리하면 CLAUDE.md의 신호/잡음 비율이 올라가고 매 세션 컨텍스트 비용이 내려간다"
-      - "GitHub 파일 크기 제한"
-      - "Markdown 렌더 성능"
+      - 파일 수 제한
+      - >-
+        기능 상세는 *모든 세션*에 필요한 게 아니라 *해당 모듈을 건드릴 때만* 필요하다 — on-demand 로드로 분리하면
+        CLAUDE.md의 신호/잡음 비율이 올라가고 매 세션 컨텍스트 비용이 내려간다
+      - GitHub 파일 크기 제한
+      - Markdown 렌더 성능
     answer: 1
-    explanation: "CLAUDE.md는 *자동 로드*되는 컨텍스트, docs/*.md는 *참조 시 로드*되는 컨텍스트. 세션마다 한 번씩 읽힐 정보와 필요할 때만 읽힐 정보를 같은 파일에 두면 비용은 전자 기준으로 계산된다. 쪼개기는 단순히 크기 줄이기가 아니라 *로딩 시점 분리*."
+    explanation: >-
+      CLAUDE.md는 *자동 로드*되는 컨텍스트, docs/*.md는 *참조 시 로드*되는 컨텍스트. 세션마다 한 번씩 읽힐 정보와
+      필요할 때만 읽힐 정보를 같은 파일에 두면 비용은 전자 기준으로 계산된다. 쪼개기는 단순히 크기 줄이기가 아니라 *로딩 시점 분리*.
 ---
 
 ## 목적

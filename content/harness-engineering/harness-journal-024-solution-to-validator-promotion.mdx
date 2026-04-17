@@ -1,43 +1,65 @@
 ---
-title: "Harness Journal 024 — 솔루션을 Validator Warning으로 승격하는 사이클 (Mermaid 4번째 재발)"
+title: Harness Journal 024 — 솔루션을 Validator Warning으로 승격하는 사이클 (Mermaid 4번째 재발)
 category: harness-engineering
 series: harness-journal
-date: "2026-04-16"
-tags: [harness-journal, mermaid, validator, solution-promotion, regression-test, idempotency]
+date: '2026-04-16'
+tags:
+  - harness-journal
+  - mermaid
+  - validator
+  - solution-promotion
+  - regression-test
+  - idempotency
 confidence: 4
 connections:
   - harness-engineering/harness-journal-019-mcapp-cross-session-cleanup
   - harness-engineering/compound-engineering-philosophy
   - harness-engineering/harness-engineering-overview
   - evaluation/numeric-execution-evidence
+  - harness-engineering/harness-journal-025-jit-retrieval-poc-phase1
 status: complete
-description: "Mermaid 노드 라벨 따옴표 누락이 4번째 재발. 그동안 docs/solutions/ 에 박제만 했던 패턴을 validator warning 으로 승격 — 빌드 한 번에 잠재 함정 9건 즉시 발견. solution → validator 승격 자체를 패턴으로 박제."
+description: >-
+  Mermaid 노드 라벨 따옴표 누락이 4번째 재발. 그동안 docs/solutions/ 에 박제만 했던 패턴을 validator
+  warning 으로 승격 — 빌드 한 번에 잠재 함정 9건 즉시 발견. solution → validator 승격 자체를 패턴으로 박제.
 type: entry
 quiz:
-  - question: "Solution 문서를 validator warning 으로 승격하는 트리거 조건은?"
+  - question: Solution 문서를 validator warning 으로 승격하는 트리거 조건은?
     choices:
-      - "솔루션 문서가 1건이라도 박제된 직후"
-      - "동일 패턴이 N번 재발 (이번 사례는 4번째). 1~2번은 'docs/solutions에 기록' 으로 충분하지만, 3+번은 '재발이 시스템화됐다'는 신호 — 사람 기억 대신 코드 가드로 승격"
-      - "사용자 명시 요청"
-      - "프로덕션 사고 발생"
+      - 솔루션 문서가 1건이라도 박제된 직후
+      - >-
+        동일 패턴이 N번 재발 (이번 사례는 4번째). 1~2번은 'docs/solutions에 기록' 으로 충분하지만, 3+번은
+        '재발이 시스템화됐다'는 신호 — 사람 기억 대신 코드 가드로 승격
+      - 사용자 명시 요청
+      - 프로덕션 사고 발생
     answer: 1
-    explanation: "Compound Engineering 원칙: '같은 실수 두 번 안 하기는 사람 기억이 아니라 시스템 규칙'. 1~2번은 솔루션 문서로 충분하지만 N=3+ 부터는 검출 비용이 누적되므로 validator/훅으로 행동 레벨 가드 필요."
-  - question: "이번 mermaid warning 을 auto-fix 가 아닌 warning-only 로 구현한 이유는?"
+    explanation: >-
+      Compound Engineering 원칙: '같은 실수 두 번 안 하기는 사람 기억이 아니라 시스템 규칙'. 1~2번은 솔루션
+      문서로 충분하지만 N=3+ 부터는 검출 비용이 누적되므로 validator/훅으로 행동 레벨 가드 필요.
+  - question: 이번 mermaid warning 을 auto-fix 가 아닌 warning-only 로 구현한 이유는?
     choices:
-      - "구현이 단순해서"
-      - "shape 다양성(cylinder · rhombus · circle)으로 정규식 false positive 위험 + 자동 수정 도구 신뢰 X memory rule + idempotency 보장 부담. 사람이 보고 수동 수정하도록 경고만 띄우는 게 안전"
-      - "성능 때문에"
-      - "테스트 작성이 쉬워서"
+      - 구현이 단순해서
+      - >-
+        shape 다양성(cylinder · rhombus · circle)으로 정규식 false positive 위험 + 자동 수정
+        도구 신뢰 X memory rule + idempotency 보장 부담. 사람이 보고 수동 수정하도록 경고만 띄우는 게 안전
+      - 성능 때문에
+      - 테스트 작성이 쉬워서
     answer: 1
-    explanation: "Bug 2 의 교훈: 정규식 auto-fix 가 idempotency 깨지면 매 실행마다 따옴표가 누적되어 파일 손상. cylinder `[(label)]` · rhombus `{label}` 처럼 shape 다양성까지 고려하면 자동 수정 위험 증가. warning-only 는 이 모든 위험을 우회."
-  - question: "vitest 회귀 테스트에서 idempotency 검증이 별도 케이스로 들어간 이유는?"
+    explanation: >-
+      Bug 2 의 교훈: 정규식 auto-fix 가 idempotency 깨지면 매 실행마다 따옴표가 누적되어 파일 손상.
+      cylinder `[(label)]` · rhombus `{label}` 처럼 shape 다양성까지 고려하면 자동 수정 위험 증가.
+      warning-only 는 이 모든 위험을 우회.
+  - question: vitest 회귀 테스트에서 idempotency 검증이 별도 케이스로 들어간 이유는?
     choices:
-      - "테스트 커버리지 숫자를 늘리려고"
-      - "Bug 2(따옴표 누적 손상)의 트라우마. 새 정규식이 추가될 때마다 '이미 처리된 입력에 다시 실행해도 결과 동일'을 별도 검증해야 같은 사고 재발 방지"
-      - "vitest 가 요구해서"
-      - "관행"
+      - 테스트 커버리지 숫자를 늘리려고
+      - >-
+        Bug 2(따옴표 누적 손상)의 트라우마. 새 정규식이 추가될 때마다 '이미 처리된 입력에 다시 실행해도 결과 동일'을 별도
+        검증해야 같은 사고 재발 방지
+      - vitest 가 요구해서
+      - 관행
     answer: 1
-    explanation: "정규식 변경은 silent 손상 위험이 가장 큰 변경 유형. '5회 실행해도 결과 동일' 같은 idempotency 케이스를 별도로 검증하지 않으면, 미래의 누군가가 정규식을 수정할 때 누적 손상을 다시 도입할 수 있다."
+    explanation: >-
+      정규식 변경은 silent 손상 위험이 가장 큰 변경 유형. '5회 실행해도 결과 동일' 같은 idempotency 케이스를 별도로
+      검증하지 않으면, 미래의 누군가가 정규식을 수정할 때 누적 손상을 다시 도입할 수 있다.
 ---
 
 ## Before — 솔루션은 박제했지만 가드는 없었다

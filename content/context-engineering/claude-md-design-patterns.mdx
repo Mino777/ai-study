@@ -1,42 +1,56 @@
 ---
-title: "CLAUDE.md 설계 패턴 — 에이전트에게 프로젝트를 가르치는 법"
+title: CLAUDE.md 설계 패턴 — 에이전트에게 프로젝트를 가르치는 법
 category: context-engineering
-date: "2026-04-15"
-tags: [context-engineering, claude-md, project-context, onboarding, best-practices]
+date: '2026-04-15'
+tags:
+  - context-engineering
+  - claude-md
+  - project-context
+  - onboarding
+  - best-practices
 confidence: 5
 connections:
   - context-engineering/context-engineering-fundamentals
   - context-engineering/claudeignore-context-hygiene
   - harness-engineering/ai-agent-start-here
   - harness-engineering/llm-first-wiki-principles
+  - context-engineering/api-contract-as-3-client-source-of-truth
 status: complete
-description: "CLAUDE.md는 매 턴 로드되는 프로젝트의 뇌. 500줄 이하로 핵심만, 상세는 슬래시 커맨드로 분리. 3개 프로젝트에서 검증된 구조 템플릿 + 안티패턴."
+description: >-
+  CLAUDE.md는 매 턴 로드되는 프로젝트의 뇌. 500줄 이하로 핵심만, 상세는 슬래시 커맨드로 분리. 3개 프로젝트에서 검증된 구조
+  템플릿 + 안티패턴.
 type: entry
 quiz:
-  - question: "CLAUDE.md를 500줄 이하로 유지해야 하는 이유는?"
+  - question: CLAUDE.md를 500줄 이하로 유지해야 하는 이유는?
     choices:
-      - "파일 크기 제한이 있어서"
-      - "매 턴 컨텍스트에 로드되므로 과도하면 중요한 지시가 희석되고 토큰이 낭비되어서"
-      - "Git diff가 커져서"
-      - "읽기 어려워서"
+      - 파일 크기 제한이 있어서
+      - 매 턴 컨텍스트에 로드되므로 과도하면 중요한 지시가 희석되고 토큰이 낭비되어서
+      - Git diff가 커져서
+      - 읽기 어려워서
     answer: 1
-    explanation: "Claude Code는 매 턴마다 CLAUDE.md 전체를 컨텍스트에 로드한다. 1000줄짜리 CLAUDE.md는 매 턴 수천 토큰을 소비하면서 핵심 지시를 희석시킨다."
-  - question: "CLAUDE.md에 '절대 금지' 섹션이 필요한 이유는?"
+    explanation: >-
+      Claude Code는 매 턴마다 CLAUDE.md 전체를 컨텍스트에 로드한다. 1000줄짜리 CLAUDE.md는 매 턴 수천 토큰을
+      소비하면서 핵심 지시를 희석시킨다.
+  - question: CLAUDE.md에 '절대 금지' 섹션이 필요한 이유는?
     choices:
-      - "에이전트가 반항하지 않도록"
-      - "에이전트가 '도움을 주려고' 위험한 파일(pbxproj, .env, migration)을 수정하는 것을 사전 차단하기 위해"
-      - "법적 요구사항이라서"
-      - "코드 스타일 통일을 위해"
+      - 에이전트가 반항하지 않도록
+      - '에이전트가 ''도움을 주려고'' 위험한 파일(pbxproj, .env, migration)을 수정하는 것을 사전 차단하기 위해'
+      - 법적 요구사항이라서
+      - 코드 스타일 통일을 위해
     answer: 1
-    explanation: "AI 에이전트는 기본적으로 '도움이 되려는' 경향이 있어서 pbxproj 수정, migration 실행 등 위험한 작업도 시도할 수 있다. 명시적 금지 목록이 이를 차단한다."
-  - question: "CLAUDE.md에 넣지 말아야 하는 것은?"
+    explanation: >-
+      AI 에이전트는 기본적으로 '도움이 되려는' 경향이 있어서 pbxproj 수정, migration 실행 등 위험한 작업도 시도할 수
+      있다. 명시적 금지 목록이 이를 차단한다.
+  - question: CLAUDE.md에 넣지 말아야 하는 것은?
     choices:
-      - "아키텍처 패턴"
-      - "배포 흐름"
-      - "모든 API 엔드포인트의 상세 스펙과 파라미터 목록"
-      - "금지 패턴"
+      - 아키텍처 패턴
+      - 배포 흐름
+      - 모든 API 엔드포인트의 상세 스펙과 파라미터 목록
+      - 금지 패턴
     answer: 2
-    explanation: "API 상세 스펙은 코드 자체에서 읽을 수 있는 정보다. CLAUDE.md에는 코드에서 읽을 수 없는 것(아키텍처 결정의 이유, 금지 패턴, 배포 절차)만 넣는다."
+    explanation: >-
+      API 상세 스펙은 코드 자체에서 읽을 수 있는 정보다. CLAUDE.md에는 코드에서 읽을 수 없는 것(아키텍처 결정의 이유, 금지
+      패턴, 배포 절차)만 넣는다.
 ---
 
 ## 한 줄 요약

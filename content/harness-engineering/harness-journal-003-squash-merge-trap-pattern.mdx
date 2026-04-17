@@ -1,42 +1,74 @@
 ---
-title: "Harness Journal 003 — squash merge 함정의 두 번째 라이브 입증, 그리고 시스템 차원 회피 메커니즘 제안"
+title: 'Harness Journal 003 — squash merge 함정의 두 번째 라이브 입증, 그리고 시스템 차원 회피 메커니즘 제안'
 category: harness-engineering
 series: harness-journal
-date: "2026-04-12"
-tags: [harness-journal, harness-engineering, git-worktree, squash-merge, multi-session, ai-ops]
+date: '2026-04-12'
+tags:
+  - harness-journal
+  - harness-engineering
+  - git-worktree
+  - squash-merge
+  - multi-session
+  - ai-ops
 confidence: 4
 connections:
   - harness-engineering/harness-journal-000-baseline
   - harness-engineering/harness-journal-001-ci-merge-gate
   - harness-engineering/harness-journal-002-inline-test-gate
+  - harness-engineering/harness-journal-004-wt-branch-command
+  - harness-engineering/harness-journal-005-wt-branch-dogfooding-and-transfer
+  - harness-engineering/harness-journal-011-concurrent-session-safety
+  - harness-engineering/harness-journal-021-github-token-deploy-chain-gap
+  - harness-engineering/multi-session-ai-ops-patterns
+  - harness-engineering/wt-branch-structural-safety
 status: complete
-description: "Journal 002에서 박제한 squash merge 함정이 다른 세션에서 즉시 두 번째 라이브 사고로 재현됨. 같은 패턴의 두 번 라이브 발생은 우연이 아닌 시스템적 결함이라는 강력한 신호. 회피 메커니즘 4가지 제안과 다음 구현 사이클의 큐 정의."
+description: >-
+  Journal 002에서 박제한 squash merge 함정이 다른 세션에서 즉시 두 번째 라이브 사고로 재현됨. 같은 패턴의 두 번 라이브
+  발생은 우연이 아닌 시스템적 결함이라는 강력한 신호. 회피 메커니즘 4가지 제안과 다음 구현 사이클의 큐 정의.
 type: entry
 quiz:
-  - question: "Journal 002의 함정이 *다른 세션에서* 두 번째로 발생한 것이 *우연이 아닌 패턴*인 이유는?"
+  - question: Journal 002의 함정이 *다른 세션에서* 두 번째로 발생한 것이 *우연이 아닌 패턴*인 이유는?
     choices:
-      - "두 사고 모두 같은 사람이 같은 시간대에 작업했기 때문"
-      - "AI 자동 squash merge 환경에서 *로컬 git 상태와 origin이 갈라지는 것*이 시스템 기본값이고, 그 갭을 *사람이 매번 fetch + reset으로 메워야* 하는데, 사람의 기억력 의존은 100% 실패하기 때문. 사고 발생 확률이 0이 아니라 *시간 함수*"
-      - "GitHub Actions의 race condition 때문"
-      - "ai-review.yml의 yaml 문법이 잘못되었기 때문"
+      - 두 사고 모두 같은 사람이 같은 시간대에 작업했기 때문
+      - >-
+        AI 자동 squash merge 환경에서 *로컬 git 상태와 origin이 갈라지는 것*이 시스템 기본값이고, 그 갭을
+        *사람이 매번 fetch + reset으로 메워야* 하는데, 사람의 기억력 의존은 100% 실패하기 때문. 사고 발생 확률이 0이
+        아니라 *시간 함수*
+      - GitHub Actions의 race condition 때문
+      - ai-review.yml의 yaml 문법이 잘못되었기 때문
     answer: 1
-    explanation: "Journal 001/002 사이클을 쓰면서 박제했던 함정이 다른 세션에서 *즉시* 재현됐다는 것은, 이 사고가 시간을 두고 무작위로 발생하는 게 아니라 *환경 구조 자체에 박혀 있는 결함*임을 입증한다. 시스템 차원의 회피 메커니즘이 없으면 N번 더 발생할 것."
-  - question: "이 사고를 *내가 자율로 cherry-pick으로 정리하지 않은 이유*는?"
+    explanation: >-
+      Journal 001/002 사이클을 쓰면서 박제했던 함정이 다른 세션에서 *즉시* 재현됐다는 것은, 이 사고가 시간을 두고 무작위로
+      발생하는 게 아니라 *환경 구조 자체에 박혀 있는 결함*임을 입증한다. 시스템 차원의 회피 메커니즘이 없으면 N번 더 발생할 것.
+  - question: 이 사고를 *내가 자율로 cherry-pick으로 정리하지 않은 이유*는?
     choices:
-      - "cherry-pick이 GitHub Actions에서 지원되지 않기 때문"
-      - "v0.9.12 cherry-pick 시 CHANGELOG/VERSION/package.json/Sidebar.tsx 4개 파일에 충돌이 발생했고, 충돌 해결은 *코드 결정*(예: Sidebar.tsx의 UI 결정)이라 사용자/다른 세션의 의도를 모르는 채로 임의 처리하면 작업 손상 위험이 있기 때문"
-      - "worktree 명령이 거부됐기 때문"
-      - "PR #93의 다른 commits이 너무 많기 때문"
+      - cherry-pick이 GitHub Actions에서 지원되지 않기 때문
+      - >-
+        v0.9.12 cherry-pick 시 CHANGELOG/VERSION/package.json/Sidebar.tsx 4개 파일에
+        충돌이 발생했고, 충돌 해결은 *코드 결정*(예: Sidebar.tsx의 UI 결정)이라 사용자/다른 세션의 의도를 모르는 채로
+        임의 처리하면 작업 손상 위험이 있기 때문
+      - worktree 명령이 거부됐기 때문
+      - 'PR #93의 다른 commits이 너무 많기 때문'
     answer: 1
-    explanation: "AI가 자율적으로 처리할 수 있는 일과 *사람의 결정이 필요한 일*을 구분하는 것이 안전한 자율성의 핵심. 충돌 해결은 *코드 의도*에 대한 결정이라 사용자 영역. 자율 모드라도 *코드 결정*은 임의로 하면 안 된다."
-  - question: "회피 메커니즘 4가지(ai-review 코멘트 / AI-AGENT-GUIDE 패턴 / wt-branch 슬래시 커맨드 / post-merge hook) 중 *가장 임팩트 있는* 것은?"
+    explanation: >-
+      AI가 자율적으로 처리할 수 있는 일과 *사람의 결정이 필요한 일*을 구분하는 것이 안전한 자율성의 핵심. 충돌 해결은 *코드
+      의도*에 대한 결정이라 사용자 영역. 자율 모드라도 *코드 결정*은 임의로 하면 안 된다.
+  - question: >-
+      회피 메커니즘 4가지(ai-review 코멘트 / AI-AGENT-GUIDE 패턴 / wt-branch 슬래시 커맨드 /
+      post-merge hook) 중 *가장 임팩트 있는* 것은?
     choices:
-      - "AI-AGENT-GUIDE.md에 패턴 추가 — 모든 AI 세션이 시작 시 자동 로드"
-      - "wt-branch 슬래시 커맨드 — *새 작업을 worktree로 분기*가 한 줄 커맨드가 되면 사고가 발생할 수 없음. ai-review 코멘트와 AI-AGENT-GUIDE는 *사람의 기억력*에 의존하는 안내, wt-branch는 *행동 자체를 강제*"
-      - "ai-review.yml의 머지 후 PR 코멘트 — 즉시 가시화"
-      - "post-merge git hook — git 레벨에서 자동 동기화"
+      - AI-AGENT-GUIDE.md에 패턴 추가 — 모든 AI 세션이 시작 시 자동 로드
+      - >-
+        wt-branch 슬래시 커맨드 — *새 작업을 worktree로 분기*가 한 줄 커맨드가 되면 사고가 발생할 수 없음.
+        ai-review 코멘트와 AI-AGENT-GUIDE는 *사람의 기억력*에 의존하는 안내, wt-branch는 *행동 자체를
+        강제*
+      - ai-review.yml의 머지 후 PR 코멘트 — 즉시 가시화
+      - post-merge git hook — git 레벨에서 자동 동기화
     answer: 1
-    explanation: "Compound Engineering의 일관된 메시지: *사람의 기억력에 의존하는 가드는 100% 실패한다*. 안내 문서나 PR 코멘트는 사람이 *읽고 기억해야* 작동한다. 슬래시 커맨드는 *행동 자체가 안전한 패턴*이 되므로 기억력 의존이 0. wt-branch가 가장 압도적."
+    explanation: >-
+      Compound Engineering의 일관된 메시지: *사람의 기억력에 의존하는 가드는 100% 실패한다*. 안내 문서나 PR
+      코멘트는 사람이 *읽고 기억해야* 작동한다. 슬래시 커맨드는 *행동 자체가 안전한 패턴*이 되므로 기억력 의존이 0.
+      wt-branch가 가장 압도적.
 ---
 
 ## 갭 (Before)
