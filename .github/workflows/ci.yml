@@ -1,5 +1,7 @@
 name: "🧪 CI"
 
+# ADR-010 hybrid fallback: GitHub-hosted primary → self-hosted fallback.
+
 on:
   pull_request:
     branches: [main]
@@ -7,14 +9,43 @@ on:
     branches: [main]
 
 jobs:
-  test-and-build:
+  # ══════════════════════════════════════════════════════════════════
+  # Primary: GitHub-hosted (ubuntu-latest)
+  # ══════════════════════════════════════════════════════════════════
+  test-gh-hosted:
+    name: CI (GitHub-hosted primary)
     runs-on: ubuntu-latest
+    continue-on-error: true
+    outputs:
+      passed: ${{ steps.mark.outputs.passed }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: "npm"
+      - run: npm ci
+      - run: npm audit --audit-level=high
+      - run: npm test
+      - run: npm run build
+
+      - name: Mark primary success
+        id: mark
+        run: echo "passed=true" >> $GITHUB_OUTPUT
+
+  # ══════════════════════════════════════════════════════════════════
+  # Fallback: Self-hosted (macOS ARM64)
+  # ══════════════════════════════════════════════════════════════════
+  test-self-hosted:
+    name: CI (self-hosted fallback)
+    needs: test-gh-hosted
+    if: ${{ always() && needs.test-gh-hosted.outputs.passed != 'true' }}
+    runs-on: [self-hosted, macOS, ARM64, ai-study]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
       - run: npm ci
       - run: npm audit --audit-level=high
       - run: npm test

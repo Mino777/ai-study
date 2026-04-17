@@ -1,16 +1,8 @@
 name: 🚀 Auto Merge to main
 
 # Harness Journal 014 — 박제 전이성 4회째 사이클.
-# moneyflow(Journal 002) → tarosaju(Journal 011) → ai-study(이번, 첫 허브 이식).
-#
-# 왜 허브에도 자동 머지가 필요한가: 각 워커 프로젝트 세션들이 *꿀팁 PR*을
-# 허브(ai-study)에 계속 쏴주는 흐름을 만들려면, 허브에 들어온 PR이 자동으로
-# 머지되어야 라운드트립 지연이 0이 된다. 허브가 병목이 되지 않기 위함.
-#
-# Test Gate는 ci.yml과 동일한 npm test + npm run build로 유지해서
-# dev-setup-tips-log append나 Harness Journal 신설 같은 content 변경이 빠르게
-# 통과하도록 한다 (prebuild의 frontmatter zod 검증 + content manifest 생성이
-# npm run build 안에서 자동으로 돌아간다).
+# ADR-010 hybrid fallback: GitHub-hosted primary → self-hosted fallback.
+# 빌링 한도 도달 시 self-hosted runner가 자동으로 CI + 머지 수행.
 
 on:
   push:
@@ -18,7 +10,6 @@ on:
       - main
 
 # Node 20 deprecation 대응 — GitHub Actions runner가 2026-06-02부터 Node 24로 전환.
-# 지금 opt-in해서 새 런타임 기반으로 선제 전환. 롤백은 이 env 블록 제거만.
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
@@ -27,9 +18,17 @@ permissions:
   pull-requests: write
 
 jobs:
-  auto-merge:
-    name: Auto Merge
+  # ══════════════════════════════════════════════════════════════════
+  # Primary: GitHub-hosted runner (ubuntu-latest)
+  # ══════════════════════════════════════════════════════════════════
+  auto-merge-gh-hosted:
+    name: Auto Merge (GitHub-hosted primary)
     runs-on: ubuntu-latest
+    continue-on-error: true
+    outputs:
+      passed: ${{ steps.mark.outputs.passed }}
+      pr_number: ${{ steps.pr.outputs.number }}
+      pr_title: ${{ steps.pr.outputs.title }}
 
     steps:
       - name: Checkout
@@ -166,7 +165,6 @@ jobs:
       # Inline Test Gate — 허브(ai-study) 전용
       # npm run build가 prebuild(validate-content + generate-content-manifest)를
       # 자동으로 실행하므로 frontmatter zod 검증 + 매니페스트 생성이 안에서 돈다.
-      # content 변경(Harness Journal, dev-setup-tips-log append 등)도 여기서 걸러진다.
       # ─────────────────────────────────────────────────────────────
 
       - name: Install dependencies
@@ -202,20 +200,11 @@ jobs:
                 '',
                 '`npm test` 또는 `npm run build`(prebuild 포함)가 실패했습니다.',
                 '워크플로 로그를 확인하고 수정 후 다시 push해주세요.',
-                '',
-                '---',
-                '> Harness Journal 014 — ai-study 허브에 inline Test Gate 도입.',
-                '> content(MDX frontmatter zod 검증 + manifest 생성)도 npm run build 안에서 검증됩니다.',
               ].join('\n'),
             });
 
-      # ─────────────────────────────────────────────────────────────
-      # patterns/ 브랜치 감지 — 라벨 부착 + auto-merge skip
-      # Harness Journal 020 — `/curate-inbound` 파이프라인. patterns/ 브랜치는
-      # raw 콘텐츠라서 허브 세션이 curation(익명화 / 분류 / frontmatter / connections)을
-      # 해야 하므로 auto-merge하면 안 됨. Test Gate는 여전히 통과해야 구문 검증은 됨.
-      # 허브는 `gh pr list --label patterns`로 큐 확인 → `/curate-inbound #<num>` 실행.
-      # ─────────────────────────────────────────────────────────────
+      # ── patterns/ 브랜치 감지 — 라벨 부착 + auto-merge skip ──
+      # Harness Journal 020 — `/curate-inbound` 파이프라인.
       - name: Label patterns branch (skip auto-merge)
         if: |
           steps.sync.outputs.status != 'conflict' &&
@@ -250,10 +239,6 @@ jobs:
                 '```',
                 `/curate-inbound #${prNumber}`,
                 '```',
-                '',
-                '`/curate-inbound`가 6 카테고리(reject / tips / solution / journal / pattern-entry / needs-review) 중 하나로 분류 → curation → 새 `curate/<slug>` 브랜치 + PR → 그 PR은 자동 머지됩니다. 이 원본 `patterns/` PR은 그때 닫힙니다.',
-                '',
-                '상세: [`/curate-inbound` 슬래시 커맨드](https://github.com/Mino777/ai-study/blob/main/.claude/commands/curate-inbound.md) / [Harness Journal 020](https://github.com/Mino777/ai-study/blob/main/content/harness-engineering/harness-journal-020-promise-timeout-wrapper.mdx)',
               ].join('\n'),
             });
             core.info('patterns/ 브랜치 — auto-merge skipped');
@@ -293,14 +278,13 @@ jobs:
               core.setFailed(err.message);
             }
 
-      # ── 머지 후 Vercel 배포 트리거 ──
-      # GITHUB_TOKEN으로 만든 squash merge는 Vercel webhook을 발동시키지 않음.
-      # Journal 021 — GITHUB_TOKEN deploy chain gap 패턴.
-      # Vercel API로 직접 배포를 트리거하여 프로덕션 배포 보장.
-      # Vercel Deploy Hook으로 프로덕션 배포 트리거.
-      # VERCEL_DEPLOY_HOOK은 Vercel 대시보드 > Settings > Git > Deploy Hooks에서 생성.
-      # 형식: https://api.vercel.com/v1/integrations/deploy/prj_xxx/yyy
-      # 설정 안 되어 있으면 이 스텝은 조용히 스킵.
+      # ── ADR-010 Mark-step: merge 성공 시에만 passed=true ──
+      - name: Mark primary success
+        id: mark
+        if: steps.merge.outputs.merged == 'true'
+        run: echo "passed=true" >> $GITHUB_OUTPUT
+
+      # ── Vercel Deploy Hook 트리거 ──
       - name: Trigger Vercel Deploy
         if: steps.merge.outputs.merged == 'true'
         env:
@@ -311,12 +295,8 @@ jobs:
             echo "✅ Vercel production deploy triggered via deploy hook"
           else
             echo "⚠️ VERCEL_DEPLOY_HOOK secret not set — Vercel deploy not triggered"
-            echo "   Vercel 대시보드 > Settings > Git > Deploy Hooks에서 hook 생성 후"
-            echo "   GitHub repo secrets에 VERCEL_DEPLOY_HOOK으로 추가하세요"
           fi
 
-      # ── 머지 후 feature 브랜치를 main으로 리셋 ──
-      # squash merge 후 feature 브랜치가 main과 diverge하는 문제 해결
       - name: Reset branch to main
         if: steps.merge.outputs.merged == 'true'
         run: |
@@ -325,3 +305,267 @@ jobs:
           git reset --hard origin/main
           git push origin ${{ github.ref_name }} --force-with-lease
           echo "✅ feature 브랜치를 main으로 리셋 완료 — 다음 push 시 충돌 없음"
+
+  # ══════════════════════════════════════════════════════════════════
+  # Fallback: Self-hosted runner (macOS ARM64)
+  # 빌링 한도, 테스트 실패, job 취소 등 모든 경우 트리거.
+  # ══════════════════════════════════════════════════════════════════
+  auto-merge-self-hosted:
+    name: Auto Merge (self-hosted fallback)
+    needs: auto-merge-gh-hosted
+    if: ${{ always() && needs.auto-merge-gh-hosted.outputs.passed != 'true' }}
+    runs-on: [self-hosted, macOS, ARM64, ai-study]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.ref_name }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Find or Create PR
+        id: pr
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const branch = context.ref.replace('refs/heads/', '');
+
+            const { data: existing } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              head: `${context.repo.owner}:${branch}`,
+              base: 'main',
+              state: 'open',
+            });
+
+            if (existing.length > 0) {
+              const pr = existing[0];
+              core.setOutput('number', String(pr.number));
+              core.setOutput('title', pr.title);
+              return;
+            }
+
+            let commits = [];
+            try {
+              const { data: compare } = await github.rest.repos.compareCommits({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                base: 'main',
+                head: branch,
+              });
+              commits = compare.commits.slice().reverse();
+            } catch (e) {
+              console.warn('커밋 비교 실패:', e.message);
+            }
+
+            const latestMsg = commits[0]?.commit?.message ?? branch;
+            const titleRaw  = latestMsg.split('\n')[0];
+            const title     = titleRaw.length > 72 ? titleRaw.slice(0, 69) + '...' : titleRaw;
+
+            const commitList = commits.length > 0
+              ? commits.slice(0, 10).map(c =>
+                  `- \`${c.sha.slice(0, 7)}\` ${c.commit.message.split('\n')[0]}`
+                ).join('\n')
+              : `- ${branch} 브랜치 작업`;
+
+            const body = [
+              '## 📝 작업 내역',
+              '',
+              commitList,
+              '',
+              '---',
+              '> 🤖 자동 생성된 PR — self-hosted fallback에서 실행됨.',
+            ].join('\n');
+
+            const { data: pr } = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body,
+              head: branch,
+              base: 'main',
+            });
+
+            core.setOutput('number', String(pr.number));
+            core.setOutput('title', pr.title);
+
+      - name: Rebase onto main
+        id: sync
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+
+          if git merge-base --is-ancestor origin/main HEAD; then
+            echo "✅ Already up to date"
+            echo "status=ok" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "⚙️ Rebasing onto origin/main..."
+          if git rebase origin/main; then
+            git push origin HEAD:${{ github.ref_name }} --force-with-lease
+            echo "status=ok" >> $GITHUB_OUTPUT
+          else
+            git rebase --abort
+            echo "status=conflict" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Comment on conflict
+        if: steps.sync.outputs.status == 'conflict'
+        uses: actions/github-script@v7
+        env:
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: parseInt(process.env.PR_NUMBER),
+              body: [
+                '## ⚠️ Rebase 실패 — 충돌 수동 해결 필요',
+                '',
+                '```bash',
+                'git fetch origin',
+                'git rebase origin/main',
+                '# 충돌 파일 수정 후',
+                'git add .',
+                'git rebase --continue',
+                'git push origin HEAD --force-with-lease',
+                '```',
+              ].join('\n')
+            });
+            core.setFailed('충돌 — 수동 해결 필요');
+
+      - name: Install dependencies
+        if: steps.sync.outputs.status != 'conflict'
+        run: npm ci
+
+      - name: 🔒 Test Gate (vitest + build)
+        id: test_gate
+        if: steps.sync.outputs.status != 'conflict'
+        run: |
+          echo "::group::vitest"
+          npm test
+          echo "::endgroup::"
+          echo "::group::build (prebuild + next build)"
+          npm run build
+          echo "::endgroup::"
+
+      - name: Notify on Test Gate failure
+        if: failure() && steps.test_gate.outcome == 'failure'
+        uses: actions/github-script@v7
+        env:
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            if (!process.env.PR_NUMBER) return;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: parseInt(process.env.PR_NUMBER),
+              body: [
+                '## ❌ Test Gate 실패 — 자동 머지 차단 (self-hosted fallback)',
+                '',
+                '`npm test` 또는 `npm run build`가 실패했습니다.',
+                '워크플로 로그를 확인하고 수정 후 다시 push해주세요.',
+              ].join('\n'),
+            });
+
+      # ── patterns/ 브랜치 감지 ──
+      - name: Label patterns branch (skip auto-merge)
+        if: |
+          steps.sync.outputs.status != 'conflict' &&
+          startsWith(github.ref_name, 'patterns/')
+        uses: actions/github-script@v7
+        env:
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const prNumber = parseInt(process.env.PR_NUMBER);
+            try {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                labels: ['patterns', 'needs-curation'],
+              });
+            } catch (e) {
+              console.warn('라벨 부착 실패:', e.message);
+            }
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: [
+                '## 🏗️ patterns/ 브랜치 감지 — 허브 curation 대기 (self-hosted)',
+                '',
+                '`/curate-inbound #' + prNumber + '`로 처리해주세요.',
+              ].join('\n'),
+            });
+
+      - name: Squash Merge
+        if: |
+          steps.sync.outputs.status != 'conflict' &&
+          !startsWith(github.ref_name, 'patterns/')
+        id: merge
+        uses: actions/github-script@v7
+        env:
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+          PR_TITLE: ${{ steps.pr.outputs.title }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const prNumber = parseInt(process.env.PR_NUMBER);
+            const prTitle  = process.env.PR_TITLE;
+
+            try {
+              await github.rest.pulls.merge({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: prNumber,
+                commit_title: `${prTitle} (#${prNumber})`,
+                merge_method: 'squash',
+              });
+              console.log('✅ Squash Merge 완료 (self-hosted fallback)');
+              core.setOutput('merged', 'true');
+            } catch (err) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body: `⚠️ 자동 머지 실패 (self-hosted) — 수동으로 머지해주세요.\n\`\`\`\n${err.message}\n\`\`\``,
+              });
+              core.setFailed(err.message);
+            }
+
+      - name: Trigger Vercel Deploy
+        if: steps.merge.outputs.merged == 'true'
+        env:
+          VERCEL_DEPLOY_HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK }}
+        run: |
+          if [ -n "$VERCEL_DEPLOY_HOOK" ]; then
+            curl -s -X POST "$VERCEL_DEPLOY_HOOK" > /dev/null 2>&1
+            echo "✅ Vercel deploy triggered (self-hosted fallback)"
+          else
+            echo "⚠️ VERCEL_DEPLOY_HOOK not set"
+          fi
+
+      - name: Reset branch to main
+        if: steps.merge.outputs.merged == 'true'
+        run: |
+          git fetch origin main
+          git checkout ${{ github.ref_name }}
+          git reset --hard origin/main
+          git push origin ${{ github.ref_name }} --force-with-lease
+          echo "✅ feature 브랜치를 main으로 리셋 완료"
