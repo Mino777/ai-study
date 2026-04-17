@@ -39,6 +39,7 @@ MDX는 JSX 파서 → `<br>` (HTML void) 컴파일 에러.
 `subgraph Standard RAG` → `Standard`만 인식, `RAG`는 garbage.
 
 **탐지**: mermaid 코드블록 안에서 `subgraph <단어> <단어>` (id 없이 공백 포함 이름)
+**제외**: `subgraph id ["Label"]` 형태는 올바른 구문 — id 뒤에 `[` 또는 `["` 가 오면 무시
 **수정**: `subgraph id ["Label with spaces"]`
 
 ### 함정 3: JSX 파싱 함정
@@ -58,6 +59,7 @@ MDX는 JSX 파서 → `<br>` (HTML void) 컴파일 에러.
 빌드는 통과하지만 **런타임 Mermaid 렌더 실패** (가장 위험).
 
 **탐지**: mermaid 코드블록 안에서 `[라벨]` 또는 `{라벨}` 형태의 노드 중, 라벨에 `<br/>`, `→`, `<`, `>` 포함인데 따옴표로 안 감싼 것
+**제외**: 이미 `["..."]` 또는 `{"..."}` 로 따옴표 감싸진 것은 무시 (dry-run FP 주범)
 **수정**: `Node["label<br/>text"]` — 따옴표로 감싸기
 
 ### 함정 5: Mermaid cylinder `[("...")]` 중첩 괄호
@@ -105,3 +107,5 @@ MDX는 JSX 파서 → `<br>` (HTML void) 컴파일 에러.
 | `{...}` | 코드블록 안 JS/TS 코드 | ``` 경계 안이면 무시 |
 | `<숫자` | Mermaid 라벨 안의 비교 (`<1m`) | 이미 따옴표로 감싸져 있으면 무시 |
 | `→` in `[]` | 마크다운 테이블 셀 | mermaid 블록 밖이면 무시 |
+| subgraph 공백 | `subgraph id ["Label"]` 올바른 구문 | id 뒤에 `[` 있으면 무시 |
+| `[라벨]` 특수문자 | `["라벨"]` 이미 따옴표 감싼 것 | `["` 또는 `{" ` 시작이면 무시 |
