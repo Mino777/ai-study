@@ -91,21 +91,12 @@ public/            → search-index.json (gitignored, SearchDialog lazy fetch용
 - 카테고리 우선순위: AI 방법론(2.0x) > iOS/Frontend(1.5x) > Infrastructure(0.7x)
 - Secrets: GEMINI_API_KEY, VERCEL_TOKEN
 
-## Components
-- `Header` — 공통 헤더 (Wiki/Dashboard/Vibe Coding + 현재 탭 하이라이트)
-- `KnowledgeGraph` — force-directed 그래프 (useMemo graphData, useRef hover, 빈 카테고리 회색 노드)
-- `SearchDialog` — Cmd+K 검색 + GraphSearchContext 연동. 검색 인덱스는 `public/search-index.json`에서 lazy fetch (mount 후 `requestIdleCallback` 프리페치 + 모듈 스코프 캐시). layout.tsx가 글로벌로 한 번만 mount — 페이지별 중복 mount 금지
-- `Sidebar` — 카테고리 트리 (접이식, confidence dots, harness-engineering 내 Journal 서브그룹)
-- `SummaryCard` — 엔트리 요약 (카테고리 배지, confidence, 읽기 시간, GitHub 편집)
-- `CodeBlock` — 코드 블록 + 복사 버튼
-- `MermaidRenderer` — 클라이언트 DOM 직접 렌더링. `.mermaid-block` div를 스캔 → mermaid SVG 변환. `rehypeMermaid` 플러그인과 쌍으로 동작 (Shiki 간섭 우회)
-- `MermaidDiagram` — 단독 mermaid 렌더 컴포넌트 (MermaidRenderer가 페이지 레벨에서 대체)
-- `EntryNav` — 이전/다음 엔트리 (같은 카테고리 내)
-- `MobileNav` — 모바일 하단 탭 바
-- `LearningHeatmap` — GitHub 스타일 학습 히트맵 (12주, dailyEntries 기반, 일~토 행 정렬)
-- `Sidebar` — 카테고리 트리. `SeriesSubGroup`이 frontmatter `series` 필드 기반으로 generic하게 그룹화 (📓 Harness Journal / 📱 iOS Journal / 🤖 Multi-Agent Orchestration Journal). 새 시리즈는 `SERIES_LABELS` (schema.ts) 한 줄 추가
-- `Quiz` — frontmatter quiz 배열 기반 객관식 자가 점검 (즉시 채점 + 해설 + localStorage 저장)
-- `QuizWidget` — 대시보드용 퀴즈 통계 + Spaced Repetition 큐 ("오늘 복습할 엔트리"). `lib/quiz-storage.ts`의 SM-2 단순화 알고리즘 사용 (간격 1→3→7→14→30→60일)
+## Components (주요)
+- `KnowledgeGraph` — force-directed 그래프 (react-force-graph-2d, ssr:false)
+- `SearchDialog` — Cmd+K 검색 + GraphSearchContext. `public/search-index.json` lazy fetch. layout.tsx 글로벌 1회 mount
+- `Sidebar` — 카테고리 트리 + `SeriesSubGroup` (frontmatter `series` 기반). 새 시리즈는 `SERIES_LABELS` (schema.ts) 한 줄 추가
+- `MermaidRenderer` — 클라이언트 DOM 직접 렌더. `rehypeMermaid` 플러그인과 쌍 (Shiki 간섭 우회)
+- `Quiz` / `QuizWidget` — frontmatter quiz 배열 기반 자가 점검 + SM-2 SRS 스케줄
 
 ## API Routes
 - `/api/og` — OG 이미지 자동 생성 (Edge Runtime, next/og, Noto Sans KR)
@@ -115,17 +106,11 @@ public/            → search-index.json (gitignored, SearchDialog lazy fetch용
 - `/api/admin/entries/[...slug]` — 조회(GET) + 수정(PUT) + 삭제(DELETE)
 
 ## Admin / Auth & Security
-- 쿠키 기반 HMAC-SHA256 인증 (middleware.ts)
-- 환경변수: ADMIN_PASSWORD (최소 8자), ADMIN_SECRET (최소 16자), GITHUB_TOKEN, GITHUB_REPO — **default fallback 없음**, 미설정 시 런타임 throw
-- Timing-safe 비교: Web Crypto HMAC 기반 constant-time (Edge Runtime 호환)
-- Rate Limiting: 로그인 15분/5회 IP 기반 (`src/lib/rate-limit.ts`)
-- Security Headers: CSP, HSTS, X-Frame-Options, Permissions-Policy (`next.config.ts`)
-- Error 정보 누출 차단: GitHub API 에러 → 서버 로깅 + 클라이언트 generic 메시지
-- Body 크기 제한: MDX 콘텐츠 100KB 초과 시 413
-- npm audit CI: `--audit-level=high` (ci.yml)
-- GitHub Contents API로 MDX 파일 CRUD → Vercel 자동 재배포
-- 에디터: @uiw/react-md-editor (다크 테마, 실시간 프리뷰)
-- 보안 패턴 참조: `content/harness-engineering/security-hardening-checklist.mdx`
+- HMAC-SHA256 쿠키 인증 (middleware.ts), Rate Limiting 15분/5회
+- 환경변수: ADMIN_PASSWORD, ADMIN_SECRET, GITHUB_TOKEN, GITHUB_REPO — **미설정 시 런타임 throw**
+- Security Headers: CSP, HSTS, X-Frame-Options (`next.config.ts`)
+- GitHub Contents API로 MDX CRUD → Vercel 자동 재배포
+- 보안 상세: `content/harness-engineering/security-hardening-checklist.mdx`
 
 ## Roadmap
 - See TODOS.md for deferred items and backlog
@@ -190,136 +175,4 @@ Key routing rules:
 - `scripts/lib/mermaid-fix.mjs` — `validate-content.mjs`에서 추출한 자동 수정 + warning-only 검출. 두 과거 버그(slicing offset / regex 누적) docstring 박제 + `detectUnquotedSpecialCharLabels()` warning (`<br/>` `→`)
 - `scripts/__tests__/validate-content.test.mjs` — mermaid-fix 16 회귀 테스트 (idempotency 케이스 별도 박제, `npm test`로 vitest 실행)
 
-<!-- rtk-instructions v2 -->
-# RTK (Rust Token Killer) - Token-Optimized Commands
-
-## Golden Rule
-
-**Always prefix commands with `rtk`**. If RTK has a dedicated filter, it uses it. If not, it passes through unchanged. This means RTK is always safe to use.
-
-**Important**: Even in command chains with `&&`, use `rtk`:
-```bash
-# ❌ Wrong
-git add . && git commit -m "msg" && git push
-
-# ✅ Correct
-rtk git add . && rtk git commit -m "msg" && rtk git push
-```
-
-## RTK Commands by Workflow
-
-### Build & Compile (80-90% savings)
-```bash
-rtk cargo build         # Cargo build output
-rtk cargo check         # Cargo check output
-rtk cargo clippy        # Clippy warnings grouped by file (80%)
-rtk tsc                 # TypeScript errors grouped by file/code (83%)
-rtk lint                # ESLint/Biome violations grouped (84%)
-rtk prettier --check    # Files needing format only (70%)
-rtk next build          # Next.js build with route metrics (87%)
-```
-
-### Test (90-99% savings)
-```bash
-rtk cargo test          # Cargo test failures only (90%)
-rtk vitest run          # Vitest failures only (99.5%)
-rtk playwright test     # Playwright failures only (94%)
-rtk test <cmd>          # Generic test wrapper - failures only
-```
-
-### Git (59-80% savings)
-```bash
-rtk git status          # Compact status
-rtk git log             # Compact log (works with all git flags)
-rtk git diff            # Compact diff (80%)
-rtk git show            # Compact show (80%)
-rtk git add             # Ultra-compact confirmations (59%)
-rtk git commit          # Ultra-compact confirmations (59%)
-rtk git push            # Ultra-compact confirmations
-rtk git pull            # Ultra-compact confirmations
-rtk git branch          # Compact branch list
-rtk git fetch           # Compact fetch
-rtk git stash           # Compact stash
-rtk git worktree        # Compact worktree
-```
-
-Note: Git passthrough works for ALL subcommands, even those not explicitly listed.
-
-### GitHub (26-87% savings)
-```bash
-rtk gh pr view <num>    # Compact PR view (87%)
-rtk gh pr checks        # Compact PR checks (79%)
-rtk gh run list         # Compact workflow runs (82%)
-rtk gh issue list       # Compact issue list (80%)
-rtk gh api              # Compact API responses (26%)
-```
-
-### JavaScript/TypeScript Tooling (70-90% savings)
-```bash
-rtk pnpm list           # Compact dependency tree (70%)
-rtk pnpm outdated       # Compact outdated packages (80%)
-rtk pnpm install        # Compact install output (90%)
-rtk npm run <script>    # Compact npm script output
-rtk npx <cmd>           # Compact npx command output
-rtk prisma              # Prisma without ASCII art (88%)
-```
-
-### Files & Search (60-75% savings)
-```bash
-rtk ls <path>           # Tree format, compact (65%)
-rtk read <file>         # Code reading with filtering (60%)
-rtk grep <pattern>      # Search grouped by file (75%)
-rtk find <pattern>      # Find grouped by directory (70%)
-```
-
-### Analysis & Debug (70-90% savings)
-```bash
-rtk err <cmd>           # Filter errors only from any command
-rtk log <file>          # Deduplicated logs with counts
-rtk json <file>         # JSON structure without values
-rtk deps                # Dependency overview
-rtk env                 # Environment variables compact
-rtk summary <cmd>       # Smart summary of command output
-rtk diff                # Ultra-compact diffs
-```
-
-### Infrastructure (85% savings)
-```bash
-rtk docker ps           # Compact container list
-rtk docker images       # Compact image list
-rtk docker logs <c>     # Deduplicated logs
-rtk kubectl get         # Compact resource list
-rtk kubectl logs        # Deduplicated pod logs
-```
-
-### Network (65-70% savings)
-```bash
-rtk curl <url>          # Compact HTTP responses (70%)
-rtk wget <url>          # Compact download output (65%)
-```
-
-### Meta Commands
-```bash
-rtk gain                # View token savings statistics
-rtk gain --history      # View command history with savings
-rtk discover            # Analyze Claude Code sessions for missed RTK usage
-rtk proxy <cmd>         # Run command without filtering (for debugging)
-rtk init                # Add RTK instructions to CLAUDE.md
-rtk init --global       # Add RTK to ~/.claude/CLAUDE.md
-```
-
-## Token Savings Overview
-
-| Category | Commands | Typical Savings |
-|----------|----------|-----------------|
-| Tests | vitest, playwright, cargo test | 90-99% |
-| Build | next, tsc, lint, prettier | 70-87% |
-| Git | status, log, diff, add, commit | 59-80% |
-| GitHub | gh pr, gh run, gh issue | 26-87% |
-| Package Managers | pnpm, npm, npx | 70-90% |
-| Files | ls, read, grep, find | 60-75% |
-| Infrastructure | docker, kubectl | 85% |
-| Network | curl, wget | 65-70% |
-
-Overall average: **60-90% token reduction** on common development operations.
-<!-- /rtk-instructions -->
+<!-- RTK instructions: 전역 ~/.claude/CLAUDE.md의 @RTK.md로 로드됨. 이중 로딩 방지를 위해 프로젝트 레벨에서 제거 (A1 토큰 레버). -->
