@@ -9,26 +9,26 @@
 
 ## 🕒 작성 시점
 
-- **작성 일시**: 2026-04-17 (Session 6 종료 직전)
-- **작성 주체**: Claude (Session 6)
-- **이유**: Aidy Session 7 박제(Journal 006) + 기존 엔트리 출처 보강(003/tmux-flush) 사이클 종료 → 다음 세션 부트스트랩
+- **작성 일시**: 2026-04-17 (Session 7 — Aidy Journal 007 박제 직후)
+- **작성 주체**: Claude (Session 7)
+- **이유**: Aidy Session 8 박제(Journal 007) + Journal 006 역링크 보강 → 다음 세션 부트스트랩
 
 ---
 
 ## 📸 현재 상태 스냅샷
 
 ### ai-study Wiki
-- **엔트리 수**: 118 (+1, Aidy Journal 006)
+- **엔트리 수**: 119 (+1, Aidy Journal 007)
 - **카테고리**: 13 (방법론 4 + 시스템 3 + 평가&인프라 2 + 응용 4)
 - **주요 시리즈**:
   - **Harness Journal** (000~025)
   - **iOS Journal** (000~009)
-  - **Multi-Agent Orchestration Journal (Aidy)** (000 · 001 · 002 · 003 · 004 · 005 · **006**)
+  - **Multi-Agent Orchestration Journal (Aidy)** (000 ~ **007**)
   - **Flow Map for iOS Devs** (1·2·3·4·6·7편 완료, 5편 deferred)
 - **Git 상태**: main clean, origin/main 동기 (세션 시작 시 반드시 `rtk git fetch`)
 - **최근 major 변경**:
-  - **Aidy Journal 006** — WO-010 진단 3회 정정 + ADR-009 self-hosted runner 전환 (180min → 0min)
-  - **기존 엔트리 출처 보강** — Journal 003 · tmux-flush-automation 에 `a4f8861 v0.7.1` 커밋 + Journal 006 링크 추가
+  - **Aidy Journal 007** — CI 인프라 독립화 4 WO + Hybrid Fallback + Mark-step 패턴 + QA 에이전트 배치
+  - **Journal 006 역링크 보강** — "후속 WO 3건 (Session 8 대기)" → "후속 WO 3건 → Session 8 완료" + Journal 007 링크
 
 ### Layer 3 POC 현재 상태 (변동 없음)
 - **인프라**: ✅ 작동 (1~3ms 응답, brute force, JSON 인덱스)
@@ -38,20 +38,16 @@
 - **다음 변수**: 모델 교체 > 라우터 > 섀도우 모드
 
 ### aidy 4 레포 (관제 + 3 워커)
-- **Session 5/6/7 박제 완료** — Journal 003/004/005/006 + 카테고리 엔트리 7건
-- **Session 7 종료 상태** (aidy-architect commit `0e23007`): WO-010 done, self-hosted runner online
-- **배포 상태**: 3-client 모두 프로덕션 미구축 — [배포 설계 로드맵](/wiki/infrastructure/aidy-3-client-deployment-design-roadmap) 참조
-- **다음 aidy 세션(s8) 시작점**: `aidy-architect/HANDOFF.md` — WO-011 Swift 6 Sendable / **WO-012 Node.js 24 (P0, 2026-06-02)** / WO-013 워크플로 통합
+- **Session 5~8 박제 완료** — Journal 003~007 + 카테고리 엔트리 7건
+- **Session 8 종료 상태** (aidy-architect commit `e3a08ea`): WO-012/014/015/016 done + QA 에이전트 배치
+- **Runner 현황**: MBA에 3대 운영 (iOS self-hosted only / server·android Hybrid)
+- **배포 상태**: 3-client 모두 프로덕션 미구축
+- **다음 aidy 세션(s9) 시작점**: `aidy-architect/HANDOFF.md` — WO-011(Swift 6) / WO-013(워크플로 통합) / billing 복구 시 WO-016 정상 시나리오 검증
 
 ### moneyflow / tarosaju (워커 프로젝트)
-- **Git 상태**: 세션 시작 시 직접 fetch 확인 ([Journal 003 squash merge 함정](/wiki/harness-engineering/harness-journal-003-squash-merge-trap-pattern))
-- **이식 가능 패턴** (이번 세션 신규 포함):
-  - Circuit Breaker · 3-provider 폴백 · 프롬프트 캐싱 · 5-Layer Defense
-  - React Compiler + startTransition · Numeric Execution Evidence · Mermaid warning
-  - **Worker Prompts Logging** (multi-agent 하네스가 있다면)
-  - **tmux flush 자동화** (architect-cli 패턴)
-  - **SSE 0-dep 패턴** (3 플랫폼 각자의 표준 API)
-  - **Password Reset 보안 5원칙** (enumeration 방지 + 쿨다운 기존 토큰 유지)
+- **moneyflow**: 캘리브레이션 카드 fix + Content Pipeline 테스트 (최신 `3bc894d`)
+- **tarosaju**: NEXT.md 리뉴얼 + 결과 컴포넌트 dynamic import (최신 `c51be1c`)
+- **Git 상태**: 세션 시작 시 직접 fetch 확인
 
 ---
 
@@ -68,47 +64,33 @@
 
 2. **Phase 2c — 쿼리 라우터 v0 (규칙 기반)**
    - 에러 키워드 / 명시 트리거 (`/search`) 만 검색 실행 — 일반 대화는 skip
-   - 안 그러면 [엔트리 §10 안티패턴](/wiki/context-engineering/context-scaling-3-layer-architecture) "모든 쿼리에 RAG → Layer 3 가 선형 비용 회귀"
    - 예상 크기: S (정규식/키워드 매칭)
 
 3. **N=3 룰을 `compound-engineering-philosophy` 엔트리에 명시 추가**
-   - [Journal 024](/wiki/harness-engineering/harness-journal-024-solution-to-validator-promotion) 후속 — solution → validator 승격 트리거를 *철학 엔트리* 에 박제
+   - [Journal 024](/wiki/harness-engineering/harness-journal-024-solution-to-validator-promotion) 후속
    - 예상 크기: S
 
-### 🟡 Medium — Aidy 후속 (s8) + 꾸준한 박제
+### 🟡 Medium — Aidy 후속 (s9) + 꾸준한 박제
 
-4. **aidy Session 8 박제 대기 (WO-012 Node.js 24 진행 중)**
-   - s7 종료 후 등록된 WO 3건 완료 시점에 Journal 007 박제 후보:
-     - **WO-012 Node.js 24** — 3 워커 모두. 2026-06-02 강제 마이그레이션이라 **시급**. aidy-ios 는 `d203243` 에서 이미 시작
-     - **WO-011 Swift 6 Sendable** — iOS 의존성 마이그레이션
-     - **WO-013 워크플로 통합** — test.yml + ai-review.yml 중복 제거
-   - 기타 HANDOFF P1 잔여:
-     - **Password reset SMTP Phase 2** — 이메일 템플릿 + bounce 처리
-     - **SSE Phase 3** — Anthropic official event 전수 (error/ping/usage)
-     - **P-004 Phase 2 Multi-Provider Fallback** — 2nd API key 확보 후
-   - 트리거: aidy-architect 에서 s8 완료 + compound
+4. **aidy Session 9 박제 대기**
+   - s8 종료 후 backlog:
+     - **WO-011** (Swift 6 Sendable) — iOS 의존성 마이그레이션
+     - **WO-013** (워크플로 통합) — test.yml + ai-review.yml 중복 제거
+     - **WO-016 정상 시나리오 검증** — billing 복구 시 primary green + fallback skipped 실증
+   - 기타 P1:
+     - Password reset SMTP Phase 2 / SSE Phase 3 / Multi-Provider Fallback P-004 Phase 2
+   - 트리거: aidy-architect에서 s9 완료 + compound
 
 5. **JSX trap detector 정밀도 개선**
    - `api-contract-as-3-client-source-of-truth.mdx Line ~213` `{worker}` warning 1건 잔존
-   - 본문 인라인 코드(`)로 감싸 해결 또는 detectJsxTraps 룰 보강
-   - 세션 5에서 추가된 `<col>` 같은 HTML void element 패턴은 별도로 `validate-content.mjs` 사전 경고 추가 검토 (솔루션 #3 참조)
 
-6. **Flow Map 시리즈 Part 5 재개 판단**
-   - 현재 deferred (실 배포 미구축)
-   - 트리거: 실제 Neon + Fly 연결 완료 시점
+6. **Flow Map 시리즈 Part 5 재개 판단** — deferred (실 배포 미구축)
 
 ### 🟢 Low — 가치 시점 봐서
 
 7. **Phase 3 — Cross-repo 인덱싱**
-   - `aidy-architect/docs/solutions/`, `mino-moneyflow/docs/solutions/`, `mino-tarosaju/docs/solutions/` 도 ai-study 인덱스에 포함
-   - sync 전략 설계 필요 (단방향 vs 양방향)
-
 8. **인덱싱 자동화 (pre-commit 또는 CI)**
-   - 새 .mdx/.md 커밋 시 재임베딩 자동
-   - 단, 모델 다운로드 환경(CI)이라 시간/캐시 전략 필요
-
 9. **CLAUDE.md "세션 시작 4 파일 로드" 규약 재검토**
-   - 선택적 로드로 격하 검토 (handoff 함정 섹션 제안)
 
 ---
 
@@ -117,11 +99,11 @@
 ### 코드 결정 대기 (자율 처리 X)
 - **Part 5 실제 도입 시점** — 사용자 · 예산 · 일정 결정
 - **다국어 모델 다운로드 크기** — multilingual-e5-small 은 ~100MB. 디스크 여유 확인 후 진행
-- **aidy s8 시작 시점** — 토큰 리밋 여유 확인 후 ([Journal 003](/wiki/harness-engineering/aidy-journal-003-parallel-dispatch-token-economics)). WO-012(Node.js 24) 가 2026-06-02 강제 마이그레이션이라 시급
+- **aidy s9 시작 시점** — 토큰 리밋 여유 확인 후
 
 ### 다른 세션 주의
-- moneyflow · tarosaju 자체 세션 가능 — 세션 시작 시 `rtk git fetch` ([Journal 019](/wiki/harness-engineering/harness-journal-019-mcapp-cross-session-cleanup))
-- Squash merge 함정: 다른 세션이 squash merge 한 branch ([Journal 003](/wiki/harness-engineering/harness-journal-003-squash-merge-trap-pattern))
+- moneyflow · tarosaju 자체 세션 가능 — 세션 시작 시 `rtk git fetch`
+- Squash merge 함정: 다른 세션이 squash merge 한 branch
 - aidy 4 레포 동시 작업 가능 — `~/Develop/aidy-architect/HANDOFF.md` 확인
 
 ---
@@ -142,11 +124,11 @@
 - [ ] `rtk git -C ~/Develop/mino-moneyflow fetch origin`
 - [ ] `rtk git -C ~/Develop/mino-tarosaju fetch origin`
 - [ ] aidy 작업 검토 시 `~/Develop/aidy-architect/HANDOFF.md` 읽기
-- [ ] 양쪽 main 최신 commit 확인 · 이 NEXT.md 의 스냅샷과 비교 → 다른 세션 작업 감지 시 갱신
+- [ ] 양쪽 main 최신 commit 확인 · 이 NEXT.md 의 스냅샷과 비교
 
 ### Phase 4: 최근 박제 훑기 (3분)
+- [ ] `content/harness-engineering/aidy-journal-007-ci-infra-independence-hybrid-fallback.mdx` (Hybrid Fallback + Mark-step)
 - [ ] `content/harness-engineering/aidy-journal-006-ios-ci-self-hosted-runner-migration.mdx` (진단 3회 정정)
-- [ ] `content/harness-engineering/aidy-journal-003-parallel-dispatch-token-economics.mdx` (토큰 경제성)
 - [ ] `content/harness-engineering/harness-journal-025-jit-retrieval-poc-phase1.mdx` (POC 결과 + 다음 변수)
 
 ### Phase 5: 작업 시작 (2분 내)
@@ -197,12 +179,13 @@ rtk npm run embed-content
 
 ## 📜 최근 갱신
 
-### 2026-04-17 (Session 6 종료 — Aidy Journal 006 박제)
-- **Aidy Journal 006 박제** — WO-010 진단 3회 정정 + ADR-009 self-hosted runner 전환
-  - 진단 진화 타임라인 (tuist↔macos-14 → 결제 차단 → ai-review.yml 알림 폭탄)
-  - 실측 수치: 124 tests / 1m 56s / 4월 macOS 분 **~180min → 0min**
-  - 후속 WO 3건(011 Swift 6 / 012 Node.js 24 P0 / 013 워크플로 통합) 박제
-  - Tokenomics 4 조건 대입 — self-hosted는 공식문서+실측+부작용관측+롤백용이 모두 충족
-- **기존 엔트리 출처 보강** — Journal 003 · tmux-flush-automation-pattern 에 `a4f8861 v0.7.1` 커밋 + Journal 006 역링크 추가 (교훈→도구→첫 실행 사례 3단 연결)
-- 엔트리 수 117 → 118
-- **다음 순위**: Layer 3 Phase 2b(다국어 임베딩 모델 비교)가 최상위. aidy s8(WO-012 시급) 은 aidy-architect 세션 발생 후 Journal 007 박제
+### 2026-04-17 (Session 7 — Aidy Journal 007 박제)
+- **Aidy Journal 007 박제** — CI 인프라 독립화 4 WO (012/014/015/016) + ADR-010 Hybrid Fallback + Mark-step 패턴
+  - continue-on-error masking 미문서화 버그 → Mark-step 우회 패턴 설계 + 실증
+  - 3 워커 466 tests all green (server 207 + android 135 + iOS 124)
+  - QA 에이전트 3 워커 배치 (model: sonnet)
+  - send-seq P3-7 첫 실전 성공
+  - 박제 교훈 5건: 선행 투자 복리 / continue-on-error 지뢰 / spec-first-verify-first / 크로스 워커 전파 / Hybrid 쿼터 최적화
+- **Journal 006 역링크 보강** — "Session 8 대기" → "Session 8 완료" + Journal 007 링크
+- 엔트리 수 118 → 119
+- **다음 순위**: Layer 3 Phase 2b(다국어 임베딩 모델 비교)가 최상위

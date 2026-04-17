@@ -1,0 +1,307 @@
+---
+title: "Aidy Journal 007 — CI 인프라 독립화 4 WO + Hybrid Fallback + QA 에이전트 배치"
+category: harness-engineering
+series: aidy-journal
+date: "2026-04-17"
+tags: [aidy-journal, github-actions, self-hosted-runner, hybrid-fallback, continue-on-error, adr-010, node24, qa-agent, ci-infrastructure, mark-step-pattern]
+confidence: 4
+connections:
+  - harness-engineering/aidy-journal-006-ios-ci-self-hosted-runner-migration
+  - harness-engineering/aidy-journal-003-parallel-dispatch-token-economics
+  - harness-engineering/tmux-flush-automation-pattern
+  - tokenomics/claude-code-token-levers-catalog
+  - harness-engineering/compound-engineering-philosophy
+status: complete
+description: "Session 8: WO-012(Node.js 24) billing 차단 발견 → ADR-010 방향 전환 → WO-014/015(server/android self-hosted) + WO-016(Hybrid fallback) 동일 세션 완주. continue-on-error masking 미문서화 버그 → Mark-step 우회 패턴 설계. 3 워커 QA 에이전트 배치(466 tests). send-seq P3-7 첫 실전 + spec-first-verify-first 원칙 도출."
+type: entry
+quiz:
+  - question: "GitHub Actions `continue-on-error: true`가 job-level에 있을 때 `needs.x.result`는 어떤 값을 반환하는가?"
+    choices:
+      - "실제 실패 상태 (`'failure'`)"
+      - "`'success'`로 마스킹됨 — 실패해도 다음 job의 `needs.x.result`는 `'success'`. job-level에는 `outcome`도 미제공"
+      - "`'skipped'`"
+      - "`'cancelled'`"
+    answer: 1
+    explanation: "GitHub Actions 미문서화 동작. `continue-on-error: true`가 job-level에 있으면 `needs.<job>.result`가 실제 실패에도 `'success'`로 마스킹. step-level의 `outcome`과 달리 job-level에는 `outcome` 미제공. 따라서 `result`/`outcome` 어느 것으로도 실패 여부 확인 불가 → Mark-step 우회 필수."
+  - question: "Hybrid fallback 패턴에서 Mark-step 우회가 필요한 이유는?"
+    choices:
+      - "GitHub Actions 성능 최적화"
+      - "`continue-on-error`가 `needs.result`를 마스킹하므로, step-level outputs(`steps.mark.outputs.passed`)로 실패 여부를 전달해야 fallback job이 정확히 발동"
+      - "보안 정책 준수"
+      - "artifacts 저장을 위해"
+    answer: 1
+    explanation: "Mark-step은 `if: success()` (암묵 기본값)로 배치. 이전 step 실패 시 skip → `passed` 미설정 → fallback 발동. billing 차단(job startup fail) → step 전부 미실행 → 역시 fallback 발동. outputs는 `continue-on-error` 마스킹 대상이 아니므로 정확한 실패 전달 가능."
+  - question: "WO-012(Node.js 24) 3 워커 dispatch 중 iOS만 즉시 green을 확보한 이유는?"
+    choices:
+      - "iOS 테스트가 적어서"
+      - "iOS는 WO-010(ADR-009)에서 이미 self-hosted 전환 완료 → billing 차단과 무관. server/android는 GitHub-hosted 의존 → billing 차단으로 job 시작 자체 불가"
+      - "iOS runner가 더 빠라서"
+      - "Node.js 24가 iOS에만 적용 가능해서"
+    answer: 1
+    explanation: "선행 투자(WO-010 self-hosted 전환)가 이번 세션의 부분 성공 보장. ADR-009 결정 당시에는 macOS 분 가중치 10x 절감이 주요 동기였지만, billing 독립이라는 숨겨진 배당이 WO-012에서 즉시 실현. 인프라 독립성의 복리 효과."
+---
+
+## Before — Journal 006 이후의 상태
+
+Session 7(v0.7.2) 종료 시점:
+
+1. **WO-010 done** — iOS CI self-hosted runner 전환 완료 (124 tests / 1m 56s / macOS 분 180→0)
+2. **P3 도구 3종** — `send-seq` + 429 backoff + `ci-status.sh` 도구화 ([Journal 006](/wiki/harness-engineering/aidy-journal-006-ios-ci-self-hosted-runner-migration))
+3. **후속 WO 3건 등록** — WO-011(Swift 6) / WO-012(Node.js 24, P0) / WO-013(워크플로 통합)
+
+Session 8은 **P0 WO-012(Node.js 24, 2026-06-02 deadline)** 착수로 시작했다. 그리고 billing 차단이 다시 등장했다.
+
+---
+
+## WO-012 — Node.js 24 호환 + billing 차단 재발
+
+### send-seq P3-7 첫 실전
+
+WO-012는 3 워커(iOS/server/android) 모두 대상. `send-seq` 직렬 dispatch([Journal 003](/wiki/harness-engineering/aidy-journal-003-parallel-dispatch-token-economics))로 순차 실행:
+
+| 워커 | dispatch 소요 | 결과 |
+|---|---|---|
+| iOS | 195s | **green** — self-hosted(WO-010) 덕에 billing 무관 |
+| server | 465s | **blocked** — billing 차단 |
+| android | 210s | **blocked** — billing 차단 |
+
+iOS만 즉시 green. **WO-010의 숨겨진 배당** — self-hosted 전환이 billing 독립성까지 보장.
+
+### 방향 전환
+
+server/android가 GitHub-hosted(ubuntu-latest) 의존 → billing 차단으로 job 시작 자체 불가. WO-012 Gate 2 blocked.
+
+**사용자와 즉시 방향 전환 결정**: server/android도 self-hosted runner 통합 + Hybrid fallback 패턴 도입.
+
+→ **WO-014**(server self-hosted) + **WO-015**(android self-hosted + SDK) + **WO-016**(Hybrid fallback) 동일 세션 내 발주.
+
+---
+
+## ADR-010 — Hybrid Fallback 전략
+
+### 워커별 차등 적용
+
+| 워커 | 전략 | 근거 |
+|---|---|---|
+| iOS | self-hosted **only** | macOS 분 가중치 10x — ADR-009 유지 |
+| Server | **Hybrid** (GitHub-hosted primary + self-hosted fallback) | Linux 계수 1x — 평상시 무료 쿼터(2000분/월) 활용, 장애 시 자동 fallback |
+| Android | **Hybrid** (동일 + merge 가드) | 동일 논리 |
+
+Hybrid를 선택한 이유: 사용자 의도("깃헙 먼저 찌르고 실패시 self-hosted") 100% 부합 + Linux 무료 쿼터 활용 극대화. self-hosted only로 가면 무료 2000분/월을 버리게 된다.
+
+### continue-on-error masking 버그 발견
+
+WO-016 최초 설계:
+
+```yaml
+# 설계 의도: primary fail → fallback 발동
+primary:
+  runs-on: ubuntu-latest
+  continue-on-error: true
+fallback:
+  needs: primary
+  if: needs.primary.result != 'success'   # ← 항상 false!
+```
+
+**server 1차 실행에서 발견**: primary fail + fallback **skipped**. 예상의 정반대.
+
+**근본 원인**: `continue-on-error: true`가 job-level에 있으면 `needs.<job>.result`를 `'success'`로 마스킹. GitHub Actions 미문서화 동작. job-level에는 step의 `outcome`도 미제공이라 어떤 필드로도 실패 여부 확인 불가.
+
+### Mark-step 우회 패턴 (ADR-010 §8)
+
+```yaml
+primary:
+  runs-on: ubuntu-latest
+  continue-on-error: true
+  outputs:
+    passed: ${{ steps.mark.outputs.passed }}
+  steps:
+    - # actual work ...
+    - name: Mark primary success
+      id: mark
+      # if: success() (암묵 기본값) — 이전 step 실패 시 skip
+      run: echo "passed=true" >> $GITHUB_OUTPUT
+
+fallback:
+  needs: primary
+  if: ${{ always() && needs.primary.outputs.passed != 'true' }}
+  runs-on: [self-hosted, macOS, ARM64, aidy-server]
+```
+
+**왜 작동하는가**:
+1. `outputs`는 `continue-on-error` 마스킹 대상이 아님 (step-level 값 직접 전달)
+2. Mark step의 `if: success()`(암묵) — 이전 step 실패 → skip → `passed` 미설정 → fallback 발동
+3. billing 차단(job startup fail) → step 전부 미실행 → `passed` 미설정 → fallback 발동
+4. `always()`로 needs 상태와 무관하게 평가 실행
+
+2차 실행 결과: primary fail → fallback **green** (3초 지연). 실증 완료.
+
+---
+
+## WO-014/015 — 인프라 세팅
+
+### Architect 선행 작업
+
+MBA에 2 runner 추가 등록 + 환경 구성:
+
+| 항목 | 설정 |
+|---|---|
+| server runner | `jominhoui-mba-server` / self-hosted, macOS, ARM64, aidy-server |
+| android runner | `jominhoui-mba-android` / self-hosted, macOS, ARM64, aidy-android |
+| JDK 17 (baseline) | `/opt/homebrew/opt/openjdk@17` (17.0.18) |
+| JDK 21 (workflow) | `actions/setup-java@v5` tool-cache (Temurin 21.0.10) |
+| Android SDK | `/opt/homebrew/share/android-commandlinetools` |
+| SDK 컴포넌트 | build-tools 35.0.0, platform-tools 37.0.0, platforms;android-35 |
+
+### Spec 전제 보정 2건
+
+1. **JDK 17 vs 21**: spec에 JDK 17 고정 가정 → 실제 프로젝트 `build.gradle.kts`에서 JDK 21 필요 확인. 워커가 현장 보정
+2. **Android SDK 경로**: `$HOME/Library/Android/sdk` 예상 → brew cask 실제 경로 `/opt/homebrew/share/android-commandlinetools`. 설치 전 경로 가정의 함정
+
+→ **spec-first-verify-first 원칙 도출**: workflow 패턴 spec 작성 후 1 워커 dispatch → 실증 → spec 확정 → 나머지 워커 dispatch.
+
+### 테스트 실측
+
+| 워커 | 테스트 수 | 결과 |
+|---|---|---|
+| server | 207 tests | 0 failures |
+| android | 135 tests | 0 failures |
+| iOS (WO-010 baseline) | 124 tests | green 유지 |
+| **합계** | **466 tests** | **all green** |
+
+server에서 `actions/cache` 15분 hang 발견 → 워커가 독립 해결(cache step 제거).
+
+---
+
+## WO-016 — 라이브 스펙 정정 + 크로스 워커 전파
+
+WO-016의 가장 가치 있는 산출물은 *코드가 아니라 프로세스*.
+
+### 타임라인
+
+| 단계 | 사건 | 대응 |
+|---|---|---|
+| §1 | server 1차: Mark-step 패턴 미적용 → fallback skipped | 원인 분석 → Mark-step 설계 |
+| §2 | server 2차: primary fail → fallback **green** (3초) | ADR-010 §8 즉시 보강 |
+| §3 | android tmux 긴급 알림: "§1 버그 있었다, §8 패턴 확인 후 적용" | android가 server main YAML cross-check 후 정상 적용 |
+| §4 | android: primary fail → fallback green | merge 가드 패턴 추가 발견 (조건부 step이 있는 경우) |
+
+**라이브 스펙 정정 + 크로스 워커 전파가 1 세션 내 완결된 사례.** tmux 알림 채널이 없었다면 android 워커가 같은 버그를 반복했을 것.
+
+---
+
+## QA 에이전트 배치 (v0.8.0)
+
+s8 마지막 작업으로 3 워커에 `@qa-tester` 에이전트 배치:
+
+| 워커 | 프레임워크 | 테스트 수 | 모드 |
+|---|---|---|---|
+| server | Spring Boot + JUnit 5 + MockMvc | 207 | run / cover / add / fix / flaky |
+| ios | TCA TestStore + XCTest | 124 | 동일 |
+| android | MVVM + MockK + Turbine | 135 | 동일 + contract |
+
+전부 `model: sonnet`으로 경량화. 기존 Architect가 직접 테스트 지시하던 패턴에서 **전용 에이전트 위임**으로 전환.
+
+---
+
+## 운영 데이터
+
+| 항목 | 수치 |
+|---|---|
+| WO 완료 | 4건 (012, 014, 015, 016) |
+| ADR | 1건 생성 (010) + 3회 보강 (§6 JDK, §7 cache 금지, §8 Mark-step) |
+| 테스트 (3 워커 합계) | **466 tests / 0 failures** |
+| Runner | MBA에 3대 동시 운영 (iOS/server/android) |
+| Hybrid 실증 | server/android: primary fail → fallback green (3초 지연) |
+| 솔루션 | 1건 (continue-on-error masking) |
+| send-seq 실행 | 3회 (WO-012 3워커 / WO-014+015 / WO-016) |
+| 세션 소요 | ~3h (리밋 대기 포함) |
+
+---
+
+## 박제 교훈
+
+### 1. 선행 투자의 복리 효과
+
+iOS self-hosted(WO-010, Journal 006)는 macOS 분 절감이 주요 동기였다. 그런데 billing 차단이 재발했을 때 **iOS만 유일하게 즉시 green**. 인프라 독립성 투자는 예상 못한 시점에 배당을 지급한다. Compound Engineering의 본질 — 지금의 결정이 미래 세션의 옵션을 넓힌다.
+
+### 2. `continue-on-error` + `needs.result` = 지뢰
+
+GitHub Actions 미문서화 동작. `continue-on-error: true`가 job-level에 있으면 `needs.<job>.result`를 `'success'`로 마스킹. **fallback workflow 설계 시 `needs.result` 사용 금지** → Mark-step 패턴 필수.
+
+### 3. spec-first-verify-first
+
+WO-016 §1 예시 패턴 버그는 Architect가 spec 작성 시 dry-run을 안 한 것. workflow 패턴처럼 *실행해봐야 확인되는* spec은 "1 워커 실행 → 실증 → spec 확정 → 나머지 dispatch" 순서.
+
+### 4. 크로스 워커 전파 채널 필수
+
+tmux 알림이 없었다면 android 워커가 server와 같은 버그를 반복. 워커 간 실시간 전파 채널(tmux, 알림 스크립트)이 multi-agent 오케스트레이션의 비용 절감 인프라.
+
+### 5. Hybrid는 쿼터 최적화 전략
+
+Linux 계수 1x인 server/android는 self-hosted only가 아니라 Hybrid가 정답. 무료 2000분/월을 버리지 않으면서 billing 장애에 자동 대응. 경제성과 안정성의 양립.
+
+---
+
+## 후속 (s9 대기)
+
+| 항목 | 상태 | 트리거 |
+|---|---|---|
+| WO-016 정상 시나리오 검증 | deferred | billing 복구 시 — primary green + fallback skipped 실증 |
+| WO-011 (Swift 6 Sendable) | backlog | iOS 전용, 경고 다수 |
+| WO-013 (워크플로 통합) | backlog | test.yml + ai-review.yml 중복 제거 |
+| Password reset SMTP Phase 2 | backlog | 이메일 템플릿 + bounce |
+| SSE Phase 3 | backlog | Anthropic event_type 전수 |
+| MBA 디스크 모니터링 | 추천 | iOS + Android SDK + Gradle 캐시 누적 (현재 61GB 여유) |
+| Runner 경합 모니터링 | 추천 | 3대 동시 busy 시 CPU/메모리 경합 추적 |
+
+---
+
+## AI Agent Directive
+
+### Trigger
+- GitHub Actions workflow에서 `continue-on-error: true` 사용 + fallback job 설계 시
+- billing 차단 재발 시 (iOS 외 워커)
+- self-hosted runner 추가 등록 시
+- Hybrid fallback 패턴 도입 검토 시
+- 3 워커 동시 CI 인프라 변경 시
+
+### Prerequisites
+- [Journal 006](/wiki/harness-engineering/aidy-journal-006-ios-ci-self-hosted-runner-migration) — ADR-009 iOS self-hosted 선행
+- [Journal 003](/wiki/harness-engineering/aidy-journal-003-parallel-dispatch-token-economics) — send-seq 직렬 dispatch + 토큰 경제성
+- [tmux flush 자동화](/wiki/harness-engineering/tmux-flush-automation-pattern) — 크로스 워커 tmux 알림 채널
+
+### Actionable Steps
+
+1. **Hybrid fallback 설계 시 `needs.result` 사용 금지** — `continue-on-error` 마스킹 때문. 반드시 Mark-step 패턴(`outputs.passed` + `if: always() && != 'true'`)
+2. **workflow 패턴 spec 작성 후 1 워커 실행 → 실증 → spec 확정** — spec-first-verify-first. WO-016처럼 실행해봐야 드러나는 버그가 있다
+3. **self-hosted runner 추가 시 프로젝트 빌드 설정 1회 읽기** — `build.gradle.kts`의 `jvmTarget`/`compileSdk`, `Package.swift`의 tools version 등. spec 전제와 실제 불일치 방지
+4. **multi-worker dispatch는 `send-seq` 직렬** — billing/rate-limit 리스크 회피. 1 워커 green 확인 후 나머지
+5. **인프라 변경 후 모든 워크플로 스캔** — Journal 006 교훈 재적용. `ci-status.sh --watch`로 모든 워크플로 fail 탐지
+6. **tmux 알림으로 크로스 워커 긴급 전파** — spec 정정/버그 발견 시 다른 워커에 즉시 알림
+
+### Anti-patterns
+
+- **`needs.result`로 fallback 트리거** — `continue-on-error` 마스킹으로 영원히 skipped
+- **spec dry-run 없이 전체 워커 동시 dispatch** — 같은 버그 N회 반복
+- **프로젝트 빌드 설정 미확인 상태로 환경 spec 작성** — JDK/SDK 버전 미스매치
+- **self-hosted only로 Linux 워커 전환** — 무료 쿼터 2000분/월 낭비
+- **크로스 워커 전파 채널 없이 multi-agent 운영** — 동일 버그 N회 반복
+- **`actions/cache` 무조건 사용** — self-hosted에서 15분 hang 발생 가능. 로컬 캐시면 불필요
+
+---
+
+## 출처 / 검증 메모
+
+- aidy-architect:
+  - HANDOFF.md L1~L107 (s8 전체 기록)
+  - ADR-010: `specs/decisions/010-server-android-self-hosted-hybrid.md`
+  - 회고: `docs/retros/s8-WO-012-016-compound-retro.md`
+  - 솔루션: `docs/solutions/2026-04-17-continue-on-error-masking.md`
+  - 커밋: `59f8731` v0.8.0 (WO done) + `e3a08ea` v0.8.0 (QA 배치)
+  - WO: done/WO-012 ~ WO-016
+- aidy-server: WO-014 runner 등록 + Hybrid workflow 적용 (207 tests green)
+- aidy-android: WO-015 runner + SDK + Hybrid workflow 적용 (135 tests green)
+- aidy-ios: WO-012 Node.js 24 merged (124 tests green, self-hosted)
+- 연관 Journal: [003](/wiki/harness-engineering/aidy-journal-003-parallel-dispatch-token-economics) · [006](/wiki/harness-engineering/aidy-journal-006-ios-ci-self-hosted-runner-migration)
+- 연관 솔루션: continue-on-error masking (GitHub 미문서화, 2026-04 기준 공식 문서에 명시 없음)
