@@ -62,6 +62,7 @@ MDX 전체를 읽어야 할 때만 파일을 직접 열 것. 검색으로 충분
 ## Project Structure
 ```
 content/           → MDX wiki entries (13 카테고리별 디렉토리)
+data/              → search-hits.json (JIT 검색 히트 카운트, git 추적)
 scripts/           → prebuild manifest, watch, new-entry CLI, AI 과외 선생님, topic-pool.json,
                      embed-content (Layer 3 인덱서), search (검색 CLI), benchmark-models (모델 비교)
 scripts/lib/       → mermaid-fix (validate 유틸), query-router (JIT 검��� 라우터)
@@ -191,11 +192,17 @@ Key routing rules:
 - 워커 프로젝트(moneyflow/tarosaju) 상태 확인, 다른 세션 작업 흔적 감지, 충돌 사전 탐지 → invoke projects-sync
 - 다른 Claude 세션(맥앱/웹/다른 터미널) PR/커밋 검증, 크로스 세션 리뷰 → invoke cross-session-review
 - 워커 프로젝트(moneyflow/tarosaju 등)가 `patterns:` prefix로 쏜 PR을 하네스로 박제 → invoke curate-inbound
+- MDX/Mermaid 콘텐츠 작성 후 커밋 전 문법 검증 → invoke validate-mdx
+- AI 생성 콘텐츠(Gemini/Claude) 검증, 가짜 인용/YAML/slug → invoke validate-ai-output
+- solutions N=3+ 누적, 코드 게이트 승격 판단 → invoke promote-solution
 
 ## .claude/ 인프라
 
 - `.claude/hooks/no-company-names.sh` — PreToolUse(Edit/Write) 가드. `gma-ios|GreenCar|LOTTIMS` 패턴 grep → 차단. 메모리 룰 보강용 행동 레벨 가드. 화이트리스트: `.claude/projects/.../memory/`, 훅 자체
 - `.claude/commands/cross-session-review.md` — Journal 019 5단 프로토콜 슬래시 커맨드
+- `.claude/commands/validate-mdx.md` — MDX/Mermaid 5대 함정 사전 grep (mdx solutions 5건 추출)
+- `.claude/commands/validate-ai-output.md` — AI 생성물 4대 함정 검증 (ai-pipeline solutions 4건 추출)
+- `.claude/commands/promote-solution.md` — N=3+ 솔루션 코드 게이트 승격 프로세스 (workflow solutions 7건 추출)
 - `scripts/lib/mermaid-fix.mjs` — `validate-content.mjs`에서 추출한 자동 수정 + warning-only 검출. 두 과거 버그(slicing offset / regex 누적) docstring 박제 + `detectUnquotedSpecialCharLabels()` warning (`<br/>` `→`)
 - `scripts/__tests__/validate-content.test.mjs` — mermaid-fix 16 회귀 테스트 (idempotency 케이스 별도 박제, `npm test`로 vitest 실행)
 

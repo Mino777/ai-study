@@ -9,74 +9,74 @@
 
 ## 🕒 작성 시점
 
-- **작성 일시**: 2026-04-17 (Session 9 — Superpowers+Hermes+aidy 패턴 이식 + 6프로젝트 배포)
-- **작성 주체**: Claude (Session 9)
-- **이유**: 8개 패턴 평가 / 7개 이식 / 6프로젝트 배포 완료 → 다음 세션 부트스트랩
+- **작성 일시**: 2026-04-17 (Session 10 — JIT 히트 카운트 + 스킬 자동 생성 첫 실행)
+- **작성 주체**: Claude (Session 10)
+- **이유**: NEXT.md 큐 🔴 High 1번 실행 완료 → 다음 세션 부트스트랩
 
 ---
 
 ## 📸 현재 상태 스냅샷
 
 ### ai-study Wiki
-- **엔트리 수**: 127 (+2)
+- **엔트리 수**: 127
 - **카테고리**: 13 (방법론 4 + 시스템 3 + 평가&인프라 2 + 응용 4)
 - **AI Agent Directive**: **100%** (85/85 non-journal)
-- **compound Phase**: 7 Phase (3b/4/4b/6 신규)
-- **주요 시리즈**:
-  - **Harness Journal** (000~025)
-  - **iOS Journal** (000~009)
-  - **Multi-Agent Orchestration Journal (Aidy)** (000~007)
-  - **Flow Map for iOS Devs** (1·2·3·4·6·7편 완료, 5편 deferred)
+- **슬래시 커맨드**: **11개** (+validate-mdx, validate-ai-output, promote-solution)
+- **compound Phase**: 7 Phase (3b/4/4b/6 포함)
 - **Git 상태**: main clean, origin/main 동기
 - **최근 major 변경**:
-  - **Superpowers+Hermes+aidy 패턴 7개 이식** — compound 5→7 Phase
-  - **review 2-Stage** — 6프로젝트 배포
-  - **자기 평가 바이어스 3층 방어** — 16건 회고 분석 기반
+  - **JIT 검색 히트 카운트** — search.mjs → data/search-hits.json → manifest → UI
+  - **스킬 3개 자동 생성** — solutions 16건에서 메타 패턴 추출
+
+### JIT 히트 카운트 현황
+- **totalQueries**: 1 (방금 첫 실행)
+- **저장소**: `data/search-hits.json` (git 추적)
+- **UI**: 위키 목록/상세 페이지에 "JIT N회" 배지
+- **다음 마일스톤**: 100+ 쿼리 축적 후 0회 엔트리 하이라이트 판단
 
 ### Tokenomics 현재 상태
-- **7일 비용**: $5,111 (04/10~17, 세션 8 집중 작업 포함)
-- **프로젝트별**: moneyflow 43%, tarosaju 25%, ai-study 15%, aidy 14%
+- **7일 비용**: $5,111 (04/10~17)
 - **RTK 절감**: 53.0M tokens (97.4%)
 - **Cache read**: 98%+
 
 ### Layer 3 POC 현재 상태 (변동 없음)
 - **적중률**: Top-5 93%, Top-1 73%, 토큰 절감 99.8%
 - **Phase 3 통과**: ✅
-- **다음**: 실전 관찰 계속 (3+ 세션 검증 중 1/3)
+- **다음**: 실전 관찰 계속 (3+ 세션 검증 중 — 히트 카운트로 관찰성 확보)
 
 ### aidy 4 레포 (관제 + 3 워커)
-- **이식 완료**: review 2-Stage + Frozen Snapshot (전체), Anti-Rationalization (architect)
 - **다음 aidy 세션(s9) 시작점**: `aidy-architect/HANDOFF.md`
 
 ### moneyflow / tarosaju (워커 프로젝트)
-- **이식 완료**: compound 업그레이드 + review 2-Stage + Frozen Snapshot
 - **현재 브랜치**: moneyflow=`docs/v0944-handoff`, tarosaju=`docs/next-plan`
-- **주의**: main이 아닌 브랜치에 커밋됨. 머지 시점은 각 프로젝트 세션에서 결정
+- **JIT 검색**: ai-study에만 적용. 워커 프로젝트는 미적용
 
 ---
 
 ## 🎯 다음 작업 큐 (우선순위 순)
 
-### 🔴 High — 스킬 자동 생성 첫 실행 + JIT 검증
+### 🔴 High — 스킬 검증 + JIT 관찰
 
-1. **경험→스킬 자동 생성 첫 실행**
-   - workflow(7건), mdx(5건), ai-pipeline(4건) — 3개 카테고리 N≥3
-   - 각 카테고리 솔루션 읽고 공통 패턴 추출 → 스킬 초안 생성
-   - 사람 리뷰 후 `.claude/commands/`에 커밋
-   - 예상 크기: M
+1. **스킬 dry-run 검증**
+   - `/validate-mdx`를 실제 MDX 파일에 실행 → false positive 비율 측정
+   - `/validate-ai-output`를 최근 AI 생성 엔트리에 실행 → 함정 탐지 테스트
+   - false positive > 5% 시 grep 패턴 정밀도 조정
+   - 예상 크기: S
 
 2. **JIT 검색 성과 검증 (2/3 세션)**
    - 실전 세션에서 JIT 검색 실제 사용 관찰
+   - 히트 카운트 축적 확인 (totalQueries 추적)
    - shadow-benchmark 재실행 → 적중률 80%+ 유지 확인
    - 예상 크기: S (관찰)
 
-### 🟡 Medium — aidy s9 + 위키 유지보수
+### 🟡 Medium — aidy s9 + 유지보수
 
 3. **aidy Session 9 박제 대기**
    - 트리거: aidy-architect에서 s9 완료 + compound
 
-4. **이식 전 브랜치 확인 체크리스트 구현**
-   - 크로스 프로젝트 이식 시 각 프로젝트 현재 브랜치 확인 자동화
+4. **히트 카운트 100+ 도달 시 0회 엔트리 표시**
+   - totalQueries > 100 이후 판단
+   - 0회 엔트리를 위키 목록에서 시각적으로 구분 (opacity 낮추기 등)
    - 예상 크기: S
 
 ### 🟢 Low — 가치 시점 봐서
@@ -90,7 +90,7 @@
 ## ⚠️ 블로커 / 대기 사항
 
 ### 코드 결정 대기 (자율 처리 X)
-- **스킬 자동 생성 초안** — 사람 리뷰 게이트 필수
+- **0회 엔트리 하이라이트 방식** — 데이터 충분히 쌓인 후 사용자와 논의
 - **aidy s9 시작 시점** — 토큰 리밋 여유 확인 후
 
 ### 다른 세션 주의
@@ -118,9 +118,9 @@
 - [ ] 양쪽 main 최신 commit 확인 · 이 NEXT.md 의 스냅샷과 비교
 
 ### Phase 4: 최근 박제 훑기 (3분)
-- [ ] `docs/retros/2026-04-17-session-9.md` (패턴 이식 + 바이어스 대응)
-- [ ] `content/evaluation/agent-self-evaluation-bias-countermeasures.mdx`
-- [ ] `content/harness-engineering/cross-project-pattern-porting-methodology.mdx`
+- [ ] `docs/retros/2026-04-17-session-10.md` (히트 카운트 + 스킬 자동 생성)
+- [ ] `.claude/commands/validate-mdx.md` (새 스킬 확인)
+- [ ] `.claude/commands/promote-solution.md` (새 스킬 확인)
 
 ### Phase 5: 작업 시작 (2분 내)
 - [ ] 새 작업은 `/wt-branch <branch-name>` 으로 시작
@@ -152,6 +152,9 @@ rtk npm test -- scripts/__tests__/
 # Layer 3 검색
 rtk npm run search -- "query text"
 
+# JIT 히트 카운트 확인
+cat data/search-hits.json | jq '.totalQueries, (.hits | to_entries | sort_by(-.value) | .[:10])'
+
 # 사이클 종료
 /compound
 ```
@@ -170,10 +173,8 @@ rtk npm run search -- "query text"
 
 ## 📜 최근 갱신
 
-### 2026-04-17 (Session 9 — 패턴 이식 + 6프로젝트 배포)
-- **8개 패턴 평가** — Superpowers(3) + Hermes(3) + aidy(2)
-- **7개 이식** — No-Placeholder, Anti-Rationalization, 2-Stage Review, Frozen Snapshot, 프로세스 개선, 스킬 자동 생성, NEXT.md Phase
-- **6프로젝트 배포** — ai-study + moneyflow + tarosaju + aidy 3워커
-- **compound 5→7 Phase** — 3b/4/4b/6 추가
-- **엔트리 2건** — 바이어스 대응 + 패턴 이식 방법론
-- **다음 순위**: 스킬 자동 생성 첫 실행 (workflow 7, mdx 5, ai-pipeline 4)
+### 2026-04-17 (Session 10 — JIT 히트 카운트 + 스킬 자동 생성)
+- **JIT 히트 카운트 구현** — search.mjs → data/search-hits.json → manifest → UI
+- **스킬 3개 자동 생성** — /validate-mdx, /validate-ai-output, /promote-solution
+- **NEXT.md 큐 🔴 High 1번 완료** → 큐 재정렬 (스킬 검증 + JIT 관찰로 교체)
+- **슬래시 커맨드**: 8 → 11

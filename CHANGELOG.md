@@ -2,6 +2,31 @@
 
 모든 주목할 만한 변경사항을 이 파일에 기록합니다.
 
+## [2026-04-17] 세션 10 — JIT 히트 카운트 + 스킬 자동 생성 첫 실행
+
+> NEXT.md 큐 🔴 High 1번 실행: solutions N≥3 카테고리에서 스킬 3개 추출 + JIT 검색 관찰성 확보
+
+### Added
+
+- **JIT 검색 히트 카운트** — `search.mjs` → `data/search-hits.json` 영구 기록 → manifest → UI 표시
+  - 엔트리 상세 페이지: SummaryCard에 "JIT N회" 배지
+  - 위키 목록 페이지: 각 카드에 히트 카운트 표시
+  - 0회 엔트리 자연스럽게 식별 가능 (1000+ 쿼리 축적 후 활용)
+- **스킬 3개 자동 생성** (docs/solutions 16건에서 패턴 추출):
+  - `/validate-mdx` — MDX/Mermaid 5대 함정 사전 grep (mdx 5건)
+  - `/validate-ai-output` — AI 생성물 4대 함정 검증 (ai-pipeline 4건)
+  - `/promote-solution` — N=3+ 솔루션 코드 게이트 승격 프로세스 (workflow 7건)
+
+### Metrics
+
+| 항목 | Before | After |
+|---|---|---|
+| 슬래시 커맨드 | 8 | **11** (+validate-mdx, validate-ai-output, promote-solution) |
+| JIT 관찰성 | 검색만 가능 | **검색 + 히트 카운트 추적** |
+| manifest 필드 | 6 | **7** (+searchHits) |
+
+---
+
 ## [2026-04-17] 세션 9 — Superpowers+Hermes+aidy 패턴 이식 + 6프로젝트 배포
 
 > 외부 프레임워크 3개(Superpowers, Hermes, aidy-architect)에서 8개 패턴 평가, 7개 이식, 6개 프로젝트 배포
