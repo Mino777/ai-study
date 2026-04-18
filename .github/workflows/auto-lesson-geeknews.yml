@@ -5,7 +5,12 @@ name: "📰 Auto Lesson from GeekNews"
 on:
   schedule:
     - cron: "50 23 * * *"
-  workflow_dispatch: # 수동 실행
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: "특정 이슈 번호 지정 (비우면 자동 감지)"
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -20,7 +25,17 @@ jobs:
         id: check
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_ISSUE: ${{ inputs.issue_number }}
         run: |
+          # 수동 지정된 이슈가 있으면 바로 사용
+          if [ -n "$INPUT_ISSUE" ]; then
+            echo "issue_number=$INPUT_ISSUE" >> $GITHUB_OUTPUT
+            echo "has_stale=true" >> $GITHUB_OUTPUT
+            echo "stale_count=1" >> $GITHUB_OUTPUT
+            echo "📋 수동 지정 이슈: #$INPUT_ISSUE"
+            exit 0
+          fi
+
           # 24h 이상 된 미응답 "오늘의 학습" 이슈 찾기
           STALE_ISSUES=$(gh issue list \
             --repo ${{ github.repository }} \
