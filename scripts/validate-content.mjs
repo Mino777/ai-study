@@ -95,6 +95,7 @@ function detectPlaceholders(content, filePath) {
     { regex: /구현\s*예정/, label: "구현 예정" },
     { regex: /추후\s*작성/, label: "추후 작성" },
     { regex: /작성\s*필요/, label: "작성 필요" },
+    { regex: /\uFFFD/, label: "깨진 문자 (Unicode replacement character)" },
   ];
 
   for (let i = 0; i < lines.length; i++) {

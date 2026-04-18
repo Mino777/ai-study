@@ -153,7 +153,10 @@ Compound가 성립하려면 2가지가 필요:
 
 **왜**: 전이성이 없으면 복리는 *1명 × N 사이클*이 한계. 전이성이 있으면 *M명 × N 사이클*.
 
-**실제 사례**: Journal 005 — 다른 세션이 ai-study의 박제 패치를 *별도 안내 없이 발견해서 적용*. Compound Engineering의 *"다음 작업이 더 쉬워진다"*가 *다른 사람에게도* 확장되는 첫 라이브 검증.
+**실제 사례**:
+- Journal 005 — 다른 세션이 ai-study의 박제 패치를 *별도 안내 없이 발견해서 적용*. 전이성의 첫 라이브 검증.
+- **양방향 전이**: Journal 014의 `/curate-inbound` — 워커 프로젝트(moneyflow/tarosaju)에서 발견한 패턴이 허브(ai-study)로 역방향 전이. 단방향(허브→워커)뿐 아니라 *워커→허브*도 전이 경로.
+- **4레포 동시 전이**: aidy-architect의 Spec-Driven 패턴이 ai-study 위키에 박제 → 다시 moneyflow/tarosaju의 CI/CD 패턴(ADR-010 hybrid fallback)이 ai-study+aidy 3레포에 동시 이식. *M 프로젝트 × N 사이클* 복리의 실전.
 
 ### 6. 사이클 분할 — 한 사이클에 한 박제
 
@@ -181,15 +184,16 @@ Compound가 성립하려면 2가지가 필요:
 
 ### 9. 사고 재발률 0 — N=3 승격 트리거
 
-**원칙**: 박제된 패���이 다�� 사이클에 *다시 발생��면 안 된다*. 재발 시 가드를 행동 레벨로 끌어올린다 (메모리 → 훅 → ��크플로).
+**원칙**: 박제된 패턴이 다음 사이클에 *다시 발생하면 안 된다*. 재발 시 가드를 행동 레벨로 끌어올린다 (메모리 → 훅 → 워크플로).
 
-**왜**: 재발은 *기존 가드가 기�� 레벨*이라는 증거. 원칙 2로 되돌���가서 더 낮은 ���이어��� 박는다.
+**왜**: 재발은 *기존 가드가 기억 레벨*이라는 증거. 원칙 2로 되돌아가서 더 낮은 레이어에 박는다.
 
 **N=3 승격 트리거**: `docs/solutions/` 에 동일 패턴이 **3건 이상** 누적되면 *솔루션 문서 레벨*에서 *validator/훅 레벨*로 승격한다. 1~2건은 문서 박제로 충분하지만, 3건부터는 "재발이 시스템화됐다"는 신호다.
 
 승격 시 원칙:
 - **warning-only 우선** — auto-fix는 false positive / idempotency 깨짐 위험이 크다. 사람이 보고 수동 수정하도록 경고만 띄우는 게 안전
 - **idempotency 별도 vitest 케이스** — 새 정규식이 추가될 때마다 "이미 처리된 입력에 다시 실행해도 결과 동일" 검증 필수
+- **FP율 모니터링** — 승격된 validator의 FP가 높으면(90%+) 사용자가 경고를 무시하기 시작 → 진짜 문제도 놓침. 코드블록 밀집 파일 대상 stress test로 FP율 측정 후 판단 (validate-mdx Trap 3 stress test 사례: FP 90%+ 확인 → "수동 검토 플래그"로 역할 한정, 자동 게이트 승격 보류)
 
 **실제 사례**:
 - Journal 003 squash merge trap — 사고가 *두 번* 발생 → `/wt-branch`(행동 레벨)로 박음
@@ -260,6 +264,9 @@ flowchart LR
 | [skill-system-introduction](/wiki/harness-engineering/skill-system-introduction) | 원칙 8, 경로 의존성 | 슬래시 커맨드가 *큰 워크플로로 통합*되는 경로 의존성. `/compound`에 4가지가 다 들어간 이유 |
 | [wt-branch-structural-safety](/wiki/harness-engineering/wt-branch-structural-safety) | 원칙 2 | *"행동에 박는 가드 > 기억에 의존하는 가드"* 원칙을 구조적으로 구현한 가장 순수한 사례 |
 | [ai-ops-environment-diagnosis-checklist](/wiki/harness-engineering/ai-ops-environment-diagnosis-checklist) | 원칙 12 | 영역 10 "자율 진행 / Compound Loop"로 50문항 체크리스트에 편입. Stage 3 이상 도달 여부 체크 |
+| [harness-journal-024-solution-to-validator-promotion](/wiki/harness-engineering/harness-journal-024-solution-to-validator-promotion) | 원칙 9 | Mermaid 따옴표 누락 4번째 재발 → `validate-content.mjs` warning 승격. *"N=3이면 validator 승격"* 원칙의 최초 라이브 적용 |
+| [cross-project-pattern-porting-methodology](/wiki/harness-engineering/cross-project-pattern-porting-methodology) | 원칙 5 | 전이성을 *방법론*으로 일반화. 3 프로젝트 간 패턴 이식의 5단계 프로세스 |
+| [aidy-journal-009-stall-detection-3way-dispatch-feature-sprint](/wiki/harness-engineering/aidy-journal-009-stall-detection-3way-dispatch-feature-sprint) | 원칙 3, 9 | Stall Detection 4단계 프로토콜 — *사고(워커 10분 정체)가 다음 사이클의 모니터링 프로토콜로 박제* |
 
 ---
 
@@ -273,7 +280,7 @@ flowchart LR
 | **4. 자동 루프** | `/autoceo`가 N 라운드 자동 반복 | 사람이 *승인*만. 사이클 실행은 자동 |
 | **5. 완전 자율** | 외부 입력 → 실행 → 박제 → 다음 사이클까지 | 사람이 *회고만* 읽음. 운영 0 |
 
-ai-study + 3 프로덕트 현재 상태: **Stage 3~4**. 슬래시 커맨드로 박제 누락률을 거의 0으로 줄였고, `/autoceo`로 N 라운드 자동 실행까지 실험 중.
+ai-study + 3 프로덕트 현재 상태: **Stage 3~4**. 슬래시 커맨드 7개(`/compound`, `/autoceo`, `/wt-branch`, `/ingest`, `/cross-session-review`, `/curate-inbound`, `/projects-sync`)로 박제 누락률을 거의 0으로 줄였고, `/autoceo`로 N 라운드 자동 실행까지 운영 중. aidy-architect는 10라운드 자동 스프린트(v0.9→v1.0, +101 tests)를 Stage 4 수준에서 완주.
 
 ---
 
@@ -356,3 +363,13 @@ ai-study 위키 자체가 Compound Engineering의 *살아있는 구현체*다.
 - 4단계 루프 × 4개 슬래시 커맨드 매핑은 [compound-automation-slash-commands](/wiki/harness-engineering/compound-automation-slash-commands)에서 박제된 해석
 - 5단계 ladder는 [ai-ops-environment-diagnosis-checklist](/wiki/harness-engineering/ai-ops-environment-diagnosis-checklist) 영역 10에서 Stage 3 이상 도달 여부 측정 기준으로 참조됨
 - 이 엔트리는 *철학적 토대*로, 12 엔트리가 이미 인용하던 원칙을 *한 곳에 박제*한 것. 새로운 주장이 아니라 *추출 + 일반화*
+
+## 갱신 로그
+
+### 2026-04-18 — 깨진 문자 복원 + 경험 기반 보강
+
+- **깨진 문자 복원**: 원칙 9의 한글 텍스트 2줄 복원 (Unicode replacement character `�` → 원문 복원)
+- **원칙 5 전이성 보강**: 양방향 전이(워커→허브 `/curate-inbound`) + 4레포 동시 전이(ADR-010) 사례 추가
+- **원칙 9 FP 모니터링 추가**: validate-mdx Trap 3 stress test 교훈 — 승격된 validator의 FP율이 높으면 경고 무시 유발 → stress test로 역할 한정 판단
+- **5단계 Ladder 현재 상태 갱신**: 슬래시 커맨드 7개 + aidy-architect Stage 4 완주 반영
+- **referencing 테이블 3건 추가**: Journal 024(N=3 승격), cross-project-porting(전이성 방법론), Aidy Journal 009(Stall Detection)
