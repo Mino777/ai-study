@@ -130,28 +130,30 @@ Claude Code의 `isolation: "worktree"` 옵션이 이를 자동화한다.
 
 ## ai-study Hub-Worker 모델과의 연결
 
-이 프로젝트의 기존 Hub-Worker 아키텍처:
+이 프로젝트의 Hub-Worker 아키텍처 — **이미 멀티 에이전트 운영 중**:
 
 ```
-ai-study (허브)
-  ├── moneyflow (워커) — 패턴 수집, 비용 분석
-  ├── tarosaju (워커) — 패턴 수집, Supabase 실전
-  └── aidy-architect (워커) — 멀티에이전트 오케스트레이션
+ai-study (허브) ← 독립 Claude 세션
+  ├── moneyflow (워커) ← 독립 Claude 세션
+  ├── tarosaju (워커) ← 독립 Claude 세션
+  └── aidy-architect (워커) ← 독립 Claude 세션
 ```
 
-이것은 **Orchestrator-Worker 패턴**의 실전 구현이다:
-- 허브(ai-study)가 Planner 역할: 지식 그래프 분석, 다음 작업 큐 결정
-- 워커가 실행: 각 프로젝트에서 독립 작업
-- `/projects-sync`가 Judge 역할: 워커 상태 진단, 충돌 사전 탐지
-- `/compound`가 피드백 루프: 결과를 허브에 박제
+각 세션이 독립된 CLAUDE.md · 컨텍스트 · git 상태를 가진 **병렬 에이전트**다. 이것은 Orchestrator-Worker 패턴의 실전 구현이며, 허브 세션이 3역할을 수행한다:
 
-### 진화 방향
+| 역할 | 도구 | 행동 |
+|------|------|------|
+| **관찰자** | `/projects-sync` | 워커 상태 read-only 진단, 충돌 사전 탐지 |
+| **작업자** | `/wt-branch` | 워커 코드 안전 변경 (worktree 격리) |
+| **수집자** | `/compound` | 워커 결과를 허브에 박제 + 인바운드 tips PR 수신 |
 
-| 현재 | 다음 단계 |
-|------|----------|
-| 수동 `/projects-sync` | 자동 워커 상태 폴링 |
-| 단일 Claude 세션 | 역할별 병렬 에이전트 |
-| Hub에서 전체 컨텍스트 | Worker에 최소 컨텍스트만 전달 |
+### 현재 달성 vs 실제 다음 단계
+
+| 영역 | 현재 상태 (달성) | 실제 다음 단계 |
+|------|-----------------|---------------|
+| 병렬 실행 | 프로젝트별 독립 세션 병렬 운영 (13+ 사이클, 사고 0회) | 하나의 세션 내에서 Agent tool sub-agent 병렬 spawn |
+| 컨텍스트 | JIT 검색(99.8% 절감) + `/wt-branch` 격리 | 워커별 CLAUDE.md 경량화 (역할별 최소 계약만 전달) |
+| 상태 동기화 | `/projects-sync` 수동 트리거 | 워커 5+개 시점에서 자동 폴링 검토 |
 
 ## 주요 도구 (2026)
 
