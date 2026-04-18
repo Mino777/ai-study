@@ -40,7 +40,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          DATE=$(date +%Y-%m-%d)
+          DATE=$(TZ=Asia/Seoul date +%Y-%m-%d)
           RESULT=$(cat /tmp/scan-result.json)
           PROMOTABLE=${{ steps.scan.outputs.promotable }}
           TOTAL=${{ steps.scan.outputs.total }}

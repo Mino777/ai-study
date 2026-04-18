@@ -1,7 +1,7 @@
 ---
 title: "멀티 Claude 에이전트 관리: 설정 YAML을 넘어선 '컴파일' 전략"
 category: agents
-date: "2026-04-18"
+date: "2026-04-19"
 tags: [agent-as-code, dynamic-prompting, agent-composition, claude-3, typescript, agents]
 confidence: 1
 connections: [agents/agent-architectures, agents/hermes-agent-analysis, agents/multi-agent-orchestration-patterns-2026]
@@ -65,7 +65,7 @@ graph TD
     subgraph agent_compile ["에이전트 '컴파일' 방식"]
         F[사용자 요청] --> G{Orchestrator}
         G --> H(컨텍스트 분석: 사용자 등급, 시간 등)
-        H --> I[AgentCompiler.compile(context)]
+        H --> I["AgentCompiler.compile(context)"]
         I --> J[동적으로 생성된 프롬프트와 도구]
         J --> K[LLM API 호출]
     end

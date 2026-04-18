@@ -209,7 +209,7 @@ async function generateMDX(topic, manifest) {
   const sameCategoryEntries = manifest.entries.filter((e) => e.frontmatter.category === topic.category);
   const existingTitles = sameCategoryEntries.map((e) => `- ${e.frontmatter.title}`).join("\n");
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" });
 
   const contextNote = topic.category === "ios-ai"
     ? "\n대상 독자: iOS 개발자. Swift/SwiftUI 코드 예제 중심. 실무에서 바로 쓸 수 있는 패턴 위주."

@@ -89,7 +89,7 @@ jobs:
         run: |
           # 백틱/특수문자 안전: env로 주입하여 shell 해석 방지
           SAFE_TOPIC=$(echo "$TOPIC" | tr '`' "'")
-          DATE=$(date +%Y-%m-%d)
+          DATE=$(TZ=Asia/Seoul date +%Y-%m-%d)
           SHORT_ID=$(date +%H%M%S)
           BRANCH="lesson/${DATE}-${SHORT_ID}"
 

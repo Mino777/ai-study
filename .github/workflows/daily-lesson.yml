@@ -34,7 +34,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          DATE=$(date +%Y-%m-%d)
+          DATE=$(TZ=Asia/Seoul date +%Y-%m-%d)
           TOPIC1="${{ steps.suggest.outputs.topic_1_title }}"
           TOPIC2="${{ steps.suggest.outputs.topic_2_title }}"
           TOPIC3="${{ steps.suggest.outputs.topic_3_title }}"

@@ -99,7 +99,7 @@ jobs:
           ISSUE_NUM: ${{ steps.check.outputs.issue_number }}
         run: |
           SAFE_TOPIC=$(echo "$TOPIC" | tr '`' "'")
-          DATE=$(date +%Y-%m-%d)
+          DATE=$(TZ=Asia/Seoul date +%Y-%m-%d)
           BRANCH="auto-lesson/${DATE}-geeknews"
 
           git config user.name "Mino777"
