@@ -1,0 +1,179 @@
+---
+title: "AgentCompiler 동적 라우팅: 하드코딩 → 티어+키 기반 런타임 컴파일"
+category: agents
+date: "2026-04-19"
+tags: [agent-routing, dynamic-compilation, multi-provider, tier-system, agents, tokenomics]
+confidence: 2
+connections: [agents/multi-claude-agent-management-compile-strategy, agents/multi-provider-circuit-breaker, agents/agent-architectures, tokenomics/tier-based-ai-cost-cap, agents/multi-agent-orchestration-patterns-2026]
+status: published
+description: "에이전트별 모델 라우팅을 하드코딩하는 대신, 유저 티어 + 에이전트 역할 + 사용 가능한 API 키 3차원으로 런타임 컴파일하는 패턴. moneyflow 실 구현 + aidy ADR-011 불채택 대비 분석."
+type: entry
+quiz:
+  - question: "AgentCompiler가 '컴파일'하는 3개 입력 차원은?"
+    choices:
+      - "모델명, 온도, 최대 토큰"
+      - "에이전트 역할, 유저 티어, 사용 가능한 API 키"
+      - "프롬프트, 컨텍스트, 도구"
+      - "비용, 지연시간, 정확도"
+    answer: 1
+    explanation: "compileAgent(role, tier, keys) → CompiledAgent. 역할로 카테고리를, 티어로 모델을, 키로 폴백을 결정한다."
+  - question: "aidy-architect가 ADR-011에서 AgentCompiler를 불채택한 핵심 이유는?"
+    choices:
+      - "구현 복잡도가 너무 높아서"
+      - "3개 고정 워커에서는 라우팅 판단이 자명하여 동적 컴파일이 과잉"
+      - "API 키 폴백 기능이 불필요해서"
+      - "성능 오버헤드가 너무 커서"
+    answer: 1
+    explanation: "56건 WO 중 라우팅 오류 0건. server=백엔드, iOS=iOS, Android=Android — 라우팅이 자명한 환경에서 동적 컴파일은 토큰 낭비."
+  - question: "Free 티어에서 AgentCompiler가 적용하는 최적화 두 가지는?"
+    choices:
+      - "모든 에이전트 Gemini 사용 + maxTokens 30% 감소"
+      - "모든 에이전트 Claude 사용 + 캐싱 활성화"
+      - "모든 에이전트 OpenAI 사용 + temperature 0 고정"
+      - "라우팅 비활성화 + 단일 모델 고정"
+    answer: 0
+    explanation: "Free 티어는 비용 최소화가 목표. 전 카테고리 Gemini + maxTokens 30% 감소로 비용을 최소화한다."
+---
+
+## 요약
+
+에이전트 시스템에서 "어떤 에이전트가 어떤 모델을 쓸까?"를 하드코딩하면 티어 추가, 모델 교체, 키 만료 시마다 코드를 고쳐야 한다. **AgentCompiler**는 이 라우팅 결정을 순수 함수로 추출해, 3개 입력(역할, 티어, 키)에서 런타임에 최적 설정을 **컴파일**한다.
+
+## 문제: 하드코딩 라우팅의 한계
+
+```typescript
+// Before: 모든 에이전트-모델 매핑이 상수
+const AGENT_ROUTING = {
+  dataCollector: { model: "gemini-2.0-flash", temp: 0.1 },
+  classifier:    { model: "gpt-4o-mini",      temp: 0.2 },
+  analyzer:      { model: "claude-sonnet-4-6", temp: 0.3 },
+  decisionMaker: { model: "gemini-2.0-flash",  temp: 0.4 },
+};
+```
+
+이 구조의 문제:
+- **티어별 차등 불가** — Free/Pro/Premium 모두 같은 모델
+- **키 만료 대응 불가** — OpenAI 키가 없으면 전체 장애
+- **변경 범위 폭발** — 새 티어 추가 시 모든 라우팅 수정
+
+## 해법: 3차원 런타임 컴파일
+
+```typescript
+// compileAgent(role, tier, keys) → CompiledAgent
+// 순수 함수. 부수효과 없음. 테스트 용이.
+
+// 1차원: 역할 → 카테고리 매핑
+const AGENT_SPECS: Record<AgentRole, AgentSpec> = {
+  dataCollector:  { category: "data",           temperature: 0.1, maxTokens: 4096 },
+  classifier:     { category: "classification",  temperature: 0.2, maxTokens: 2048 },
+  analyzer:       { category: "critical",        temperature: 0.3, maxTokens: 8192 },
+  decisionMaker:  { category: "core",            temperature: 0.4, maxTokens: 4096 },
+};
+
+// 2차원: 티어 × 카테고리 → 이상적 모델
+const TIER_MODEL_MAP: Record<Tier, Record<Category, Provider>> = {
+  free:    { data: "gemini", classification: "gemini", critical: "gemini", core: "gemini" },
+  pro:     { data: "gemini", classification: "openai", critical: "claude", core: "gemini" },
+  premium: { data: "gemini", classification: "openai", critical: "claude", core: "claude" },
+};
+
+// 3차원: 키 가용성 → 폴백 체인
+function resolveProvider(ideal: Provider, keys: AvailableKeys): Provider {
+  if (keys.has(ideal)) return ideal;
+  const fallback = ["gemini", "openai", "claude"];
+  return fallback.find(p => keys.has(p)) ?? "gemini";
+}
+```
+
+### 컴파일 결과
+
+```typescript
+interface CompiledAgent {
+  model: string;        // "gemini-2.0-flash" | "gpt-4o-mini" | "claude-sonnet-4-6"
+  temperature: number;
+  maxTokens: number;
+}
+
+function compileAgent(role: AgentRole, tier: Tier, keys: AvailableKeys): CompiledAgent {
+  const spec = AGENT_SPECS[role];
+  const idealProvider = TIER_MODEL_MAP[tier][spec.category];
+  const provider = resolveProvider(idealProvider, keys);
+  
+  return {
+    model: PROVIDER_MODELS[provider],
+    temperature: spec.temperature,
+    maxTokens: tier === "free" ? Math.floor(spec.maxTokens * 0.7) : spec.maxTokens,
+  };
+}
+```
+
+**"컴파일러" 메타포**: 소스 코드(선언적 사양)를 기계어(구체적 설정)로 변환하듯, 고수준 선언(티어 + 역할 + 가용 키)을 저수준 런타임 설정으로 변환한다.
+
+## 티어별 전략
+
+| 티어 | 전략 | 특징 |
+|------|------|------|
+| **Free** | 비용 최소화 | 전 카테고리 Gemini + maxTokens 30% 감소 |
+| **Pro** | 카테고리별 최적화 | data/core는 Gemini, classification은 OpenAI, critical은 Claude |
+| **Premium** | 품질 최대화 | Pro와 동일하되 core(의사결정)에 Claude 배정 |
+
+## 언제 쓰고, 언제 안 쓰나: ADR-011 대비
+
+같은 조직(Aidy) 내에서 moneyflow는 AgentCompiler를 채택하고, aidy-architect는 **ADR-011로 명시적으로 불채택**했다. 핵심 차이:
+
+| 기준 | moneyflow (채택) | aidy-architect (불채택) |
+|------|-----------------|----------------------|
+| 에이전트 수 | 4+ (역할 다양) | 3 고정 (server/iOS/Android) |
+| 라우팅 복잡도 | 티어 × 카테고리 × 키 | 자명 (server=백엔드) |
+| 라우팅 오류 이력 | 모델 미스매치 경험 | 56 WO, 0건 오류 |
+| 확장 계획 | 새 티어/모델 추가 예정 | 3 워커 고정 |
+
+### ADR-011 판단 기준
+
+> "56건 완료된 WO 중 라우팅 오류 0건. 풀어야 할 문제가 없다."
+
+AgentCompiler 도입 판단 체크리스트:
+1. **에이전트 5개 이상** 또는 역할 중첩이 있는가?
+2. **라우팅 오류**가 2회 이상 발생했는가?
+3. **티어/과금 차등**이 필요한가?
+4. **API 키 폴백**이 필요한가?
+
+4개 중 2개 이상 Yes면 채택, 아니면 정적 라우팅 유지.
+
+## 테스트 전략
+
+```typescript
+// 21개 테스트: 모든 티어 × 카테고리 × 폴백 조합
+describe("compileAgent", () => {
+  it("free 티어는 모든 카테고리에 gemini", () => {
+    const result = compileAgent("analyzer", "free", allKeys);
+    expect(result.model).toContain("gemini");
+  });
+
+  it("키 없으면 폴백 체인 작동", () => {
+    const result = compileAgent("classifier", "pro", new Set(["gemini"]));
+    expect(result.model).toContain("gemini"); // openai 이상적이지만 키 없으므로 gemini
+  });
+
+  it("free 티어 maxTokens 30% 감소", () => {
+    const free = compileAgent("analyzer", "free", allKeys);
+    const pro = compileAgent("analyzer", "pro", allKeys);
+    expect(free.maxTokens).toBe(Math.floor(pro.maxTokens * 0.7));
+  });
+});
+```
+
+순수 함수이므로 모든 조합을 결정론적으로 테스트 가능. 런타임 매직 없음.
+
+## 핵심 교훈
+
+1. **다차원 라우팅은 룩업 테이블 분리** — 하나의 거대한 매핑 대신 차원별 테이블 (AGENT_SPECS, TIER_MODEL_MAP, fallback chain)
+2. **순수 함수 컴파일** — 상태 없는 `compileAgent()`로 테스트 용이성 확보
+3. **채택/불채택 모두 의도적 판단** — ADR로 기록. "왜 안 쓰는가"도 엔지니어링 결정
+4. **확장 시 비파괴적** — 새 티어 추가 = `TIER_MODEL_MAP`에 한 줄. 기존 코드 수정 불필요
+
+## 출처
+
+- moneyflow PR #133: `feat: AgentCompiler 동적 라우팅 — AGENT_ROUTING 하드코딩 → 티어+키 기반 런타임 컴파일`
+- aidy-architect ADR-011: `WO 에이전트 라우팅 정적 유지, AgentCompiler 불채택`
+- 관련 엔트리: [멀티 Claude 에이전트 관리 컴파일 전략](/wiki/agents/multi-claude-agent-management-compile-strategy) (개념편)
