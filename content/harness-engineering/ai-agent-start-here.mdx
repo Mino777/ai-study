@@ -79,8 +79,8 @@ quiz:
 ## 30초 요약
 
 - **저장소**: Jominho의 `ai-study` 위키 ([SPEC.md](../../SPEC.md) 참조)
-- **목적**: Jominho의 두 프로젝트(mino-moneyflow, mino-tarosaju)에서 검증된 AI 엔지니어링 방법론을 *당신이 즉시 실행할 수 있는 형태*로 박제
-- **주요 시리즈**: [Harness Journal](/harness-journal) — AI 운영 환경 개선 사이클 기록 (000~021, 21 에피소드) + [iOS Journal](/harness-journal) (000~006, 7 에피소드)
+- **목적**: Jominho의 3 프로덕트(mino-moneyflow, mino-tarosaju, aidy 4레포)에서 검증된 AI 엔지니어링 방법론을 *당신이 즉시 실행할 수 있는 형태*로 박제
+- **주요 시리즈**: [Harness Journal](/harness-journal) — AI 운영 환경 개선 사이클 기록 (000~024, 24 에피소드) + [iOS Journal](/harness-journal) (000~009, 10 에피소드) + [Aidy Journal](/harness-journal) (000~009, 10 에피소드)
 - **당신의 역할**: (a) 위키를 읽고 *현재 작업에 적용*, (b) 작업 결과를 *다음 에이전트가 읽을 수 있게* 박제, (c) 워커 프로젝트에서 발견한 패턴을 허브로 전달 (`/curate-inbound`)
 
 ## 세션 시작 필수 로드 순서
@@ -119,7 +119,7 @@ quiz:
 
 순서:
 
-1. [Compound 자동화 슬래시 커맨드 정리](/wiki/harness-engineering/compound-automation-slash-commands) — `/compound`, `/autoceo`, `/wt-branch`, `/ingest` 매핑 표
+1. [Compound 자동화 슬래시 커맨드 정리](/wiki/harness-engineering/compound-automation-slash-commands) — 7개 커맨드 매핑 표 (`/compound`, `/autoceo`, `/wt-branch`, `/ingest`, `/cross-session-review`, `/curate-inbound`, `/projects-sync`)
 2. [Skill 시스템 도입](/wiki/harness-engineering/skill-system-introduction) — 슬래시 커맨드 vs Skill 경계
 
 ### AI 호출 코드 개선
@@ -129,9 +129,17 @@ quiz:
 1. [AI 호출 패턴 — Circuit Breaker, 폴백, 캐싱](/wiki/harness-engineering/ai-call-patterns-circuit-breaker-fallback) — moneyflow ai-client.ts 6가지 패턴
 2. [AI 출력 Zod 검증 패턴 5 layer](/wiki/harness-engineering/ai-output-zod-validation-pattern) — 환각 차단
 
-### AI 비용 관리
+### AI 비용 / 토큰 최적화
 
 1. [AI API 비용 추적 패턴](/wiki/harness-engineering/ai-api-cost-tracking-pattern) — 모델별 단가 + 로깅 + `/cost-check`
+2. [Claude Code 토큰 절감 레버 카탈로그](/wiki/tokenomics/claude-code-token-levers-catalog) — RTK 이후 15개 레버
+3. [Prompt Caching 90% 비용 절감](/wiki/tokenomics/prompt-caching-cost-reduction) — `cache_control: ephemeral` 실전
+4. [프로젝트 레벨 비용 분석 패턴](/wiki/tokenomics/project-level-cost-analysis-pattern) — ccusage 계측
+
+### AI 프롬프트 기법
+
+1. [공감형 AI 프롬프트 기법](/wiki/prompt-engineering/empathetic-ai-prompt-techniques) — Rogerian/MI/NVC + 위기 신호 가드레일
+2. [Quality Guards](/wiki/prompt-engineering/quality-guards) — 출력 품질 보호 패턴
 
 ### 사고 발생 (rebase 충돌, 머지 게이트 우회 등)
 
@@ -140,6 +148,7 @@ quiz:
 1. [Harness Journal 003 — squash merge 함정 패턴](/wiki/harness-engineering/harness-journal-003-squash-merge-trap-pattern) — 대표적 함정 2회 라이브 입증
 2. [Harness Journal 004 — `/wt-branch` 슬래시 커맨드](/wiki/harness-engineering/harness-journal-004-wt-branch-command) — 회피 메커니즘
 3. [Multi-Session AI Ops 패턴](/wiki/harness-engineering/multi-session-ai-ops-patterns) — 여러 세션 동시 작업의 함정과 회피
+4. [병렬 Worktree Git Lock 함정](/wiki/infrastructure/parallel-worktree-git-lock-trap) — N개 에이전트 동시 worktree 생성 시 config.lock race condition
 
 ### 외부 URL을 위키 엔트리로 박제
 
@@ -488,19 +497,21 @@ Web은 *배포가 push = 즉시 반영*이므로 pre-commit 게이트가 더 중
 
 *내가 처리할 수 없는 것*을 *사용자에게 알리는 것*도 자율의 일부.
 
-## 현재 위키 상태 스냅샷 (2026-04-12)
+## 현재 위키 상태 스냅샷 (2026-04-18)
 
 | 항목 | 값 |
 |---|---|
-| 총 엔트리 | 78 |
-| 카테고리 | 11개 (prompt/context/harness/tokenomics/rag/agents/fine-tuning/evaluation/infrastructure/ios-ai/frontend-ai) |
-| 주 시리즈 | Harness Journal (000~023, 23 에피소드) + iOS Journal (000~008, 9 에피소드) |
+| 총 엔트리 | 131 |
+| 카테고리 | 13개 (prompt/context/harness/tokenomics/rag/agents/fine-tuning/evaluation/infrastructure/ios-ai/frontend-ai/android-ai/backend-ai) |
+| 주 시리즈 | Harness Journal (000~024) + iOS Journal (000~009) + Aidy Journal (000~009) |
 | 슬래시 커맨드 | 7개 (`/compound`, `/autoceo`, `/wt-branch`, `/ingest`, `/cross-session-review`, `/curate-inbound`, `/projects-sync`) |
 | 플랫폼별 가이드 | Web (Next.js) + iOS (Swift/SPM) |
-| 허브-워커 모델 | ai-study(허브) + moneyflow/tarosaju(워커) — 양방향 기여 인프라 확립 |
-| Runtime Validator | moneyflow 10/10 에이전트 Layer 1-4 완료 |
+| 허브-워커 모델 | ai-study(허브) + moneyflow/tarosaju/aidy(워커) — 양방향 기여 인프라 확립 |
+| Runtime Validator | moneyflow 10/10 에이전트 Layer 1-4 완료 + tarosaju 3 route 5-Layer 완료 |
 | LLM-as-a-Judge | 3 프로젝트 적용 (moneyflow/tarosaju/ai-study) |
-| CI/CD | ai-review.yml (3 프로젝트) + test-gate.yml (moneyflow) + validate-content.mjs + vitest 회귀 테스트 |
+| CI/CD | ai-review.yml (3 프로젝트) + hybrid fallback (ADR-010) + validate-content.mjs + vitest 회귀 테스트 |
+| JIT 검색 | 4 프로젝트 배포 (Layer 3 벡터 인덱스) |
+| Self-hosted Runner | 6개 등록 (ai-study/moneyflow/tarosaju/aidy-ios/server/android) |
 
 이 상태는 *스냅샷*이다. 최신 큐는 [Harness Journal 000 베이스라인의 갱신 로그](/wiki/harness-engineering/harness-journal-000-baseline#갱신-로그) 확인.
 
