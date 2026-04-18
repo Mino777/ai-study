@@ -9,8 +9,8 @@
 
 ## 🕒 작성 시점
 
-- **작성 일시**: 2026-04-18 (Session 15 — 크로스 세션 리뷰 + Graph-Lesson 연동)
-- **작성 주체**: Claude (Session 15)
+- **작성 일시**: 2026-04-19 (Session 16 — NEXT.md 큐 소화 + 그래프 시각 개선)
+- **작성 주체**: Claude (Session 16)
 - **이유**: compound 완료 후 세션 핸드오프
 
 ---
@@ -21,15 +21,16 @@
 - **엔트리 수**: 134
 - **카테고리**: 13 (방법론 4 + 시스템 3 + 평가&인프라 2 + 응용 4)
 - **Git 상태**: main clean, origin/main 동기
-- **CI 상태**: 빌드 통과, 테스트 23/23
-- **그래프**: 134 노드, 852 엣지, Top 허브 = compound-engineering-philosophy (67 연결)
+- **CI 상태**: 빌드 통과, 테스트 33/33 (3 파일)
+- **그래프**: 134 노드, Obsidian 스타일 원형 레이아웃 (charge -280, forceRadial r=220)
 
 ### 도구
 | 도구 | 명령 | 용도 |
 |------|------|------|
-| Graph Query CLI | `node scripts/graph-query.mjs <cmd>` | 지식 그래프 7개 쿼리 (hubs/suggest/path 등) |
-| 승격 스캐너 | `node scripts/scan-promotions.mjs` | N=3+ 솔루션 자동 감지 + 승격 제안 |
-| generate-lesson | `npm run generate-lesson` | **graph 신호 연동 완료** (weakHub +1.5, connectivity +1.0) |
+| Graph Query CLI | `node scripts/graph-query.mjs <cmd>` | 지식 그래프 7개 쿼리 |
+| 승격 스캐너 | `node scripts/scan-promotions.mjs` | N=3+ 솔루션 자동 감지 |
+| 승격 CI | `.github/workflows/promotion-scan.yml` | **신규** — push+weekly → Issue 자동 생성 |
+| generate-lesson | `npm run generate-lesson` | graph 신호 연동 + 다양성 cap (카테고리 max 2) |
 
 ### 워커 프로젝트 상태 (2026-04-18 기준)
 | 프로젝트 | 상태 | 주의 |
@@ -44,13 +45,12 @@
 | ai-study | 6 |
 | moneyflow | 4 |
 | tarosaju | 3 |
-| aidy-architect | 11 |
-| **합계** | **24** (100 미달, 관찰 계속) |
+| aidy-architect | 13 |
+| **합계** | **26** (100 미달, 관찰 계속) |
 
 ### Tokenomics
 - **RTK 절감**: 53.0M tokens (97.4%)
 - **Cache read**: 98%+
-- **Gemini 파이프라인**: 카테고리 스코프 적용 (134→~10개 전송)
 
 ---
 
@@ -58,44 +58,35 @@
 
 ### 🔴 High
 
-1. **Validator 자동 승격 파이프라인** (promote-solution → GitHub Actions)
-   - `scan-promotions.mjs`로 스캔은 자동화 완료 → CI에서 자동 실행 + 승격 PR 생성
-   - 현재 N=3+ 카테고리: workflow(7), mdx(5), ai-pipeline(4), github-actions(3), next-patterns(3)
-   - 예상 크기: L
-
-2. **computeGraphSignals vitest 케이스 추가**
-   - 세션 15에서 테스트 미작성 (아쉬운 점 1)
-   - weakHubCategories 검출 + categoryConnectivity 계산 검증
+1. **promotion-scan.yml 실제 동작 검증**
+   - `gh workflow run promotion-scan` 수동 트리거 → Issue 생성 확인
+   - `promotion-scan` 라벨 사전 생성 필요
    - 예상 크기: S
 
 ### 🟡 Medium
 
-3. **추천 다양성 검증** — 같은 카테고리 3건 연속 방지 로직 검토
-   - graph 부스트 후 context-engineering 편중 관찰됨
-   - 예상 크기: S
-
-4. **JIT 검색 성과 검증 — 4프로젝트 관찰**
+2. **JIT 검색 성과 검증 — 4프로젝트 관찰**
    - totalQueries 100 도달 시 적중률 분석
    - 예상 크기: S (관찰)
 
-5. **히트 카운트 100+ 도달 시 0회 엔트리 표시**
+3. **히트 카운트 100+ 도달 시 0회 엔트리 표시**
    - 예상 크기: S
 
-6. **validate-mdx Trap 3 AST 파싱 개선 검토**
+4. **validate-mdx Trap 3 AST 파싱 개선 검토**
    - FP 90%+ — 실제 사고 유발 시 착수
    - 예상 크기: M
 
-7. **워커 재료 추가 박제 후보**
+5. **워커 재료 추가 박제 후보**
    - moneyflow: Content Pipeline 상태 머신, React Hydration + SW 캐시
    - tarosaju: Large Page Decomposition, Supabase Realtime Retry
    - 예상 크기: S each
 
 ### 🟢 Low
 
-8. **인덱싱 자동화 (pre-commit 또는 CI)**
-9. **Flow Map Part 5 재개 판단** — deferred
-10. **Semantic Caching POC** — JIT 검색에 벡터 유사도 기반 캐시 추가 (70%+ 절감 기대)
-11. **멀티 에이전트 모델 라우팅** — Haiku/Sonnet/Opus 사다리 자동 선택 (40-60% 절감)
+6. **인덱싱 자동화 (pre-commit 또는 CI)**
+7. **Flow Map Part 5 재개 판단** — deferred
+8. **Semantic Caching POC** — JIT 검색에 벡터 유사도 기반 캐시 추가
+9. **멀티 에이전트 모델 라우팅** — Haiku/Sonnet/Opus 사다리 자동 선택
 
 ---
 
@@ -178,10 +169,8 @@ node scripts/scan-promotions.mjs
 
 ## 📜 최근 갱신
 
-### 2026-04-18 (Session 15 compound — 크로스 세션 리뷰 + Graph-Lesson 연동)
-- **크로스 세션 리뷰**: 세션 14 6함정 검증 + URL 10건 재검증
-- **confidence 교정**: 딥리서치 3건 3→2 하향
-- **엔트리 수정**: 멀티에이전트 Hub-Worker 섹션 현실 반영
-- **graph-lesson 연동**: generate-lesson에 weakHub +1.5 / connectivity +1.0 부스트
-- **큐 완료**: 항목 2(graph-lesson 연동) + 항목 4(confidence 조정)
-- **신규 큐**: computeGraphSignals 테스트 + 추천 다양성 검증
+### 2026-04-19 (Session 16 compound — NEXT.md 큐 소화 + 그래프 시각 개선)
+- **완료**: computeGraphSignals vitest (High 2) + 승격 CI (High 1) + 추천 다양성 (Medium 3)
+- **완료**: 지식 그래프 Obsidian 스타일 레이아웃 (유저 요청)
+- **신규 High**: promotion-scan.yml 실제 동작 검증
+- **제거**: 완료된 큐 5건 (High 2 + Medium 1 + 그래프)

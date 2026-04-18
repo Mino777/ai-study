@@ -2,6 +2,32 @@
 
 모든 주목할 만한 변경사항을 이 파일에 기록합니다.
 
+## [2026-04-19] 세션 16 — NEXT.md 큐 소화 + 그래프 시각 개선
+
+> computeGraphSignals 테스트 보강 + 승격 CI 파이프라인 + 추천 다양성 + Obsidian 스타일 그래프 레이아웃
+
+### Added
+
+- **computeGraphSignals vitest 10케이스** — weakHubCategories 5 + categoryConnectivity 3 + edge case 2. 함수를 `scripts/lib/graph-signals.mjs`로 분리 + export
+- **솔루션 승격 자동 스캔 CI** — `.github/workflows/promotion-scan.yml` (docs/solutions 변경 시 + 매주 월 09:00 KST). N≥3 카테고리 감지 → Issue 자동 생성/업데이트
+- **추천 다양성 cap** — `generate-lesson.mjs`에서 같은 카테고리 최대 2건 제한 (3건 연속 방지)
+
+### Changed
+
+- **지식 그래프 레이아웃** — charge -1200→-280, forceRadial 추가 (r=220), distanceMax 220, linkDistance 90→110. 세로 찌그러짐 → 컴팩트 원형 레이아웃
+
+### Metrics
+
+| 항목 | Before | After |
+|---|---|---|
+| vitest 케이스 | 23 | **33** (+10) |
+| 그래프 charge | -1200 | **-280** |
+| 추천 다양성 | 제한 없음 | **카테고리당 max 2** |
+| 승격 CI | 수동 스캔 | **자동 Issue 생성** |
+| NEXT.md 큐 소화 | High 2 + Medium 1 | **High 2 + Medium 1 완료** |
+
+---
+
 ## [2026-04-18] 세션 15 — 크로스 세션 리뷰 + Graph-Lesson 연동
 
 > 세션 14 크로스 검증 → confidence 교정 3건 + 엔트리 현실 반영 + graph-query 신호를 generate-lesson 추천에 연동
