@@ -429,15 +429,36 @@ async function callWithValidation(opts) {
 
 ## 출처
 
-이 엔트리는 *제안 + 패턴 정의*. 양쪽 프로젝트 모두 미적용 상태.
-
 - 갭 식별: [Harness Journal 000 베이스라인](/wiki/harness-engineering/harness-journal-000-baseline)의 공통 갭 #2
 - 보완 패턴: [AI 호출 패턴 엔트리](/wiki/harness-engineering/ai-call-patterns-circuit-breaker-fallback)의 *6번 패턴 (구조화된 출력 3단 fallback)*은 layer 1만 다룸. 이 엔트리는 layer 2-5까지 확장.
 - Zod 공식 문서 (refine, schema chaining)
+- **tarosaju 실전 적용**: `docs/solutions/ai-pipeline/2026-04-14-zod-5-layer-ai-output-validation.md` — 3개 AI route에 5 layer 전부 적용
 
 ### 검증 메모
 
-- 코드 스니펫은 *직접 작성한 패턴*. 양쪽 프로젝트의 실제 구현은 아직 없음.
 - 5 layer 분류는 *내 분석*이며 공식적인 분류가 아님. 다른 분류도 가능.
 - "STRONG_BUY + confidence 30" 같은 사례는 *Journal 000 audit 보고서*에서 직접 인용된 *실제 환각 사례*
 - 안전 기본값 vs throw 결정은 *도메인 의존*. 거래/결제 시스템은 throw, 콘텐츠 시스템은 안전 기본값이 일반적.
+
+## 갱신 로그
+
+### 2026-04-18 — tarosaju 실전 적용 데이터 추가
+
+**상태 변경**: "양쪽 프로젝트 모두 미적용" → **tarosaju 3개 route 실전 적용 완료**.
+
+**적용된 route와 layer 매핑**:
+
+| Route | Layer 1 | Layer 2 | Layer 3 | Layer 4 | Layer 5 |
+|---|---|---|---|---|---|
+| `/api/fortune/ai` | `guardFortuneOutput()` | `fortuneOutputSchema` | `.min(1).max(10)` | `.refine()` AI 자기참조 | `judgeFortune()` |
+| `/api/tarot-chat` | `guardTarotChatOutput()` | — (텍스트 응답) | 첫 턴 500자 제한 | — | `judgeTarotChat()` |
+| `/api/icebreakers` | — | `icebreakerSchema` | `.min(10).max(100)` | — | — |
+
+**실전에서 확인된 패턴**:
+
+1. **`parseAIResponse()` 공통 파서** — 3단계 JSON 추출(direct parse → code block → brace match)로 AI 응답 포맷 변동에 대응. 이 엔트리의 layer 2 패턴을 실전 구현한 것.
+2. **`SAFE_FALLBACK` 안전 메시지** — layer 1-4 실패 시 하드코딩된 안전 응답 반환. route별 전용 메시지.
+3. **Layer 5 fire-and-forget** — `void judgeXxx()` 패턴으로 응답 반환을 차단하지 않음. Haiku ~$0.001/eval, 15초 timeout, 재시도 0회.
+4. **Prompt caching 병행** — system prompt에 `cache_control: { type: "ephemeral" }` 적용으로 90% 입력 비용 절감. 상세: [Prompt Caching 엔트리](/wiki/tokenomics/prompt-caching-cost-reduction).
+
+**moneyflow**: 10개 에이전트 전부 Runtime Validator 적용 완료 (Journal 012~017). 이 엔트리의 패턴을 금융 도메인에 맞게 확장 (STRONG_BUY + confidence 교차검증 등).
