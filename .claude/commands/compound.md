@@ -2,6 +2,16 @@
 
 매 스프린트/배포 후 실행. 이번 작업을 문서화하여 다음 작업이 더 쉬워지게 한다.
 
+## Phase 0: 컨텍스트 압축 (토큰 절감)
+
+**compound 시작 전 반드시 `/compact` 실행.** 작업 중 누적된 컨텍스트를 압축하여 compound 실행 자체의 토큰 소비를 줄인다. 압축 지시문:
+
+```
+/compact Keep decision log, key changes, and file paths. Discard exploration and intermediate outputs.
+```
+
+이 Phase를 건너뛰지 않는다. compound는 긴 워크플로이므로 압축 없이 실행하면 토큰 낭비가 크다.
+
 ## Phase 1: 변경사항 수집
 
 git log + git diff로 최근 변경사항 파악.
