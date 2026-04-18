@@ -89,6 +89,7 @@ public/            → search-index.json (gitignored, SearchDialog lazy fetch용
 - `npm run generate-lesson` — AI 과외 선생님: 주제 3개 추천
 - `npm run generate-lesson generate <slug>` — 특정 주제로 콘텐츠 생성
 - `npm run generate-lesson generate-custom <텍스트>` — 커스텀 주제로 생성 (Gemini가 영문 slug 자동 생성, 한글 slug 금지)
+- `node scripts/scout-geeknews.mjs [--dry-run]` — 긱뉴스 데일리 스카우트: 전체 스캔 → 4 프로젝트 매칭 → hub-dispatch Issue (22:00 KST CI 자동)
 - `npm run embed-content` — Layer 3 벡터 인덱스 재생성 (multilingual-e5-small, ~100s)
 - `npm run search -- "<query>"` — Layer 3 JIT 검색 (쿼리 라우터 자동 적용, --force로 강제)
 - `node scripts/shadow-benchmark.mjs` — Layer 3 Phase 3 섀도우 벤치마크 (적중률 + 토큰 절감 측정)

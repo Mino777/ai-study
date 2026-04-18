@@ -2,6 +2,32 @@
 
 모든 주목할 만한 변경사항을 이 파일에 기록합니다.
 
+## [2026-04-19] 세션 16c — 긱뉴스 데일리 스카우트 파이프라인
+
+> 매일 22:00 KST — 긱뉴스 전체 스캔 → 4개 프로젝트 방향성 매칭 → 이식 계획 Issue 자동 생성
+
+### Added
+
+- **긱뉴스 데일리 스카우트** — `scripts/scout-geeknews.mjs` (기존 curate-geeknews와 완전 별도)
+  - RSS 30개 기사 전체 스캔 → Gemini 2.5 Flash 1회 호출로 4개 프로젝트 동시 매칭
+  - 매칭된 프로젝트 레포에 `hub-dispatch` 라벨 Issue 자동 생성
+  - 프로젝트별 방향성 컨텍스트 내장 (ai-study/moneyflow/tarosaju/aidy)
+  - `--dry-run` 지원, GitHub Step Summary 출력
+- **GitHub Actions 워크플로우** — `.github/workflows/daily-scout-geeknews.yml`
+  - 매일 22:00 KST (13:00 UTC) 자동 실행 + workflow_dispatch
+  - cross-repo Issue 생성을 위한 GH_PAT 지원 (미설정 시 GITHUB_TOKEN 폴백)
+
+### Metrics
+
+| 항목 | Before | After |
+|---|---|---|
+| 워크플로우 | 7 | **8** (+daily-scout-geeknews) |
+| 자동화 스크립트 | curate 1개 | **+scout 1개** (학습용 vs 이식용 분리) |
+| 프로젝트 스캔 범위 | 1개 best pick | **4개 프로젝트 × 30 기사 전체** |
+| Gemini 호출 | 2회 (선정+평가) | **1회** (전체 매칭 일괄) |
+
+---
+
 ## [2026-04-19] 세션 16b — 긱뉴스 자동 큐레이션 + 허브 디스패치 체계
 
 > 미응답 이슈 → 긱뉴스 RSS 큐레이션 → 자동 엔트리 생성 파이프라인 완성 + 이식 가능성 평가 + 4 워커 프로젝트 hub-dispatch 체계

@@ -9,8 +9,8 @@
 
 ## 🕒 작성 시점
 
-- **작성 일시**: 2026-04-19 (Session 16b — 긱뉴스 자동 큐레이션 + 허브 디스패치)
-- **작성 주체**: Claude (Session 16b)
+- **작성 일시**: 2026-04-19 (Session 16c — 긱뉴스 데일리 스카우트)
+- **작성 주체**: Claude (Session 16c)
 - **이유**: compound 완료 후 세션 핸드오프
 
 ---
@@ -31,8 +31,9 @@
 | 승격 스캐너 | `node scripts/scan-promotions.mjs` | N=3+ 솔루션 자동 감지 |
 | 승격 CI | `.github/workflows/promotion-scan.yml` | push+weekly → Issue 자동 생성 |
 | generate-lesson | `npm run generate-lesson` | graph 신호 + 다양성 cap |
-| 긱뉴스 큐레이션 | `node scripts/curate-geeknews.mjs` | **신규** — 24h 미응답 시 자동 엔트리 |
-| 긱뉴스 CI | `.github/workflows/auto-lesson-geeknews.yml` | **신규** — 08:50 KST 자동 실행 |
+| 긱뉴스 큐레이션 | `node scripts/curate-geeknews.mjs` | 24h 미응답 시 자동 엔트리 |
+| 긱뉴스 스카우트 | `node scripts/scout-geeknews.mjs` | **신규** — 22:00 KST 전체 스캔 → 프로젝트별 이식 계획 |
+| 긱뉴스 스카우트 CI | `.github/workflows/daily-scout-geeknews.yml` | **신규** — 매일 자동 실행 |
 
 ### 워커 프로젝트 상태 (2026-04-19 기준)
 | 프로젝트 | 상태 | hub-dispatch |
@@ -45,6 +46,7 @@
 ### 허브 디스패치 체계
 - 각 워커 CLAUDE.md에 `hub-dispatch` 이슈 확인 규칙 추가 완료
 - 세션 시작 시 `gh issue list --label hub-dispatch --state open` 자동 확인
+- **신규**: 긱뉴스 스카우트가 매일 자동으로 hub-dispatch Issue 생성 (GH_PAT 등록 완료)
 
 ### JIT 검색 현황
 | 프로젝트 | totalQueries |
@@ -61,46 +63,51 @@
 
 ### 🔴 High
 
-1. **[워커] AI API 프록시 3단계 방어선** (tarosaju → moneyflow → aidy-server)
+1. **긱뉴스 스카우트 첫 실행 결과 확인**
+   - Actions 탭에서 첫 22:00 실행 결과 확인
+   - Gemini 매칭 품질 검증 → 프롬프트 튜닝 필요 여부 판단
+   - 예상 크기: S
+
+2. **[워커] AI API 프록시 3단계 방어선** (tarosaju → moneyflow → aidy-server)
    - hub-dispatch 이슈: tarosaju#46, moneyflow#131, aidy-server#6
    - Supabase Edge Functions 프록시 + 인증 + Rate Limiting
    - 예상 크기: M (프로젝트당)
 
-2. **[워커] AgentCompiler 동적 전환** (moneyflow + aidy-architect)
+3. **[워커] AgentCompiler 동적 전환** (moneyflow + aidy-architect)
    - hub-dispatch 이슈: moneyflow#132, aidy-architect#1
    - AGENT_ROUTING 하드코딩 → 런타임 컴파일
    - 예상 크기: M
 
-3. **promotion-scan.yml 실제 동작 검증**
+4. **promotion-scan.yml 실제 동작 검증**
    - `gh workflow run promotion-scan` 수동 트리거 → Issue 생성 확인
    - `promotion-scan` + `actionable-insight` 라벨 사전 생성 필요
    - 예상 크기: S
 
 ### 🟡 Medium
 
-4. **[워커] SDD Acceptance Spec 강화** (moneyflow, tarosaju, aidy 4레포)
+5. **[워커] SDD Acceptance Spec 강화** (moneyflow, tarosaju, aidy 4레포)
    - hub-dispatch 이슈: aidy-architect#2
    - 각 프로젝트 SPEC.md에 Build/Content/Promotion Gate 추가
    - 예상 크기: S
 
-5. **[허브] Hub-Worker 병렬화 다음 단계**
+6. **[허브] Hub-Worker 병렬화 다음 단계**
    - Agent tool sub-agent 병렬 spawn, 워커별 CLAUDE.md 경량화 검토
    - 예상 크기: M
 
-6. **JIT 검색 성과 검증** — totalQueries 100 도달 시 적중률 분석
+7. **JIT 검색 성과 검증** — totalQueries 100 도달 시 적중률 분석
 
-7. **히트 카운트 100+ 도달 시 0회 엔트리 표시**
+8. **히트 카운트 100+ 도달 시 0회 엔트리 표시**
 
-8. **워커 재료 박제 후보**
+9. **워커 재료 박제 후보**
    - moneyflow: Content Pipeline 상태 머신, React Hydration + SW 캐시
    - tarosaju: Large Page Decomposition, Supabase Realtime Retry
    - aidy: WO 에이전트 검증 패턴, Architect-Worker 라우팅 사례
 
 ### 🟢 Low
 
-9. **인덱싱 자동화 (pre-commit 또는 CI)**
-10. **Semantic Caching POC**
-11. **멀티 에이전트 모델 라우팅**
+10. **인덱싱 자동화 (pre-commit 또는 CI)**
+11. **Semantic Caching POC**
+12. **멀티 에이전트 모델 라우팅**
 
 ---
 
@@ -179,9 +186,7 @@ node scripts/scan-promotions.mjs
 
 ## 📜 최근 갱신
 
-### 2026-04-19 (Session 16b compound — 긱뉴스 큐레이션 + 허브 디스패치)
-- **완료**: 긱뉴스 자동 큐레이션 파이프라인 (curate-geeknews.mjs + CI)
-- **완료**: 엔트리 3건 자동 생성 + 이식 평가 + hub-dispatch 6건
-- **완료**: bot 오트리거 수정, Mermaid 에러 수정, UTC→KST 통일
-- **완료**: 60% 컨텍스트 임계값 규칙, 워커 CLAUDE.md hub-dispatch 규칙
-- **신규**: API 프록시 (High), AgentCompiler (High), SDD 강화 (Medium)
+### 2026-04-19 (Session 16c compound — 긱뉴스 데일리 스카우트)
+- **완료**: 긱뉴스 데일리 스카우트 파이프라인 (scout-geeknews.mjs + CI)
+- **완료**: GH_PAT Fine-grained token 셋업
+- **신규 큐**: 스카우트 첫 실행 결과 확인 (High #1)
