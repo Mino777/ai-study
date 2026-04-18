@@ -403,16 +403,16 @@ Journal 010 이후 추가 11 사이클이 완료된 시점. 상세 회고는 각
 | #4 AI API 비용 추적 | ✅ 양쪽 완료 |
 | #5 메모리 신뢰도 | ⏳ 미진행 |
 | #6 /autoceo 브라우저 검증 | ⏳ 미진행 |
-| #7 npm audit CI | ⏳ 미진행 |
-| #8 Skill 시스템 | ✅ 7개 슬래시 커맨드로 확장 완료 (`/compound`, `/autoceo`, `/wt-branch`, `/ingest`, `/cross-session-review`, `/curate-inbound`, `/projects-sync`) |
+| #7 npm audit CI | ✅ dompurify 패치 + `--omit=dev`로 해결 (Session 13) |
+| #8 Skill 시스템 | ✅ 11개 슬래시 커맨드로 확장 완료 (기존 7개 + validate-mdx, validate-ai-output, promote-solution, review) |
 | #9 세션 간 git 동기화 | ✅ `/wt-branch` 3 프로젝트 통일 + dogfooding 검증 |
 | #10 다중 세션 책임 분리 | ✅ 박제 + 적용 완료 |
 
-**원본 큐 대비 완료율**: 10 갭 중 7개 ✅ = **70%** (Journal 009 시점 60% → Journal 021 시점 70%)
+**원본 큐 대비 완료율**: 10 갭 중 8개 ✅ = **80%** (Journal 009 시점 60% → Journal 021 시점 70% → Session 13 시점 80%)
 
-**남은 미진행 항목** (갭 #5/#6/#7): 라이브 사고 부재로 우선순위가 계속 밀림. 시급성 발생 시 다음 큐 진입.
+**남은 미진행 항목** (갭 #5/#6): 라이브 사고 부재로 우선순위가 계속 밀림. 시급성 발생 시 다음 큐 진입.
 
-**슬래시 커맨드 진화 요약**: 베이스라인 2개 → Journal 021 시점 7개. 매 Journal마다 하나씩이 아니라 *필요할 때 정의 → 이식*하는 패턴으로 성장.
+**슬래시 커맨드 진화 요약**: 베이스라인 2개 → Journal 021 시점 7개 → Session 13 시점 **11개**. 매 Journal마다 하나씩이 아니라 *필요할 때 정의 → 이식*하는 패턴으로 성장. 추가 4개(validate-mdx, validate-ai-output, promote-solution, review)는 Review + Compound 단계를 세분화.
 
 ---
 
