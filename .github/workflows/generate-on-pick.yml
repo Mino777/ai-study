@@ -11,8 +11,11 @@ permissions:
 
 jobs:
   generate:
-    # 오늘의 학습 이슈에 대한 댓글만 처리
-    if: contains(github.event.issue.title, '오늘의 학습 주제를 골라주세요') && !github.event.issue.pull_request
+    # 오늘의 학습 이슈에 대한 사람 댓글만 처리 (bot 댓글 무시 — auto-lesson 클로즈 댓글 오트리거 방지)
+    if: >-
+      contains(github.event.issue.title, '오늘의 학습 주제를 골라주세요')
+      && !github.event.issue.pull_request
+      && github.event.comment.user.type != 'Bot'
     runs-on: ubuntu-latest
     steps:
       - name: Parse choice
