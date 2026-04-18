@@ -212,6 +212,86 @@ async function main() {
     fs.appendFileSync(process.env.GITHUB_OUTPUT, `selected_link=${article.link}\n`);
     fs.appendFileSync(process.env.GITHUB_OUTPUT, `generated=true\n`);
   }
+
+  // 5. 이식 가능성 평가
+  console.log("\n4️⃣ 프로젝트 이식 가능성 평가 중...");
+  const assessment = await assessActionability(topic, article);
+  if (assessment) {
+    console.log(`   ✅ 이식 가능: ${assessment.target}`);
+    console.log(`   📋 액션: ${assessment.action}`);
+    if (process.env.GITHUB_OUTPUT) {
+      fs.appendFileSync(process.env.GITHUB_OUTPUT, `actionable=true\n`);
+      fs.appendFileSync(process.env.GITHUB_OUTPUT, `action_target=${assessment.target}\n`);
+      fs.appendFileSync(process.env.GITHUB_OUTPUT, `action_summary=${assessment.action}\n`);
+      fs.appendFileSync(process.env.GITHUB_OUTPUT, `action_detail=${assessment.detail.replace(/\n/g, '%0A')}\n`);
+    }
+  } else {
+    console.log("   ℹ️ 이식 대상 없음 — 지식 축적용 엔트리");
+    if (process.env.GITHUB_OUTPUT) {
+      fs.appendFileSync(process.env.GITHUB_OUTPUT, `actionable=false\n`);
+    }
+  }
+}
+
+// ─── 4. 이식 가능성 평가 ───────────────────────────────────────
+
+async function assessActionability(topic, article) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genAI = new GoogleGenerativeAI(apiKey);
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+  const prompt = `당신은 AI 엔지니어링 프로젝트의 실무 적용 가능성을 평가하는 전문가입니다.
+
+아래 긱뉴스 기사를 학습 위키 엔트리로 작성했습니다. 이 내용이 아래 3개 프로젝트에 **실제로 이식/반영할 수 있는 구체적 액션**이 있는지 평가하세요.
+
+기사 제목: ${article.title}
+위키 주제: ${topic}
+
+프로젝트 정보:
+1. **ai-study** — Next.js 15 학습 위키. MDX 콘텐츠, 지식 그래프, AI 과외 파이프라인 (Gemini), JIT 검색
+2. **moneyflow** — AI 포트폴리오 매니저. React + Supabase + AI 분석 파이프라인. ai-client.ts에 Circuit Breaker/폴백/캐싱
+3. **tarosaju** — AI 운세/일기 앱. Next.js + Supabase. Gemini 호출, 실시간 구독
+
+평가 기준 (모두 AND 조건):
+- 해당 프로젝트의 기존 코드에 **구체적으로 적용 가능한** 변경이 있는가?
+- 변경이 **즉시 실행 가능**한가? (리서치만 필요한 건 제외)
+- 변경의 **효과가 측정 가능**한가? (성능, 비용, 안정성 등)
+
+3 조건 모두 만족하는 경우에만 아래 JSON으로 응답:
+{
+  "actionable": true,
+  "target": "프로젝트명 (ai-study / moneyflow / tarosaju)",
+  "action": "한 줄 액션 요약",
+  "detail": "구체적 이식 계획 (어떤 파일에 무엇을 변경, 3줄 이내)",
+  "priority": "high | medium | low"
+}
+
+3 조건 중 하나라도 불만족하면:
+{ "actionable": false }
+
+마크다운 코드 펜스 없이 JSON만 응답.`;
+
+  try {
+    const result = await model.generateContent(prompt);
+    let text = result.response.text().trim();
+    text = text.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
+    const parsed = JSON.parse(text);
+
+    if (parsed.actionable) {
+      return {
+        target: parsed.target,
+        action: parsed.action,
+        detail: parsed.detail,
+        priority: parsed.priority || "medium",
+      };
+    }
+    return null;
+  } catch (err) {
+    console.warn(`   ⚠️ 평가 실패 (스킵): ${err.message}`);
+    return null;
+  }
 }
 
 main().catch((err) => {

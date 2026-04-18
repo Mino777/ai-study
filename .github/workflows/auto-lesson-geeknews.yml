@@ -176,6 +176,33 @@ jobs:
             --repo ${{ github.repository }} \
             --reason "not planned"
 
+      - name: Create actionable issue if applicable
+        if: steps.check.outputs.has_stale == 'true' && steps.curate.outputs.actionable == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ACTION_TARGET: ${{ steps.curate.outputs.action_target }}
+          ACTION_SUMMARY: ${{ steps.curate.outputs.action_summary }}
+          ACTION_DETAIL: ${{ steps.curate.outputs.action_detail }}
+          TOPIC: ${{ steps.curate.outputs.selected_topic }}
+          SOURCE_LINK: ${{ steps.curate.outputs.selected_link }}
+        run: |
+          gh issue create \
+            --repo ${{ github.repository }} \
+            --title "🔧 이식 후보: ${ACTION_SUMMARY}" \
+            --label "actionable-insight" \
+            --body "## 🔧 긱뉴스 큐레이션에서 발견된 이식 후보
+
+          **출처 엔트리:** ${TOPIC}
+          **원본:** ${SOURCE_LINK}
+          **대상 프로젝트:** ${ACTION_TARGET}
+
+          ### 구체적 액션
+          ${ACTION_DETAIL}
+
+          ---
+          > 이 이슈는 긱뉴스 자동 큐레이션에서 Gemini가 프로젝트 이식 가능성을 감지하여 자동 생성되었습니다.
+          > 검토 후 작업을 시작하거나, 해당 없으면 클로즈하세요."
+
       - name: Close remaining stale issues
         if: steps.check.outputs.has_stale == 'true' && steps.check.outputs.stale_count > 1
         env:
