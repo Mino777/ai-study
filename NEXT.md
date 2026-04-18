@@ -55,31 +55,53 @@
 
 ## 🎯 다음 작업 큐 (우선순위 순)
 
+### 🔴 High (딥리서치 2026-04-18 결과)
+
+1. **Validator 자동 승격 파이프라인** (promote-solution → GitHub Actions)
+   - 현재 수동 5-Phase → CI 자동화로 전환
+   - Solutions N=3+ 감지 → 자동 `.claude/hooks/` 생성
+   - 참고: `harness-engineering/spec-driven-development-for-ai-agents`
+   - 예상 크기: L
+
+2. **Graph 기반 메모리 쿼리 POC**
+   - content-manifest.json 그래프를 쿼리 가능한 구조로 이식
+   - dangling connections 자동 감지 → generate-lesson 주제 제안 연동
+   - 참고: MAGMA 논문, `context-engineering/context-engineering-2026-paradigm-shift`
+   - 예상 크기: M
+
 ### 🟡 Medium
 
-1. **JIT 검색 성과 검증 — 4프로젝트 관찰**
+3. **JIT 검색 성과 검증 — 4프로젝트 관찰**
    - totalQueries 100 도달 시 적중률 분석
    - 3세션 연속 유지 시 Layer 3 검증 완료 선언
    - 예상 크기: S (관찰)
 
-2. **히트 카운트 100+ 도달 시 0회 엔트리 표시**
+4. **SPEC.md Acceptance Spec 섹션 추가** (SDD 강화)
+   - 검증 가능한 acceptance criteria 명시
+   - 빌드 통과 + 테스트 수 + 성능 임계값
+   - 참고: `harness-engineering/spec-driven-development-for-ai-agents`
+   - 예상 크기: S
+
+5. **히트 카운트 100+ 도달 시 0회 엔트리 표시**
    - totalQueries > 100 이후 판단
    - 예상 크기: S
 
-3. **validate-mdx Trap 3 AST 파싱 개선 검토**
+6. **validate-mdx Trap 3 AST 파싱 개선 검토**
    - stress test에서 FP 90%+ 확인됨
    - FP가 실제 사고 유발 시 착수
    - 예상 크기: M
 
-4. **워커 재료 추가 박제 후보** (이번 세션에서 발견, 미착수)
+7. **워커 재료 추가 박제 후보**
    - moneyflow: Content Pipeline 상태 머신, React Hydration + SW 캐시
    - tarosaju: Large Page Decomposition, Supabase Realtime Retry
    - 예상 크기: S each
 
 ### 🟢 Low
 
-5. **인덱싱 자동화 (pre-commit 또는 CI)**
-6. **Flow Map Part 5 재개 판단** — deferred
+8. **인덱싱 자동화 (pre-commit 또는 CI)**
+9. **Flow Map Part 5 재개 판단** — deferred
+10. **Semantic Caching POC** — JIT 검색에 벡터 유사도 기반 캐시 추가 (70%+ 절감 기대)
+11. **멀티 에이전트 모델 라우팅** — Haiku/Sonnet/Opus 사다리 자동 선택 (40-60% 절감)
 
 ---
 
@@ -153,9 +175,8 @@ done
 
 ## 📜 최근 갱신
 
-### 2026-04-18 (Session 13 final — CI 안정화 + 워커 재료 박제)
-- **CI 안정화**: npm audit 해결 + 미완성 마커 해소 + validate-mdx stress test
-- **워커 재료 박제**: empathetic-ai-prompt-techniques (tarosaju) + parallel-worktree-git-lock-trap (moneyflow)
-- **기존 엔트리 보강**: Zod 5-Layer에 실전 적용 데이터 추가
-- **메모리**: /projects-sync 시 aidy-architect 포함 룰 저장
-- **2차 compound**: 워커 재료 박제분까지 포함하여 문서화 완료
+### 2026-04-18 (Session 14 — 딥리서치 + 최신 동향 박제)
+- **딥리서치**: 하네스/컴파운드 엔지니어링 2025-2026 최신 동향 3에이전트 병렬 조사
+- **신규 엔트리 3건**: Context Engineering 2026 패러다임 전환, SDD 방법론, Multi-Agent 오케스트레이션 패턴
+- **Gemini 파이프라인 최적화**: 카테고리 스코프 컨텍스트 (134→~10개), ping 테스트 제거, 누락 카테고리 3개 추가
+- **NEXT.md 큐 재정렬**: 딥리서치 결과 기반 High 우선순위 2건 추가

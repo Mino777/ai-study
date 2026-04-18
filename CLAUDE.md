@@ -90,6 +90,7 @@ public/            → search-index.json (gitignored, SearchDialog lazy fetch용
 - `npm run search -- "<query>"` — Layer 3 JIT 검색 (쿼리 라우터 자동 적용, --force로 강제)
 - `node scripts/shadow-benchmark.mjs` — Layer 3 Phase 3 섀도우 벤치마크 (적중률 + 토큰 절감 측정)
 - `node scripts/fix-one-way-connections.mjs [--apply]` — 일방향 연결 감지 + 역링크 일괄 추가
+- `node scripts/graph-query.mjs <cmd>` — 지식 그래프 쿼리 CLI (neighbors/dangling/islands/hubs/path/weak-links/suggest)
 
 ## Content System
 - All content in `content/` as MDX files with frontmatter

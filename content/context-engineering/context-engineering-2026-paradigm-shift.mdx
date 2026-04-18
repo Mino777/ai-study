@@ -1,0 +1,164 @@
+---
+title: "Context Engineering 2026 패러다임 전환 — Prompt Engineering을 넘어서"
+category: context-engineering
+date: "2026-04-18"
+tags:
+  - context-engineering
+  - paradigm-shift
+  - 2026-trends
+  - gartner
+  - memory-architecture
+  - agent-context
+confidence: 3
+connections:
+  - context-engineering/context-engineering-fundamentals
+  - context-engineering/claude-md-design-patterns
+  - context-engineering/context-compression
+  - context-engineering/context-scaling-3-layer-architecture
+  - context-engineering/multi-turn-context-management
+  - harness-engineering/harness-engineering-overview
+  - harness-engineering/compound-engineering-philosophy
+  - tokenomics/claude-code-token-levers-catalog
+status: complete
+description: "2026년 Gartner가 breakout AI capability로 지정한 Context Engineering. Prompt Engineering에서의 패러다임 전환과 3층 메모리 아키텍처, 60% 임계값 등 실전 적용 기법."
+type: entry
+quiz:
+  - question: "2026년 Context Engineering이 Prompt Engineering과 근본적으로 다른 점은?"
+    choices:
+      - "더 긴 프롬프트를 작성하는 것"
+      - "전체 정보 환경(메모리+도구+검색+상태)을 설계하는 것"
+      - "모델을 fine-tuning하는 것"
+      - "프롬프트를 여러 언어로 번역하는 것"
+    answer: 1
+    explanation: "Context Engineering은 단일 프롬프트가 아니라 프롬프트+메모리+도구+검색+상태를 포함한 전체 정보 환경을 설계하는 기술이다."
+  - question: "컨텍스트 윈도우 활용도가 몇 % 를 넘으면 품질 저하가 시작되는가?"
+    choices:
+      - "40%"
+      - "60%"
+      - "80%"
+      - "95%"
+    answer: 1
+    explanation: "실측 데이터에 따르면 컨텍스트 60% 활용도에서 품질 저하가 시작된다. 60% 이상은 낭비일 가능성이 높다."
+  - question: "2026년 표준 에이전트 메모리 3층 구조에서 Episodic Memory의 역할은?"
+    choices:
+      - "현재 세션의 스크래치패드"
+      - "타임스탬프 기반 액션/결과 로그 (중기)"
+      - "도메인 팩트와 선호도 저장 (장기)"
+      - "모델 가중치 캐시"
+    answer: 1
+    explanation: "Episodic Memory는 중기 계층으로, 세션 간 액션과 결과를 타임스탬프 기반으로 로깅한다. Working(단기)과 Semantic(장기) 사이에 위치."
+---
+
+## 갭 / 맥락
+
+2024년까지 AI 활용의 중심은 **Prompt Engineering** — "올바른 단어를 찾아 모델에게 전달"하는 것이었다. 2026년, 이 프레임은 근본적으로 전환되었다.
+
+Gartner가 2026년 **breakout AI capability**로 Context Engineering을 지정했다. 핵심 질문이 바뀌었다:
+
+> "What configuration of context is most likely to generate our model's desired behavior?"
+
+프롬프트는 컨텍스트의 *일부*일 뿐이다. 진짜 설계 대상은 **프롬프트 + 메모리 + 도구 + 검색 + 상태**를 포함한 전체 정보 환경이다.
+
+## 2024 기법의 역효과
+
+2024~2025에 표준이었던 프롬프트 기법들이 2026년에는 **역효과**를 내는 사례가 확인되고 있다:
+
+| 기법 | 2024 | 2026 |
+|------|------|------|
+| "Think step by step" | 추론 품질 향상 | 최신 모델에서 오히려 결과 품질 저하 |
+| 긴 시스템 프롬프트 | 더 많은 맥락 = 더 좋은 답 | 60% 임계값 이후 품질 급락 |
+| Few-shot 예제 다량 투입 | 패턴 학습 강화 | 토큰 낭비 + 모델이 예제에 과적합 |
+
+모델 자체가 진화하면서, **모델에 맞는 컨텍스트 환경 설계**가 프롬프트 워딩보다 중요해졌다.
+
+## 핵심 개념: Context = 5요소 설계
+
+```
+┌─────────────────────────────────────────────┐
+│              Context Environment             │
+│                                             │
+│  1. Prompt      ← 현재 요청 + 시스템 지시    │
+│  2. Memory      ← 세션 간 지속 지식          │
+│  3. Tools       ← 에이전트가 호출 가능한 도구  │
+│  4. Retrieval   ← JIT 검색으로 주입된 지식    │
+│  5. State       ← 현재 작업 진행 상태        │
+│                                             │
+│  → 이 5요소의 "구성"이 모델 행동을 결정       │
+└─────────────────────────────────────────────┘
+```
+
+### 60% 임계값 원칙
+
+컨텍스트 윈도우를 **60% 이상 채우면 품질이 저하**된다. 실전 규칙:
+
+- 태스크 단위로 세션 분리 (한 세션에 모든 것을 담지 않기)
+- JIT 검색으로 관련 청크만 주입 (전체 위키 331K → ~800 tokens)
+- 완료된 서브태스크는 compaction으로 요약
+
+### 3층 메모리 아키텍처 (2026 표준)
+
+| 계층 | 역할 | 수명 | 구현 예시 |
+|------|------|------|----------|
+| **Working Memory** | 현재 세션 스크래치패드 | 세션 내 | 대화 컨텍스트, 토큰 버퍼 |
+| **Episodic Memory** | 액션/결과 타임스탬프 로그 | 세션 간 | NEXT.md, Journal 시리즈 |
+| **Semantic Memory** | 팩트/선호도/도메인 지식 | 영구 | `.claude/memory/` 파일들, CLAUDE.md |
+
+이 3층이 ai-study 프로젝트에 이미 구현되어 있다:
+- Working: 현재 대화 컨텍스트
+- Episodic: NEXT.md (세션 핸드오프) + Harness Journal (사이클 로그)
+- Semantic: `.claude/projects/.../memory/` (유저/피드백/프로젝트 메모리)
+
+### Hook 기반 도구 제어
+
+Claude Code의 Hook 아키텍처가 Context Engineering의 "Tools" 계층을 구현한다:
+
+```bash
+# PreToolUse hook — 모든 tool call에 대해 사전 검증
+# 예: no-company-names.sh → Edit/Write 전에 민감 정보 차단
+.claude/hooks/no-company-names.sh
+```
+
+모든 도구 호출이 외부 서비스(또는 스크립트)로 전송되어 Allow/Deny 판정을 받는 구조. 이를 통해 에이전트의 행동 범위를 컨텍스트 수준에서 제어한다.
+
+## ai-study 프로젝트 적용 현황
+
+| 5요소 | 구현 | 상태 |
+|-------|------|------|
+| Prompt | CLAUDE.md + SPEC.md + ai-agent-start-here.mdx | 완료 |
+| Memory | `.claude/memory/` 3층 분리 | 완료 |
+| Tools | `.claude/hooks/` + slash commands | 완료 |
+| Retrieval | JIT 검색 (Layer 3, 99.8% 절감) | 완료 |
+| State | NEXT.md (세션 상태 핸드오프) | 완료 |
+
+## AI Agent Directive
+
+### Trigger
+- 새 프로젝트에 AI 에이전트 환경을 설계할 때
+- 기존 프로젝트의 에이전트 성능이 기대에 미치지 못할 때
+- 컨텍스트 윈도우 사용량이 60%를 초과하여 품질 저하가 관찰될 때
+
+### Prerequisites
+- `context-engineering/context-engineering-fundamentals` — 기초 개념
+- `context-engineering/context-scaling-3-layer-architecture` — Layer 구조
+- `tokenomics/claude-code-token-levers-catalog` — 토큰 최적화 레버
+
+### Actionable Steps
+1. 5요소(Prompt/Memory/Tools/Retrieval/State) 각각의 현재 구현 상태를 점검
+2. 컨텍스트 윈도우 활용도가 60%를 넘지 않는지 확인 — 넘으면 태스크 분리 또는 compaction
+3. 3층 메모리 구조가 갖춰져 있는지 확인 — Working/Episodic/Semantic 분리
+4. JIT 검색이 구현되어 있으면 전체 문서 주입 대신 관련 청크만 사용
+5. Hook/Guard가 설정되어 있으면 에이전트 행동 범위가 적절히 제한되는지 검증
+
+### Anti-patterns
+- 2024식 "think step by step" 무조건 추가 — 최신 모델에서 역효과
+- 컨텍스트 윈도우에 "더 많이 넣으면 더 좋다" 사고방식 — 60% 임계값 위반
+- 메모리를 단일 계층으로 운영 — Working/Episodic/Semantic 미분리
+- 모든 도구를 한꺼번에 로드 — Tool Search로 필요 시점에만 로드 (95% 절감)
+
+## 출처 / 검증 메모
+
+- Anthropic 공식: [Effective Context Engineering for AI Agents](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents)
+- Awesome Context Engineering: [GitHub](https://github.com/Meirtz/Awesome-Context-Engineering)
+- 60% 임계값: Anthropic 엔지니어링 블로그 + 커뮤니티 실측 보고
+- 3층 메모리: [Mem0 논문](https://arxiv.org/pdf/2504.19413), [A-Mem 논문](https://arxiv.org/pdf/2502.12110)
+- ai-study 프로젝트 구현: 직접 운영 데이터 (JIT 검색 99.8% 절감 실측)

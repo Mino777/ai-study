@@ -1,0 +1,197 @@
+---
+title: "Multi-Agent Orchestration 패턴 2026 — Planner-Worker-Judge 3역할 모델"
+category: agents
+date: "2026-04-18"
+tags:
+  - multi-agent
+  - orchestration
+  - planner-worker-judge
+  - 2026-trends
+  - hub-worker
+  - git-worktree
+confidence: 3
+connections:
+  - agents/agent-architectures
+  - agents/multi-agent-pipeline
+  - agents/hermes-agent-analysis
+  - harness-engineering/harness-engineering-overview
+  - harness-engineering/compound-engineering-philosophy
+  - harness-engineering/aidy-journal-000-architect-worker-baseline
+  - harness-engineering/wt-branch-structural-safety
+  - harness-engineering/spec-driven-development-for-ai-agents
+  - context-engineering/context-engineering-2026-paradigm-shift
+  - tokenomics/project-level-cost-analysis-pattern
+status: complete
+description: "2026년 2월, 주요 AI 코딩 플랫폼이 동시에 멀티 에이전트를 출시. Planner→Worker→Judge 3역할 모델, git worktree 격리, 모델 라우팅으로 40-60% 비용 절감."
+type: entry
+quiz:
+  - question: "2026년 멀티 에이전트 오케스트레이션의 표준 3역할 모델은?"
+    choices:
+      - "Reader → Writer → Publisher"
+      - "Planner → Worker → Judge"
+      - "Input → Process → Output"
+      - "Designer → Developer → Tester"
+    answer: 1
+    explanation: "2026년 표준: Planner(태스크 생성), Worker(병렬 실행), Judge(진행 판정)의 3역할 모델."
+  - question: "멀티 에이전트에서 Worker 간 충돌을 방지하는 핵심 기술은?"
+    choices:
+      - "파일 락(file lock)"
+      - "git worktree 격리"
+      - "순차 실행"
+      - "공유 메모리"
+    answer: 1
+    explanation: "각 Worker가 독립된 git worktree에서 작업하면 파일 충돌 없이 병렬 실행이 가능하다."
+  - question: "멀티 에이전트 모델 라우팅으로 달성 가능한 비용 절감은?"
+    choices:
+      - "10-20%"
+      - "20-30%"
+      - "40-60%"
+      - "80-90%"
+    answer: 2
+    explanation: "Worker에 Haiku/Sonnet 급 저가 모델을 사용하고, Planner/Judge에만 Opus를 사용하면 품질 손실 없이 40-60% 비용 절감 가능."
+---
+
+## 갭 / 맥락
+
+2026년 2월, 모든 주요 AI 코딩 플랫폼이 **2주 내에 동시에** 멀티 에이전트 기능을 출시했다. 단일 에이전트 시대에서 멀티 에이전트 오케스트레이션 시대로의 전환이 확정된 순간이다.
+
+핵심 변화:
+- 소프트웨어 엔지니어 역할: "코드 작성" → **"에이전트 오케스트레이션"**
+- GitHub 글로벌 커밋의 4%가 AI 에이전트 저자
+- 자율성보다 **조율(coherence)**이 핵심 — Mike Mason (2026)
+
+## 핵심 개념: Planner → Worker → Judge
+
+```
+┌─────────────────────────────────────────────┐
+│              Orchestrator                    │
+│                                             │
+│  ┌──────────┐                               │
+│  │ Planner  │ 코드베이스 탐색 → 태스크 생성    │
+│  └────┬─────┘                               │
+│       │ 태스크 분배                           │
+│  ┌────┴────┬────────┬────────┐              │
+│  │Worker A │Worker B│Worker C│  (병렬 실행)   │
+│  │worktree │worktree│worktree│  (격리된 환경)  │
+│  └────┬────┴────┬───┴────┬───┘              │
+│       │         │        │                   │
+│  ┌────┴─────────┴────────┴───┐              │
+│  │         Judge             │ 진행 판정      │
+│  └───────────────────────────┘              │
+└─────────────────────────────────────────────┘
+```
+
+### 3역할 상세
+
+| 역할 | 책임 | 추천 모델 | 비용 비율 |
+|------|------|----------|----------|
+| **Planner** | 코드베이스 분석, 태스크 분해, 의존성 파악 | Opus | 높음 (5%) |
+| **Worker** | 독립적 태스크 실행 (코딩, 테스트, 문서화) | Sonnet/Haiku | 낮음 (70%) |
+| **Judge** | 각 사이클 종료 시 진행 판정, 품질 검증 | Opus | 높음 (25%) |
+
+### 모델 라우팅 — 40-60% 비용 절감
+
+```
+┌─────────────────────────────────────────┐
+│           Model Routing Ladder           │
+│                                         │
+│  Opus ($5/$25)   ← 설계, 아키텍처 리뷰   │
+│  Sonnet ($3/$15) ← 대부분 운영 업무 70%   │
+│  Haiku ($1/$5)   ← 분류, 추출, 포매팅    │
+└─────────────────────────────────────────┘
+```
+
+Planner/Judge에 Opus, Worker에 Sonnet/Haiku를 배치하면 **품질 손실 없이 40-60% 비용 절감**.
+
+### git worktree 격리 — 충돌 제로
+
+멀티 에이전트의 최대 위험은 **파일 충돌**. 해결책:
+
+```bash
+# 각 Worker가 독립 worktree에서 작업
+git worktree add /tmp/worker-a -b feature/task-a
+git worktree add /tmp/worker-b -b feature/task-b
+
+# 작업 완료 후 merge
+git merge feature/task-a
+git merge feature/task-b
+```
+
+Claude Code의 `isolation: "worktree"` 옵션이 이를 자동화한다.
+
+## 오케스트레이션 패턴 비교
+
+| 패턴 | 구조 | 강점 | 약점 | 적합 상황 |
+|------|------|------|------|----------|
+| **Sequential** | A → B → C | 단순, 디버깅 쉬움 | 느림 | 의존성 높은 파이프라인 |
+| **Concurrent** | A ∥ B ∥ C | 빠름, 비용 효율 | 충돌 위험 | 독립적 태스크 |
+| **Hierarchical** | Manager → Sub-managers → Workers | 대규모 확장 | 복잡성 | 100+ 파일 리팩토링 |
+| **Orchestrator-Worker** | Hub → Workers | 중앙 제어 + 분산 실행 | 단일 실패점 | 중규모 프로젝트 |
+
+## ai-study Hub-Worker 모델과의 연결
+
+이 프로젝트의 기존 Hub-Worker 아키텍처:
+
+```
+ai-study (허브)
+  ├── moneyflow (워커) — 패턴 수집, 비용 분석
+  ├── tarosaju (워커) — 패턴 수집, Supabase 실전
+  └── aidy-architect (워커) — 멀티에이전트 오케스트레이션
+```
+
+이것은 **Orchestrator-Worker 패턴**의 실전 구현이다:
+- 허브(ai-study)가 Planner 역할: 지식 그래프 분석, 다음 작업 큐 결정
+- 워커가 실행: 각 프로젝트에서 독립 작업
+- `/projects-sync`가 Judge 역할: 워커 상태 진단, 충돌 사전 탐지
+- `/compound`가 피드백 루프: 결과를 허브에 박제
+
+### 진화 방향
+
+| 현재 | 다음 단계 |
+|------|----------|
+| 수동 `/projects-sync` | 자동 워커 상태 폴링 |
+| 단일 Claude 세션 | 역할별 병렬 에이전트 |
+| Hub에서 전체 컨텍스트 | Worker에 최소 컨텍스트만 전달 |
+
+## 주요 도구 (2026)
+
+| 도구 | 특징 |
+|------|------|
+| [ComposioHQ Agent Orchestrator](https://github.com/ComposioHQ/agent-orchestrator) | 병렬 코딩 에이전트 + git worktree 자동 격리 |
+| [Augment Code Intent](https://www.augmentcode.com/blog/intent-a-workspace-for-agent-orchestration) | 에이전트 워크스페이스 + living spec 공유 |
+| [CrewAI](https://crewai.com/) | Role-based 에이전트 조율 (가장 단순) |
+| Claude Agent SDK | Anthropic 공식 에이전트 SDK |
+
+## AI Agent Directive
+
+### Trigger
+- 프로젝트가 3+ 독립 에이전트/세션으로 분산될 때
+- 단일 에이전트로 처리하기엔 태스크가 너무 클 때 (100+ 파일)
+- 워커 프로젝트 간 충돌이 발생할 때
+
+### Prerequisites
+- `agents/agent-architectures` — 에이전트 기초 아키텍처
+- `harness-engineering/aidy-journal-000-architect-worker-baseline` — Hub-Worker 실전
+- `harness-engineering/wt-branch-structural-safety` — worktree 안전 패턴
+
+### Actionable Steps
+1. Planner/Worker/Judge 3역할 정의 — 각 역할의 입출력 계약 명시
+2. Worker 간 격리 전략 결정 — git worktree 또는 별도 브랜치
+3. 모델 라우팅 설정 — Planner(Opus) + Worker(Sonnet) + Judge(Opus)
+4. `/projects-sync`로 워커 상태 모니터링 자동화
+5. 각 사이클 종료 시 `/compound`로 결과 박제
+
+### Anti-patterns
+- 모든 에이전트에 동일 모델 사용 — 비용 낭비 (Haiku로 충분한 작업에 Opus 사용)
+- Worker 간 같은 파일 동시 수정 — git worktree 격리 없이 병렬 실행
+- Orchestrator 없이 에이전트 자율 실행 — 방향성 상실, 중복 작업
+- 3~5개를 넘는 초기 에이전트 수 — MVP는 소규모로 시작
+
+## 출처 / 검증 메모
+
+- Addy Osmani: [The Code Agent Orchestra](https://addyosmani.com/blog/code-agent-orchestra/)
+- Mike Mason: [AI Coding Agents 2026](https://mikemason.ca/writing/ai-coding-agents-jan-2026/)
+- ComposioHQ: [Agent Orchestrator GitHub](https://github.com/ComposioHQ/agent-orchestrator)
+- Beam AI: [6 Multi-Agent Orchestration Patterns](https://beam.ai/agentic-insights/multi-agent-orchestration-patterns-production)
+- ai-study Hub-Worker: 직접 운영 (moneyflow + tarosaju + aidy-architect)
+- 모델 가격: Anthropic 공식 pricing (2026-04)

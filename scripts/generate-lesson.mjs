@@ -11,6 +11,7 @@ const CATEGORIES = [
   "prompt-engineering",
   "context-engineering",
   "harness-engineering",
+  "tokenomics",
   "rag",
   "agents",
   "fine-tuning",
@@ -18,6 +19,8 @@ const CATEGORIES = [
   "infrastructure",
   "ios-ai",
   "frontend-ai",
+  "android-ai",
+  "backend-ai",
 ];
 
 // 우선순위: AI 활용 방법론 > iOS/Frontend AI > 나머지
@@ -25,10 +28,13 @@ const CATEGORY_PRIORITY = {
   "prompt-engineering": 2.0,
   "context-engineering": 2.0,
   "harness-engineering": 2.0,
+  tokenomics: 2.0,
   agents: 1.8,
   rag: 1.8,
   "ios-ai": 1.5,
   "frontend-ai": 1.5,
+  "android-ai": 1.5,
+  "backend-ai": 1.5,
   evaluation: 1.2,
   "fine-tuning": 1.0,
   infrastructure: 0.7,
@@ -36,6 +42,9 @@ const CATEGORY_PRIORITY = {
 
 const CATEGORY_LABELS = {
   "prompt-engineering": "Prompt Engineering",
+  "context-engineering": "Context Engineering",
+  "harness-engineering": "Harness Engineering",
+  tokenomics: "Tokenomics",
   rag: "RAG",
   agents: "Agents",
   "fine-tuning": "Fine-tuning",
@@ -43,8 +52,8 @@ const CATEGORY_LABELS = {
   infrastructure: "Infrastructure",
   "ios-ai": "iOS + AI",
   "frontend-ai": "Frontend + AI",
-  "context-engineering": "Context Engineering",
-  "harness-engineering": "Harness Engineering",
+  "android-ai": "Android + AI",
+  "backend-ai": "Backend + AI",
 };
 
 // ─── 1. Load manifest & topic pool ───────────────────────────────
@@ -169,26 +178,15 @@ async function generateMDX(topic, manifest) {
   }
 
   const genAI = new GoogleGenerativeAI(apiKey);
-  // Pro 우선, 503 시 Flash 폴백
+  // Pro 우선, 실패 시 Flash 폴백 (ping 테스트 제거 — 본 호출에서 직접 폴백)
   const MODELS = ["gemini-2.5-pro", "gemini-2.5-flash"];
-  let model;
-  for (const modelName of MODELS) {
-    try {
-      model = genAI.getGenerativeModel({ model: modelName });
-      // 연결 테스트 (짧은 프롬프트)
-      await model.generateContent("ping");
-      console.log(`🤖 Using model: ${modelName}`);
-      break;
-    } catch (err) {
-      console.warn(`⚠️  ${modelName} unavailable: ${err.message?.slice(0, 80)}`);
-      if (modelName === MODELS[MODELS.length - 1]) {
-        console.error("❌ All models unavailable");
-        process.exit(1);
-      }
-    }
-  }
+  let model = genAI.getGenerativeModel({ model: MODELS[0] });
+  let currentModelIdx = 0;
+  console.log(`🤖 Primary model: ${MODELS[0]} (fallback: ${MODELS[1]})`);
 
-  const existingTitles = manifest.entries.map((e) => `- ${e.frontmatter.title}`).join("\n");
+  // 토큰 최적화: 같은 카테고리 엔트리만 컨텍스트로 전송 (전체 134개 → ~10개)
+  const sameCategoryEntries = manifest.entries.filter((e) => e.frontmatter.category === topic.category);
+  const existingTitles = sameCategoryEntries.map((e) => `- ${e.frontmatter.title}`).join("\n");
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -242,6 +240,12 @@ MDX 문법 제약 (반드시 준수 — 위반 시 빌드 실패):
       break;
     } catch (err) {
       console.warn(`⚠️  Attempt ${attempt + 1} failed: ${err.message}`);
+      // 첫 실패 시 폴백 모델로 전환
+      if (attempt === 0 && currentModelIdx < MODELS.length - 1) {
+        currentModelIdx++;
+        model = genAI.getGenerativeModel({ model: MODELS[currentModelIdx] });
+        console.log(`🔄 Switching to fallback: ${MODELS[currentModelIdx]}`);
+      }
       if (attempt === 2) {
         console.error("❌ All retries failed");
         process.exit(1);
@@ -543,6 +547,9 @@ async function generateCustom(topicText) {
     infrastructure: ["인프라", "서빙", "캐싱", "게이트웨이", "배포"],
     "ios-ai": ["ios", "swift", "core ml", "apple", "swiftui", "xcode"],
     "frontend-ai": ["프론트", "react", "next", "웹", "frontend", "react native"],
+    "android-ai": ["android", "kotlin", "jetpack", "compose"],
+    "backend-ai": ["backend", "서버", "api", "fastapi", "express", "spring"],
+    tokenomics: ["토큰", "token", "비용", "cost", "caching", "캐싱", "pricing"],
   };
 
   const lower = topicText.toLowerCase();
