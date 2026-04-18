@@ -58,15 +58,16 @@
 
 ### 🔴 High
 
-1. **[워커] AI API 프록시 3단계 방어선 구현** (tarosaju 먼저 → moneyflow)
+1. **[워커] AI API 프록시 3단계 방어선 구현** (tarosaju → moneyflow → aidy-server)
    - 출처: `ai-api-cost-prevention-serverless-security-pattern` 엔트리
    - Supabase Edge Functions 프록시 + 인증 + Rate Limiting
-   - tarosaju: `src/lib/anthropic-client.ts` / moneyflow: `src/lib/trading/ai-client.ts`
+   - tarosaju: `src/lib/anthropic-client.ts` / moneyflow: `src/lib/trading/ai-client.ts` / aidy-server: AI 호출 엔드포인트
    - 예상 크기: M (프로젝트당)
 
 2. **[워커] moneyflow AGENT_ROUTING 동적 AgentCompiler 전환**
    - 출처: `multi-claude-agent-management-compile-strategy` 엔트리
    - `src/lib/trading/ai-client.ts` AGENT_ROUTING 하드코딩 → 런타임 컴파일
+   - aidy-architect의 WO 에이전트 라우팅에도 적용 검토
    - 예상 크기: M
 
 3. **promotion-scan.yml 실제 동작 검증**
@@ -83,7 +84,7 @@
 3. **히트 카운트 100+ 도달 시 0회 엔트리 표시**
    - 예상 크기: S
 
-4. **[워커] SDD Acceptance Spec 강화** (moneyflow, tarosaju)
+4. **[워커] SDD Acceptance Spec 강화** (moneyflow, tarosaju, aidy 4레포)
    - 출처: `spec-driven-development-for-ai-agents` 엔트리
    - 각 프로젝트 SPEC.md에 Build Gate / Content Gate / Promotion Gate 섹션 추가
    - 예상 크기: S
