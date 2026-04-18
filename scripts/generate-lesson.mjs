@@ -249,7 +249,8 @@ MDX 문법 제약 (반드시 준수 — 위반 시 빌드 실패):
 1. HTML void 태그는 반드시 self-closing: <br />, <hr />, <img /> (특히 표 안)
 2. 본문 텍스트에서 {중괄호}는 JSX로 파싱됨 — 반드시 인라인 코드(\`)로 감싸거나 괄호()로 교체
 3. 본문 텍스트에서 <숫자 (예: <3)는 JSX 태그로 파싱됨 — 공백 추가(< 3) 또는 인라인 코드 사용
-4. Mermaid subgraph 이름에 공백은 반드시 id ["Label"] 형식: subgraph rag_std ["Standard RAG"]`;
+4. Mermaid subgraph 이름에 공백은 반드시 id ["Label"] 형식: subgraph rag_std ["Standard RAG"]
+5. Mermaid 라벨 안에서 <br/> 사용 금지 — 특히 rhombus{} 라벨에서 렌더링 에러 발생. 줄바꿈 대신 괄호로 보충 정보 표기: F{"Check Rate Limit (Firestore)"}`;
 
   console.log("🤖 Calling Gemini 2.5 Flash...");
 
