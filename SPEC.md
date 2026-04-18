@@ -191,6 +191,35 @@ Jominho의 프로젝트 (또는 새 프로젝트)
 
 ---
 
+## Acceptance Spec — 검증 가능한 품질 기준
+
+> SDD 원칙: 코드 ≠ 진실, Spec = 진실. 아래 기준을 통과해야 "완료"다.
+
+### Build Gate (자동 검증)
+| 기준 | 명령 | 통과 조건 |
+|------|------|----------|
+| TypeScript 빌드 | `npm run build` | 에러 0, 경고 허용 |
+| 테스트 | `npm test` | 전체 통과 (현재 23/23) |
+| MDX 문법 | `/validate-mdx` | 5대 함정 0건 |
+| Dangling 연결 | 빌드 로그 확인 | 신규 dangling 0건 |
+
+### Content Gate (수동/AI 검증)
+| 기준 | 검증 방법 | 통과 조건 |
+|------|----------|----------|
+| Frontmatter 유효성 | Zod 스키마 (`src/lib/schema.ts`) | 파싱 에러 0 |
+| AI Agent Directive | 신규 엔트리 리뷰 | Trigger + Actionable Steps 포함 |
+| Quiz | 신규 엔트리 | 3문항 이상, answer 인덱스 유효 |
+| 중복 없음 | Graph Query `neighbors` | 같은 개념 2+ 엔트리 금지 |
+
+### Promotion Gate (솔루션 승격 시)
+| 기준 | 검증 방법 | 통과 조건 |
+|------|----------|----------|
+| N ≥ 3 | `node scripts/scan-promotions.mjs` | 해당 카테고리 3건+ |
+| Idempotency | auto-fix 2회 연속 실행 | diff 0 |
+| 회귀 테스트 | vitest | 기존 + 신규 케이스 통과 |
+
+---
+
 ## AI Agent Contract
 
 AI 에이전트가 이 저장소에서 작업할 때 *지켜야 할 계약*:

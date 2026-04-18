@@ -91,6 +91,7 @@ public/            → search-index.json (gitignored, SearchDialog lazy fetch용
 - `node scripts/shadow-benchmark.mjs` — Layer 3 Phase 3 섀도우 벤치마크 (적중률 + 토큰 절감 측정)
 - `node scripts/fix-one-way-connections.mjs [--apply]` — 일방향 연결 감지 + 역링크 일괄 추가
 - `node scripts/graph-query.mjs <cmd>` — 지식 그래프 쿼리 CLI (neighbors/dangling/islands/hubs/path/weak-links/suggest)
+- `node scripts/scan-promotions.mjs` — 솔루션 승격 스캐너 (N=3+ 자동 감지 → 승격 제안, --json CI 연동)
 
 ## Content System
 - All content in `content/` as MDX files with frontmatter
