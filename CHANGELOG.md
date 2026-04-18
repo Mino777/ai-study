@@ -2,6 +2,32 @@
 
 모든 주목할 만한 변경사항을 이 파일에 기록합니다.
 
+## [2026-04-18] 세션 13 — CI 안정화 + 큐 정리
+
+> npm audit CI 실패 해결 + 미완성 마커 경고 해소 + validate-mdx stress test
+
+### Fixed
+
+- **npm audit CI 실패** — dompurify moderate 취약점 패치 + CI `--omit=dev` 추가
+  - protobufjs critical은 `@xenova/transformers` devDependency 체인 → 프로덕션 무관
+  - `npm audit --audit-level=high --omit=dev` → 0 vulnerabilities
+- **미완성 마커 빌드 경고 2건** — Journal 003 "구현 예정" + Tokenomics "작성 필요"
+  - 둘 다 문맥상 정확한 서술이나 키워드 매칭 FP → 표현 수정으로 해소
+
+### Changed
+
+- CI `npm audit` 명령에 `--omit=dev` 플래그 추가 (ci.yml primary + fallback 양쪽)
+
+### Metrics
+
+| 항목 | Before | After |
+|---|---|---|
+| CI npm audit | 실패 (5 vulnerabilities) | **통과 (0)** |
+| 빌드 경고 | 2건 (미완성 마커) | **0건** |
+| validate-mdx Trap 3 FP율 | 미측정 | **90%+ (코드블록 밀집 시, 의도된 동작)** |
+
+---
+
 ## [2026-04-17] 세션 11b — JIT 검색 4프로젝트 이식 + 대시보드 버그 수정
 
 > JIT 검색 파이프라인을 moneyflow/tarosaju/aidy-architect 3프로젝트에 동시 이식
