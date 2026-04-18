@@ -69,6 +69,40 @@ function loadTopicPool() {
 
 // ─── 2. Topic recommendation engine ─────────────────────────────
 
+function computeGraphSignals(manifest) {
+  const { nodes, edges } = manifest.graph || { nodes: [], edges: [] };
+  if (nodes.length === 0) return { weakHubCategories: new Set(), categoryConnectivity: {} };
+
+  // Build connectivity map
+  const connectivity = new Map();
+  for (const n of nodes) connectivity.set(n.id, 0);
+  for (const e of edges) {
+    connectivity.set(e.source, (connectivity.get(e.source) || 0) + 1);
+    connectivity.set(e.target, (connectivity.get(e.target) || 0) + 1);
+  }
+
+  // Weak hubs: conf<=2 + connections>=15
+  const weakHubCategories = new Set();
+  for (const n of nodes) {
+    if (n.confidence <= 2 && (connectivity.get(n.id) || 0) >= 15) {
+      weakHubCategories.add(n.category);
+    }
+  }
+
+  // Category avg connectivity
+  const catConn = {};
+  for (const n of nodes) {
+    if (!catConn[n.category]) catConn[n.category] = [];
+    catConn[n.category].push(connectivity.get(n.id) || 0);
+  }
+  const categoryConnectivity = {};
+  for (const [cat, conns] of Object.entries(catConn)) {
+    categoryConnectivity[cat] = conns.reduce((a, b) => a + b, 0) / conns.length;
+  }
+
+  return { weakHubCategories, categoryConnectivity };
+}
+
 function recommendTopics(manifest, topicPool, count = 3) {
   const existingSlugs = new Set(manifest.entries.map((e) => e.slug));
   const categoryEntries = {};
@@ -82,6 +116,8 @@ function recommendTopics(manifest, topicPool, count = 3) {
         ? entries.reduce((sum, e) => sum + e.frontmatter.confidence, 0) / entries.length
         : 0;
   }
+
+  const { weakHubCategories, categoryConnectivity } = computeGraphSignals(manifest);
 
   // Collect dangling connections
   const danglingConnections = [];
@@ -123,6 +159,13 @@ function recommendTopics(manifest, topicPool, count = 3) {
       let score = 0;
       if (categoryEntries[category]?.length === 0) score += 3;
       if (categoryConfidence[category] < 3) score += 1.5;
+
+      // Graph signal: weak hub category boost (conf<=2 + connections>=15)
+      if (weakHubCategories.has(category)) score += 1.5;
+
+      // Graph signal: high connectivity + low confidence category
+      const avgConn = categoryConnectivity[category] || 0;
+      if (avgConn >= 10 && categoryConfidence[category] < 3) score += 1.0;
 
       // Staleness: days since last entry in this category
       const catDates = (categoryEntries[category] || []).map((e) =>
@@ -437,9 +480,11 @@ async function suggest() {
     process.exit(0);
   }
 
+  const { weakHubCategories } = computeGraphSignals(manifest);
   console.log("📚 오늘의 추천 주제 3가지:\n");
   topics.forEach((t, i) => {
-    console.log(`  ${i + 1}. [${CATEGORY_LABELS[t.category]}] ${t.title} (score: ${t.score.toFixed(1)})`);
+    const graphTag = weakHubCategories.has(t.category) ? " 🔗graph-boost" : "";
+    console.log(`  ${i + 1}. [${CATEGORY_LABELS[t.category]}] ${t.title} (score: ${t.score.toFixed(1)}${graphTag})`);
   });
 
   // Output for GitHub Actions
