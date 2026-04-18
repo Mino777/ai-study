@@ -1,0 +1,199 @@
+---
+title: 공감형 AI 프롬프트 기법 — Rogerian / MI / NVC 3가지 상담 심리 패턴
+category: prompt-engineering
+date: '2026-04-18'
+tags:
+  - prompt-engineering
+  - rogerian
+  - motivational-interviewing
+  - nvc
+  - counseling
+  - safety
+  - crisis-detection
+  - tarosaju
+confidence: 4
+connections:
+  - prompt-engineering/quality-guards
+  - harness-engineering/ai-ops-environment-diagnosis-checklist
+status: complete
+description: >-
+  AI 상담/대화 서비스에서 상담 심리학 3대 기법(Rogerian, MI, NVC)을 시스템 프롬프트에 적용하는 패턴.
+  위기 신호 서버 측 가드레일 포함. tarosaju 3개 route 실전 적용 사례.
+type: entry
+quiz:
+  - question: 멀티턴 깊은 고민 상담에 가장 적합한 상담 심리 기법은?
+    choices:
+      - NVC (OFNR) — 관찰-감정-필요-요청 4단계
+      - MI (Motivational Interviewing) — 강점 기반 긍정 에너지
+      - >-
+        **Rogerian 비지시적 상담** — 판단 없는 수용 + 공감적 반영 + 질문으로 열기
+      - Chain of Thought — 단계별 추론
+    answer: 2
+    explanation: >-
+      Rogerian은 "답은 내담자 안에 있다"는 전제. 멀티턴 대화에서 AI가 조언을 쏟아내는 대신
+      공감적 반영과 열린 질문으로 사용자가 스스로 답을 찾도록 안내한다.
+  - question: 위기 신호(자살/자해) 감지 시 가장 안전한 대응 구조는?
+    choices:
+      - 시스템 프롬프트에 "위기 시 핫라인 안내" 추가
+      - LLM에게 위기 판단을 맡기고 응답에 포함
+      - >-
+        **서버 측 regex로 AI 호출 자체를 차단** + 하드코딩된 공감 응답 + 핫라인 번호
+      - 클라이언트 측 키워드 필터링
+    answer: 2
+    explanation: >-
+      LLM은 시스템 프롬프트를 무시할 수 있고, 프롬프트 인젝션으로 우회 가능.
+      서버 측에서 AI 호출 자체를 차단하면 LLM 의존도 0, 100% 예측 가능한 안전 응답.
+  - question: NVC의 OFNR 4단계 중 첫 메시지(icebreaker)에서 가장 중요한 요소는?
+    choices:
+      - Observation — 판단 없는 관찰
+      - Feeling — 나의 감정 표현
+      - Need — 충족되지 않은 필요
+      - >-
+        **Request — 초대형 질문** ("~해볼래요?")
+    answer: 3
+    explanation: >-
+      첫 메시지에서 가장 큰 실수는 "혼잣말"(일방 전달)이나 "요구형". Request를
+      초대형 질문으로 구성하면 상대에게 선택권을 주면서 대화를 열 수 있다.
+---
+
+## 갭
+
+AI 대화/상담 서비스의 시스템 프롬프트가 "역할 + 톤 + 길이" 수준에 머물면:
+- 응답이 "상담사"가 아니라 "정보 제공자"에 가까움
+- 첫 턴에 모든 해석을 쏟아내 대화 흐름이 없음
+- 위기 신호(자살/자해) 대응 없음
+- 감정 검증 없이 조언부터 제시
+
+상담 심리학의 검증된 기법을 시스템 프롬프트에 구조적으로 주입하면 이 갭을 메운다.
+
+## 3가지 상담 심리 기법
+
+### 1. Rogerian 비지시적 상담 — 깊은 고민 대화용
+
+Carl Rogers의 Person-Centered Therapy. 핵심 원칙:
+- **Unconditional positive regard**: 판단 없는 수용
+- **Empathy**: 공감적 반영 ("그 마음 이해해요")
+- **Congruence**: 진정성
+
+**적합한 상황**: 멀티턴 대화, 깊은 고민 상담, 타로/점술 해석
+
+프롬프트 구조:
+```
+## 상담 원칙 (Rogerian + 비지시적 상담)
+1. 검증 먼저 — "그 마음 이해해요", "~한 기분이었겠어요"
+2. 통찰 — 카드를 감정과 연결
+3. 질문으로 열기 — 조언보다 질문 (상대가 스스로 답 찾도록)
+4. 작은 실천 — 강요 없이 "오늘 해볼 수 있는 작은 한 가지"
+```
+
+**왜 이게 맞는가**: 타로 같은 "거울" 메타포 서비스와 자연스러운 매치. 카드가 답을 주는 게 아니라 사용자 내면을 비추고, Rogerian도 "답은 내담자 안에 있다"는 전제.
+
+### 2. MI (Motivational Interviewing) — 긍정 에너지 부스트용
+
+OARS 패턴 중 **Affirmation**에 집중:
+- 사용자의 강점을 짚어주기
+- 초대형 제안 ("~해보세요") > 강요형 ("~해야 해요")
+- 구체적 micro-action (추상 조언 금지)
+
+**적합한 상황**: 일일 운세, 데일리 피드, 자기 계발 메시지
+
+프롬프트 구조:
+```
+## Principles (Motivational Interviewing — Affirmation 강화)
+1. Affirm strengths — 사용자 긍정 에너지 짚기
+2. Gentle guidance — 초대가 아닌 강요 금지
+3. Concrete micro-action — 오늘 당장 할 수 있는 것 1개
+```
+
+**왜 이게 맞는가**: 운세/데일리 피드는 하루 기분 세팅. 부정 예언은 자기 실현적 저주가 될 수 있으므로 MI의 강점 기반 접근이 안전하고 효과적.
+
+### 3. NVC (Nonviolent Communication) — 첫 메시지/관계 시작용
+
+Marshall Rosenberg의 OFNR 4단계:
+- **O**bservation: 판단 없는 관찰
+- **F**eeling: 나의 감정 표현 ("궁금해요", "설레요")
+- **N**eed: 열린 needs (연결, 이해, 재미)
+- **R**equest: 초대형 질문 ("~해볼래요?")
+
+**적합한 상황**: 첫 메시지 생성, 아이스브레이커, 매칭 서비스
+
+프롬프트 구조:
+```
+## NVC Principles (OFNR)
+- Observation: 상대 특성에서 관찰한 구체적 특징
+- Feeling: 내 쪽의 감정
+- Need: 열린 needs
+- Request: 초대형 질문
+
+## Tone Matching
+- 리더/직설적 → 담백
+- 섬세/감성적 → 부드러움
+```
+
+**왜 이게 맞는가**: 첫 메시지에서 가장 큰 실수는 "혼잣말"이나 "요구형". NVC는 내 감정을 표현하되 상대에게 선택권을 주는 구조.
+
+## 서버 측 위기 신호 가드레일 (Defense in Depth)
+
+LLM이 시스템 프롬프트를 무시할 수 있으므로 **서버 측 regex** 이중 보호 필수:
+
+```ts
+// API route 시작 부분
+const crisis = crisisCheck(lastUserMessage);
+if (crisis.shouldBlockAi && crisis.fallbackMessage) {
+  // AI 호출 자체를 차단 + 하드코딩된 공감 응답 + 109 핫라인
+  return Response.json({
+    message: crisis.fallbackMessage,
+    crisis: crisis.level,
+  });
+}
+```
+
+- **severe** (자살/자해 구체 언급) → AI 호출 자체 차단, 하드코딩 응답
+- 성능 영향 0 (O(n) 문자열 매치)
+- LLM에 의존하지 않으므로 100% 예측 가능
+- 프롬프트 인젝션/롤플레이 우회 공격에도 안전
+
+## 기법 선택 가이드
+
+| 상황 | 기법 | 핵심 효과 |
+|---|---|---|
+| 멀티턴 깊은 상담 | **Rogerian** | 공감 반영 → 자기 통찰 유도 |
+| 일일 메시지/운세 | **MI Affirmation** | 강점 짚기 → 긍정 프레이밍 |
+| 첫 메시지/매칭 | **NVC OFNR** | 초대형 질문 → 압력 없는 연결 |
+| 위기 신호 감지 | **서버 regex** | AI 차단 → 안전 응답 + 핫라인 |
+
+## AI Agent Directive
+
+**Trigger**: AI 대화/상담 서비스의 시스템 프롬프트를 설계할 때. 특히 감정적 주제를 다루는 AI route 작성 시.
+
+**Prerequisites**: [Quality Guards](/wiki/prompt-engineering/quality-guards)
+
+### Actionable Steps
+1. 서비스의 대화 유형 분류 (깊은 상담 / 데일리 피드 / 첫 메시지)
+2. 유형에 맞는 기법 선택 (Rogerian / MI / NVC)
+3. 시스템 프롬프트에 해당 기법의 원칙 섹션 추가
+4. crisis-detector 서버 측 가드레일 통합
+5. 톤 매칭 규칙 추가 (사용자 성향별 톤 분기)
+6. 테스트: 위기 신호 입력 시 AI 차단 + 안전 응답 확인
+
+### Anti-patterns
+- 시스템 프롬프트에만 위기 대응 넣고 서버 가드 생략 (LLM은 무시할 수 있음)
+- 모든 route에 같은 기법 적용 (상황별 기법 선택이 핵심)
+- 첫 턴에 모든 해석 쏟아내기 (Rogerian의 "질문으로 열기" 위반)
+- 추상적 조언 ("긍정적으로 생각하세요") — 구체적 micro-action 필수
+
+## 출처
+
+**워커 프로젝트 실전 적용**:
+- mino-tarosaju `docs/solutions/ai-pipeline/2026-04-11-rogerian-prompts.md` — 3개 route 적용 + crisis-detector 40 tests
+- tarot-chat (Rogerian), fortune/ai (MI), icebreakers (NVC) — 각 route별 기법 매핑
+
+**학술 출처**:
+- Carl Rogers, *Client-Centered Therapy* (1951) — Rogerian 원칙
+- Miller & Rollnick, *Motivational Interviewing* — OARS 프레임워크
+- Marshall Rosenberg, *Nonviolent Communication* — OFNR 4단계
+
+### 검증 메모
+- 3가지 기법 선택과 route 매핑은 tarosaju 실전 적용에서 직접 확인
+- crisis-detector는 40 tests로 검증된 서버 측 구현
+- 학술 출처는 각 기법의 원저자/원서 확인

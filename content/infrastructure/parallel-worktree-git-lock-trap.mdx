@@ -1,0 +1,162 @@
+---
+title: 병렬 Worktree Git Lock 함정 — config.lock Race Condition
+category: infrastructure
+date: '2026-04-18'
+tags:
+  - git
+  - worktree
+  - concurrency
+  - race-condition
+  - parallel-agents
+  - moneyflow
+confidence: 4
+connections:
+  - harness-engineering/harness-journal-003-squash-merge-trap-pattern
+  - harness-engineering/harness-journal-004-wt-branch-command
+  - harness-engineering/multi-session-ai-ops-patterns
+status: complete
+description: >-
+  N개의 Agent를 병렬로 git worktree add 실행 시 .git/config.lock race condition으로 첫 번째만
+  성공하고 나머지 전부 실패하는 함정. 순차 실행 또는 non-worktree 모드로 회피.
+type: entry
+quiz:
+  - question: 4개 에이전트가 동시에 git worktree add를 실행하면 어떤 일이 발생하는가?
+    choices:
+      - 4개 모두 성공 (git이 자동으로 lock queue 처리)
+      - >-
+        **첫 번째만 성공, 나머지 3개는 .git/config.lock 에러로 즉시 실패**
+      - 랜덤하게 2-3개 성공
+      - 4개 모두 실패
+    answer: 1
+    explanation: >-
+      Git은 .git/config 수정 시 lock file을 사용하지만 exponential backoff가 없어
+      lock 경합 시 즉시 실패한다. 첫 프로세스만 lock을 획득하고 나머지는 전부 탈락.
+  - question: 병렬 에이전트 실행 시 worktree lock 문제를 회피하는 가장 안전한 방법은?
+    choices:
+      - .git/config.lock을 미리 삭제
+      - >-
+        **순차적으로 worktree 생성 후 병렬 작업 진행**
+      - Docker 컨테이너 사용
+      - git config lock timeout 설정
+    answer: 1
+    explanation: >-
+      Worktree 생성은 순차적으로 하되, 생성 완료 후 각 worktree에서의 작업은 병렬로
+      진행하면 된다. Lock은 생성 시점에만 경합하므로 생성만 순차화하면 해결.
+  - question: .git/config.lock 파일이 존재할 때 가장 먼저 확인해야 할 것은?
+    choices:
+      - 즉시 삭제
+      - >-
+        **이전 worktree 명령이 interrupted/crashed 됐는지 확인** (git worktree prune 실행)
+      - git을 재설치
+      - .git 디렉토리 초기화
+    answer: 1
+    explanation: >-
+      Stale lock은 이전 프로세스가 비정상 종료됐다는 신호. git worktree prune으로
+      dangling 참조를 정리한 후 lock 파일을 제거하는 것이 안전한 순서.
+---
+
+## 갭
+
+Claude Code의 Agent tool에서 `isolation: "worktree"`로 N개의 에이전트를 동시에 띄우면, 모두 `git worktree add`를 실행한다. 이때 `.git/config.lock` race condition으로 **첫 번째만 성공하고 나머지 전부 실패**하는 함정이 있다.
+
+에러 메시지:
+```
+error: could not lock config file .git/config: File exists
+error: unable to write upstream branch configuration
+fatal: unable to write to database
+```
+
+## 근본 원인
+
+Git은 `.git/config` 수정 시 atomic write를 위해 lock file(`.git/config.lock`)을 생성한다. 하지만:
+
+1. Process A가 `.git/config.lock` 획득 → 수정 시작
+2. Process B, C, D가 동시에 같은 lock을 찾으려 함
+3. Lock이 이미 존재하면 **retry 없이 즉시 실패** (exponential backoff 없음)
+
+Git은 single-threaded config write를 가정하고 설계됨. OS 레벨의 flock만 사용하며, 동시 접근 시 lock manager/MVCC 같은 보호가 없다.
+
+## 회피 패턴
+
+### 패턴 1: 순차 생성 + 병렬 작업 (권장)
+
+Worktree 생성은 순차, 작업은 병렬:
+
+```bash
+# ✅ 권장: worktree만 순차 생성
+git worktree add /tmp/agent-1 -b feat-1 && \
+git worktree add /tmp/agent-2 -b feat-2 && \
+git worktree add /tmp/agent-3 -b feat-3
+
+# 이후 각 worktree에서 병렬 작업 (lock 경합 없음)
+```
+
+### 패턴 2: non-worktree 모드
+
+Agent tool에서 `isolation: "worktree"`를 쓰지 않고 로컬 브랜치로 작업:
+
+```bash
+# worktree 대신 브랜치만 생성 (config.lock 불필요)
+git checkout -b feat-1
+```
+
+### 패턴 3: 사전 정리 + 순차 재시도
+
+```bash
+# 1. stale lock 확인 + 제거
+ls -la .git/config.lock  # 존재 확인
+git worktree prune        # dangling 참조 정리
+rm -f .git/config.lock    # stale lock 제거
+
+# 2. worktree 순차 생성
+git worktree add /tmp/agent-1 -b feat-1
+sleep 1
+git worktree add /tmp/agent-2 -b feat-2
+```
+
+## 예방 체크리스트
+
+병렬 에이전트 실행 전 매번:
+
+- [ ] `.git/config.lock` 존재 여부 확인
+- [ ] `git worktree list`로 stale worktree 점검
+- [ ] `git worktree prune` 실행 (dangling 정리)
+- [ ] **Sequential vs Parallel 의사결정**: worktree 생성은 반드시 순차
+- [ ] CI/CD matrix job은 별도 runner라 이 문제 해당 없음 (로컬만 위험)
+
+## 교훈
+
+- **Concurrent git worktree creation은 unsupported** — git 내부 설계가 lock 경합 시 재시도 없이 즉시 실패
+- **Stale lock은 신호** — `.git/config.lock` 발견 시 이전 프로세스가 비정상 종료된 것
+- **CI matrix vs 로컬 병렬**: GitHub Actions matrix job은 각각 별도 runner라 충돌 없음. 로컬 병렬 실행만 위험
+
+## AI Agent Directive
+
+**Trigger**: Agent tool로 N개의 에이전트를 `isolation: "worktree"`로 동시에 띄우려 할 때. 또는 `.git/config.lock` 에러 발생 시.
+
+**Prerequisites**: [wt-branch 슬래시 커맨드](/wiki/harness-engineering/harness-journal-004-wt-branch-command)
+
+### Actionable Steps
+1. 병렬 에이전트가 필요하면 worktree 생성은 **순차**로 실행
+2. 생성 완료 후 각 worktree에서의 작업은 **병렬** 진행
+3. `.git/config.lock` 에러 발생 시: prune → lock 제거 → 순차 재시도
+4. 대안: `isolation: "worktree"` 대신 일반 브랜치 모드 사용
+
+### Anti-patterns
+- N개 에이전트를 동시에 `isolation: "worktree"`로 띄우기 (첫 번째만 성공)
+- `.git/config.lock`을 확인 없이 즉시 삭제 (진행 중인 프로세스일 수 있음)
+- lock 에러 후 같은 명령 재시도 (원인 해결 없이 반복)
+
+## 출처
+
+**워커 프로젝트 실전 사례**:
+- mino-moneyflow `docs/solutions/workflow/2026-04-18-worktree-config-lock.md` — 4 병렬 에이전트 중 3개 실패 사례
+
+**참고**:
+- [Git Worktree 공식 문서](https://git-scm.com/docs/git-worktree)
+- Git < 2.30에서 더 심함, v2.35+ 권장
+
+### 검증 메모
+- 4 병렬 에이전트 실행 시 3/4 실패는 moneyflow에서 직접 발생한 사례
+- 근본 원인(lock file + no retry)은 Git 소스 코드의 설계 제약
+- 순차 생성 패턴은 같은 세션에서 검증 완료
