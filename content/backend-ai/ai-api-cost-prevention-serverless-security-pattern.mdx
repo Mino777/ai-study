@@ -54,7 +54,7 @@ iOS 앱의 소스코드나 웹 애플리케이션의 JavaScript 번들은 최종
 ```mermaid
 graph TD
     subgraph Bad_Practice ["❌ 위험한 아키텍처"]
-        Client_App["📱 iOS/Web App <br/> (Secret Key 내장)"] -- "API Call" --> Malicious_User["👨‍💻 악의적 사용자 <br/> (Key 탈취)"]
+        Client_App["📱 iOS/Web App (Secret Key 내장)"] -- "API Call" --> Malicious_User["👨‍💻 악의적 사용자 (Key 탈취)"]
         Malicious_User -- "💸 무제한 API 호출" --> AI_API["🤖 Gemini API"]
         AI_API -- "請求書 €54,000" --> Developer["🧑‍💻 개발자"]
     end
@@ -256,10 +256,10 @@ flowchart TD
 
     subgraph Serverless_Backend ["☁️ Firebase Cloud Functions"]
         D[API Endpoint /callGemini] --> E{Verify ID Token};
-        E -- "✅ Valid" --> F{Check Rate Limit <br/> (Firestore)};
+        E -- "✅ Valid" --> F{"Check Rate Limit (Firestore)"};
         E -- "❌ Invalid" --> G[Return 401 Unauthorized];
         
-        F -- "✅ OK" --> H{Load Secret Key <br/> (Secret Manager)};
+        F -- "✅ OK" --> H{"Load Secret Key (Secret Manager)"};
         F -- "❌ Limit Exceeded" --> I[Return 429 Too Many Requests];
         
         H --> J[Call Gemini API];
@@ -271,8 +271,8 @@ flowchart TD
     
     subgraph External_Services ["🌐 External/Managed Services"]
         Gemini["🤖 Google Gemini API"];
-        Firestore["🗄️ Firestore <br/>(Rate Limit Data)"];
-        SecretManager["🔐 Secret Manager <br/>(API Key)"];
+        Firestore["🗄️ Firestore (Rate Limit Data)"];
+        SecretManager["🔐 Secret Manager (API Key)"];
     end
 
     J --> Gemini;
