@@ -2,29 +2,34 @@
 
 모든 주목할 만한 변경사항을 이 파일에 기록합니다.
 
-## [2026-04-18] 세션 13 — CI 안정화 + 큐 정리
+## [2026-04-18] 세션 13 — CI 안정화 + 큐 정리 + 워커 재료 박제
 
-> npm audit CI 실패 해결 + 미완성 마커 경고 해소 + validate-mdx stress test
+> npm audit CI 실패 해결 + 미완성 마커 해소 + 3프로젝트 재료 체크 → 엔트리 2건 신규 + 1건 보강
+
+### Added
+
+- **prompt-engineering/empathetic-ai-prompt-techniques** — Rogerian/MI/NVC 3가지 상담 심리 프롬프트 기법 + 위기 신호 서버 가드레일 (tarosaju 실전)
+- **infrastructure/parallel-worktree-git-lock-trap** — 병렬 worktree git config.lock race condition 함정 + 순차 생성 회피 패턴 (moneyflow 실전)
+- 일방향 연결 5건 역링크 추가
+
+### Changed
+
+- **Zod 5-Layer 엔트리 갱신** — "미적용" → tarosaju 3 route + moneyflow 10 에이전트 실전 적용 데이터 추가
+- CI `npm audit` 명령에 `--omit=dev` 플래그 추가 (ci.yml primary + fallback 양쪽)
 
 ### Fixed
 
 - **npm audit CI 실패** — dompurify moderate 취약점 패치 + CI `--omit=dev` 추가
-  - protobufjs critical은 `@xenova/transformers` devDependency 체인 → 프로덕션 무관
-  - `npm audit --audit-level=high --omit=dev` → 0 vulnerabilities
-- **미완성 마커 빌드 경고 2건** — Journal 003 "구현 예정" + Tokenomics "작성 필요"
-  - 둘 다 문맥상 정확한 서술이나 키워드 매칭 FP → 표현 수정으로 해소
-
-### Changed
-
-- CI `npm audit` 명령에 `--omit=dev` 플래그 추가 (ci.yml primary + fallback 양쪽)
+- **미완성 마커 빌드 경고 2건** — Journal 003 + Tokenomics FP 표현 수정
 
 ### Metrics
 
 | 항목 | Before | After |
 |---|---|---|
+| 엔트리 수 | 129 | **131** (+2) |
 | CI npm audit | 실패 (5 vulnerabilities) | **통과 (0)** |
-| 빌드 경고 | 2건 (미완성 마커) | **0건** |
-| validate-mdx Trap 3 FP율 | 미측정 | **90%+ (코드블록 밀집 시, 의도된 동작)** |
+| 빌드 경고 | 2건 | **0건** |
+| validate-mdx Trap 3 FP율 | 미측정 | **90%+ (의도된 동작)** |
 
 ---
 

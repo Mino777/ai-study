@@ -9,7 +9,7 @@
 
 ## 🕒 작성 시점
 
-- **작성 일시**: 2026-04-18 (Session 13 — CI 안정화 + 큐 정리)
+- **작성 일시**: 2026-04-18 (Session 13 final — CI 안정화 + 워커 재료 박제)
 - **작성 주체**: Claude (Session 13)
 - **이유**: 세션 마무리 핸드오프
 
@@ -18,24 +18,25 @@
 ## 📸 현재 상태 스냅샷
 
 ### ai-study Wiki
-- **엔트리 수**: 129
+- **엔트리 수**: 131
 - **카테고리**: 13 (방법론 4 + 시스템 3 + 평가&인프라 2 + 응용 4)
 - **Git 상태**: main clean, origin/main 동기
-- **CI 상태**: npm audit 통과 (0 vulnerabilities), 빌드 경고 0건, 테스트 23/23
+- **CI 상태**: npm audit 통과, 빌드 경고 0건, 테스트 23/23
 
 ### Self-hosted Runner 현황 (6개 전체 가동)
-| 레포 | Runner 이름 | 라벨 | 상태 |
-|---|---|---|---|
-| **ai-study** | `jominhoui-mba-ai-study` | `self-hosted, macOS, ARM64, ai-study` | launchd 등록, 가동 중 |
-| **moneyflow** | `jominhoui-mba-moneyflow` | `self-hosted, macOS, ARM64, moneyflow` | launchd 등록, 가동 중 |
-| **tarosaju** | `jominhoui-mba-tarosaju` | `self-hosted, macOS, ARM64, tarosaju` | launchd 등록, 가동 중 |
-| aidy-ios | `jominhoui-mba-ios` | `self-hosted, macOS, ARM64, aidy-ios` | launchd 등록, idle |
-| aidy-server | `jominhoui-mba-server` | `self-hosted, macOS, ARM64, aidy-server` | launchd 등록, idle |
-| aidy-android | `jominhoui-mba-android` | `self-hosted, macOS, ARM64, aidy-android` | launchd 등록, idle |
+| 레포 | Runner 이름 | 상태 |
+|---|---|---|
+| **ai-study** | `jominhoui-mba-ai-study` | 가동 중 |
+| **moneyflow** | `jominhoui-mba-moneyflow` | 가동 중 |
+| **tarosaju** | `jominhoui-mba-tarosaju` | 가동 중 |
+| aidy-ios / aidy-server / aidy-android | 각각 등록 | idle |
 
-### Tokenomics 현재 상태
-- **RTK 절감**: 53.0M tokens (97.4%)
-- **Cache read**: 98%+
+### 워커 프로젝트 상태 (2026-04-18 projects-sync)
+| 프로젝트 | 상태 | 주의 |
+|---|---|---|
+| **moneyflow** | compound/v0945-docs 브랜치, PR #130 open | 다른 세션 작업 중 |
+| **tarosaju** | main 동기화, PR #45 open | compound 문서화 PR |
+| **aidy-architect** | main 동기화, untracked 파일 있음 | WO-017 gate review 작업 흔적 |
 
 ### JIT 검색 현황
 | 프로젝트 | totalQueries |
@@ -46,9 +47,9 @@
 | aidy-architect | 11 |
 | **합계** | **24** (100 미달, 관찰 계속) |
 
-### aidy 4 레포
-- **최신 상태**: s14 종료, WO 32건 done, 637 tests, api-contract v0.4
-- **다음 시작점**: `aidy-architect/HANDOFF.md`
+### Tokenomics
+- **RTK 절감**: 53.0M tokens (97.4%)
+- **Cache read**: 98%+
 
 ---
 
@@ -58,7 +59,6 @@
 
 1. **JIT 검색 성과 검증 — 4프로젝트 관찰**
    - totalQueries 100 도달 시 적중률 분석
-   - ai-study shadow-benchmark 93%+ 유지 확인 (3/3 세션)
    - 3세션 연속 유지 시 Layer 3 검증 완료 선언
    - 예상 크기: S (관찰)
 
@@ -67,29 +67,31 @@
    - 예상 크기: S
 
 3. **validate-mdx Trap 3 AST 파싱 개선 검토**
-   - stress test에서 FP 90%+ 확인됨 (코드블록 밀집 시)
-   - 현재 "수동 검토 플래그"로 동작 — FP가 실제 사고 유발 시 착수
+   - stress test에서 FP 90%+ 확인됨
+   - FP가 실제 사고 유발 시 착수
    - 예상 크기: M
+
+4. **워커 재료 추가 박제 후보** (이번 세션에서 발견, 미착수)
+   - moneyflow: Content Pipeline 상태 머신, React Hydration + SW 캐시
+   - tarosaju: Large Page Decomposition, Supabase Realtime Retry
+   - 예상 크기: S each
 
 ### 🟢 Low
 
-4. **인덱싱 자동화 (pre-commit 또는 CI)**
-5. **Flow Map Part 5 재개 판단** — deferred
+5. **인덱싱 자동화 (pre-commit 또는 CI)**
+6. **Flow Map Part 5 재개 판단** — deferred
 
 ---
 
 ## ⚠️ 블로커 / 대기 사항
 
-### 코드 결정 대기
-- **0회 엔트리 하이라이트 방식** — 데이터 충분히 쌓인 후 사용자와 논의
-
 ### 다른 세션 주의
-- moneyflow `docs/v0944-handoff` / tarosaju `docs/next-plan` — 브랜치 주의
-- aidy 4 레포 — `~/Develop/aidy-architect/HANDOFF.md` 확인
+- moneyflow: `compound/v0945-docs` 브랜치 + PR #130 — 만지지 말 것
+- tarosaju: PR #45 open — compound 문서화
+- aidy: WO-017 gate review 작업 흔적 — `~/Develop/aidy-architect/HANDOFF.md` 확인
 
 ### Runner 운영
 - Runner 디렉토리: `~/actions-runner-{ai-study,moneyflow,tarosaju,ios,server,android}/`
-- 월간: `~/actions-runner-*/_work` 정리, npm cache 확인
 - launchd 서비스 확인: `launchctl list | grep actions.runner`
 
 ---
@@ -134,12 +136,6 @@ for p in ~/Develop/ai-study ~/Develop/mino-moneyflow ~/Develop/mino-tarosaju ~/D
   echo "$(basename $p): $(cat $p/data/search-hits.json 2>/dev/null | jq -r '.totalQueries // 0')"
 done
 
-# ai-study 빌드
-cd ~/Develop/ai-study && rtk npm run build
-
-# Layer 3 검색 (각 프로젝트에서)
-rtk npm run search -- "query text"
-
 # 사이클 종료
 /compound
 ```
@@ -157,8 +153,9 @@ rtk npm run search -- "query text"
 
 ## 📜 최근 갱신
 
-### 2026-04-18 (Session 13 — CI 안정화 + 큐 정리)
-- **npm audit CI 실패 해결** — dompurify 패치 + `--omit=dev` (프로덕션 무관 devDep 제외)
-- **미완성 마커 빌드 경고 2건 해소** — false positive 표현 수정
-- **validate-mdx Trap 3 stress test** — FP 90%+ 확인, 의도된 동작으로 현상 유지
-- **완료 큐 제거**: npm audit 해결, 미완성 마커 정리, validate-mdx stress test
+### 2026-04-18 (Session 13 final — CI 안정화 + 워커 재료 박제)
+- **CI 안정화**: npm audit 해결 + 미완성 마커 해소 + validate-mdx stress test
+- **워커 재료 박제**: empathetic-ai-prompt-techniques (tarosaju) + parallel-worktree-git-lock-trap (moneyflow)
+- **기존 엔트리 보강**: Zod 5-Layer에 실전 적용 데이터 추가
+- **메모리**: /projects-sync 시 aidy-architect 포함 룰 저장
+- **2차 compound**: 워커 재료 박제분까지 포함하여 문서화 완료
