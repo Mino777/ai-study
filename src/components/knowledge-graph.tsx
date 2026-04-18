@@ -60,13 +60,20 @@ export function KnowledgeGraph({ nodes, edges }: KnowledgeGraphProps) {
       if (!graph || typeof graph.d3Force !== "function") return;
 
       import("d3-force")
-        .then(({ forceCollide, forceX, forceY }) => {
+        .then(({ forceCollide, forceX, forceY, forceRadial }) => {
           if (cancelled) return;
-          // Collision: prevent node overlap (radius = max node size + label padding)
-          graph.d3Force?.("collide", forceCollide(22).strength(0.9));
-          // Centering: gentle pull toward center to keep cluster compact
-          graph.d3Force?.("x", forceX(0).strength(0.04));
-          graph.d3Force?.("y", forceY(0).strength(0.04));
+          // Collision: prevent node overlap
+          graph.d3Force?.("collide", forceCollide(16).strength(0.8));
+          // Centering: pull toward center for compact round shape
+          graph.d3Force?.("x", forceX(0).strength(0.05));
+          graph.d3Force?.("y", forceY(0).strength(0.05));
+          // Radial: pull toward a circle — Obsidian-style organic roundness
+          graph.d3Force?.("radial", forceRadial(220, 0, 0).strength(0.06));
+          // Limit charge range to prevent long-distance repulsion distortion
+          const charge = graph.d3Force?.("charge") as { distanceMax?: (d: number) => unknown } | undefined;
+          if (charge && typeof charge.distanceMax === "function") {
+            charge.distanceMax(220);
+          }
           graph.d3ReheatSimulation?.();
         })
         .catch(() => {
@@ -262,9 +269,9 @@ export function KnowledgeGraph({ nodes, edges }: KnowledgeGraphProps) {
         linkColor={() => "rgba(107, 107, 128, 0.25)"}
         linkWidth={0.8}
         // @ts-expect-error -- linkDistance not in types but works at runtime
-        linkDistance={90}
+        linkDistance={110}
         d3Force="charge"
-        d3ForceStrength={-1200}
+        d3ForceStrength={-280}
         onNodeClick={handleNodeClick as never}
         onNodeHover={handleNodeHover as never}
         cooldownTicks={150}
