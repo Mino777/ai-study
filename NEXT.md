@@ -9,34 +9,33 @@
 
 ## 🕒 작성 시점
 
-- **작성 일시**: 2026-04-18 (Session 13 final — CI 안정화 + 워커 재료 박제)
-- **작성 주체**: Claude (Session 13)
-- **이유**: 세션 마무리 핸드오프
+- **작성 일시**: 2026-04-18 (Session 14 — 딥리서치 + 도구 2건 + SDD 강화)
+- **작성 주체**: Claude (Session 14)
+- **이유**: compound 완료 후 세션 핸드오프
 
 ---
 
 ## 📸 현재 상태 스냅샷
 
 ### ai-study Wiki
-- **엔트리 수**: 131
+- **엔트리 수**: 134
 - **카테고리**: 13 (방법론 4 + 시스템 3 + 평가&인프라 2 + 응용 4)
 - **Git 상태**: main clean, origin/main 동기
-- **CI 상태**: npm audit 통과, 빌드 경고 0건, 테스트 23/23
+- **CI 상태**: 빌드 통과, 테스트 23/23
+- **그래프**: 134 노드, 852 엣지, Top 허브 = compound-engineering-philosophy (67 연결)
 
-### Self-hosted Runner 현황 (6개 전체 가동)
-| 레포 | Runner 이름 | 상태 |
-|---|---|---|
-| **ai-study** | `jominhoui-mba-ai-study` | 가동 중 |
-| **moneyflow** | `jominhoui-mba-moneyflow` | 가동 중 |
-| **tarosaju** | `jominhoui-mba-tarosaju` | 가동 중 |
-| aidy-ios / aidy-server / aidy-android | 각각 등록 | idle |
+### 신규 도구
+| 도구 | 명령 | 용도 |
+|------|------|------|
+| Graph Query CLI | `node scripts/graph-query.mjs <cmd>` | 지식 그래프 7개 쿼리 (hubs/suggest/path 등) |
+| 승격 스캐너 | `node scripts/scan-promotions.mjs` | N=3+ 솔루션 자동 감지 + 승격 제안 |
 
-### 워커 프로젝트 상태 (2026-04-18 projects-sync)
+### 워커 프로젝트 상태 (2026-04-18 기준)
 | 프로젝트 | 상태 | 주의 |
 |---|---|---|
 | **moneyflow** | compound/v0945-docs 브랜치, PR #130 open | 다른 세션 작업 중 |
 | **tarosaju** | main 동기화, PR #45 open | compound 문서화 PR |
-| **aidy-architect** | main 동기화, untracked 파일 있음 | WO-017 gate review 작업 흔적 |
+| **aidy-architect** | main 동기화, untracked 파일 있음 | WO-017 gate review 흔적 |
 
 ### JIT 검색 현황
 | 프로젝트 | totalQueries |
@@ -50,45 +49,40 @@
 ### Tokenomics
 - **RTK 절감**: 53.0M tokens (97.4%)
 - **Cache read**: 98%+
+- **Gemini 파이프라인**: 카테고리 스코프 적용 (134→~10개 전송)
 
 ---
 
 ## 🎯 다음 작업 큐 (우선순위 순)
 
-### 🔴 High (딥리서치 2026-04-18 결과)
+### 🔴 High
 
 1. **Validator 자동 승격 파이프라인** (promote-solution → GitHub Actions)
-   - 현재 수동 5-Phase → CI 자동화로 전환
-   - Solutions N=3+ 감지 → 자동 `.claude/hooks/` 생성
-   - 참고: `harness-engineering/spec-driven-development-for-ai-agents`
+   - `scan-promotions.mjs`로 스캔은 자동화 완료 → CI에서 자동 실행 + 승격 PR 생성
+   - 현재 N=3+ 카테고리: workflow(7), mdx(5), ai-pipeline(4), github-actions(3), next-patterns(3)
    - 예상 크기: L
 
-2. **Graph 기반 메모리 쿼리 POC**
-   - content-manifest.json 그래프를 쿼리 가능한 구조로 이식
-   - dangling connections 자동 감지 → generate-lesson 주제 제안 연동
-   - 참고: MAGMA 논문, `context-engineering/context-engineering-2026-paradigm-shift`
+2. **graph-query suggest → generate-lesson 연동**
+   - Graph Query suggest 결과를 주제 추천에 반영 (낮은 confidence + 높은 연결 = 보강 1순위)
+   - harness-engineering-overview (conf:2, 53 연결) 등 보강 후보 자동 추출
    - 예상 크기: M
 
 ### 🟡 Medium
 
 3. **JIT 검색 성과 검증 — 4프로젝트 관찰**
    - totalQueries 100 도달 시 적중률 분석
-   - 3세션 연속 유지 시 Layer 3 검증 완료 선언
    - 예상 크기: S (관찰)
 
-4. **SPEC.md Acceptance Spec 섹션 추가** (SDD 강화)
-   - 검증 가능한 acceptance criteria 명시
-   - 빌드 통과 + 테스트 수 + 성능 임계값
-   - 참고: `harness-engineering/spec-driven-development-for-ai-agents`
+4. **딥리서치 엔트리 3건 confidence 조정**
+   - 현재 confidence:3 → 직접 적용 전까지 2로 하향 검토
+   - 메모리 feedback_research_entry_confidence 참조
    - 예상 크기: S
 
 5. **히트 카운트 100+ 도달 시 0회 엔트리 표시**
-   - totalQueries > 100 이후 판단
    - 예상 크기: S
 
 6. **validate-mdx Trap 3 AST 파싱 개선 검토**
-   - stress test에서 FP 90%+ 확인됨
-   - FP가 실제 사고 유발 시 착수
+   - FP 90%+ — 실제 사고 유발 시 착수
    - 예상 크기: M
 
 7. **워커 재료 추가 박제 후보**
@@ -110,7 +104,7 @@
 ### 다른 세션 주의
 - moneyflow: `compound/v0945-docs` 브랜치 + PR #130 — 만지지 말 것
 - tarosaju: PR #45 open — compound 문서화
-- aidy: WO-017 gate review 작업 흔적 — `~/Develop/aidy-architect/HANDOFF.md` 확인
+- aidy: WO-017 gate review 작업 흔적
 
 ### Runner 운영
 - Runner 디렉토리: `~/actions-runner-{ai-study,moneyflow,tarosaju,ios,server,android}/`
@@ -139,6 +133,8 @@
 ### Phase 4: 최근 박제 훑기 (3분)
 - [ ] Runner 상태 확인: `launchctl list | grep actions.runner`
 - [ ] 3프로젝트 최근 CI 실행 확인: `gh run list --repo Mino777/<repo> --limit 3`
+- [ ] `node scripts/graph-query.mjs suggest` — 그래프 기반 추천 확인
+- [ ] `node scripts/scan-promotions.mjs` — 승격 대상 확인
 
 ### Phase 5: 작업 시작 (2분 내)
 - [ ] 새 작업은 `/wt-branch <branch-name>` 으로 시작
@@ -158,6 +154,13 @@ for p in ~/Develop/ai-study ~/Develop/mino-moneyflow ~/Develop/mino-tarosaju ~/D
   echo "$(basename $p): $(cat $p/data/search-hits.json 2>/dev/null | jq -r '.totalQueries // 0')"
 done
 
+# 그래프 분석
+node scripts/graph-query.mjs suggest
+node scripts/graph-query.mjs hubs 10
+
+# 승격 스캔
+node scripts/scan-promotions.mjs
+
 # 사이클 종료
 /compound
 ```
@@ -175,8 +178,10 @@ done
 
 ## 📜 최근 갱신
 
-### 2026-04-18 (Session 14 — 딥리서치 + 최신 동향 박제)
-- **딥리서치**: 하네스/컴파운드 엔지니어링 2025-2026 최신 동향 3에이전트 병렬 조사
-- **신규 엔트리 3건**: Context Engineering 2026 패러다임 전환, SDD 방법론, Multi-Agent 오케스트레이션 패턴
-- **Gemini 파이프라인 최적화**: 카테고리 스코프 컨텍스트 (134→~10개), ping 테스트 제거, 누락 카테고리 3개 추가
-- **NEXT.md 큐 재정렬**: 딥리서치 결과 기반 High 우선순위 2건 추가
+### 2026-04-18 (Session 14 compound — 딥리서치 + 도구 2건 + SDD 강화)
+- **딥리서치**: 2025-2026 최신 동향 3에이전트 병렬 조사 (Context Engineering, SDD, Multi-Agent, Tokenomics)
+- **신규 엔트리 3건**: 패러다임 전환 + SDD + 오케스트레이션 패턴
+- **신규 도구 2건**: graph-query.mjs (7개 그래프 쿼리) + scan-promotions.mjs (승격 스캐너)
+- **Gemini 최적화**: 카테고리 스코프 (134→~10개), ping 제거, 누락 카테고리 추가
+- **SDD 강화**: SPEC.md Acceptance Spec 3단 Gate 추가
+- **메모리 2건**: 딥리서치 URL 재검증 + 리서치 엔트리 confidence 상한

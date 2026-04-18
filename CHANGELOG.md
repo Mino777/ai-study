@@ -2,6 +2,37 @@
 
 모든 주목할 만한 변경사항을 이 파일에 기록합니다.
 
+## [2026-04-18] 세션 14 — 2026 딥리서치 + 도구 2건 + SDD 강화
+
+> 하네스/컴파운드 엔지니어링 2025-2026 최신 동향 3에이전트 병렬 리서치 → 위키 박제 3건 + Gemini 최적화 + Graph Query + 승격 스캐너
+
+### Added
+
+- **context-engineering/context-engineering-2026-paradigm-shift** — Gartner breakout capability, 60% 임계값, 3층 메모리 아키텍처, 5요소 Context 설계
+- **harness-engineering/spec-driven-development-for-ai-agents** — SDD 방법론, 코드 ≠ 진실 원칙, 6-Layer 테스트 하네스, Gartner 40% 취소 예측
+- **agents/multi-agent-orchestration-patterns-2026** — Planner-Worker-Judge 3역할, 모델 라우팅 40-60% 절감, git worktree 격리
+- **scripts/graph-query.mjs** — 지식 그래프 쿼리 CLI 7개 명령 (neighbors/dangling/islands/hubs/path/weak-links/suggest)
+- **scripts/scan-promotions.mjs** — 솔루션 승격 자동 스캐너 (N=3+ 감지, 승격 형태 제안, --json CI 연동)
+- **SPEC.md Acceptance Spec** — Build/Content/Promotion 3단 Gate 명시 (SDD 강화)
+
+### Changed
+
+- **Gemini 파이프라인 토큰 최적화** — 카테고리 스코프 컨텍스트 (전체 134→같은 카테고리 ~10개), ping 테스트 제거, 본 호출 시 직접 폴백
+- **generate-lesson.mjs 누락 카테고리** — tokenomics, android-ai, backend-ai 3개 추가 (CATEGORIES + PRIORITY + LABELS + catKeywords)
+- **NEXT.md 큐 재정렬** — High 2건 (Validator 자동 승격, Graph 메모리 쿼리) + Low 2건 (Semantic Caching, 모델 라우팅) 추가
+
+### Metrics
+
+| 항목 | Before | After |
+|---|---|---|
+| 엔트리 수 | 131 | **134** (+3) |
+| 신규 도구 | graph-query 없음 | **graph-query + scan-promotions** |
+| Gemini 컨텍스트 | 전체 134개 제목 전송 | **카테고리 ~10개만** (90%+ 절감) |
+| SPEC.md | Acceptance Spec 없음 | **3단 Gate 명시** |
+| 그래프 | 134 노드, 852 엣지 | Top 허브: compound-engineering-philosophy (67 연결) |
+
+---
+
 ## [2026-04-18] 세션 13 — CI 안정화 + 큐 정리 + 워커 재료 박제
 
 > npm audit CI 실패 해결 + 미완성 마커 해소 + 3프로젝트 재료 체크 → 엔트리 2건 신규 + 1건 보강
