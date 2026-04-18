@@ -31,6 +31,9 @@ AI 하네스 엔지니어링 학습 위키 + 포트폴리오. Next.js 15 App Rou
 - **Deploy:** Vercel (GitHub auto-deploy, push = 배포)
 - **JIT Retrieval (Layer 3):** 로컬 임베딩 (`Xenova/multilingual-e5-small`, 384d) + JSON brute-force 검색 (1~2ms) + 규칙 기반 쿼리 라우터
 
+## Context Window 관리 규칙
+- **60% 임계값**: 컨텍스트 윈도우 60% 이상 소진 시 태스크 분리 또는 `/compact` 실행. 초과 상태에서의 의사결정은 품질이 떨어진다.
+
 ## JIT 위키 검색 (에이전트 필수)
 
 위키 지식이 필요할 때 **MDX 파일을 직접 읽지 말고** 검색을 먼저 실행:

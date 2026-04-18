@@ -58,7 +58,18 @@
 
 ### 🔴 High
 
-1. **promotion-scan.yml 실제 동작 검증**
+1. **[워커] AI API 프록시 3단계 방어선 구현** (tarosaju 먼저 → moneyflow)
+   - 출처: `ai-api-cost-prevention-serverless-security-pattern` 엔트리
+   - Supabase Edge Functions 프록시 + 인증 + Rate Limiting
+   - tarosaju: `src/lib/anthropic-client.ts` / moneyflow: `src/lib/trading/ai-client.ts`
+   - 예상 크기: M (프로젝트당)
+
+2. **[워커] moneyflow AGENT_ROUTING 동적 AgentCompiler 전환**
+   - 출처: `multi-claude-agent-management-compile-strategy` 엔트리
+   - `src/lib/trading/ai-client.ts` AGENT_ROUTING 하드코딩 → 런타임 컴파일
+   - 예상 크기: M
+
+3. **promotion-scan.yml 실제 동작 검증**
    - `gh workflow run promotion-scan` 수동 트리거 → Issue 생성 확인
    - `promotion-scan` 라벨 사전 생성 필요
    - 예상 크기: S
@@ -72,7 +83,17 @@
 3. **히트 카운트 100+ 도달 시 0회 엔트리 표시**
    - 예상 크기: S
 
-4. **validate-mdx Trap 3 AST 파싱 개선 검토**
+4. **[워커] SDD Acceptance Spec 강화** (moneyflow, tarosaju)
+   - 출처: `spec-driven-development-for-ai-agents` 엔트리
+   - 각 프로젝트 SPEC.md에 Build Gate / Content Gate / Promotion Gate 섹션 추가
+   - 예상 크기: S
+
+5. **[허브] Hub-Worker 병렬화 다음 단계**
+   - 출처: `multi-agent-orchestration-patterns-2026` 엔트리
+   - Agent tool sub-agent 병렬 spawn, 워커별 CLAUDE.md 경량화 검토
+   - 예상 크기: M
+
+6. **validate-mdx Trap 3 AST 파싱 개선 검토**
    - FP 90%+ — 실제 사고 유발 시 착수
    - 예상 크기: M
 
