@@ -168,8 +168,19 @@ function recommendTopics(manifest, topicPool, count = 3) {
   // Sort by score descending, random tiebreak
   candidates.sort((a, b) => b.score - a.score || Math.random() - 0.5);
 
+  // Diversity: 같은 카테고리 최대 2건 (3건 연속 방지)
+  const selected = [];
+  const categoryCounts = {};
+  for (const c of candidates) {
+    if (selected.length >= count) break;
+    const catCount = categoryCounts[c.category] || 0;
+    if (catCount >= 2) continue;
+    selected.push(c);
+    categoryCounts[c.category] = catCount + 1;
+  }
+
   // Return top N with connections
-  return candidates.slice(0, count).map((selected) => {
+  return selected.map((selected) => {
     const relatedSlugs = manifest.entries
       .filter((e) => e.frontmatter.category === selected.category)
       .map((e) => e.slug)
