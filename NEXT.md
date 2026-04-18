@@ -9,8 +9,8 @@
 
 ## 🕒 작성 시점
 
-- **작성 일시**: 2026-04-18 (Session 14 — 딥리서치 + 도구 2건 + SDD 강화)
-- **작성 주체**: Claude (Session 14)
+- **작성 일시**: 2026-04-18 (Session 15 — 크로스 세션 리뷰 + Graph-Lesson 연동)
+- **작성 주체**: Claude (Session 15)
 - **이유**: compound 완료 후 세션 핸드오프
 
 ---
@@ -24,11 +24,12 @@
 - **CI 상태**: 빌드 통과, 테스트 23/23
 - **그래프**: 134 노드, 852 엣지, Top 허브 = compound-engineering-philosophy (67 연결)
 
-### 신규 도구
+### 도구
 | 도구 | 명령 | 용도 |
 |------|------|------|
 | Graph Query CLI | `node scripts/graph-query.mjs <cmd>` | 지식 그래프 7개 쿼리 (hubs/suggest/path 등) |
 | 승격 스캐너 | `node scripts/scan-promotions.mjs` | N=3+ 솔루션 자동 감지 + 승격 제안 |
+| generate-lesson | `npm run generate-lesson` | **graph 신호 연동 완료** (weakHub +1.5, connectivity +1.0) |
 
 ### 워커 프로젝트 상태 (2026-04-18 기준)
 | 프로젝트 | 상태 | 주의 |
@@ -62,21 +63,20 @@
    - 현재 N=3+ 카테고리: workflow(7), mdx(5), ai-pipeline(4), github-actions(3), next-patterns(3)
    - 예상 크기: L
 
-2. **graph-query suggest → generate-lesson 연동**
-   - Graph Query suggest 결과를 주제 추천에 반영 (낮은 confidence + 높은 연결 = 보강 1순위)
-   - harness-engineering-overview (conf:2, 53 연결) 등 보강 후보 자동 추출
-   - 예상 크기: M
+2. **computeGraphSignals vitest 케이스 추가**
+   - 세션 15에서 테스트 미작성 (아쉬운 점 1)
+   - weakHubCategories 검출 + categoryConnectivity 계산 검증
+   - 예상 크기: S
 
 ### 🟡 Medium
 
-3. **JIT 검색 성과 검증 — 4프로젝트 관찰**
+3. **추천 다양성 검증** — 같은 카테고리 3건 연속 방지 로직 검토
+   - graph 부스트 후 context-engineering 편중 관찰됨
+   - 예상 크기: S
+
+4. **JIT 검색 성과 검증 — 4프로젝트 관찰**
    - totalQueries 100 도달 시 적중률 분석
    - 예상 크기: S (관찰)
-
-4. **딥리서치 엔트리 3건 confidence 조정**
-   - 현재 confidence:3 → 직접 적용 전까지 2로 하향 검토
-   - 메모리 feedback_research_entry_confidence 참조
-   - 예상 크기: S
 
 5. **히트 카운트 100+ 도달 시 0회 엔트리 표시**
    - 예상 크기: S
@@ -178,10 +178,10 @@ node scripts/scan-promotions.mjs
 
 ## 📜 최근 갱신
 
-### 2026-04-18 (Session 14 compound — 딥리서치 + 도구 2건 + SDD 강화)
-- **딥리서치**: 2025-2026 최신 동향 3에이전트 병렬 조사 (Context Engineering, SDD, Multi-Agent, Tokenomics)
-- **신규 엔트리 3건**: 패러다임 전환 + SDD + 오케스트레이션 패턴
-- **신규 도구 2건**: graph-query.mjs (7개 그래프 쿼리) + scan-promotions.mjs (승격 스캐너)
-- **Gemini 최적화**: 카테고리 스코프 (134→~10개), ping 제거, 누락 카테고리 추가
-- **SDD 강화**: SPEC.md Acceptance Spec 3단 Gate 추가
-- **메모리 2건**: 딥리서치 URL 재검증 + 리서치 엔트리 confidence 상한
+### 2026-04-18 (Session 15 compound — 크로스 세션 리뷰 + Graph-Lesson 연동)
+- **크로스 세션 리뷰**: 세션 14 6함정 검증 + URL 10건 재검증
+- **confidence 교정**: 딥리서치 3건 3→2 하향
+- **엔트리 수정**: 멀티에이전트 Hub-Worker 섹션 현실 반영
+- **graph-lesson 연동**: generate-lesson에 weakHub +1.5 / connectivity +1.0 부스트
+- **큐 완료**: 항목 2(graph-lesson 연동) + 항목 4(confidence 조정)
+- **신규 큐**: computeGraphSignals 테스트 + 추천 다양성 검증

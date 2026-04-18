@@ -2,6 +2,26 @@
 
 모든 주목할 만한 변경사항을 이 파일에 기록합니다.
 
+## [2026-04-18] 세션 15 — 크로스 세션 리뷰 + Graph-Lesson 연동
+
+> 세션 14 크로스 검증 → confidence 교정 3건 + 엔트리 현실 반영 + graph-query 신호를 generate-lesson 추천에 연동
+
+### Changed
+
+- **딥리서치 3건 confidence:3→2 하향** — 리서치 기반 상한 룰 적용 (feedback_research_entry_confidence)
+- **멀티에이전트 엔트리 Hub-Worker 섹션** — "진화 방향" → "달성 vs 실제 다음 단계" 3열 테이블로 교체, 이미 병렬 운영 중인 현실 반영
+- **generate-lesson.mjs graph 신호 연동** — `computeGraphSignals()` 추가, 약한허브 카테고리 +1.5점 + 고연결저confidence +1.0점 부스트
+
+### Metrics
+
+| 항목 | Before | After |
+|---|---|---|
+| 추천 신호 | dangling + pool + staleness | **+ graph weakHub + connectivity** |
+| 딥리서치 confidence | 3 (과대) | **2** (리서치 상한 적용) |
+| 크로스 세션 리뷰 | 6 함정 검증 | URL 10건 중 8 통과 |
+
+---
+
 ## [2026-04-18] 세션 14 — 2026 딥리서치 + 도구 2건 + SDD 강화
 
 > 하네스/컴파운드 엔지니어링 2025-2026 최신 동향 3에이전트 병렬 리서치 → 위키 박제 3건 + Gemini 최적화 + Graph Query + 승격 스캐너
