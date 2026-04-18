@@ -2,6 +2,43 @@
 
 모든 주목할 만한 변경사항을 이 파일에 기록합니다.
 
+## [2026-04-19] 세션 16b — 긱뉴스 자동 큐레이션 + 허브 디스패치 체계
+
+> 미응답 이슈 → 긱뉴스 RSS 큐레이션 → 자동 엔트리 생성 파이프라인 완성 + 이식 가능성 평가 + 4 워커 프로젝트 hub-dispatch 체계
+
+### Added
+
+- **긱뉴스 자동 큐레이션 파이프라인** — `scripts/curate-geeknews.mjs` + `.github/workflows/auto-lesson-geeknews.yml`
+  - 24h 미응답 daily lesson 이슈 감지 → 긱뉴스 RSS → Gemini 최적 글 선정 → 엔트리 생성 → PR → 자동 머지
+  - 이식 가능성 자동 평가 (assessActionability) → actionable-insight 이슈 자동 생성
+- **긱뉴스 큐레이션 엔트리 3건** — agents/멀티 에이전트 컴파일, backend-ai/API 과금 방지, context-engineering/Contexty
+- **허브 디스패치 체계** — `hub-dispatch` 라벨로 워커 4프로젝트에 이슈 자동 할당
+  - moneyflow (#131, #132), tarosaju (#46), aidy-server (#6), aidy-architect (#1, #2)
+  - 각 워커 CLAUDE.md에 세션 시작 시 hub-dispatch 확인 규칙 추가
+
+### Fixed
+
+- **generate-on-pick bot 오트리거** — `user.type != 'Bot'` 조건 추가 (중복 PR #56, #57 방지)
+- **Mermaid `<br/>` 렌더링 에러** — 2개 엔트리 수정 + Gemini 프롬프트 규칙 5 추가
+- **날짜 UTC→KST** — generate-lesson.mjs + 워크플로우 4개 전부 `Asia/Seoul` 기준으로 통일
+
+### Changed
+
+- **CLAUDE.md** — Context Window 60% 임계값 규칙 추가
+- **NEXT.md** — 이식 큐 4건 추가 (API 프록시, AgentCompiler, SDD, Hub-Worker 병렬화)
+
+### Metrics
+
+| 항목 | Before | After |
+|---|---|---|
+| 엔트리 수 | 134 | **137** (+3 긱뉴스) |
+| 워크플로우 | 6 | **7** (+auto-lesson-geeknews) |
+| hub-dispatch 이슈 | 0 | **6** (4 프로젝트) |
+| 날짜 기준 | UTC | **KST** |
+| Gemini 프롬프트 규칙 | 4 | **5** (+Mermaid br 금지) |
+
+---
+
 ## [2026-04-19] 세션 16 — NEXT.md 큐 소화 + 그래프 시각 개선
 
 > computeGraphSignals 테스트 보강 + 승격 CI 파이프라인 + 추천 다양성 + Obsidian 스타일 그래프 레이아웃
