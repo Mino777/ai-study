@@ -27,16 +27,16 @@
 ### Hermes-First 스택 진행 상태
 | Phase | 내용 | 상태 |
 |-------|------|------|
-| Phase 1-4 | VPS + Hermes 설치 + Telegram GW + delegate_task 테스트 | **다음 세션** |
+| Phase 1-4 | 로컬 Hermes 설치 + Telegram GW + delegate_task 테스트 | **완료** (로컬, Gemini 2.5 Flash) |
 | Phase 5 | ai-study 코드 인프라 (generated_by, /message poll, SOUL.md, Compiled Truth) | **완료** |
-| Phase 6 | 2주 운영 + Go/No-Go | 대기 (Phase 1-4 후) |
+| Phase 6 | 2주 운영 + Go/No-Go (5/3 판단) | **진행 중** |
 
 ### 신규 인프라 (이번 세션)
 | 인프라 | 파일 | 상태 |
 |--------|------|------|
 | generated_by 출처 추적 | `src/lib/schema.ts` | 완료 (optional field) |
 | /message poll | `.claude/commands/message.md` | 정의됨, Hermes 연동 후 실전 |
-| SOUL.md | `docs/hermes/SOUL.md` | 초안 완료, VPS 복사 대기 |
+| SOUL.md | `docs/hermes/SOUL.md` + `~/.hermes/SOUL.md` | 완료 (로컬 복사됨) |
 | Compiled Truth | `docs/solutions/` | 포맷 도입, 예시 1건 적용 |
 | CEO Plan | `docs/designs/hermes-first-stack.md` | 승격 완료 |
 
@@ -47,7 +47,7 @@
 | 지표 | baseline | target | direction | actual |
 |------|----------|--------|-----------|--------|
 | 총 엔트리 수 | 143 | 148 | higher | 144 |
-| Hermes VPS 설치 | 0 | 1 | higher | ? |
+| Hermes 로컬 설치 | 0 | 1 | higher | 1 |
 | /message poll 실전 사용 | 0 | 1 | higher | ? |
 
 ---
@@ -56,15 +56,15 @@
 
 ### 🔴 High
 
-1. **VPS + Hermes 설치 (Phase 1-4)**
-   - Hetzner CX22 (~$4/mo) VPS 생성
-   - Hermes 설치 (스크립트 확인 후 실행)
-   - Telegram Gateway + allowed_users 설정
-   - 첫 delegate_task 테스트
-   - CEO Plan 참조: `docs/designs/hermes-first-stack.md`
-   - 예상 크기: M (VPS 세팅 포함)
+1. ~~**Hermes 설치 (Phase 1-4)**~~ **완료** (로컬 + Gemini 2.5 Flash + Telegram)
 
-2. **긱뉴스 스카우트 결과 확인**
+2. **Hermes 2주 운영** (Phase 6, ~5/3까지)
+   - 매일 Telegram으로 1+ 리서치 작업 위임
+   - 최소 10개 작업, 다양한 유형 (research + markdown + backlink)
+   - Go/No-Go Decision Tree: `docs/designs/hermes-first-stack.md` 참조
+   - 예상 크기: S (일일 운영)
+
+3. **긱뉴스 스카우트 결과 확인**
    - 22:00 KST 자동 실행 → Actions 탭에서 결과 확인
    - 예상 크기: S
 
@@ -171,8 +171,8 @@ echo "ANTHROPIC_API_KEY=sk-..." > ~/.env && chmod 600 ~/.env
 
 ## 📜 최근 갱신
 
-### 2026-04-19 (Session 16f compound — Hermes-First 스택 인프라 준비)
-- **완료**: CEO Review (SELECTIVE EXPANSION, 7 proposals accepted) + Eng Review (1 issue, 0 gaps)
-- **완료**: schema.ts generated_by + /message poll + SOUL.md + Compiled Truth + generate-lesson.mjs
-- **완료**: CEO Plan → docs/designs/hermes-first-stack.md 승격
-- **다음**: VPS Hermes 설치 (Phase 1-4)
+### 2026-04-19 (Session 16f+g — Hermes-First 스택 풀 세팅)
+- **완료**: CEO Review + Eng Review + 코드 인프라 (generated_by, /message poll, SOUL.md, Compiled Truth)
+- **완료**: Hermes 로컬 설치 (Gemini 2.5 Flash) + Telegram Gateway pairing
+- **완료**: 첫 delegate_task 테스트 (android-ai 빈 주제 탐색, 10초)
+- **진행 중**: Phase 6 2주 운영 (~5/3 Go/No-Go)
