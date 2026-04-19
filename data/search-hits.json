@@ -1,6 +1,6 @@
 {
-  "totalQueries": 10,
-  "lastUpdated": "2026-04-19T02:27:53.370Z",
+  "totalQueries": 12,
+  "lastUpdated": "2026-04-19T03:15:34.072Z",
   "hits": {
     "solutions/mdx/2026-04-16-mermaid-br-in-unquoted-node-labels": 2,
     "solutions/mdx/2026-04-16-mermaid-cylinder-nested-parens": 2,
@@ -20,6 +20,9 @@
     "harness-engineering/harness-journal-024-solution-to-validator-promotion": 1,
     "solutions/ai-pipeline/2026-04-12-runtime-shape-validation-type-guard-vs-zod": 1,
     "retros/2026-04-17-session-7-phase2": 1,
-    "harness-engineering/compound-loop-break": 1
+    "harness-engineering/compound-loop-break": 1,
+    "harness-engineering/five-levers-of-harness-engineering": 1,
+    "agents/hermes-agent-analysis": 1,
+    "evaluation/agent-self-evaluation-bias-countermeasures": 1
   }
 }

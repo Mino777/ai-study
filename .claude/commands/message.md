@@ -10,6 +10,7 @@ perpetual-engine의 MessageQueue 패턴을 이식한 것.
 /message read                       # 미읽은 메시지 전체 읽기
 /message read <project>             # 특정 워커 메시지만 읽기
 /message list                       # 전체 메시지 목록
+/message poll <task-id> --timeout N # 특정 작업 완료 대기 (기본 60초)
 ```
 
 ## 메시지 저장 구조
@@ -79,6 +80,41 @@ messages/
   moneyflow → hub: 미읽은 0건
   hub → tarosaju: 미읽은 0건
   tarosaju → hub: 미읽은 0건
+```
+
+## /message poll 실행
+
+Hermes 등 외부 에이전트에 위임한 작업의 완료를 기다린다.
+
+```
+/message poll <task-id> --timeout 60
+```
+
+1. `messages/` 디렉토리에서 `task-id`가 포함된 파일을 검색
+2. 파일이 존재하고 `status: "completed"` → 결과 반환 (idempotent: 재호출 시 동일 결과)
+3. 파일이 존재하고 `status: "pending"` → timeout까지 대기 후 "pending" 반환
+4. 파일이 존재하고 `status: "failed"` → 에러 로그 반환. `/message retry <task-id>`로 수동 재시도
+5. 파일 없음 → "not_found" 반환. `/message list`로 확인
+
+### poll 결과 포맷
+
+```json
+{
+  "task_id": "hermes-2026-04-19-001",
+  "status": "completed",
+  "output": "... markdown ...",
+  "cost_usd": 0.23,
+  "duration_s": 180
+}
+```
+
+### poll 사용 시나리오
+
+```
+1. Hermes에 리서치 작업 위임 (Telegram 또는 hermes chat)
+2. Hermes가 결과를 messages/hermes-{task-id}.json에 저장
+3. 허브 세션에서: /message poll hermes-{task-id}
+4. 결과 확인 → /validate-ai-output → /compound에서 위키 반영
 ```
 
 ## 금지 사항

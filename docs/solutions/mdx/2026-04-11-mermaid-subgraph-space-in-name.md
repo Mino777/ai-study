@@ -7,6 +7,16 @@ tags: [mermaid, mdx, validation, subgraph, ai-generated]
 
 # Mermaid subgraph 이름에 공백이 있으면 `id ["label"]` 형식 필수
 
+## Compiled Truth (최신 종합)
+- **재발 횟수**: 2회 (2026-04-11, 2026-04-19)
+- **현재 최선 해결책**: Gemini 프롬프트에 `subgraph id ["Label With Space"]` 형식 명시 + validate-content.mjs 자동 검출
+- **코드 게이트 승격**: 완료 (scripts/lib/mermaid-fix.mjs + validate-content.test.mjs)
+- **마지막 발생**: 2026-04-19
+
+## Timeline (시간순 증거)
+
+### 2026-04-11 (최초 발견)
+
 ## 증상
 
 Gemini가 자동 생성한 `content/context-engineering/context-compression.mdx`에서 `npm run build` 실행 시 validation 에러:

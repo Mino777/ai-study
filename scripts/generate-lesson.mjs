@@ -332,7 +332,8 @@ MDX 문법 제약 (반드시 준수 — 위반 시 빌드 실패):
     `connections: [${topic.connections.map((c) => `${c}`).join(", ")}]`,
     `status: draft`,
     `description: "${refinedDesc}"`,
-    `type: entry${quizYaml}`,
+    `type: entry`,
+    `generated_by: gemini${quizYaml}`,
     "---",
   ].join("\n");
 
