@@ -44,6 +44,14 @@ export function fixAndValidateMermaid(code, filename) {
   // &lt;br/&gt; (HTML 엔티티)는 의도적 텍스트 설명이므로 제외.
   fixed = fixed.replace(/<br\s*\/?>/g, ' · ');
 
+  // AUTO-FIX 3: 콜론 포함 라벨에 따옴표 강제 (6번째 재발 패턴)
+  // Mermaid 파서가 콜론을 특수 구문으로 해석 → 런타임 에러.
+  // A[Phase 1: 분석] → A["Phase 1: 분석"]
+  fixed = fixed.replace(
+    /([A-Za-z_][\w]*)\[(?!")([^\[\]"]*:[^\[\]"]*)\]/g,
+    '$1["$2"]',
+  );
+
   const fixedLines = fixed.split("\n");
   const fixedContent = fixed;
 

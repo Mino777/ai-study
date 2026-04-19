@@ -215,6 +215,34 @@ describe("auto-fix 2: <br/> → ' · ' 치환 (5번째 재발로 승격)", () =>
   });
 });
 
+describe("auto-fix 3: 콜론 포함 라벨에 따옴표 강제", () => {
+  it("콜론 포함 unquoted 라벨이 자동 따옴표 처리됨", () => {
+    const code = `flowchart TD\n  User[사용자: TextField에 입력]\n`;
+    const { fixed, autoFixed } = fixAndValidateMermaid(code, "x");
+    expect(autoFixed).toBe(true);
+    expect(fixed).toContain('User["사용자: TextField에 입력"]');
+  });
+
+  it("이미 따옴표 있는 콜론 라벨은 건드리지 않음", () => {
+    const code = `flowchart TD\n  User["사용자: TextField에 입력"]\n`;
+    const { fixed } = fixAndValidateMermaid(code, "x");
+    expect(fixed).toContain('User["사용자: TextField에 입력"]');
+    // 따옴표 중첩 안 됨
+    expect(fixed).not.toContain('""');
+  });
+
+  it("idempotent — 5회 실행해도 결과 동일", () => {
+    const code = `flowchart TD\n  A[Phase 1: 분석] --> B[Phase 2: 토론]\n`;
+    let result = code;
+    for (let i = 0; i < 5; i++) {
+      const { fixed } = fixAndValidateMermaid(result, "x");
+      result = fixed;
+    }
+    expect(result).toContain('A["Phase 1: 분석"]');
+    expect(result).not.toContain('""');
+  });
+});
+
 describe("warnings — → 따옴표 누락 탐지", () => {
   it("일반 노드 [label] 안에 → 가 있고 따옴표 없으면 warning", () => {
     const code = `flowchart TD\n  GSON[Gson Converter → ChatResponse]\n`;

@@ -122,9 +122,9 @@ if (isStale(doc, { maxAge: '1h' })) {
 
 ```mermaid
 graph LR
-    A[GPT-4o: 128K] --> B[Claude 3.5: 200K]
-    B --> C[Gemini 1.5: 2M]
-    C --> D[Claude Opus 4: 1M]
+    A["GPT-4o: 128K"] --> B["Claude 3.5: 200K"]
+    B --> C["Gemini 1.5: 2M"]
+    C --> D["Claude Opus 4: 1M"]
 ```
 
 윈도우가 크다고 다 채우면 안 된다. **정밀하게 선별된 8K 토큰이 무작위 100K 토큰보다 좋은 답변을 만든다.**
