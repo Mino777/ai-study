@@ -57,6 +57,7 @@ MDX 전체를 읽어야 할 때만 파일을 직접 열 것. 검색으로 충분
 - `/dashboard` — 학습 대시보드 (스트릭 + 히트맵 + 진도 + 추천)
 - `/timeline` — 학습 타임라인 (날짜/월별 시간순 엔트리)
 - `/projects` — Vibe Coding 쇼케이스 (CE/HE 패턴 + 회고)
+- `/resume` — 히든 이력서 (R키 5회 이스터에그, iOS/FDE 탭, robots disallow)
 - `/admin` — 엔트리 관리 대시보드 (인증 필요)
 - `/admin/new` — 새 엔트리 작성 (MDX 에디터 + 프론트매터 폼)
 - `/admin/edit/[...slug]` — 엔트리 수정

@@ -2,6 +2,35 @@
 
 모든 주목할 만한 변경사항을 이 파일에 기록합니다.
 
+## [2026-04-19] 세션 16i — 히든 이력서 페이지 + iOS/FDE 탭
+
+> R키 5회 이스터에그로 접근하는 히든 Resume 페이지. iOS Engineer / FDE(채널톡) 탭 전환. 그린카 608건 실적 기반 내용 + Harness/Context/Compound 방법론 강조. PDF 다운로드, 프로필 사진, 기술블로그 링크 포함.
+
+### Added
+
+- **히든 Resume 메뉴** — header.tsx에 R키 5번 이스터에그. 2초 내 5회 입력 시 "Resume" 네비 메뉴 페이드인
+- **/resume 페이지** — iOS Engineer / FDE(채널톡) 탭 스위처. 탭별 타이틀·Summary·Skills·Experience·Projects 데이터 분리
+- **프로필 사진** — public/profile.jpg, 증명사진 + gradient glow 효과
+- **FDE 전용 섹션** — ① AI 비즈니스 문제 해결 경험, ② 현장 문제 발견 경험 (JD 필수 항목)
+- **FDE Projects intro 콜아웃** — Harness/Context/Compound 방법론 정의 박스
+- **PDF 다운로드** — window.print() 기반, print CSS로 사이트 헤더 숨김
+- **robots.txt** — /resume disallow + noindex로 검색엔진 차단
+- **print CSS** — globals.css에 @media print 추가, .site-header 셀렉터로 이력서 header 보존
+- **노션용 마크다운** — iOS 버전 + FDE 버전 각각 Downloads에 생성
+
+### Changed
+
+- **header.tsx** — site-header 클래스 추가 (print CSS에서 사이트 헤더만 정확히 타겟)
+- **그린카 Experience** — 추상적 모듈화/CI/CD → 608건 티켓, 결제 연동, 딥링크 50+, ISMS-P, SDK 5종 등 실서비스 임팩트 중심으로 전환
+- **Skills 카테고리** — 연동(Braze/Amplitude 등), 보안(ISMS-P), AI(Harness/Context/Compound) 추가
+- **Education 순서** — 최신순 정렬 (정보처리기사 2023 → 2번째 위치)
+
+### Metrics
+
+- 신규 파일: 2개 (resume/page.tsx, profile.jpg)
+- 변경 파일: 3개 (header.tsx, globals.css, robots.ts)
+- 총 추가: 538줄
+
 ## [2026-04-19] 세션 16h — Hermes 불필요 판정 + Flow Map s27 + Mermaid 근본 해결
 
 > Hermes/GBrain/OpenClaw 3스택 검토 후 현재 불필요 판정. Flow Map 4편 s27 업데이트. Mermaid 렌더링 에러 3중 근본 원인 해소 + auto-fix 승격.

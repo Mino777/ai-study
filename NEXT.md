@@ -9,8 +9,8 @@
 
 ## 🕒 작성 시점
 
-- **작성 일시**: 2026-04-19 (Session 16h — Hermes 불필요 판정 + Flow Map s27 + Mermaid 근본 해결)
-- **작성 주체**: Claude (Session 16h)
+- **작성 일시**: 2026-04-19 (Session 16i — 히든 이력서 페이지)
+- **작성 주체**: Claude (Session 16i)
 - **이유**: compound 완료 후 세션 핸드오프
 
 ---
@@ -22,28 +22,11 @@
 - **카테고리**: 13 (방법론 4 + 시스템 3 + 평가&인프라 2 + 응용 4)
 - **Git 상태**: main clean, origin/main 동기
 - **CI 상태**: 빌드 통과, 테스트 34/34
-- **Mermaid auto-fix**: 3규칙 (괄호/br/콜론) + ID 충돌 error 감지
+- **신규 페이지**: `/resume` (히든, R키 5회, iOS/FDE 탭, robots disallow)
 
 ### Hermes-First 스택 상태
 - **판정**: 현재 불필요 (2026-04-19)
-- **이유**: Claude Code Max + Gemini Flash로 충분
 - **재검토 트리거**: 동시 에이전트 5개+ / 24/7 무인 운영 / 기억 손실 3회+ / OS 위임 5회+
-- **이식 성과**: Compiled Truth 패턴 → docs/solutions/ 적용 완료
-
-### aidy 프로젝트 상태 (4/19 /projects-sync)
-- **architect**: s27 autoceo 완료 (v2.3~v2.6), ahead 1, WO-097~102 backlog 변동
-- **ios**: v2.6 Gift Suggestions 완료, 동기화 완료, 554 tests
-- **android**: v2.6 Gift Suggestions 완료, 동기화 완료, 663 tests
-- **server**: v2.6 Gift Suggestions 완료, ahead 2, 796 tests
-
----
-
-## 이번 스프린트 KPI
-
-| 지표 | baseline | target | direction | actual |
-|------|----------|--------|-----------|--------|
-| 총 엔트리 수 | 144 | 150 | higher | ? |
-| Mermaid subgraph/node 충돌 잔여 | 63 | 0 | lower | ? |
 
 ---
 
@@ -65,17 +48,18 @@
    - tarosaju에서 `feat/ai-api-3layer-defense` 브랜치 작업 중
    - 예상 크기: M (프로젝트당)
 
-4. **JIT 검색 성과 검증** — totalQueries 100 도달 시 적중률 분석
-   - 현재 12 쿼리. 아직 멀음
+4. **이력서 노션 동기화**
+   - 현재 코드(page.tsx)와 노션 md 파일 내용 불일치 — iOS 노션 파일 업데이트 필요
+   - 예상 크기: S
 
-5. **기존 Gemini 엔트리에 generated_by: gemini 소급 적용 — 추가분**
-   - 이번에 12건 완료. 누락 있으면 추가
+5. **이력서 디자인 최종 폴리싱**
+   - 글자 크기/마진 미세 조정, 모바일 반응형 확인
+   - 예상 크기: S
 
 ### 🟢 Low
 
-6. **Compiled Truth _compiled-truth.md 추가 카테고리**
-   - next-patterns (3건) → N=3 도달, Compiled Truth 대상
-7. **인덱싱 자동화 (pre-commit 또는 CI)**
+6. **next-patterns Compiled Truth** — N=3 도달, _compiled-truth.md 대상
+7. **JIT 검색 성과 검증** — totalQueries 100 도달 시 적중률 분석
 
 ---
 
@@ -83,8 +67,8 @@
 
 ### 다른 세션 주의
 - moneyflow: conductor worktree `la-paz` 존재 — 만지지 말 것
-- tarosaju: `feat/ai-api-3layer-defense` 브랜치 작업 중 (main 복귀 안 한 상태)
-- aidy-architect: ahead 1, WO in-progress 디렉토리 변동
+- tarosaju: `feat/ai-api-3layer-defense` 브랜치 작업 중
+- aidy-architect: ahead 1
 - aidy-server: ahead 2
 
 ---
@@ -115,20 +99,11 @@
 
 ---
 
-## 💾 이 NEXT.md 의 운영 규칙
-
-- **세션 경계에서 교체** (append 금지)
-- **완료된 큐 항목은 즉시 제거**
-- **갱신 로그는 최근 1개만**
-- **재사용 학습** → memory · solutions · retros 로 승격
-
----
-
 ## 📜 최근 갱신
 
-### 2026-04-19 (Session 16h — Hermes 불필요 판정 + Flow Map s27 + Mermaid 근본 해결)
-- **완료**: generated_by 소급 12건 + Compiled Truth 4카테고리
-- **완료**: GBrain/OpenClaw/Hermes 불필요 판정
-- **완료**: Flow Map 4편 s27 업데이트 (v2.3~v2.6)
-- **완료**: Mermaid 3중 근본 해결 (br/콜론/ID충돌) + auto-fix 승격 + 34 테스트
-- **다음**: Mermaid 충돌 63건 일괄 정리
+### 2026-04-19 (Session 16i — 히든 이력서 페이지)
+- **완료**: /resume 히든 페이지 (R키 5회 이스터에그)
+- **완료**: iOS/FDE 탭 스위처 + FDE 전용 섹션 (JD 필수 항목 ①②)
+- **완료**: 그린카 608건 실적 기반 내용 + Harness/Context/Compound 강조
+- **완료**: PDF 다운로드, 프로필 사진, 기술블로그 링크
+- **다음**: Mermaid 충돌 63건 + 이력서 노션 동기화
