@@ -1,7 +1,7 @@
 ---
 title: aidy-architect로 보는 멀티 세션 오케스트레이션 — 한 명이 3-client 풀스택을 병렬로 짓는 법
 category: harness-engineering
-date: '2026-04-16'
+date: '2026-04-19'
 tags:
   - aidy
   - flow-map-series
@@ -383,6 +383,30 @@ iOS에서 TCA/Redux를 쓰는 이유가 "상태 변경 경로를 단방향으로
 - **`/compound` 를 2~3 WO 모아서 한 번에** — 재발 가능 문제의 "재발 맥락"이 흐려져 솔루션 품질 저하
 - **기억에 의존하는 가드** ("워커야 커밋 전에 테스트 돌려줘") — 시간 지나면 100% 실패. hooks로 행동 강제
 - **inbox 파일을 주기적으로 확인 안 함** — 워커가 블로킹된 채 5분, 10분 방치 → 세션 타임아웃 누적
+
+---
+
+## s27 업데이트 — autoceo v2.3~v2.6 4피처 스프린트 (2026-04-19)
+
+s14 종료 이후 **s27에서 autoceo 스프린트가 돌아갔다.** 4개 피처가 한 번의 autoceo 루프로 3-client 동시 배포되었고, Architect의 역할이 더 선명하게 드러난 사례다.
+
+### 스프린트 요약
+
+| 버전 | 피처 | WO 번호 | Server | iOS | Android |
+|------|------|---------|--------|-----|---------|
+| v2.3 | Anniversary Reminders | WO-085~087 | ✅ | ✅ | ✅ |
+| v2.4 | Notification Preferences | WO-088~090 | ✅ | ✅ | ✅ |
+| v2.5 | Relationship Nudges | WO-091~093 | ✅ | ✅ | ✅ |
+| v2.6 | Gift Suggestions | WO-094~096 | ✅ | ✅ | ✅ |
+
+**빌드 검증 (R9):** server 796 tests, android 663 tests, ios 554 tests — 전부 PASS.
+
+### Architect 관점에서 배울 점
+
+1. **autoceo 루프의 실전 작동**: R1(스펙 정의) → R2~R5(서버 먼저 → 클라 dispatch) → R6(에지 케이스 테스트 보강) → R8(전체 빌드 검증) → R9(cross-session-review). 사람이 개입한 건 autoceo 시작 명령뿐.
+2. **"서버 먼저" 원칙 재확인**: 모든 피처에서 서버 API가 먼저 완성되고 Gate-1 통과 후 iOS/Android에 dispatch. 역순은 한 번도 없었음.
+3. **Gate-1이 4피처 연속 PASS**: 스펙(api-contract.md)이 충분히 상세하면 워커가 첫 시도에 통과하는 비율이 올라감. WO-092/093은 Gate-1 한 번에 PASS.
+4. **WO 넘버링 폭증 (85→96)**: 12개 WO가 하나의 autoceo 루프에서 나옴. WO 관리의 스케일링 한계가 보이기 시작.
 
 ---
 

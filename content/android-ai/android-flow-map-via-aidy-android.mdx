@@ -1,7 +1,7 @@
 ---
 title: aidy-android로 그리는 안드로이드 흐름 맵 — iOS 개발자를 위한 큰 그림
 category: android-ai
-date: '2026-04-16'
+date: '2026-04-19'
 tags:
   - android
   - jetpack-compose
@@ -361,6 +361,28 @@ flowchart TD
 - **Navigation Compose부터 학습** — 작은 앱은 `when(selectedTab)`로 충분. 과설계 방지
 - **SharedPreferences에 토큰 저장** — 평문 유출 위험. 반드시 EncryptedSharedPreferences
 - **GlobalScope 사용** — lifecycle 무시 → 메모리 누수. `viewModelScope` 쓰기
+
+---
+
+## s27 업데이트 — v2.3~v2.6 Android 구현 (2026-04-19)
+
+s27 autoceo 스프린트에서 4개 피처가 Android에 추가되었다. MVVM + Compose 패턴이 반복 적용된 사례.
+
+### 추가된 피처
+
+| 버전 | 피처 | 핵심 Android 패턴 |
+|------|------|------------------|
+| v2.3 | Anniversary Reminders | ViewModel + data layer 분리, navigation graph 확장 |
+| v2.4 | Notification Preferences | Compose 토글 UI + EncryptedSharedPreferences |
+| v2.5 | Relationship Nudges | data layer + ViewModel 먼저, 이후 UI + navigation 분리 커밋 |
+| v2.6 | Gift Suggestions | AI 추천 결과 → LazyColumn + Card 컴포넌트 |
+
+### 학습 포인트
+
+- **data layer → ViewModel → UI 순서**: v2.5에서 특히 명확. 두 번의 커밋으로 data+ViewModel과 UI+navigation을 분리. iOS의 Reducer+View 쌍과 대응하지만 분리 단위가 다름
+- **SwiftUI ↔ Compose 비교 기회**: 같은 피처를 양쪽에서 구현했으므로, v2.3~v2.6 어느 피처든 골라서 iOS 코드와 1:1 비교 가능
+- **에지 케이스 테스트 보강 (R6)**: v2.3/v2.4/v2.5 에지 케이스를 별도 라운드에서 일괄 추가
+- **최종 테스트**: 663 tests 전체 PASS
 
 ---
 

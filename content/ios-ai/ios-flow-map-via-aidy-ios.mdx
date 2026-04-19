@@ -1,7 +1,7 @@
 ---
 title: aidy-ios로 다시 보는 iOS 흐름 맵 — TCA + SwiftUI + Tuist 역방향 학습
 category: ios-ai
-date: '2026-04-16'
+date: '2026-04-19'
 tags:
   - ios
   - swiftui
@@ -370,12 +370,33 @@ flowchart TD
 
 ---
 
+## s27 업데이트 — v2.3~v2.6 iOS 구현 (2026-04-19)
+
+s27 autoceo 스프린트에서 4개 피처가 iOS에 추가되었다. TCA + SwiftUI 패턴이 반복 적용된 실전 사례.
+
+### 추가된 피처
+
+| 버전 | 피처 | 핵심 iOS 패턴 |
+|------|------|--------------|
+| v2.3 | Anniversary Reminders | Reducer + Effect로 알림 스케줄링, `@Dependency(\.userNotifications)` |
+| v2.4 | Notification Preferences | SettingsFeature에 토글 바인딩, `@BindingReducer` 활용 |
+| v2.5 | Relationship Nudges | 서버 푸시 → 로컬 알림 변환, ConversationStarter 테스트 수정 |
+| v2.6 | Gift Suggestions | AI 추천 결과 → List + NavigationLink 연결 |
+
+### 학습 포인트
+
+- **같은 TCA 패턴의 반복 적용**: 4개 피처 모두 `XxxFeature.swift` + `XxxView.swift` 쌍으로 구성. Reducer → Effect → State 변경 흐름이 동일해서, 한 피처를 이해하면 나머지 3개는 빠르게 읽힘
+- **에지 케이스 테스트 보강 (R6)**: v2.3/v2.4/v2.5의 에지 케이스를 별도 라운드에서 일괄 추가. "기능 완성 후 별도 테스트 패스" 리듬
+- **최종 테스트**: 554 tests 전체 PASS
+
+---
+
 ## 다음 학습 연결
 
 - [aidy-server로 그리는 백엔드 흐름 맵](/wiki/backend-ai/backend-flow-map-via-aidy-server) — 서버가 받는 요청의 여정
 - [aidy-android로 그리는 안드로이드 흐름 맵](/wiki/android-ai/android-flow-map-via-aidy-android) — 같은 API를 Compose로 호출
 - [iOS Harness Journal 000 — 베이스라인](/wiki/ios-ai/ios-ai-journal-000-baseline) — 회사 프로덕션 iOS 앱에 AI 하네스 설치
-- (예정) aidy-architect로 보는 멀티 세션 오케스트레이션 — 세 클라이언트를 하나의 스펙으로 묶는 구조
+- [aidy-architect로 보는 멀티 세션 오케스트레이션](/wiki/harness-engineering/architect-flow-map-via-aidy-architect) — 세 클라이언트를 하나의 스펙으로 묶는 구조
 
 ---
 
