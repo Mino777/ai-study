@@ -2,6 +2,35 @@
 
 모든 주목할 만한 변경사항을 이 파일에 기록합니다.
 
+## [2026-04-19] 세션 16e — perpetual-engine 분석 + 3대 패턴 이식
+
+> /ingest로 perpetual-engine 프레임워크 분석 → 이식 가능 패턴 3개 추출 → 슬래시 커맨드 + 인프라로 즉시 이식
+
+### Added
+
+- **agents/perpetual-engine-portable-patterns** — MetricsEvaluator 5단계 판정, ConsultantFactory 에페메럴 전문가, MessageQueue 파일 기반 메시징 분석 엔트리
+- **`/compound` Phase 1b**: MetricsEvaluator KPI 자동 판정 단계 — NEXT.md KPI 테이블 → 달성률 → 5단계 verdict (scale_up/maintain/iterate/pivot/kill)
+- **`/consult` 슬래시 커맨드**: 온디맨드 에페메럴 전문가 소환 — 자유 서술로 즉석 생성, 진실성 가드 내장, 자동 역할 해제
+- **`/message` 슬래시 커맨드 + `messages/` 디렉토리**: 허브↔워커 파일 기반 비동기 메시지 큐 — JSON 파일, 인프라 제로
+- **`/projects-sync` 메시지 큐 연동**: Step 6으로 미읽은 메시지 자동 표시
+
+### Changed
+
+- **CLAUDE.md**: skill routing 2줄 추가 (consult, message), 인프라 섹션 2줄 추가, Project Structure에 messages/ 추가
+- 기존 엔트리 3개에 역링크 추가 (multi-agent-orchestration-patterns-2026, multi-agent-sprint-optimization-patterns, agent-architectures)
+
+### Metrics
+
+| 항목 | Before | After |
+|---|---|---|
+| 총 엔트리 | 142 | **143** (+1) |
+| 슬래시 커맨드 | 11개 | **13개** (+2: /consult, /message) |
+| /compound Phases | 8개 (0~7) | **9개** (+Phase 1b: MetricsEvaluator) |
+| 역링크 추가 | — | **3개 엔트리** |
+| 분석한 소스 파일 | — | **6개** (perpetual-engine core) |
+
+---
+
 ## [2026-04-19] 세션 16d — 워커 재료 박제 + Claude Design + 엔트리 정비
 
 > projects-sync → 워커 3프로젝트 재료 수집 → 엔트리 4건 생성 + 2건 병합/수정 + 404 링크 정리

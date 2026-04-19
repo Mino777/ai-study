@@ -9,8 +9,8 @@
 
 ## 🕒 작성 시점
 
-- **작성 일시**: 2026-04-19 (Session 16d — 워커 재료 박제 + Claude Design + 엔트리 정비)
-- **작성 주체**: Claude (Session 16d)
+- **작성 일시**: 2026-04-19 (Session 16e — perpetual-engine 분석 + 3대 패턴 이식)
+- **작성 주체**: Claude (Session 16e)
 - **이유**: compound 완료 후 세션 핸드오프
 
 ---
@@ -18,21 +18,18 @@
 ## 📸 현재 상태 스냅샷
 
 ### ai-study Wiki
-- **엔트리 수**: 142
+- **엔트리 수**: 143
 - **카테고리**: 13 (방법론 4 + 시스템 3 + 평가&인프라 2 + 응용 4)
+- **슬래시 커맨드**: 13개 (신규: /consult, /message)
 - **Git 상태**: main clean, origin/main 동기
 - **CI 상태**: 빌드 통과
-- **그래프**: 142 노드, Obsidian 스타일 원형 레이아웃
 
-### 도구
-| 도구 | 명령 | 용도 |
-|------|------|------|
-| Graph Query CLI | `node scripts/graph-query.mjs <cmd>` | 지식 그래프 7개 쿼리 |
-| 승격 스캐너 | `node scripts/scan-promotions.mjs` | N=3+ 솔루션 자동 감지 |
-| 승격 CI | `.github/workflows/promotion-scan.yml` | push+weekly → Issue 자동 생성 |
-| generate-lesson | `npm run generate-lesson` | graph 신호 + 다양성 cap |
-| 긱뉴스 큐레이션 | `node scripts/curate-geeknews.mjs` | 24h 미응답 시 자동 엔트리 |
-| 긱뉴스 스카우트 | `node scripts/scout-geeknews.mjs` | 22:00 KST 전체 스캔 → 프로젝트별 이식 계획 |
+### 신규 인프라 (이번 세션)
+| 인프라 | 파일 | 상태 |
+|--------|------|------|
+| MetricsEvaluator (Phase 1b) | `.claude/commands/compound.md` | 정의됨, KPI 미정의 |
+| /consult | `.claude/commands/consult.md` | 정의됨, 미실전 |
+| /message + messages/ | `.claude/commands/message.md` | 정의됨, 미실전 |
 
 ### 워커 프로젝트 상태 (2026-04-19 기준)
 | 프로젝트 | 상태 | hub-dispatch |
@@ -41,9 +38,15 @@
 | **tarosaju** | feat/ai-api-3layer-defense 브랜치 | — |
 | **aidy-architect** | main 동기화 (s23 완료) | #3 Claude Design 핸드오프 |
 
-### 긱뉴스 파이프라인 상태
-- **큐레이션** (`auto-lesson-geeknews.yml`): 정상 작동 확인 (수동 트리거 성공, `actionable-insight` 라벨 생성 완료)
-- **스카우트** (`daily-scout-geeknews.yml`): 오늘 밤 22:00 KST 첫 실행 예정
+---
+
+## 이번 스프린트 KPI
+
+| 지표 | baseline | target | direction | actual |
+|------|----------|--------|-----------|--------|
+| 총 엔트리 수 | 143 | 148 | higher | ? |
+| /consult 실전 사용 | 0 | 1 | higher | ? |
+| /message 실전 사용 | 0 | 1 | higher | ? |
 
 ---
 
@@ -51,13 +54,14 @@
 
 ### 🔴 High
 
-1. **긱뉴스 스카우트 첫 실행 결과 확인**
-   - 오늘 밤 22:00 KST 첫 실행 → Actions 탭에서 결과 확인
-   - Gemini 매칭 품질 검증 → 프롬프트 튜닝 필요 여부 판단
+1. **신규 인프라 실전 검증**
+   - `/consult` 첫 실전 사용 — 적절한 자문 상황에서 실행
+   - `/message send moneyflow "..."` — 워커에 첫 directive 전송 테스트
    - 예상 크기: S
 
-2. **promotion-scan.yml 실제 동작 검증**
-   - `gh workflow run promotion-scan` 수동 트리거 → Issue 생성 확인
+2. **긱뉴스 스카우트 첫 실행 결과 확인**
+   - 오늘 밤 22:00 KST 첫 실행 → Actions 탭에서 결과 확인
+   - Gemini 매칭 품질 검증 → 프롬프트 튜닝 필요 여부 판단
    - 예상 크기: S
 
 3. **[워커] AI API 프록시 3단계 방어선** (tarosaju → moneyflow → aidy-server)
@@ -110,7 +114,7 @@
 
 ### Phase 3: Git 동기화 (5분)
 - [ ] `rtk git fetch` (ai-study)
-- [ ] `/projects-sync` 실행
+- [ ] `/projects-sync` 실행 (메시지 큐 확인 포함)
 
 ### Phase 4: 최근 박제 훑기 (3분)
 - [ ] `node scripts/graph-query.mjs suggest`
@@ -134,6 +138,11 @@ done
 # 그래프 + 승격
 node scripts/graph-query.mjs suggest
 node scripts/scan-promotions.mjs
+
+# 신규 커맨드 테스트
+/consult <전문가 서술>
+/message send moneyflow "<directive>"
+/message read
 ```
 
 ---
@@ -149,9 +158,9 @@ node scripts/scan-promotions.mjs
 
 ## 📜 최근 갱신
 
-### 2026-04-19 (Session 16d compound — 워커 재료 박제 + Claude Design)
-- **완료**: 워커 재료 박제 4건 (agent-compiler, cost-cap, sprint-optimization, claude-design)
-- **완료**: 긱뉴스 auto-lesson 디버깅 (actionable-insight 라벨)
-- **완료**: ai-agent-start-here 404 링크 수정 3곳
-- **완료**: hub-dispatch 2건 (aidy#3, moneyflow#136)
-- **신규 메모리**: tokenomics 카테고리 범위, 중복 확인 필수
+### 2026-04-19 (Session 16e compound — perpetual-engine 분석 + 3대 패턴 이식)
+- **완료**: perpetual-engine 소스코드 분석 → 이식 가능 패턴 3개 엔트리
+- **완료**: MetricsEvaluator → /compound Phase 1b 이식
+- **완료**: ConsultantFactory → /consult 슬래시 커맨드 이식
+- **완료**: MessageQueue → /message + messages/ 이식 + /projects-sync 연동
+- **신규**: NEXT.md에 첫 KPI 테이블 정의 (엔트리 수, /consult 사용, /message 사용)
