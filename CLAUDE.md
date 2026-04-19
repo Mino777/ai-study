@@ -217,7 +217,7 @@ Key routing rules:
 - `.claude/commands/promote-solution.md` — N=3+ 솔루션 코드 게이트 승격 프로세스 (workflow solutions 7건 추출)
 - `.claude/commands/consult.md` — perpetual-engine ConsultantFactory 이식. 온디맨드 에페메럴 전문가 소환 + 진실성 가드
 - `.claude/commands/message.md` — perpetual-engine MessageQueue 이식. 허브↔워커 파일 기반 비동기 메시지 (messages/ JSON)
-- `scripts/lib/mermaid-fix.mjs` — `validate-content.mjs`에서 추출한 자동 수정 + warning-only 검출. 두 과거 버그(slicing offset / regex 누적) docstring 박제 + `detectUnquotedSpecialCharLabels()` warning (`<br/>` `→`)
-- `scripts/__tests__/validate-content.test.mjs` — mermaid-fix 16 회귀 테스트 (idempotency 케이스 별도 박제, `npm test`로 vitest 실행)
+- `scripts/lib/mermaid-fix.mjs` — Mermaid 자동 수정 3규칙(괄호 quoting / `<br/>` → `·` / 콜론 quoting) + subgraph/node ID 충돌 error 감지 + `→` warning
+- `scripts/__tests__/validate-content.test.mjs` — mermaid-fix 34 회귀 테스트 (`npm test`로 vitest 실행)
 
 <!-- RTK instructions: 전역 ~/.claude/CLAUDE.md의 @RTK.md로 로드됨. 이중 로딩 방지를 위해 프로젝트 레벨에서 제거 (A1 토큰 레버). -->

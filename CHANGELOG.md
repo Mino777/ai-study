@@ -2,6 +2,37 @@
 
 모든 주목할 만한 변경사항을 이 파일에 기록합니다.
 
+## [2026-04-19] 세션 16h — Hermes 불필요 판정 + Flow Map s27 + Mermaid 근본 해결
+
+> Hermes/GBrain/OpenClaw 3스택 검토 후 현재 불필요 판정. Flow Map 4편 s27 업데이트. Mermaid 렌더링 에러 3중 근본 원인 해소 + auto-fix 승격.
+
+### Added
+
+- **generated_by: gemini 소급 적용** — Gemini 파이프라인 생성 엔트리 12개에 frontmatter 추가
+- **Compiled Truth 일괄 적용** — workflow(7)/mdx(6)/github-actions(4)/ai-pipeline(4) 4개 카테고리에 `_compiled-truth.md` 생성
+- **Flow Map 4편 s27 업데이트** — aidy v2.3~v2.6 (Anniversary Reminders/Notification Preferences/Relationship Nudges/Gift Suggestions) 반영
+- **mermaid-fix.mjs AUTO-FIX 2** — `<br/>` → `·` 자동 치환 (warning에서 auto-fix 승격)
+- **mermaid-fix.mjs AUTO-FIX 3** — 콜론 포함 unquoted 라벨 자동 따옴표 처리
+- **mermaid-fix.mjs ERROR** — subgraph/node ID 충돌 감지 (진짜 근본 원인)
+- **테스트** — mermaid-fix 16→34 케이스로 확대
+
+### Changed
+
+- **GBrain+OpenClaw+Hermes 엔트리** — "현재 불필요" 판정 + 재검토 트리거 명시. confidence 2→3
+- **전체 MDX 15개 파일** — Mermaid 블록 내 `<br/>` 126건 제거
+- **전체 MDX 7개 파일** — Mermaid 블록 내 콜론 unquoted 18건 수정
+- **android/ios flow map** — subgraph ID 충돌 해소 (VM→VMLayer, UI→UILayer 등)
+
+### Metrics
+
+- 엔트리: 144 (변동 없음)
+- Mermaid auto-fix 규칙: 1→3 (괄호/br/콜론)
+- Mermaid error 규칙: +1 (subgraph/node ID 충돌)
+- 테스트: 34/34 PASS
+- 커밋: 6건
+
+---
+
 ## [2026-04-19] 세션 16f — Hermes-First 스택 CEO/Eng Review + 인프라 준비
 
 > GBrain+OpenClaw+Hermes 3스택 분석 위키 엔트리 기반으로 CEO Review(SELECTIVE EXPANSION) + Eng Review 완료. Hermes-First 접근법으로 ai-study 코드 인프라 선작업.

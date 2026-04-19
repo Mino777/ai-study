@@ -9,8 +9,8 @@
 
 ## 🕒 작성 시점
 
-- **작성 일시**: 2026-04-19 (Session 16f — Hermes-First 스택 CEO/Eng Review + 인프라 준비)
-- **작성 주체**: Claude (Session 16f)
+- **작성 일시**: 2026-04-19 (Session 16h — Hermes 불필요 판정 + Flow Map s27 + Mermaid 근본 해결)
+- **작성 주체**: Claude (Session 16h)
 - **이유**: compound 완료 후 세션 핸드오프
 
 ---
@@ -20,25 +20,21 @@
 ### ai-study Wiki
 - **엔트리 수**: 144
 - **카테고리**: 13 (방법론 4 + 시스템 3 + 평가&인프라 2 + 응용 4)
-- **슬래시 커맨드**: 13개 (/message에 poll 서브커맨드 추가)
 - **Git 상태**: main clean, origin/main 동기
-- **CI 상태**: 빌드 통과, 테스트 37/37
+- **CI 상태**: 빌드 통과, 테스트 34/34
+- **Mermaid auto-fix**: 3규칙 (괄호/br/콜론) + ID 충돌 error 감지
 
-### Hermes-First 스택 진행 상태
-| Phase | 내용 | 상태 |
-|-------|------|------|
-| Phase 1-4 | 로컬 Hermes 설치 + Telegram GW + delegate_task 테스트 | **완료** (로컬, Gemini 2.5 Flash) |
-| Phase 5 | ai-study 코드 인프라 (generated_by, /message poll, SOUL.md, Compiled Truth) | **완료** |
-| Phase 6 | 2주 운영 + Go/No-Go (5/3 판단) | **진행 중** |
+### Hermes-First 스택 상태
+- **판정**: 현재 불필요 (2026-04-19)
+- **이유**: Claude Code Max + Gemini Flash로 충분
+- **재검토 트리거**: 동시 에이전트 5개+ / 24/7 무인 운영 / 기억 손실 3회+ / OS 위임 5회+
+- **이식 성과**: Compiled Truth 패턴 → docs/solutions/ 적용 완료
 
-### 신규 인프라 (이번 세션)
-| 인프라 | 파일 | 상태 |
-|--------|------|------|
-| generated_by 출처 추적 | `src/lib/schema.ts` | 완료 (optional field) |
-| /message poll | `.claude/commands/message.md` | 정의됨, Hermes 연동 후 실전 |
-| SOUL.md | `docs/hermes/SOUL.md` + `~/.hermes/SOUL.md` | 완료 (로컬 복사됨) |
-| Compiled Truth | `docs/solutions/` | 포맷 도입, 예시 1건 적용 |
-| CEO Plan | `docs/designs/hermes-first-stack.md` | 승격 완료 |
+### aidy 프로젝트 상태 (4/19 /projects-sync)
+- **architect**: s27 autoceo 완료 (v2.3~v2.6), ahead 1, WO-097~102 backlog 변동
+- **ios**: v2.6 Gift Suggestions 완료, 동기화 완료, 554 tests
+- **android**: v2.6 Gift Suggestions 완료, 동기화 완료, 663 tests
+- **server**: v2.6 Gift Suggestions 완료, ahead 2, 796 tests
 
 ---
 
@@ -46,9 +42,8 @@
 
 | 지표 | baseline | target | direction | actual |
 |------|----------|--------|-----------|--------|
-| 총 엔트리 수 | 143 | 148 | higher | 144 |
-| Hermes 로컬 설치 | 0 | 1 | higher | 1 |
-| /message poll 실전 사용 | 0 | 1 | higher | ? |
+| 총 엔트리 수 | 144 | 150 | higher | ? |
+| Mermaid subgraph/node 충돌 잔여 | 63 | 0 | lower | ? |
 
 ---
 
@@ -56,50 +51,41 @@
 
 ### 🔴 High
 
-1. ~~**Hermes 설치 (Phase 1-4)**~~ **완료** (로컬 + Gemini 2.5 Flash + Telegram)
+1. **Mermaid subgraph/node ID 충돌 63건 일괄 정리**
+   - `mermaid-fix.mjs`가 이미 감지. 나머지 파일 수동 수정 필요
+   - 예상 크기: M
 
-2. **Hermes 2주 운영** (Phase 6, ~5/3까지)
-   - 매일 Telegram으로 1+ 리서치 작업 위임
-   - 최소 10개 작업, 다양한 유형 (research + markdown + backlink)
-   - Go/No-Go Decision Tree: `docs/designs/hermes-first-stack.md` 참조
-   - 예상 크기: S (일일 운영)
-
-3. **긱뉴스 스카우트 결과 확인**
+2. **긱뉴스 스카우트 결과 확인**
    - 22:00 KST 자동 실행 → Actions 탭에서 결과 확인
    - 예상 크기: S
 
-3. **[워커] AI API 프록시 3단계 방어선** (tarosaju → moneyflow → aidy-server)
-   - 예상 크기: M (프로젝트당)
-
 ### 🟡 Medium
 
-4. **기존 Gemini 엔트리에 generated_by: gemini 소급 적용**
-   - 일괄 스크립트 작성 → 기존 엔트리 점진 적용
-   - 예상 크기: S
+3. **[워커] AI API 프록시 3단계 방어선** (tarosaju → moneyflow → aidy-server)
+   - tarosaju에서 `feat/ai-api-3layer-defense` 브랜치 작업 중
+   - 예상 크기: M (프로젝트당)
 
-5. **docs/solutions/ Compiled Truth 일괄 적용**
-   - N>=3 카테고리(workflow 7, mdx 6, github-actions 4, ai-pipeline 4) 대상
-   - 예상 크기: S
+4. **JIT 검색 성과 검증** — totalQueries 100 도달 시 적중률 분석
+   - 현재 12 쿼리. 아직 멀음
 
-6. **JIT 검색 성과 검증** — totalQueries 100 도달 시 적중률 분석
+5. **기존 Gemini 엔트리에 generated_by: gemini 소급 적용 — 추가분**
+   - 이번에 12건 완료. 누락 있으면 추가
 
 ### 🟢 Low
 
-7. **Hermes 2주 운영 후 GBrain CEO Plan** (TODOS P2)
-8. **OpenClaw 검토** (TODOS P3)
-9. **인덱싱 자동화 (pre-commit 또는 CI)**
+6. **Compiled Truth _compiled-truth.md 추가 카테고리**
+   - next-patterns (3건) → N=3 도달, Compiled Truth 대상
+7. **인덱싱 자동화 (pre-commit 또는 CI)**
 
 ---
 
 ## ⚠️ 블로커 / 대기 사항
 
-### VPS 필요
-- Hermes Phase 1-4는 VPS 없이 진행 불가
-- Hetzner CX22 (~$4/mo) 권장
-
 ### 다른 세션 주의
 - moneyflow: conductor worktree `la-paz` 존재 — 만지지 말 것
-- tarosaju: `feat/ai-api-3layer-defense` 브랜치 작업 중
+- tarosaju: `feat/ai-api-3layer-defense` 브랜치 작업 중 (main 복귀 안 한 상태)
+- aidy-architect: ahead 1, WO in-progress 디렉토리 변동
+- aidy-server: ahead 2
 
 ---
 
@@ -123,40 +109,9 @@
 - [ ] `node scripts/scan-promotions.mjs`
 
 ### Phase 5: 작업 시작 (2분 내)
-- [ ] VPS 세팅은 이 세션에서 진행 (Phase 1-4)
+- [ ] Mermaid 충돌 63건 정리 우선
 - [ ] 작업 완료 후 `/compound`
 - [ ] 세션 종료 직전 이 NEXT.md 교체
-
----
-
-## 📝 부록: Hermes VPS 세팅 가이드
-
-```bash
-# 1. Hetzner CX22 VPS 생성 후 SSH 접속
-ssh root@<VPS_IP>
-
-# 2. 초기 세팅
-apt update && apt upgrade -y
-curl -fsSL https://deb.nodesource.com/setup_24.x | bash -
-apt install -y nodejs ufw
-ufw allow OpenSSH && ufw enable
-
-# 3. Hermes 설치 (스크립트 확인 후 실행)
-curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh -o install.sh
-less install.sh  # 내용 확인
-bash install.sh
-
-# 4. 모델 + 도구 설정
-hermes model        # Claude Sonnet 선택
-hermes tools        # 도구 구성
-hermes doctor       # MUST PASS
-
-# 5. Telegram Gateway
-hermes gateway setup  # Telegram 선택 + BotFather 토큰 입력
-
-# 6. 보안
-echo "ANTHROPIC_API_KEY=sk-..." > ~/.env && chmod 600 ~/.env
-```
 
 ---
 
@@ -171,8 +126,9 @@ echo "ANTHROPIC_API_KEY=sk-..." > ~/.env && chmod 600 ~/.env
 
 ## 📜 최근 갱신
 
-### 2026-04-19 (Session 16f+g — Hermes-First 스택 풀 세팅)
-- **완료**: CEO Review + Eng Review + 코드 인프라 (generated_by, /message poll, SOUL.md, Compiled Truth)
-- **완료**: Hermes 로컬 설치 (Gemini 2.5 Flash) + Telegram Gateway pairing
-- **완료**: 첫 delegate_task 테스트 (android-ai 빈 주제 탐색, 10초)
-- **진행 중**: Phase 6 2주 운영 (~5/3 Go/No-Go)
+### 2026-04-19 (Session 16h — Hermes 불필요 판정 + Flow Map s27 + Mermaid 근본 해결)
+- **완료**: generated_by 소급 12건 + Compiled Truth 4카테고리
+- **완료**: GBrain/OpenClaw/Hermes 불필요 판정
+- **완료**: Flow Map 4편 s27 업데이트 (v2.3~v2.6)
+- **완료**: Mermaid 3중 근본 해결 (br/콜론/ID충돌) + auto-fix 승격 + 34 테스트
+- **다음**: Mermaid 충돌 63건 일괄 정리
