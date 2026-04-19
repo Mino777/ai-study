@@ -9,8 +9,8 @@
 
 ## 🕒 작성 시점
 
-- **작성 일시**: 2026-04-19 (Session 16e — perpetual-engine 분석 + 3대 패턴 이식)
-- **작성 주체**: Claude (Session 16e)
+- **작성 일시**: 2026-04-19 (Session 16f — Hermes-First 스택 CEO/Eng Review + 인프라 준비)
+- **작성 주체**: Claude (Session 16f)
 - **이유**: compound 완료 후 세션 핸드오프
 
 ---
@@ -18,25 +18,27 @@
 ## 📸 현재 상태 스냅샷
 
 ### ai-study Wiki
-- **엔트리 수**: 143
+- **엔트리 수**: 144
 - **카테고리**: 13 (방법론 4 + 시스템 3 + 평가&인프라 2 + 응용 4)
-- **슬래시 커맨드**: 13개 (신규: /consult, /message)
+- **슬래시 커맨드**: 13개 (/message에 poll 서브커맨드 추가)
 - **Git 상태**: main clean, origin/main 동기
-- **CI 상태**: 빌드 통과
+- **CI 상태**: 빌드 통과, 테스트 37/37
+
+### Hermes-First 스택 진행 상태
+| Phase | 내용 | 상태 |
+|-------|------|------|
+| Phase 1-4 | VPS + Hermes 설치 + Telegram GW + delegate_task 테스트 | **다음 세션** |
+| Phase 5 | ai-study 코드 인프라 (generated_by, /message poll, SOUL.md, Compiled Truth) | **완료** |
+| Phase 6 | 2주 운영 + Go/No-Go | 대기 (Phase 1-4 후) |
 
 ### 신규 인프라 (이번 세션)
 | 인프라 | 파일 | 상태 |
 |--------|------|------|
-| MetricsEvaluator (Phase 1b) | `.claude/commands/compound.md` | 정의됨, KPI 미정의 |
-| /consult | `.claude/commands/consult.md` | 정의됨, 미실전 |
-| /message + messages/ | `.claude/commands/message.md` | 정의됨, 미실전 |
-
-### 워커 프로젝트 상태 (2026-04-19 기준)
-| 프로젝트 | 상태 | hub-dispatch |
-|---|---|---|
-| **moneyflow** | main behind 1, conductor worktree 존재 | #136 Claude Design 프로토타이핑 |
-| **tarosaju** | feat/ai-api-3layer-defense 브랜치 | — |
-| **aidy-architect** | main 동기화 (s23 완료) | #3 Claude Design 핸드오프 |
+| generated_by 출처 추적 | `src/lib/schema.ts` | 완료 (optional field) |
+| /message poll | `.claude/commands/message.md` | 정의됨, Hermes 연동 후 실전 |
+| SOUL.md | `docs/hermes/SOUL.md` | 초안 완료, VPS 복사 대기 |
+| Compiled Truth | `docs/solutions/` | 포맷 도입, 예시 1건 적용 |
+| CEO Plan | `docs/designs/hermes-first-stack.md` | 승격 완료 |
 
 ---
 
@@ -44,9 +46,9 @@
 
 | 지표 | baseline | target | direction | actual |
 |------|----------|--------|-----------|--------|
-| 총 엔트리 수 | 143 | 148 | higher | ? |
-| /consult 실전 사용 | 0 | 1 | higher | ? |
-| /message 실전 사용 | 0 | 1 | higher | ? |
+| 총 엔트리 수 | 143 | 148 | higher | 144 |
+| Hermes VPS 설치 | 0 | 1 | higher | ? |
+| /message poll 실전 사용 | 0 | 1 | higher | ? |
 
 ---
 
@@ -54,46 +56,46 @@
 
 ### 🔴 High
 
-1. **신규 인프라 실전 검증**
-   - `/consult` 첫 실전 사용 — 적절한 자문 상황에서 실행
-   - `/message send moneyflow "..."` — 워커에 첫 directive 전송 테스트
-   - 예상 크기: S
+1. **VPS + Hermes 설치 (Phase 1-4)**
+   - Hetzner CX22 (~$4/mo) VPS 생성
+   - Hermes 설치 (스크립트 확인 후 실행)
+   - Telegram Gateway + allowed_users 설정
+   - 첫 delegate_task 테스트
+   - CEO Plan 참조: `docs/designs/hermes-first-stack.md`
+   - 예상 크기: M (VPS 세팅 포함)
 
-2. **긱뉴스 스카우트 첫 실행 결과 확인**
-   - 오늘 밤 22:00 KST 첫 실행 → Actions 탭에서 결과 확인
-   - Gemini 매칭 품질 검증 → 프롬프트 튜닝 필요 여부 판단
+2. **긱뉴스 스카우트 결과 확인**
+   - 22:00 KST 자동 실행 → Actions 탭에서 결과 확인
    - 예상 크기: S
 
 3. **[워커] AI API 프록시 3단계 방어선** (tarosaju → moneyflow → aidy-server)
-   - Supabase Edge Functions 프록시 + 인증 + Rate Limiting
    - 예상 크기: M (프로젝트당)
 
 ### 🟡 Medium
 
-4. **[워커] SDD Acceptance Spec 강화** (moneyflow, tarosaju, aidy 4레포)
-   - 각 프로젝트 SPEC.md에 Build/Content/Promotion Gate 추가
+4. **기존 Gemini 엔트리에 generated_by: gemini 소급 적용**
+   - 일괄 스크립트 작성 → 기존 엔트리 점진 적용
    - 예상 크기: S
 
-5. **[허브] Hub-Worker 병렬화 다음 단계**
-   - Agent tool sub-agent 병렬 spawn, 워커별 CLAUDE.md 경량화 검토
-   - 예상 크기: M
+5. **docs/solutions/ Compiled Truth 일괄 적용**
+   - N>=3 카테고리(workflow 7, mdx 6, github-actions 4, ai-pipeline 4) 대상
+   - 예상 크기: S
 
 6. **JIT 검색 성과 검증** — totalQueries 100 도달 시 적중률 분석
 
-7. **워커 재료 박제 후보** (미처리분)
-   - moneyflow: Content Pipeline 상태 머신, React Hydration + SW 캐시
-   - tarosaju: Large Page Decomposition, Supabase Realtime Retry
-   - aidy: continue-on-error masking (Mark-step 패턴), ingest→WO 풀사이클
-
 ### 🟢 Low
 
-8. **인덱싱 자동화 (pre-commit 또는 CI)**
-9. **Semantic Caching POC**
-10. **멀티 에이전트 모델 라우팅**
+7. **Hermes 2주 운영 후 GBrain CEO Plan** (TODOS P2)
+8. **OpenClaw 검토** (TODOS P3)
+9. **인덱싱 자동화 (pre-commit 또는 CI)**
 
 ---
 
 ## ⚠️ 블로커 / 대기 사항
+
+### VPS 필요
+- Hermes Phase 1-4는 VPS 없이 진행 불가
+- Hetzner CX22 (~$4/mo) 권장
 
 ### 다른 세션 주의
 - moneyflow: conductor worktree `la-paz` 존재 — 만지지 말 것
@@ -121,28 +123,39 @@
 - [ ] `node scripts/scan-promotions.mjs`
 
 ### Phase 5: 작업 시작 (2분 내)
-- [ ] 새 작업은 `/wt-branch <branch-name>` 으로 시작
+- [ ] VPS 세팅은 이 세션에서 진행 (Phase 1-4)
 - [ ] 작업 완료 후 `/compound`
 - [ ] 세션 종료 직전 이 NEXT.md 교체
 
 ---
 
-## 📝 부록: 자주 쓰는 명령
+## 📝 부록: Hermes VPS 세팅 가이드
 
 ```bash
-# hub-dispatch 이슈 현황 (4 워커)
-for repo in mino-moneyflow mino-tarosaju aidy-architect aidy-server; do
-  echo "=== $repo ==="; gh issue list --repo Mino777/$repo --label hub-dispatch --state open --json number,title --jq '.[] | "#\(.number) \(.title)"' 2>/dev/null
-done
+# 1. Hetzner CX22 VPS 생성 후 SSH 접속
+ssh root@<VPS_IP>
 
-# 그래프 + 승격
-node scripts/graph-query.mjs suggest
-node scripts/scan-promotions.mjs
+# 2. 초기 세팅
+apt update && apt upgrade -y
+curl -fsSL https://deb.nodesource.com/setup_24.x | bash -
+apt install -y nodejs ufw
+ufw allow OpenSSH && ufw enable
 
-# 신규 커맨드 테스트
-/consult <전문가 서술>
-/message send moneyflow "<directive>"
-/message read
+# 3. Hermes 설치 (스크립트 확인 후 실행)
+curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh -o install.sh
+less install.sh  # 내용 확인
+bash install.sh
+
+# 4. 모델 + 도구 설정
+hermes model        # Claude Sonnet 선택
+hermes tools        # 도구 구성
+hermes doctor       # MUST PASS
+
+# 5. Telegram Gateway
+hermes gateway setup  # Telegram 선택 + BotFather 토큰 입력
+
+# 6. 보안
+echo "ANTHROPIC_API_KEY=sk-..." > ~/.env && chmod 600 ~/.env
 ```
 
 ---
@@ -158,9 +171,8 @@ node scripts/scan-promotions.mjs
 
 ## 📜 최근 갱신
 
-### 2026-04-19 (Session 16e compound — perpetual-engine 분석 + 3대 패턴 이식)
-- **완료**: perpetual-engine 소스코드 분석 → 이식 가능 패턴 3개 엔트리
-- **완료**: MetricsEvaluator → /compound Phase 1b 이식
-- **완료**: ConsultantFactory → /consult 슬래시 커맨드 이식
-- **완료**: MessageQueue → /message + messages/ 이식 + /projects-sync 연동
-- **신규**: NEXT.md에 첫 KPI 테이블 정의 (엔트리 수, /consult 사용, /message 사용)
+### 2026-04-19 (Session 16f compound — Hermes-First 스택 인프라 준비)
+- **완료**: CEO Review (SELECTIVE EXPANSION, 7 proposals accepted) + Eng Review (1 issue, 0 gaps)
+- **완료**: schema.ts generated_by + /message poll + SOUL.md + Compiled Truth + generate-lesson.mjs
+- **완료**: CEO Plan → docs/designs/hermes-first-stack.md 승격
+- **다음**: VPS Hermes 설치 (Phase 1-4)

@@ -2,6 +2,32 @@
 
 모든 주목할 만한 변경사항을 이 파일에 기록합니다.
 
+## [2026-04-19] 세션 16f — Hermes-First 스택 CEO/Eng Review + 인프라 준비
+
+> GBrain+OpenClaw+Hermes 3스택 분석 위키 엔트리 기반으로 CEO Review(SELECTIVE EXPANSION) + Eng Review 완료. Hermes-First 접근법으로 ai-study 코드 인프라 선작업.
+
+### Added
+
+- **`generated_by` 출처 추적** (schema.ts) — frontmatter에 optional `generated_by` 필드 추가. Hermes/Gemini 생성 엔트리 출처 구분
+- **`/message poll` 서브커맨드** — task-id로 외부 에이전트 작업 완료 대기. timeout + 상태 반환 (completed/pending/failed/not_found)
+- **`docs/hermes/SOUL.md`** — Hermes 에이전트 신원 문서. 프로젝트 맥락, 제약, 출력 포맷 정의
+- **`docs/designs/hermes-first-stack.md`** — CEO Plan 승격. SELECTIVE EXPANSION 7 proposals accepted, 2 deferred
+- **`docs/solutions/` Compiled Truth 포맷** — 파일 상단=최신 종합 판단, 하단=시간순 증거(append-only). GBrain 패턴 차용
+- **`schema-generated-by.test.mjs`** — generated_by 필드 검증 테스트 4개
+- **TODOS.md** — GBrain(P2) + OpenClaw(P3) 후속 검토 등록
+
+### Changed
+
+- **`generate-lesson.mjs`** — Gemini 파이프라인이 새 엔트리에 `generated_by: "gemini"` 자동 삽입
+- **`.claude/commands/message.md`** — poll 서브커맨드 + 사용 시나리오 문서화
+
+### Metrics
+
+- CEO Review: 11개 섹션, Outside Voice 12 findings, 2 accepted
+- Eng Review: 1 issue (generated_by scope), 0 critical gaps
+- 테스트: 37/37 통과, 빌드 성공
+- 코드 변경: 9 files, +432/-4
+
 ## [2026-04-19] 세션 16e — perpetual-engine 분석 + 3대 패턴 이식
 
 > /ingest로 perpetual-engine 프레임워크 분석 → 이식 가능 패턴 3개 추출 → 슬래시 커맨드 + 인프라로 즉시 이식

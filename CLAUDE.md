@@ -77,7 +77,9 @@ src/lib/           → schema.ts (zod, 10 categories, quizQuestionSchema),
                      content.ts (manifest/entry loaders),
                      quiz-storage.ts (localStorage attempts + SM-2 SRS schedule)
 src/generated/     → content-manifest.json (gitignored, entries + graph + streak)
-messages/          → 허브↔워커 비동기 메시지 큐 (JSON 파일, perpetual-engine MessageQueue 이식)
+messages/          → 허브↔워커 비동기 메시지 큐 (JSON 파일, perpetual-engine MessageQueue 이식, poll 지원)
+docs/hermes/       → Hermes 에이전트 SOUL.md (VPS와 동기화, git 추적)
+docs/designs/      → CEO Plan 승격 문서 (hermes-first-stack.md 등)
 public/            → search-index.json (gitignored, SearchDialog lazy fetch용 슬림 인덱스),
                      embeddings.json (gitignored, Layer 3 벡터 인덱스 ~12MB)
 .github/workflows/ → daily-lesson, generate-on-pick, vercel-retry
@@ -109,6 +111,7 @@ public/            → search-index.json (gitignored, SearchDialog lazy fetch용
 - Streak: prebuild에서 frontmatter date 기반 연속 학습일 자동 계산
 - dailyEntries: prebuild에서 날짜별 엔트리 수 맵 생성 (히트맵용)
 - Optional `quiz` 필드: 객관식 자가 점검 문항 배열 (`question` / `choices` / `answer` / `explanation`). 위키 엔트리 본문 하단에 Quiz 컴포넌트로 자동 렌더. Gemini 파이프라인이 새 엔트리 생성 시 3문항 자동 작성.
+- Optional `generated_by` 필드: 엔트리 생성 출처 추적 ("gemini" | "hermes"). 없으면 사람 작성 또는 기존 파이프라인.
 
 ## AI 과외 선생님 Pipeline
 - 매일 09:00 KST: GitHub Actions → 3개 주제 추천 Issue 생성
