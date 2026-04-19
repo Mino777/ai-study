@@ -60,9 +60,36 @@ export function fixAndValidateMermaid(code, filename) {
   // 솔루션 문서: docs/solutions/mdx/2026-04-16-mermaid-br-in-unquoted-node-labels.md
   const warnings = detectUnquotedSpecialCharLabels(fixedContent);
 
-  // 수정된 내용이 원본과 다르면 기록 (warnings 도 함께 반환)
+  // ERROR 검사: subgraph ID와 노드 ID 충돌 감지 (7번째 재발 패턴)
+  // Mermaid 파서가 subgraph과 동일 ID의 노드를 만나면 런타임 에러.
+  // 빌드 통과하지만 브라우저에서 "Mermaid 에러" — <br/> 패턴과 동일한 함정.
+  const subgraphIds = new Set();
+  const nodeIds = new Map(); // id -> line number
+  fixedLines.forEach((line, i) => {
+    const trimmed = line.trim();
+    const sgMatch = trimmed.match(/^subgraph\s+(\w+)/);
+    if (sgMatch) {
+      subgraphIds.add(sgMatch[1]);
+      return; // subgraph 라인은 노드 ID 스캔에서 제외
+    }
+    if (/^end\s*$/.test(trimmed)) return;
+    const nodeMatches = trimmed.matchAll(/(?:^|\s|-->|---)([A-Za-z_]\w*)\s*[\[\({]/g);
+    for (const m of nodeMatches) {
+      if (!nodeIds.has(m[1])) nodeIds.set(m[1], i + 1);
+    }
+  });
+  for (const sgId of subgraphIds) {
+    if (nodeIds.has(sgId)) {
+      errors.push({
+        line: nodeIds.get(sgId),
+        message: `subgraph ID "${sgId}"와 노드 ID가 충돌. 노드 ID를 변경하세요 (예: ${sgId}Node, ${sgId}_item)`,
+      });
+    }
+  }
+
+  // 수정된 내용이 원본과 다르면 기록 (warnings + errors 함께 반환)
   if (fixedContent !== code) {
-    return { fixed: fixedContent, autoFixed: true, errors: [], warnings };
+    return { fixed: fixedContent, autoFixed: true, errors, warnings };
   }
 
   // 수정 후 유효성 검증 (남은 에러만)

@@ -125,42 +125,42 @@ iOS 개발자가 TCA 코드를 처음 열었을 때 흔한 당혹감:
 flowchart TD
     User["사용자: TextField 입력 + 전송 버튼 탭"]
 
-    subgraph View ["View Layer - SwiftUI"]
+    subgraph ViewLayer ["View Layer - SwiftUI"]
       CV["ChatView · @Bindable store"]
-      CV -->|Button action| Dispatch["store.send(.sendTapped)"]
+      CV -->|Button action| DispatchAction["store.send(.sendTapped)"]
     end
 
     User --> CV
 
-    subgraph Reducer ["Reducer Layer - TCA"]
-      Dispatch --> R[ChatFeature.body]
+    subgraph ReducerLayer ["Reducer Layer - TCA"]
+      DispatchAction --> R[ChatFeature.body]
       R --> Pure["순수 상태 변경 · messages.append / inputText = empty / isLoading = true"]
-      Pure --> Effect[".run 반환 · 비동기 Effect 실행"]
+      Pure --> EffectNode[".run 반환 · 비동기 Effect 실행"]
     end
 
-    subgraph DI ["Dependency Injection"]
-      Effect --> DepRes["@Dependency(apiClient)"]
+    subgraph DILayer ["Dependency Injection"]
+      EffectNode --> DepRes["@Dependency(apiClient)"]
       DepRes -->|live or test| Live[APIClient.liveValue]
     end
 
-    subgraph Network ["Network Layer"]
+    subgraph NetworkLayer ["Network Layer"]
       Live --> Req["authorizedRequest · Keychain에서 JWT 로드"]
-      Req --> Header["Authorization: Bearer token"]
-      Header --> URLS[URLSession.data]
+      Req --> HeaderNode["Authorization Bearer token"]
+      HeaderNode --> URLS[URLSession.data]
     end
 
     URLS --> Server["aidy-server · POST /api/chat"]
     Server -->|응답| URLS2[URLSession 응답]
-    URLS2 --> Check{"checkResponse · status code"}
-    Check -->|401| Notif["NotificationCenter · unauthorizedDetected post"]
-    Check -->|4xx/5xx| APIErr["APIError.server · (message, code)"]
-    Check -->|200-299| Decode["JSONDecoder · ChatResponse"]
+    URLS2 --> CheckResp{"checkResponse · status code"}
+    CheckResp -->|401| Notif["NotificationCenter · unauthorizedDetected post"]
+    CheckResp -->|4xx/5xx| APIErr["APIError.server · message, code"]
+    CheckResp -->|200-299| DecodeNode["JSONDecoder · ChatResponse"]
 
-    Decode --> Result[Effect 완료]
-    APIErr --> Result
-    Notif --> Result
+    DecodeNode --> ResultNode[Effect 완료]
+    APIErr --> ResultNode
+    Notif --> ResultNode
 
-    Result --> Back["send(.chatResponse(Result))"]
+    ResultNode --> Back["send(.chatResponse(Result))"]
     Back --> R2[Reducer 재실행]
     R2 --> StateUpdate["State 업데이트 · isLoading = false / messages 추가"]
     StateUpdate --> Obs["@ObservableState · 변경 감지"]

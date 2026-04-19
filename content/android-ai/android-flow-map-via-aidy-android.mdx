@@ -124,28 +124,28 @@ iOS로 비유하면 "SwiftUI + @StateObject + URLSession + Keychain + Alamofire 
 flowchart TD
     User["사용자: TextField에 입력 + 전송 버튼 탭"]
 
-    subgraph UI ["UI Layer - Jetpack Compose"]
+    subgraph UILayer ["UI Layer - Jetpack Compose"]
       Screen["ChatScreen · Composable 함수"]
       Screen -->|onClick| VM_call["viewModel.send()"]
     end
 
     User --> Screen
 
-    subgraph VM ["ViewModel Layer"]
-      VM_call --> VM[ChatViewModel]
-      VM -->|1 State 즉시 업데이트| S1[messages.add 유저 메시지]
-      VM -->|2 isLoading = true| S2[로딩 UI 표시]
-      VM -->|3 coroutine 시작| Scope[viewModelScope.launch]
+    subgraph VMLayer ["ViewModel Layer"]
+      VM_call --> ChatVM[ChatViewModel]
+      ChatVM -->|1 State 즉시 업데이트| S1[messages.add 유저 메시지]
+      ChatVM -->|2 isLoading = true| S2[로딩 UI 표시]
+      ChatVM -->|3 coroutine 시작| Scope[viewModelScope.launch]
     end
 
     Scope --> Repo[ChatRepository]
 
-    subgraph Data ["Data Layer"]
+    subgraph DataLayer ["Data Layer"]
       Repo -->|sendMessage| Api["AidyApiService · Retrofit 인터페이스"]
       Api --> OK[OkHttp Client]
     end
 
-    subgraph Interceptors ["OkHttp Interceptor 체인"]
+    subgraph InterceptorLayer ["OkHttp Interceptor 체인"]
       OK --> I1["Auth Interceptor · Bearer 토큰 자동 첨부"]
       I1 --> I2["401 Interceptor · 인증 만료 시 로그아웃 트리거"]
     end
@@ -154,8 +154,8 @@ flowchart TD
     Net --> Server["aidy-server · POST /api/chat"]
 
     Server -->|응답| Net2[네트워크]
-    Net2 --> GSON["Gson Converter · JSON → ChatResponse data class"]
-    GSON --> Repo2{에러?}
+    Net2 --> GsonConv["Gson Converter · JSON to ChatResponse data class"]
+    GsonConv --> Repo2{에러}
     Repo2 -->|HttpException| E1["toApiException · ApiException 변환"]
     Repo2 -->|정상| Resp[ChatResponse 반환]
 
@@ -165,10 +165,10 @@ flowchart TD
     VM_err --> State_err["errorState 업데이트 · retryable 여부 포함"]
     VM_ok --> State_ok[messages.add 어시스턴트 메시지]
 
-    State_err --> Recompose
-    State_ok --> Recompose
-    Recompose["Compose Recomposition · state 변화 감지 → UI 재렌더"]
-    Recompose --> UI_final[ChatScreen 화면 업데이트]
+    State_err --> RecomposeNode
+    State_ok --> RecomposeNode
+    RecomposeNode["Compose Recomposition · state 변화 감지하여 UI 재렌더"]
+    RecomposeNode --> UI_final[ChatScreen 화면 업데이트]
 ```
 
 ### 각 단계가 하는 일 (한 줄씩)

@@ -243,6 +243,21 @@ describe("auto-fix 3: 콜론 포함 라벨에 따옴표 강제", () => {
   });
 });
 
+describe("error: subgraph/node ID 충돌 감지", () => {
+  it("subgraph ID와 노드 ID가 같으면 error", () => {
+    const code = `flowchart TD\n  subgraph VM ["ViewModel"]\n    VM_call --> VM[ChatViewModel]\n  end\n`;
+    const { errors } = fixAndValidateMermaid(code, "x");
+    expect(errors.length).toBeGreaterThanOrEqual(1);
+    expect(errors.some(e => e.message.includes('VM'))).toBe(true);
+  });
+
+  it("subgraph ID와 노드 ID가 다르면 error 없음", () => {
+    const code = `flowchart TD\n  subgraph VMLayer ["ViewModel"]\n    VM_call --> ChatVM[ChatViewModel]\n  end\n`;
+    const { errors } = fixAndValidateMermaid(code, "x");
+    expect(errors.length).toBe(0);
+  });
+});
+
 describe("warnings — → 따옴표 누락 탐지", () => {
   it("일반 노드 [label] 안에 → 가 있고 따옴표 없으면 warning", () => {
     const code = `flowchart TD\n  GSON[Gson Converter → ChatResponse]\n`;
