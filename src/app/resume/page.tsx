@@ -288,7 +288,7 @@ export default function ResumePage() {
 
         {/* ═══════════ EXPERIENCE ═══════════ */}
         <section className="mb-16">
-          <SectionHead>Experience</SectionHead>
+          <SectionHead>Experience <span className="text-text/30 font-normal normal-case tracking-normal">— 총 경력 4년 4개월</span></SectionHead>
           <div className="space-y-4">
             {WORK.map((w) => (
               <div
