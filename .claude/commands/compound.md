@@ -17,6 +17,63 @@
 git log + git diff로 최근 변경사항 파악.
 대화 히스토리에서 디버깅/문제해결 과정 추출.
 
+## Phase 1b: MetricsEvaluator — KPI 자동 판정
+
+NEXT.md의 "이번 스프린트 KPI" 섹션이 있으면 자동 판정을 실행한다. 없으면 스킵.
+
+### KPI 정의 포맷 (NEXT.md에 기록)
+
+```markdown
+## 이번 스프린트 KPI
+| 지표 | baseline | target | direction | actual |
+|------|----------|--------|-----------|--------|
+| 엔트리 수 | 140 | 145 | higher | ? |
+| 빌드 시간(초) | 45 | 35 | lower | ? |
+```
+
+### 판정 프로세스
+
+1. NEXT.md에서 KPI 테이블을 파싱한다
+2. `actual` 값이 `?`이면 현재 상태를 측정해서 채운다
+   - 엔트리 수: `content-manifest.json`의 entries 개수
+   - 빌드 시간: 직전 빌드 로그
+   - 토큰 비용: `ccusage` 결과 (가능한 경우)
+   - 커스텀 지표: git diff --stat 등으로 추정
+3. 달성률을 계산한다:
+   - direction=higher: `(actual - baseline) / (target - baseline) * 100`
+   - direction=lower: `(baseline - actual) / (baseline - target) * 100`
+4. 5단계 verdict를 결정한다:
+
+| 달성률 | verdict | action | 의미 |
+|--------|---------|--------|------|
+| 120%+ | exceeded | scale_up | 이 방향에 더 투자 |
+| 100%+ | achieved | maintain | 현재 전략 유지 |
+| 60%+ | improving | iterate | 실행 개선, 방향은 맞음 |
+| 30%+ | stagnant | pivot | 근본적 접근 변경 필요 |
+| 30% 미만 | failed | kill | 이 이니셔티브 중단, 자원 재배치 |
+
+5. 결과를 retro 문서의 "## KPI 판정" 섹션에 포함한다:
+
+```markdown
+## KPI 판정
+| 지표 | baseline | target | actual | 달성률 | verdict |
+|------|----------|--------|--------|--------|---------|
+| 엔트리 수 | 140 | 145 | 143 | 60% | improving |
+| 빌드 시간 | 45s | 35s | 38s | 70% | improving |
+
+**종합 verdict**: improving → **action: iterate**
+다음 스프린트: 실행 개선에 집중. 방향 전환 불필요.
+```
+
+6. NEXT.md 교체(Phase 6)에서 다음 스프린트 KPI를 새로 정의한다
+   - 이번 actual이 다음 baseline이 된다 (복리 효과)
+
+### KPI가 없는 경우
+
+NEXT.md에 KPI 섹션이 없으면:
+- "KPI 미정의 — 다음 NEXT.md에 KPI 2~3개 정의 권장" 메시지를 retro에 남긴다
+- Phase 2로 진행 (블로킹하지 않음)
+
 ## Phase 2: 3가지 문서 생성 (병렬)
 
 ### CHANGELOG.md

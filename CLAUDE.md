@@ -77,6 +77,7 @@ src/lib/           → schema.ts (zod, 10 categories, quizQuestionSchema),
                      content.ts (manifest/entry loaders),
                      quiz-storage.ts (localStorage attempts + SM-2 SRS schedule)
 src/generated/     → content-manifest.json (gitignored, entries + graph + streak)
+messages/          → 허브↔워커 비동기 메시지 큐 (JSON 파일, perpetual-engine MessageQueue 이식)
 public/            → search-index.json (gitignored, SearchDialog lazy fetch용 슬림 인덱스),
                      embeddings.json (gitignored, Layer 3 벡터 인덱스 ~12MB)
 .github/workflows/ → daily-lesson, generate-on-pick, vercel-retry
@@ -201,6 +202,8 @@ Key routing rules:
 - MDX/Mermaid 콘텐츠 작성 후 커밋 전 문법 검증 → invoke validate-mdx
 - AI 생성 콘텐츠(Gemini/Claude) 검증, 가짜 인용/YAML/slug → invoke validate-ai-output
 - solutions N=3+ 누적, 코드 게이트 승격 판단 → invoke promote-solution
+- 특정 도메인 전문가 자문, 법률/보안/마케팅/기술 전문 조언 → invoke consult
+- 워커 프로젝트에 메시지 전송, 허브↔워커 비동기 통신 → invoke message
 
 ## .claude/ 인프라
 
@@ -209,6 +212,8 @@ Key routing rules:
 - `.claude/commands/validate-mdx.md` — MDX/Mermaid 5대 함정 사전 grep (mdx solutions 5건 추출)
 - `.claude/commands/validate-ai-output.md` — AI 생성물 4대 함정 검증 (ai-pipeline solutions 4건 추출)
 - `.claude/commands/promote-solution.md` — N=3+ 솔루션 코드 게이트 승격 프로세스 (workflow solutions 7건 추출)
+- `.claude/commands/consult.md` — perpetual-engine ConsultantFactory 이식. 온디맨드 에페메럴 전문가 소환 + 진실성 가드
+- `.claude/commands/message.md` — perpetual-engine MessageQueue 이식. 허브↔워커 파일 기반 비동기 메시지 (messages/ JSON)
 - `scripts/lib/mermaid-fix.mjs` — `validate-content.mjs`에서 추출한 자동 수정 + warning-only 검출. 두 과거 버그(slicing offset / regex 누적) docstring 박제 + `detectUnquotedSpecialCharLabels()` warning (`<br/>` `→`)
 - `scripts/__tests__/validate-content.test.mjs` — mermaid-fix 16 회귀 테스트 (idempotency 케이스 별도 박제, `npm test`로 vitest 실행)
 

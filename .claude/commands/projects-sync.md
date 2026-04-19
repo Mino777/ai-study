@@ -80,7 +80,29 @@ rtk gh pr list -R Mino777/mino-tarosaju --state all --limit 5
 * `worktree list`에 `/tmp/<project>-*` 경로가 2개 이상
 * status에 modified 파일 또는 untracked 파일이 있음 (*단, .claude/worktrees/ .claude/projects/ 같은 AI session artifact는 경고 대상에서 제외*)
 
-### 6. 구조화된 리포트
+### 6. 메시지 큐 확인
+
+양쪽 프로젝트의 `messages/` 디렉토리에서 미읽은 메시지를 확인한다.
+
+```bash
+# 허브 messages/ 에서 워커→허브 미읽은 메시지
+for f in messages/*-to-hub-*.json; do
+  # read: false 인 것만 필터
+done
+
+# 워커 messages/ 에서 허브→워커 미읽은 메시지
+for project in mino-moneyflow mino-tarosaju; do
+  for f in /Users/jominho/Develop/$project/messages/hub-to-*.json; do
+    # read: false 인 것만 필터
+  done
+done
+```
+
+* 미읽은 메시지가 있으면 리포트에 `📨 메시지 큐` 섹션으로 표시
+* 메시지 내용은 요약만 보여주고, 전체 내용은 `/message read`로 확인
+* messages/ 디렉토리가 없으면 "메시지 큐 미설정" 표시 (에러 아님)
+
+### 7. 구조화된 리포트
 
 최종 출력은 다음 형식:
 
