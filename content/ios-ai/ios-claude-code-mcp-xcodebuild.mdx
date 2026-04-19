@@ -34,6 +34,7 @@ quiz:
     answer: 1
     explanation: 본문의 `XcodeBuildRunner.swift` 코드에서 `Process`는 `/usr/bin/xcodebuild`를 실행 URL로 설정하고, LLM이 생성한 파라미터(`arguments`)를 받아 외부 프로세스로 실행하는 데 사용됩니다. 또한 실행 후 표준 출력(stdout), 표준 에러(stderr), 종료 코드(terminationStatus)를 수집하여 반환하는 역할을 합니다. 1번은 `JSONDecoder`의 역할이고, 3번은 `URLSession`과 같은 네트워킹 라이브러리의 역할입니다. 4번도 `Process`를 통해 `xcodebuild -list`를 실행하여 구현할 수 있지만, MCP의 메인 워크플로우에서 `Process`의 핵심 역할은 LLM이 계획한 명령을 '실행'하는 것입니다.
 
+generated_by: gemini
 ---
 
 iOS 개발 워크플로우에는 반복적인 커맨드라인 작업이 많습니다. 특정 타겟의 유닛 테스트 실행, 새 브랜치의 빌드 가능성 확인, Ad Hoc 배포를 위한 아카이브 생성 등은 모두 `xcodebuild`를 통해 이루어지지만, 매번 정확한 파라미터(scheme, destination, configuration 등)를 기억하고 입력하는 것은 번거로운 일입니다.
