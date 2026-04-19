@@ -17,7 +17,7 @@ connections:
   - harness-engineering/aidy-journal-000-architect-worker-baseline
   - harness-engineering/spec-driven-development-for-ai-agents
   - tokenomics/project-level-cost-analysis-pattern
-status: complete
+status: published
 description: "Architect+3Worker 멀티에이전트를 11세션(62 WO) 운영한 실측 데이터로 3대 병목(idle 55%, Gate 토큰 과다, 빌드 미검증)을 발견하고, 파이프라이닝/축약 Gate/verify 자동화로 해결한 패턴."
 type: entry
 quiz:
@@ -286,28 +286,7 @@ R8: Compound
 
 ## 자기 점검
 
-<Quiz
-  questions={[
-    {
-      question: "멀티에이전트 스프린트에서 Architect의 시간 55%가 소비되는 곳은?",
-      choices: ["스펙 작성", "워커 대기(idle)", "Gate 검증", "디스패치"],
-      answer: 1,
-      explanation: "11세션 측정 결과, 워커 완료를 기다리는 idle 시간이 55%로 가장 큰 병목."
-    },
-    {
-      question: "4세션 연속 '습관화하겠다'로 미이행된 항목을 해결한 방법은?",
-      choices: ["더 강하게 다짐", "retro에 굵게 표시", "CLI 명령 자동화", "다른 사람에게 위임"],
-      answer: 2,
-      explanation: "습관에 의존하면 영원히 안 된다. architect-cli.sh verify 명령으로 프로세스에 강제."
-    },
-    {
-      question: "축약 Gate-1의 적용 조건과 절감 효과는?",
-      choices: ["항상 적용, 50% 절감", "EP ≤ 3개, 67% 토큰 절감", "서버만 적용, 30% 절감", "테스트 100+ 시, 80% 절감"],
-      answer: 1,
-      explanation: "신규 엔드포인트 3개 이하면 Architect가 직접 git diff → 스펙 대조. 서브에이전트 불필요, 67% 절감."
-    }
-  ]}
-/>
+퀴즈는 페이지 하단에 자동 렌더됩니다.
 
 ---
 
