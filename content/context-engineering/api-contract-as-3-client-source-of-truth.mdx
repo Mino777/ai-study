@@ -128,25 +128,25 @@ Flow Map 시리즈 **6편**. iOS 개발자가 회사에서 몸에 익은 "코드
 
 ```mermaid
 flowchart TD
-    Trigger["iOS 워커가 구현 중 발견:<br/>'Memory 목록 Response에 totalCount 있으면<br/>페이지네이션 UI 구현이 쉬움'"]
+    Trigger["iOS 워커가 구현 중 발견: · 'Memory 목록 Response에 totalCount 있으면 · 페이지네이션 UI 구현이 쉬움'"]
 
     subgraph WorkerSide ["워커 세션 (pane 2/3)"]
       W_stop["작업 일시 중단"]
-      W_req["inbox/ios-request.md 작성<br/>- 배경 / 요청 / 대안 / 블로킹 여부"]
+      W_req["inbox/ios-request.md 작성 · - 배경 / 요청 / 대안 / 블로킹 여부"]
     end
 
     Trigger --> W_stop
     W_stop --> W_req
 
     subgraph Watcher ["Architect 알림"]
-      Watch["inbox-watcher.sh 또는 /monitor<br/>→ macOS notification"]
+      Watch["inbox-watcher.sh 또는 /monitor · → macOS notification"]
     end
 
     W_req --> Watch
 
     subgraph ArchitectDecide ["Architect 평가"]
       Read["요청 읽기 + 타당성 검토"]
-      Check{"계약 변경이<br/>정당화되는가?"}
+      Check{"계약 변경이 · 정당화되는가?"}
       Decide1["거절: 대안 제시 응답"]
       Decide2["승인: contract 변경 시작"]
     end
@@ -156,12 +156,12 @@ flowchart TD
     Check -->|NO| Decide1
     Check -->|YES| Decide2
 
-    Decide1 -->|inbox/ios-response.md| W_resume1["워커 재개<br/>(기존 계약 기준 우회 구현)"]
+    Decide1 -->|inbox/ios-response.md| W_resume1["워커 재개 · (기존 계약 기준 우회 구현)"]
 
     subgraph ContractUpdate ["계약 업데이트"]
-      EditSpec["api-contract.md 수정<br/>§ 3. Memory 스키마에 totalCount 추가"]
-      VersionBump["버전 히스토리 append<br/>v0.2.1 → v0.2.2 '+totalCount'"]
-      ADR["필요 시 specs/decisions/<br/>ADR-XXX 작성"]
+      EditSpec["api-contract.md 수정 · § 3. Memory 스키마에 totalCount 추가"]
+      VersionBump["버전 히스토리 append · v0.2.1 → v0.2.2 '+totalCount'"]
+      ADR["필요 시 specs/decisions/ · ADR-XXX 작성"]
     end
 
     Decide2 --> EditSpec
@@ -179,9 +179,9 @@ flowchart TD
     ADR --> WO_android
 
     subgraph GateLoop ["Gate 1 대조 루프"]
-      G1_server["/gate-1 server<br/>→ totalCount 필드 존재 확인"]
-      G1_ios["/gate-1 ios<br/>→ 디코더에 totalCount 있는지"]
-      G1_android["/gate-1 android<br/>→ data class에 totalCount 있는지"]
+      G1_server["/gate-1 server · → totalCount 필드 존재 확인"]
+      G1_ios["/gate-1 ios · → 디코더에 totalCount 있는지"]
+      G1_android["/gate-1 android · → data class에 totalCount 있는지"]
     end
 
     WO_server -->|구현| G1_server
@@ -192,7 +192,7 @@ flowchart TD
     G1_ios -->|PASS| Merge
     G1_android -->|PASS| Merge
 
-    Merge --> Compound["/compound<br/>→ ADR 공개 (결정 근거 박제)"]
+    Merge --> Compound["/compound · → ADR 공개 (결정 근거 박제)"]
 ```
 
 ### 각 단계가 하는 일 (한 줄씩)

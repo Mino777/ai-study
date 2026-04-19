@@ -231,18 +231,18 @@ Compound가 성립하려면 2가지가 필요:
 
 ```mermaid
 flowchart LR
-  P["Plan<br/>큐 / 베이스라인"]
-  W["Work<br/>실제 코드"]
-  R["Review<br/>QA / PR"]
-  C["Compound<br/>박제 / 메모리"]
+  P["Plan · 큐 / 베이스라인"]
+  W["Work · 실제 코드"]
+  R["Review · QA / PR"]
+  C["Compound · 박제 / 메모리"]
 
   P --> W --> R --> C --> P
 
-  ingest["/ingest<br/>외부 입력 가공"] -. "주입" .-> P
-  wt["/wt-branch<br/>안전한 시작점"] -. "감싸기" .-> W
-  test["pre-commit hook<br/>test-gate"] -. "강제" .-> R
-  compound["/compound<br/>박제 자동화"] -. "박제" .-> C
-  autoceo["/autoceo<br/>N 라운드 자동"] -. "전체" .-> P
+  ingest["/ingest · 외부 입력 가공"] -. "주입" .-> P
+  wt["/wt-branch · 안전한 시작점"] -. "감싸기" .-> W
+  test["pre-commit hook · test-gate"] -. "강제" .-> R
+  compound["/compound · 박제 자동화"] -. "박제" .-> C
+  autoceo["/autoceo · N 라운드 자동"] -. "전체" .-> P
 ```
 
 **핵심**: C → P 화살표가 *정확한 입력*이 되어야 복리가 돈다. 박제가 *일반적인 문서*면 그 화살표는 *비어 있다*.

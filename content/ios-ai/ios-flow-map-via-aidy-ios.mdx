@@ -126,7 +126,7 @@ flowchart TD
     User[사용자: TextField 입력 + 전송 버튼 탭]
 
     subgraph View ["View Layer - SwiftUI"]
-      CV["ChatView<br/>@Bindable store"]
+      CV["ChatView · @Bindable store"]
       CV -->|Button action| Dispatch["store.send(.sendTapped)"]
     end
 
@@ -134,8 +134,8 @@ flowchart TD
 
     subgraph Reducer ["Reducer Layer - TCA"]
       Dispatch --> R[ChatFeature.body]
-      R --> Pure["순수 상태 변경<br/>messages.append / inputText = empty / isLoading = true"]
-      Pure --> Effect[".run 반환<br/>비동기 Effect 실행"]
+      R --> Pure["순수 상태 변경 · messages.append / inputText = empty / isLoading = true"]
+      Pure --> Effect[".run 반환 · 비동기 Effect 실행"]
     end
 
     subgraph DI ["Dependency Injection"]
@@ -144,17 +144,17 @@ flowchart TD
     end
 
     subgraph Network ["Network Layer"]
-      Live --> Req["authorizedRequest<br/>Keychain에서 JWT 로드"]
+      Live --> Req["authorizedRequest · Keychain에서 JWT 로드"]
       Req --> Header["Authorization: Bearer token"]
       Header --> URLS[URLSession.data]
     end
 
-    URLS --> Server["aidy-server<br/>POST /api/chat"]
+    URLS --> Server["aidy-server · POST /api/chat"]
     Server -->|응답| URLS2[URLSession 응답]
-    URLS2 --> Check{"checkResponse<br/>status code"}
-    Check -->|401| Notif["NotificationCenter<br/>unauthorizedDetected post"]
-    Check -->|4xx/5xx| APIErr["APIError.server<br/>(message, code)"]
-    Check -->|200-299| Decode["JSONDecoder<br/>ChatResponse"]
+    URLS2 --> Check{"checkResponse · status code"}
+    Check -->|401| Notif["NotificationCenter · unauthorizedDetected post"]
+    Check -->|4xx/5xx| APIErr["APIError.server · (message, code)"]
+    Check -->|200-299| Decode["JSONDecoder · ChatResponse"]
 
     Decode --> Result[Effect 완료]
     APIErr --> Result
@@ -162,9 +162,9 @@ flowchart TD
 
     Result --> Back["send(.chatResponse(Result))"]
     Back --> R2[Reducer 재실행]
-    R2 --> StateUpdate["State 업데이트<br/>isLoading = false / messages 추가"]
-    StateUpdate --> Obs["@ObservableState<br/>변경 감지"]
-    Obs --> SwiftUI["SwiftUI 재렌더<br/>diff-based update"]
+    R2 --> StateUpdate["State 업데이트 · isLoading = false / messages 추가"]
+    StateUpdate --> Obs["@ObservableState · 변경 감지"]
+    Obs --> SwiftUI["SwiftUI 재렌더 · diff-based update"]
     SwiftUI --> UIFinal[ChatView 화면 갱신]
 ```
 

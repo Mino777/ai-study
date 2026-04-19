@@ -117,15 +117,15 @@ flowchart TB
     User["사용자"] --> Hermes
 
     subgraph ORCH ["Hermes - 오케스트레이터"]
-        Hermes["Hermes Agent<br/>전략 + 기억 + 학습"]
-        DT["delegate_task<br/>서브에이전트 스폰"]
+        Hermes["Hermes Agent · 전략 + 기억 + 학습"]
+        DT["delegate_task · 서브에이전트 스폰"]
         Hermes --> DT
     end
 
     subgraph BRAIN ["GBrain - 기억 시스템"]
-        MD["마크다운 파일<br/>진실의 원천"]
-        PG["Postgres + pgvector<br/>하이브리드 검색"]
-        KG["지식 그래프<br/>자동 링크 추출"]
+        MD["마크다운 파일 · 진실의 원천"]
+        PG["Postgres + pgvector · 하이브리드 검색"]
+        KG["지식 그래프 · 자동 링크 추출"]
         MD --> PG --> KG
     end
 

@@ -125,7 +125,7 @@ flowchart TD
     User[사용자: TextField에 입력 + 전송 버튼 탭]
 
     subgraph UI ["UI Layer - Jetpack Compose"]
-      Screen["ChatScreen<br/>Composable 함수"]
+      Screen["ChatScreen · Composable 함수"]
       Screen -->|onClick| VM_call["viewModel.send()"]
     end
 
@@ -141,33 +141,33 @@ flowchart TD
     Scope --> Repo[ChatRepository]
 
     subgraph Data ["Data Layer"]
-      Repo -->|sendMessage| Api["AidyApiService<br/>Retrofit 인터페이스"]
+      Repo -->|sendMessage| Api["AidyApiService · Retrofit 인터페이스"]
       Api --> OK[OkHttp Client]
     end
 
     subgraph Interceptors ["OkHttp Interceptor 체인"]
-      OK --> I1["Auth Interceptor<br/>Bearer 토큰 자동 첨부"]
-      I1 --> I2["401 Interceptor<br/>인증 만료 시 로그아웃 트리거"]
+      OK --> I1["Auth Interceptor · Bearer 토큰 자동 첨부"]
+      I1 --> I2["401 Interceptor · 인증 만료 시 로그아웃 트리거"]
     end
 
     I2 --> Net[네트워크]
-    Net --> Server["aidy-server<br/>POST /api/chat"]
+    Net --> Server["aidy-server · POST /api/chat"]
 
     Server -->|응답| Net2[네트워크]
-    Net2 --> GSON["Gson Converter<br/>JSON → ChatResponse data class"]
+    Net2 --> GSON["Gson Converter · JSON → ChatResponse data class"]
     GSON --> Repo2{에러?}
-    Repo2 -->|HttpException| E1["toApiException<br/>ApiException 변환"]
+    Repo2 -->|HttpException| E1["toApiException · ApiException 변환"]
     Repo2 -->|정상| Resp[ChatResponse 반환]
 
     E1 --> VM_err[ViewModel catch]
     Resp --> VM_ok[ViewModel try]
 
-    VM_err --> State_err["errorState 업데이트<br/>retryable 여부 포함"]
+    VM_err --> State_err["errorState 업데이트 · retryable 여부 포함"]
     VM_ok --> State_ok[messages.add 어시스턴트 메시지]
 
     State_err --> Recompose
     State_ok --> Recompose
-    Recompose["Compose Recomposition<br/>state 변화 감지 → UI 재렌더"]
+    Recompose["Compose Recomposition · state 변화 감지 → UI 재렌더"]
     Recompose --> UI_final[ChatScreen 화면 업데이트]
 ```
 

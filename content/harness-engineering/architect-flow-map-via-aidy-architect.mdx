@@ -120,46 +120,46 @@ flowchart TD
     Human["사람: 'chat 응답에 createdAt 필드 넣자'"]
 
     subgraph Architect ["Architect 세션 (pane 0)"]
-      Spec["specs/api-contract.md 수정<br/>§ 2. Chat Response 스키마"]
-      ADR["specs/decisions/ADR-XXX.md<br/>결정 근거 박제"]
-      WO_new["work-orders/backlog/WO-NNN.md<br/>3개 발행 (server/ios/android)"]
+      Spec["specs/api-contract.md 수정 · § 2. Chat Response 스키마"]
+      ADR["specs/decisions/ADR-XXX.md · 결정 근거 박제"]
+      WO_new["work-orders/backlog/WO-NNN.md · 3개 발행 (server/ios/android)"]
     end
 
     Human --> Spec
     Spec --> ADR
     ADR --> WO_new
 
-    WO_new --> Dispatch["/dispatch WO-NNN<br/>architect-cli.sh wo NNN"]
-    Dispatch --> Move["backlog/ → in-progress/<br/>tmux send-keys로 워커에 프롬프트"]
+    WO_new --> Dispatch["/dispatch WO-NNN · architect-cli.sh wo NNN"]
+    Dispatch --> Move["backlog/ → in-progress/ · tmux send-keys로 워커에 프롬프트"]
 
     subgraph Workers ["워커 세션 (pane 1/2/3, 병렬)"]
-      W_read["CLAUDE.md + api-contract.md<br/>+ conventions + WO 읽기"]
-      W_impl["구현 + 자가 검증 grep<br/>(커밋 전 스펙 대조 필수)"]
-      W_commit["git commit + push<br/>(hooks: 컴파일/테스트 리마인더)"]
+      W_read["CLAUDE.md + api-contract.md · + conventions + WO 읽기"]
+      W_impl["구현 + 자가 검증 grep · (커밋 전 스펙 대조 필수)"]
+      W_commit["git commit + push · (hooks: 컴파일/테스트 리마인더)"]
     end
 
     Move --> W_read
     W_read --> W_impl
     W_impl --> W_commit
 
-    W_commit --> G1["/gate-1 WO-NNN<br/>Architect가 code line-by-line<br/>api-contract 대조"]
+    W_commit --> G1["/gate-1 WO-NNN · Architect가 code line-by-line · api-contract 대조"]
 
-    G1 -->|FAIL| Feedback["피드백 tmux 전송<br/>→ 워커 수정 루프"]
+    G1 -->|FAIL| Feedback["피드백 tmux 전송 · → 워커 수정 루프"]
     Feedback --> W_impl
 
-    G1 -->|PASS| G2["/gate-2 WO-NNN<br/>빌드 + 테스트 + 크로스 호환성"]
+    G1 -->|PASS| G2["/gate-2 WO-NNN · 빌드 + 테스트 + 크로스 호환성"]
 
     G2 -->|FAIL| Feedback
-    G2 -->|PASS| Done["work-orders/done/<br/>머지 승인"]
+    G2 -->|PASS| Done["work-orders/done/ · 머지 승인"]
 
-    Done --> Compound["/compound<br/>retro + solutions + ADR 업데이트"]
+    Done --> Compound["/compound · retro + solutions + ADR 업데이트"]
 
-    Compound --> Knowledge["docs/retros/WO-NNN-retro.md<br/>docs/solutions/<br/>specs/decisions/"]
+    Compound --> Knowledge["docs/retros/WO-NNN-retro.md · docs/solutions/ · specs/decisions/"]
 
     subgraph Async ["비동기 블로커 흐름 (워커가 막힐 때)"]
-      Block["워커: inbox/{worker}-request.md 작성<br/>작업 중단 + 대기"]
-      Watch["inbox-watcher.sh 또는 /monitor<br/>Architect가 발견"]
-      Resp["Architect: inbox/{worker}-response.md<br/>스펙 변경 or 답변"]
+      Block["워커: inbox/{worker}-request.md 작성 · 작업 중단 + 대기"]
+      Watch["inbox-watcher.sh 또는 /monitor · Architect가 발견"]
+      Resp["Architect: inbox/{worker}-response.md · 스펙 변경 or 답변"]
     end
 
     W_impl -.스펙 모호/블로커.-> Block

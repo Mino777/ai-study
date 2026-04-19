@@ -127,10 +127,10 @@ Flow Map 시리즈 **7편**. iOS 개발자가 회사에서 몸에 익은 "`xcode
 
 ```mermaid
 flowchart TD
-    WO["WO-NNN: DELETE /api/memories/id<br/>서버/iOS/Android 3 구현 + 테스트"]
+    WO["WO-NNN: DELETE /api/memories/id · 서버/iOS/Android 3 구현 + 테스트"]
 
     subgraph Preload ["워커 세션 시작 로딩"]
-      PL1["api-contract.md § 3. Memory<br/>+ Error Codes (MEMORY_NOT_FOUND · FORBIDDEN)"]
+      PL1["api-contract.md § 3. Memory · + Error Codes (MEMORY_NOT_FOUND · FORBIDDEN)"]
       PL2["gates/test-policy.md (P1~P6)"]
       PL3["gates/test-policy-스택.md"]
     end
@@ -140,10 +140,10 @@ flowchart TD
     PL2 --> PL3
 
     subgraph Server ["서버 워커 (Kotlin)"]
-      S_Unit["MemoryServiceTest<br/>deleteMemory_rollsBack_whenApiFails"]
-      S_Ctrl["MemoryControllerTest @WebMvcTest<br/>204 · 404 MEMORY_NOT_FOUND · 403 FORBIDDEN · 401"]
-      S_Run["./gradlew test<br/>→ BUILD SUCCESSFUL + NN passed"]
-      S_Evidence["커밋 메시지:<br/>테스트: 42 passed / 0 failed"]
+      S_Unit["MemoryServiceTest · deleteMemory_rollsBack_whenApiFails"]
+      S_Ctrl["MemoryControllerTest @WebMvcTest · 204 · 404 MEMORY_NOT_FOUND · 403 FORBIDDEN · 401"]
+      S_Run["./gradlew test · → BUILD SUCCESSFUL + NN passed"]
+      S_Evidence["커밋 메시지: · 테스트: 42 passed / 0 failed"]
     end
 
     PL3 --> S_Unit
@@ -152,12 +152,12 @@ flowchart TD
     S_Run --> S_Evidence
 
     subgraph iOS ["iOS 워커 (Swift/TCA)"]
-      I_Feat["MemoryFeatureTests<br/>delete_happyPath · delete_notFound · delete_forbidden"]
+      I_Feat["MemoryFeatureTests · delete_happyPath · delete_notFound · delete_forbidden"]
       I_Api["APIClientTest (MockURLProtocol)"]
-      I_Run["xcodebuild test -workspace<br/>→ TEST SUCCEEDED · NN tests executed"]
-      I_Check{"'no tests to run'<br/>또는 'Executed 0 tests'<br/>출력됐는가?"}
-      I_Fail["테스트 실제로 안 돈 버그!<br/>(Session 4 사고 패턴)"]
-      I_Evidence["커밋 메시지:<br/>테스트: 87 passed / 0 failed"]
+      I_Run["xcodebuild test -workspace · → TEST SUCCEEDED · NN tests executed"]
+      I_Check{"'no tests to run' · 또는 'Executed 0 tests' · 출력됐는가?"}
+      I_Fail["테스트 실제로 안 돈 버그! · (Session 4 사고 패턴)"]
+      I_Evidence["커밋 메시지: · 테스트: 87 passed / 0 failed"]
     end
 
     PL3 --> I_Feat
@@ -170,8 +170,8 @@ flowchart TD
     subgraph Android ["Android 워커 (Compose)"]
       A_Vm["MemoryViewModelTest"]
       A_Repo["MemoryRepositoryTest (MockWebServer)"]
-      A_Run["./gradlew testDebugUnitTest<br/>→ NN tests, 0 failures"]
-      A_Evidence["커밋 메시지:<br/>테스트: 56 passed / 0 failed"]
+      A_Run["./gradlew testDebugUnitTest · → NN tests, 0 failures"]
+      A_Evidence["커밋 메시지: · 테스트: 56 passed / 0 failed"]
     end
 
     PL3 --> A_Vm
@@ -208,7 +208,7 @@ flowchart TD
     G2_Coverage --> G2_Cross
 
     G2_Cross -->|PASS| Merge["3 WO 머지"]
-    Merge --> Compound["/compound<br/>retro · solution · ADR 박제"]
+    Merge --> Compound["/compound · retro · solution · ADR 박제"]
 
     I_Fail -.피드백.-> I_Feat
 ```

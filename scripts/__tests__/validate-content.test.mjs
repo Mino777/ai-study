@@ -184,39 +184,43 @@ describe("이미 손상된 파일 (Case 5 — 이전 세션의 자국)", () => {
   });
 });
 
-describe("warnings — <br/> · → 따옴표 누락 탐지 (3·4번째 재발 패턴)", () => {
-  it("일반 노드 [label] 안에 <br/> 가 있고 따옴표 없으면 warning", () => {
+describe("auto-fix 2: <br/> → ' · ' 치환 (5번째 재발로 승격)", () => {
+  it("일반 노드 [label] 안의 <br/> 가 auto-fix됨", () => {
     const code = `flowchart TD\n  Screen[ChatScreen<br/>Composable 함수]\n`;
-    const { warnings } = fixAndValidateMermaid(code, "x");
-    expect(warnings.length).toBe(1);
-    expect(warnings[0].message).toMatch(/<br\/>/);
-    expect(warnings[0].message).toContain("ChatScreen");
+    const { fixed, autoFixed } = fixAndValidateMermaid(code, "x");
+    expect(autoFixed).toBe(true);
+    expect(fixed).toContain("ChatScreen · Composable 함수");
+    expect(fixed).not.toContain("<br/>");
   });
 
+  it("따옴표 안의 <br/> 도 auto-fix됨", () => {
+    const code = `flowchart TD\n  Screen["ChatScreen<br/>Composable 함수"]\n`;
+    const { fixed, autoFixed } = fixAndValidateMermaid(code, "x");
+    expect(autoFixed).toBe(true);
+    expect(fixed).toContain("ChatScreen · Composable 함수");
+  });
+
+  it("rhombus {label} 안의 <br/> 도 auto-fix됨", () => {
+    const code = `flowchart TD\n  Check{checkResponse<br/>status code}\n`;
+    const { fixed, autoFixed } = fixAndValidateMermaid(code, "x");
+    expect(autoFixed).toBe(true);
+    expect(fixed).toContain("checkResponse · status code");
+  });
+
+  it("cylinder [(label)] 안의 <br/> 도 auto-fix됨", () => {
+    const code = `flowchart TD\n  DB[("Database<br/>PostgreSQL")]\n`;
+    const { fixed, autoFixed } = fixAndValidateMermaid(code, "x");
+    expect(autoFixed).toBe(true);
+    expect(fixed).toContain("Database · PostgreSQL");
+  });
+});
+
+describe("warnings — → 따옴표 누락 탐지", () => {
   it("일반 노드 [label] 안에 → 가 있고 따옴표 없으면 warning", () => {
     const code = `flowchart TD\n  GSON[Gson Converter → ChatResponse]\n`;
     const { warnings } = fixAndValidateMermaid(code, "x");
     expect(warnings.length).toBe(1);
     expect(warnings[0].message).toMatch(/→/);
-  });
-
-  it("rhombus {label} 안에 <br/> 가 있고 따옴표 없으면 warning", () => {
-    const code = `flowchart TD\n  Check{checkResponse<br/>status code}\n`;
-    const { warnings } = fixAndValidateMermaid(code, "x");
-    expect(warnings.length).toBe(1);
-    expect(warnings[0].message).toMatch(/rhombus/);
-  });
-
-  it("이미 따옴표 있는 라벨은 warning 없음 (idempotency)", () => {
-    const code = `flowchart TD\n  Screen["ChatScreen<br/>Composable 함수"]\n`;
-    const { warnings } = fixAndValidateMermaid(code, "x");
-    expect(warnings.length).toBe(0);
-  });
-
-  it("이미 따옴표 있는 rhombus 도 warning 없음", () => {
-    const code = `flowchart TD\n  Check{"checkResponse<br/>status code"}\n`;
-    const { warnings } = fixAndValidateMermaid(code, "x");
-    expect(warnings.length).toBe(0);
   });
 
   it("정상 라벨은 warning 없음", () => {
@@ -225,45 +229,43 @@ describe("warnings — <br/> · → 따옴표 누락 탐지 (3·4번째 재발 �
     expect(warnings.length).toBe(0);
   });
 
-  it("cylinder [(label)] 은 일반 정규식 매치 안 함 (별도 솔루션으로 처리)", () => {
-    // cylinder 는 [( ... )] 형태라 [^\[\]"]+ 클래스에 ( 가 들어와서 매치 안 됨
-    const code = `flowchart TD\n  DB[("Database<br/>PostgreSQL")]\n`;
-    const { warnings } = fixAndValidateMermaid(code, "x");
-    expect(warnings.length).toBe(0);
-  });
-
-  it("여러 라인에 여러 패턴이 섞여 있으면 모두 잡음", () => {
+  it("여러 라인에 여러 패턴이 섞여 있으면 <br/>는 auto-fix, →는 warning", () => {
     const code =
       `flowchart TD\n` +
       `  Screen[ChatScreen<br/>Composable]\n` +
       `  Api["AidyApiService<br/>Retrofit"]\n` +
       `  Check{checkResponse<br/>status}\n` +
+      `  Arrow[Data→Result]\n` +
       `  Plain[Sender]\n`;
-    const { warnings } = fixAndValidateMermaid(code, "x");
-    expect(warnings.length).toBe(2); // Screen + Check (Api는 quoted, Plain 은 special char 없음)
-    expect(warnings.map((w) => w.line).sort()).toEqual([2, 4]);
+    const { fixed, autoFixed, warnings } = fixAndValidateMermaid(code, "x");
+    // <br/>는 auto-fix로 치환됨
+    expect(autoFixed).toBe(true);
+    expect(fixed).not.toContain("<br/>");
+    expect(fixed).toContain("ChatScreen · Composable");
+    // →는 warning-only (Arrow 노드)
+    expect(warnings.length).toBe(1);
+    expect(warnings[0].message).toContain("→");
   });
 
-  it("auto-fix 가 트리거되어도 warnings 는 같이 반환됨", () => {
-    // 괄호 라벨 + br 이 함께 있으면 auto-fix(괄호 quoting) 후에도
-    // 새로 생긴 quoted 라벨에 br 가 있으니 warning 없음 (이미 quoted 됨)
+  it("auto-fix: <br/>와 괄호가 함께 있으면 둘 다 수정됨", () => {
     const code = `flowchart TD\n  A[label (with parens)]\n  B[plain<br/>break]\n`;
     const { fixed, autoFixed, warnings } = fixAndValidateMermaid(code, "x");
     expect(autoFixed).toBe(true);
     expect(fixed).toContain('A["label (with parens)"]');
-    // B 노드는 여전히 br 따옴표 누락 → warning 1건
-    expect(warnings.length).toBe(1);
-    expect(warnings[0].message).toContain("plain");
+    // B 노드의 <br/>도 auto-fix → warning 0
+    expect(fixed).toContain("plain · break");
+    expect(warnings.length).toBe(0);
   });
 
-  it("warning 함수도 idempotent — 5회 실행해도 warning 수 동일", () => {
+  it("auto-fix idempotent — 5회 실행해도 결과 동일", () => {
     const code = `flowchart TD\n  Screen[ChatScreen<br/>Composable 함수]\n`;
-    let lastWarningCount = -1;
+    let lastFixed = "";
     for (let i = 0; i < 5; i++) {
-      const { warnings } = fixAndValidateMermaid(code, "x");
-      if (lastWarningCount === -1) lastWarningCount = warnings.length;
-      else expect(warnings.length).toBe(lastWarningCount);
+      const { fixed } = fixAndValidateMermaid(lastFixed || code, "x");
+      if (i === 0) lastFixed = fixed;
+      else expect(fixed).toBe(lastFixed);
     }
-    expect(lastWarningCount).toBe(1);
+    expect(lastFixed).toContain("ChatScreen · Composable 함수");
+    expect(lastFixed).not.toContain("<br/>");
   });
 });

@@ -95,13 +95,13 @@ flowchart LR
 
   P --> W --> R --> C --> P
 
-  ingest["/ingest<br/>외부 콘텐츠를<br/>Plan 입력으로 가공"]
-  wt["/wt-branch<br/>Work의<br/>안전한 시작점"]
-  compound["/compound<br/>Compound 단계<br/>박제 자동화"]
-  autoceo["/autoceo<br/>4단계 루프<br/>N라운드 자동 반복"]
-  psync["/projects-sync<br/>워커 프로젝트<br/>read-only 진단"]
-  curate["/curate-inbound<br/>inbound PR 분류<br/>+ 하네스 박제"]
-  csr["/cross-session-review<br/>다른 세션 결과물<br/>크로스 검증"]
+  ingest["/ingest · 외부 콘텐츠를 · Plan 입력으로 가공"]
+  wt["/wt-branch · Work의 · 안전한 시작점"]
+  compound["/compound · Compound 단계 · 박제 자동화"]
+  autoceo["/autoceo · 4단계 루프 · N라운드 자동 반복"]
+  psync["/projects-sync · 워커 프로젝트 · read-only 진단"]
+  curate["/curate-inbound · inbound PR 분류 · + 하네스 박제"]
+  csr["/cross-session-review · 다른 세션 결과물 · 크로스 검증"]
 
   ingest -. "주입" .-> P
   wt -. "감싸기" .-> W

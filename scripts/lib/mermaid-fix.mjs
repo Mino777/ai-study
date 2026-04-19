@@ -29,7 +29,7 @@ export function fixAndValidateMermaid(code, filename) {
   let fixed = code;
   const errors = [];
 
-  // AUTO-FIX: 노드 라벨의 괄호를 따옴표로 감싸기
+  // AUTO-FIX 1: 노드 라벨의 괄호를 따옴표로 감싸기
   // 패턴: A[label (with parens)] → A["label (with parens)"]
   // ⚠️ 이미 따옴표가 있는 라벨은 건너뛰어야 함 (negative lookahead `(?!")`).
   //    안 그러면 매 실행마다 따옴표가 누적: D["x"] → D[""x""] → D["""x"""] ...
@@ -38,14 +38,17 @@ export function fixAndValidateMermaid(code, filename) {
     '$1["$2"]',
   );
 
+  // AUTO-FIX 2: Mermaid 라벨의 <br/> → " · " 치환 (5번째 재발로 auto-fix 승격)
+  // <br/>는 따옴표 안에 있어도 Mermaid 파서가 HTML로 해석 시도 → 런타임 에러.
+  // 빌드는 통과하지만 브라우저에서 "Mermaid 에러" 표시. warning-only로는 부족.
+  // &lt;br/&gt; (HTML 엔티티)는 의도적 텍스트 설명이므로 제외.
+  fixed = fixed.replace(/<br\s*\/?>/g, ' · ');
+
   const fixedLines = fixed.split("\n");
   const fixedContent = fixed;
 
-  // WARNING-ONLY 검사: <br/> 등 특수문자 quoted 누락 (3·4번째 재발 패턴)
-  // auto-fix 하지 않는 이유:
-  //  - cylinder [("label")] · rhombus {label} · circle ((label)) shape 가 다양
-  //  - 잘못된 자동 수정 = 매 실행마다 손상 누적 (Bug 2 의 교훈)
-  //  - 사람이 보고 수동 수정하도록 경고만 띄움
+  // WARNING-ONLY 검사: → 등 특수문자 quoted 누락
+  // <br/>는 AUTO-FIX 2에서 자동 치환. 여기서는 → 같은 나머지 특수문자만 감지.
   // 솔루션 문서: docs/solutions/mdx/2026-04-16-mermaid-br-in-unquoted-node-labels.md
   const warnings = detectUnquotedSpecialCharLabels(fixedContent);
 
