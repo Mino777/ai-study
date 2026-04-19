@@ -203,6 +203,14 @@ R8: Compound
 
 **원칙**: 워커의 자기보고를 신뢰하지 않는다. 숫자 증거 또는 직접 검증만 인정.
 
+**테스트 검증 3단계 프로토콜** (s4 iOS 사건에서 도출):
+
+| Stage | 확인 내용 | RED 시그널 |
+|-------|----------|-----------|
+| 1. 실행 증거 | `Test run with NN tests in M suites passed` 숫자 확인 | `no tests to run, finishing early` |
+| 2. 숫자 검증 | 테스트 리포트 XML의 `tests="NN" failures="0"` 합계 | 파일 없음 또는 숫자 0 |
+| 3. Scheme 포함 | xcscheme의 `<TestAction><Testables>`에 테스트 타겟 존재 | 타겟 누락 |
+
 ### 워커 Stall (멈춤) 감지
 
 | 세션 | 사건 | 교훈 |
@@ -212,9 +220,9 @@ R8: Compound
 
 **4단계 프로토콜**:
 1. **0~5분**: 조기 실행 확인 (tmux capture → 스피너 확인)
-2. **5~10분**: 2회 연속 working → pane 직접 진단
-3. **10~15분**: 워커에게 탈출 지시 ("먼저 커밋, 테스트 별도")
-4. **15분+**: Architect가 직접 코드 수정
+2. **5~10분**: 2회 연속 working → pane 직접 진단. 병목 패턴 분류: 테스트 루프 / 빌드 에러 루프 / Rate limit / Permission 대기 / 무응답
+3. **10~15분**: 워커에게 탈출 지시 ("먼저 커밋, 테스트 별도"). 2분 후 효과 확인, 2회 개입 실패 시 Stage 4로
+4. **15분+**: Architect가 직접 코드 수정 — 워커 프로젝트에서 `Read/Edit`으로 직접 fix. 커밋 메시지에 "architect 직접 개입" 명시. 워커의 unstaged 변경과 충돌 방지를 위해 `git stash` 후 작업
 
 ### 토큰 버스트
 
@@ -260,6 +268,12 @@ R8: Compound
 - **습관 의존 검증**: "다음에 꼭 하겠다"는 영원히 안 된다. 자동화하거나 프로세스에 강제
 - **전원 대기 패턴**: 3개 워커 모두 완료될 때까지 대기 → 1개 완료되면 즉시 다음 단계
 - **3-way 병렬 burst**: 3개 워커 + Architect = 4 Claude 인스턴스 동시 → rate limit 폭발
+
+### 보너스: Outside Voice 스코프 리셰이핑
+
+리뷰어(Claude)와 유저가 모두 동의한 스코프도 블라인드 스팟이 있을 수 있다. s9에서 CEO 리뷰의 SCOPE EXPANSION 7개를 유저가 전부 수락 → 독립 AI 서브에이전트(Outside Voice)가 "7개 전부 수용 = 게이트 미작동"으로 지적 → Phase 1(Core 3개) / Phase 2(Delight 4개) 분리.
+
+**패턴**: 5개 이상 확장이 전부 수락되면 자동으로 Phase 분리를 제안하는 규칙. 리뷰어도 유저도 인지 못한 과잉 스코프를 독립 에이전트가 잡는다.
 
 ---
 
