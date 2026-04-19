@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ThemeToggle } from "./theme-toggle";
@@ -13,12 +14,53 @@ const NAV_ITEMS = [
   { href: "/projects", label: "Vibe Coding" },
 ];
 
+const RESUME_ITEM = { href: "/resume", label: "Resume" };
+const SECRET_KEY = "r";
+const SECRET_COUNT = 5;
+const SECRET_TIMEOUT = 2000;
+
 export function Header({ fixed = false }: { fixed?: boolean }) {
   const pathname = usePathname();
+  const [showResume, setShowResume] = useState(false);
+
+  useEffect(() => {
+    let count = 0;
+    let timer: ReturnType<typeof setTimeout>;
+
+    function handleKeyDown(e: KeyboardEvent) {
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement
+      )
+        return;
+
+      if (e.key.toLowerCase() === SECRET_KEY) {
+        count++;
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+          count = 0;
+        }, SECRET_TIMEOUT);
+
+        if (count >= SECRET_COUNT) {
+          setShowResume(true);
+          count = 0;
+        }
+      } else {
+        count = 0;
+        clearTimeout(timer);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      clearTimeout(timer);
+    };
+  }, []);
 
   return (
     <header
-      className={`${
+      className={`site-header ${
         fixed ? "fixed left-0 right-0" : "sticky"
       } top-0 z-50 h-14 border-b border-border/50 bg-bg/80 backdrop-blur-sm`}
     >
@@ -62,6 +104,22 @@ export function Header({ fixed = false }: { fixed?: boolean }) {
               </Link>
             );
           })}
+          {showResume && (() => {
+            const isActive =
+              pathname === RESUME_ITEM.href || pathname.startsWith(RESUME_ITEM.href + "/");
+            return (
+              <Link
+                href={RESUME_ITEM.href}
+                className={`hidden md:inline-block rounded-[var(--radius-sm)] px-2.5 py-1.5 text-sm transition-colors animate-in fade-in duration-300 ${
+                  isActive
+                    ? "bg-surface text-text font-medium"
+                    : "text-muted hover:text-text"
+                }`}
+              >
+                {RESUME_ITEM.label}
+              </Link>
+            );
+          })()}
           <ThemeToggle />
         </nav>
       </div>
