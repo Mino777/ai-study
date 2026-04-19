@@ -1,17 +1,25 @@
 {
-  "totalQueries": 6,
-  "lastUpdated": "2026-04-17T09:14:02.311Z",
+  "totalQueries": 10,
+  "lastUpdated": "2026-04-19T02:27:53.370Z",
   "hits": {
     "solutions/mdx/2026-04-16-mermaid-br-in-unquoted-node-labels": 2,
     "solutions/mdx/2026-04-16-mermaid-cylinder-nested-parens": 2,
     "harness-engineering/ai-call-patterns-circuit-breaker-fallback": 1,
     "context-engineering/context-scaling-3-layer-architecture": 2,
     "harness-engineering/harness-engineering-overview": 1,
-    "harness-engineering/compound-engineering-philosophy": 1,
+    "harness-engineering/compound-engineering-philosophy": 2,
     "agents/multi-provider-circuit-breaker": 1,
     "solutions/mdx/2026-04-11-mermaid-subgraph-space-in-name": 1,
     "tokenomics/claude-code-token-levers-catalog": 1,
     "frontend-ai/frontend-ai-patterns": 1,
-    "tokenomics/claude-code-token-levers-applied-log": 1
+    "tokenomics/claude-code-token-levers-applied-log": 1,
+    "retros/2026-04-16": 1,
+    "harness-engineering/aidy-journal-000-architect-worker-baseline": 1,
+    "harness-engineering/llm-first-wiki-principles": 1,
+    "harness-engineering/ai-agent-start-here": 1,
+    "harness-engineering/harness-journal-024-solution-to-validator-promotion": 1,
+    "solutions/ai-pipeline/2026-04-12-runtime-shape-validation-type-guard-vs-zod": 1,
+    "retros/2026-04-17-session-7-phase2": 1,
+    "harness-engineering/compound-loop-break": 1
   }
 }
