@@ -9,8 +9,8 @@
 
 ## 🕒 작성 시점
 
-- **작성 일시**: 2026-04-19 (Session 16c — 긱뉴스 데일리 스카우트)
-- **작성 주체**: Claude (Session 16c)
+- **작성 일시**: 2026-04-19 (Session 16d — 워커 재료 박제 + Claude Design + 엔트리 정비)
+- **작성 주체**: Claude (Session 16d)
 - **이유**: compound 완료 후 세션 핸드오프
 
 ---
@@ -18,11 +18,11 @@
 ## 📸 현재 상태 스냅샷
 
 ### ai-study Wiki
-- **엔트리 수**: 137
+- **엔트리 수**: 142
 - **카테고리**: 13 (방법론 4 + 시스템 3 + 평가&인프라 2 + 응용 4)
 - **Git 상태**: main clean, origin/main 동기
-- **CI 상태**: 빌드 통과, 테스트 33/33 (3 파일)
-- **그래프**: 137 노드, Obsidian 스타일 원형 레이아웃
+- **CI 상태**: 빌드 통과
+- **그래프**: 142 노드, Obsidian 스타일 원형 레이아웃
 
 ### 도구
 | 도구 | 명령 | 용도 |
@@ -32,30 +32,18 @@
 | 승격 CI | `.github/workflows/promotion-scan.yml` | push+weekly → Issue 자동 생성 |
 | generate-lesson | `npm run generate-lesson` | graph 신호 + 다양성 cap |
 | 긱뉴스 큐레이션 | `node scripts/curate-geeknews.mjs` | 24h 미응답 시 자동 엔트리 |
-| 긱뉴스 스카우트 | `node scripts/scout-geeknews.mjs` | **신규** — 22:00 KST 전체 스캔 → 프로젝트별 이식 계획 |
-| 긱뉴스 스카우트 CI | `.github/workflows/daily-scout-geeknews.yml` | **신규** — 매일 자동 실행 |
+| 긱뉴스 스카우트 | `node scripts/scout-geeknews.mjs` | 22:00 KST 전체 스캔 → 프로젝트별 이식 계획 |
 
 ### 워커 프로젝트 상태 (2026-04-19 기준)
 | 프로젝트 | 상태 | hub-dispatch |
 |---|---|---|
-| **moneyflow** | compound/v0945-docs, PR #130 open | #131 API프록시, #132 AgentCompiler |
-| **tarosaju** | main 동기화 | #46 API프록시 |
-| **aidy-architect** | main 동기화 | #1 AgentCompiler, #2 SDD |
-| **aidy-server** | main 동기화 | #6 API프록시 |
+| **moneyflow** | main behind 1, conductor worktree 존재 | #136 Claude Design 프로토타이핑 |
+| **tarosaju** | feat/ai-api-3layer-defense 브랜치 | — |
+| **aidy-architect** | main 동기화 (s23 완료) | #3 Claude Design 핸드오프 |
 
-### 허브 디스패치 체계
-- 각 워커 CLAUDE.md에 `hub-dispatch` 이슈 확인 규칙 추가 완료
-- 세션 시작 시 `gh issue list --label hub-dispatch --state open` 자동 확인
-- **신규**: 긱뉴스 스카우트가 매일 자동으로 hub-dispatch Issue 생성 (GH_PAT 등록 완료)
-
-### JIT 검색 현황
-| 프로젝트 | totalQueries |
-|---|---|
-| ai-study | 6 |
-| moneyflow | 4 |
-| tarosaju | 3 |
-| aidy-architect | 13 |
-| **합계** | **26** (100 미달, 관찰 계속) |
+### 긱뉴스 파이프라인 상태
+- **큐레이션** (`auto-lesson-geeknews.yml`): 정상 작동 확인 (수동 트리거 성공, `actionable-insight` 라벨 생성 완료)
+- **스카우트** (`daily-scout-geeknews.yml`): 오늘 밤 22:00 KST 첫 실행 예정
 
 ---
 
@@ -64,61 +52,48 @@
 ### 🔴 High
 
 1. **긱뉴스 스카우트 첫 실행 결과 확인**
-   - Actions 탭에서 첫 22:00 실행 결과 확인
+   - 오늘 밤 22:00 KST 첫 실행 → Actions 탭에서 결과 확인
    - Gemini 매칭 품질 검증 → 프롬프트 튜닝 필요 여부 판단
    - 예상 크기: S
 
-2. **[워커] AI API 프록시 3단계 방어선** (tarosaju → moneyflow → aidy-server)
-   - hub-dispatch 이슈: tarosaju#46, moneyflow#131, aidy-server#6
+2. **promotion-scan.yml 실제 동작 검증**
+   - `gh workflow run promotion-scan` 수동 트리거 → Issue 생성 확인
+   - 예상 크기: S
+
+3. **[워커] AI API 프록시 3단계 방어선** (tarosaju → moneyflow → aidy-server)
    - Supabase Edge Functions 프록시 + 인증 + Rate Limiting
    - 예상 크기: M (프로젝트당)
 
-3. **[워커] AgentCompiler 동적 전환** (moneyflow + aidy-architect)
-   - hub-dispatch 이슈: moneyflow#132, aidy-architect#1
-   - AGENT_ROUTING 하드코딩 → 런타임 컴파일
-   - 예상 크기: M
-
-4. **promotion-scan.yml 실제 동작 검증**
-   - `gh workflow run promotion-scan` 수동 트리거 → Issue 생성 확인
-   - `promotion-scan` + `actionable-insight` 라벨 사전 생성 필요
-   - 예상 크기: S
-
 ### 🟡 Medium
 
-5. **[워커] SDD Acceptance Spec 강화** (moneyflow, tarosaju, aidy 4레포)
-   - hub-dispatch 이슈: aidy-architect#2
+4. **[워커] SDD Acceptance Spec 강화** (moneyflow, tarosaju, aidy 4레포)
    - 각 프로젝트 SPEC.md에 Build/Content/Promotion Gate 추가
    - 예상 크기: S
 
-6. **[허브] Hub-Worker 병렬화 다음 단계**
+5. **[허브] Hub-Worker 병렬화 다음 단계**
    - Agent tool sub-agent 병렬 spawn, 워커별 CLAUDE.md 경량화 검토
    - 예상 크기: M
 
-7. **JIT 검색 성과 검증** — totalQueries 100 도달 시 적중률 분석
+6. **JIT 검색 성과 검증** — totalQueries 100 도달 시 적중률 분석
 
-8. **히트 카운트 100+ 도달 시 0회 엔트리 표시**
-
-9. **워커 재료 박제 후보**
+7. **워커 재료 박제 후보** (미처리분)
    - moneyflow: Content Pipeline 상태 머신, React Hydration + SW 캐시
    - tarosaju: Large Page Decomposition, Supabase Realtime Retry
-   - aidy: WO 에이전트 검증 패턴, Architect-Worker 라우팅 사례
+   - aidy: continue-on-error masking (Mark-step 패턴), ingest→WO 풀사이클
 
 ### 🟢 Low
 
-10. **인덱싱 자동화 (pre-commit 또는 CI)**
-11. **Semantic Caching POC**
-12. **멀티 에이전트 모델 라우팅**
+8. **인덱싱 자동화 (pre-commit 또는 CI)**
+9. **Semantic Caching POC**
+10. **멀티 에이전트 모델 라우팅**
 
 ---
 
 ## ⚠️ 블로커 / 대기 사항
 
 ### 다른 세션 주의
-- moneyflow: `compound/v0945-docs` 브랜치 + PR #130 — 만지지 말 것
-- aidy: WO-017 gate review 작업 흔적
-
-### Runner 운영
-- Runner 디렉토리: `~/actions-runner-{ai-study,moneyflow,tarosaju,ios,server,android}/`
+- moneyflow: conductor worktree `la-paz` 존재 — 만지지 말 것
+- tarosaju: `feat/ai-api-3layer-defense` 브랜치 작업 중
 
 ---
 
@@ -135,13 +110,9 @@
 
 ### Phase 3: Git 동기화 (5분)
 - [ ] `rtk git fetch` (ai-study)
-- [ ] `rtk git -C ~/Develop/mino-moneyflow fetch origin`
-- [ ] `rtk git -C ~/Develop/mino-tarosaju fetch origin`
-- [ ] `rtk git -C ~/Develop/aidy-architect fetch origin`
-- [ ] 4프로젝트 hub-dispatch 이슈 현황 확인
+- [ ] `/projects-sync` 실행
 
 ### Phase 4: 최근 박제 훑기 (3분)
-- [ ] Runner 상태 확인: `launchctl list | grep actions.runner`
 - [ ] `node scripts/graph-query.mjs suggest`
 - [ ] `node scripts/scan-promotions.mjs`
 
@@ -155,17 +126,9 @@
 ## 📝 부록: 자주 쓰는 명령
 
 ```bash
-# runner 상태
-launchctl list | grep actions.runner
-
 # hub-dispatch 이슈 현황 (4 워커)
 for repo in mino-moneyflow mino-tarosaju aidy-architect aidy-server; do
   echo "=== $repo ==="; gh issue list --repo Mino777/$repo --label hub-dispatch --state open --json number,title --jq '.[] | "#\(.number) \(.title)"' 2>/dev/null
-done
-
-# JIT 히트 카운트
-for p in ~/Develop/ai-study ~/Develop/mino-moneyflow ~/Develop/mino-tarosaju ~/Develop/aidy-architect; do
-  echo "$(basename $p): $(cat $p/data/search-hits.json 2>/dev/null | jq -r '.totalQueries // 0')"
 done
 
 # 그래프 + 승격
@@ -186,7 +149,9 @@ node scripts/scan-promotions.mjs
 
 ## 📜 최근 갱신
 
-### 2026-04-19 (Session 16c compound — 긱뉴스 데일리 스카우트)
-- **완료**: 긱뉴스 데일리 스카우트 파이프라인 (scout-geeknews.mjs + CI)
-- **완료**: GH_PAT Fine-grained token 셋업
-- **신규 큐**: 스카우트 첫 실행 결과 확인 (High #1)
+### 2026-04-19 (Session 16d compound — 워커 재료 박제 + Claude Design)
+- **완료**: 워커 재료 박제 4건 (agent-compiler, cost-cap, sprint-optimization, claude-design)
+- **완료**: 긱뉴스 auto-lesson 디버깅 (actionable-insight 라벨)
+- **완료**: ai-agent-start-here 404 링크 수정 3곳
+- **완료**: hub-dispatch 2건 (aidy#3, moneyflow#136)
+- **신규 메모리**: tokenomics 카테고리 범위, 중복 확인 필수

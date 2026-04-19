@@ -2,6 +2,42 @@
 
 모든 주목할 만한 변경사항을 이 파일에 기록합니다.
 
+## [2026-04-19] 세션 16d — 워커 재료 박제 + Claude Design + 엔트리 정비
+
+> projects-sync → 워커 3프로젝트 재료 수집 → 엔트리 4건 생성 + 2건 병합/수정 + 404 링크 정리
+
+### Added
+
+- **agents/agent-compiler-dynamic-routing** — AgentCompiler 3차원 런타임 컴파일 패턴 (moneyflow #133 + aidy ADR-011 불채택 대비)
+- **backend-ai/tier-based-ai-cost-cap** — 티어별 월간 AI 비용 상한 + 인메모리 누적 트래커 (moneyflow #134)
+- **harness-engineering/claude-design-visual-prototyping-workflow** — Claude Design 엔트리 병합 (기존 harness + 신규 frontend-ai → 1건으로 통합)
+- **agents/multi-agent-sprint-optimization-patterns** — aidy solutions 3건 보강 (Stage 4 직접 개입, 테스트 검증 3단계, Outside Voice)
+- Hub-dispatch Issue 2건: aidy-architect#3 (Claude Design 핸드오프), moneyflow#136 (대시보드 프로토타이핑)
+
+### Changed
+
+- **backend-ai/ai-api-cost-prevention** — confidence 1→2, draft→published (tarosaju 실 구현 반영)
+- **harness-engineering/ai-agent-start-here** — 404 링크 3곳 수정 (../../SPEC.md, ../../CLAUDE.md → 텍스트)
+
+### Fixed
+
+- **긱뉴스 auto-lesson 파이프라인** — `actionable-insight` 라벨 미생성으로 실패 → 라벨 생성 해결
+- **multi-agent-sprint-optimization-patterns** — `<Quiz>` JSX 빌드 에러 수정 (frontmatter quiz로 이미 처리됨)
+- **claude-design-visual-prototyping-workflow** — status: complete → published
+- **frontend-ai/claude-design-ai-native-design-tool** 삭제 (harness-engineering 엔트리와 중복)
+
+### Metrics
+
+| 항목 | Before | After |
+|---|---|---|
+| 총 엔트리 | 137 | **142** (+5, 중복 1건 삭제) |
+| 빌드 에러 | 2건 (Quiz JSX, status) | **0건** |
+| 404 링크 | 3건 | **0건** |
+| Hub-dispatch Issue | 기존 | **+2건** (aidy#3, moneyflow#136) |
+| GitHub 라벨 | 미생성 | **actionable-insight 생성** |
+
+---
+
 ## [2026-04-19] 세션 16c — 긱뉴스 데일리 스카우트 파이프라인
 
 > 매일 22:00 KST — 긱뉴스 전체 스캔 → 4개 프로젝트 방향성 매칭 → 이식 계획 Issue 자동 생성
