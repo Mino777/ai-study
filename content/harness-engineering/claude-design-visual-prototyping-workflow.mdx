@@ -17,7 +17,8 @@ connections:
   - harness-engineering/spec-driven-development-for-ai-agents
   - agents/multi-agent-orchestration-patterns-2026
   - context-engineering/context-engineering-2026-paradigm-shift
-status: complete
+  - context-engineering/context-engineering-fundamentals
+status: published
 description: "2026.04.17 출시된 Claude Design — 텍스트 프롬프트에서 프로토타입/슬라이드를 생성하고, Claude Code로 핸드오프하여 바로 구현하는 AI 비주얼 워크플로. 디자인 시스템 자동 구축, 다양한 입력 방식, Canva/PPTX/HTML 내보내기."
 type: entry
 quiz:
@@ -73,7 +74,7 @@ Claude Design이 이 간극을 메운다:
 ### 무엇인가
 
 - **출시일**: 2026년 4월 17일 (Anthropic Labs)
-- **엔진**: Claude Opus 4.7 (3.75MP 해상도, 이전 대비 3x)
+- **엔진**: Claude Opus 4.7 (해상도 1,568px → 2,576px, 1.15MP → 3.75MP, **3.26x 향상**)
 - **성격**: AI 이미지 생성기가 **아님**. 프로토타입, 슬라이드, UI 목업, 마케팅 에셋을 만드는 **협업 비주얼 도구**
 - **대상**: 디자이너가 아닌 사람 (PM, 파운더, 마케터, 엔지니어)이 아이디어를 비주얼로 빠르게 전환
 
@@ -210,6 +211,39 @@ Claude Design          Figma              Canva
 - **이미지 생성 도구로 착각**: Midjourney/DALL-E와 다름. 일러스트/사진 생성이 아닌 UI/프로토타입 도구.
 - **Figma 완전 대체로 사용**: 정밀 디자인 작업은 여전히 Figma가 우위. 탐색 단계에서만 활용.
 - **핸드오프 없이 스크린샷만 전달**: Claude Design의 가치는 구조화된 핸드오프. 스크린샷 전달은 기존과 동일한 정보 손실.
+
+---
+
+## 프론티어 디자인: 코드 기반 인터랙티브 경험
+
+정적 시각물을 넘어 **코드 기반 프로토타입**도 생성 가능:
+
+| 카테고리 | 예시 |
+|---------|------|
+| 3D 시각화 | 인터랙티브 3D 지구본, 데이터 시각화 |
+| 음성 인터페이스 | 음성 기반 프로토타입 |
+| 비디오/모션 | 인터랙티브 효과, 셰이더 |
+| AI 내장 | 프로토타입 자체에 AI 기능 포함 |
+
+현재 초기 단계로 거친 부분이 있으나, 디자인 도구의 가능성을 코드 실행 영역까지 확장한 점이 주목할 만하다.
+
+---
+
+## 실제 성과 데이터
+
+| 기업 | Before | After |
+|------|--------|-------|
+| **Brilliant** | 복잡한 페이지에 20+ 프롬프트 필요 (다른 도구) | 2개 프롬프트로 완성 |
+| **Datadog** | 반복 작업에 1주일 | 단일 대화로 단축 |
+
+---
+
+## AI 엔지니어링 관점 시사점
+
+1. **Context Engineering 실전**: 디자인 시스템 온보딩이 곧 컨텍스트 엔지니어링. GitHub 코드 + Figma + 스타일 노트를 읽어 모델에 팀의 디자인 언어를 주입
+2. **에이전트 파이프라인 완성**: Design → Code 핸드오프는 에이전트 간 구조화된 데이터 전달의 실전 사례. 번들 포맷이 에이전트 간 통신 프로토콜 역할
+3. **멀티모달 입력의 가치**: 텍스트 + 이미지 + 문서 + 웹 캡처 — 단일 모달보다 풍부한 컨텍스트가 더 정확한 결과를 만듦
+4. **해상도가 곧 능력**: Opus 4.7의 3.26x 해상도 향상이 디자인 도구를 가능하게 함. 모델 능력이 제품 카테고리를 결정하는 사례
 
 ---
 
