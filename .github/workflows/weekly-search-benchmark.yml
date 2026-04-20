@@ -1,0 +1,134 @@
+name: "🔍 Weekly Search Quality Benchmark"
+
+# 매주 월요일 09:00 KST (UTC 00:00) — 주간 학습 리포트 직후
+on:
+  schedule:
+    - cron: "0 0 * * 1"
+  workflow_dispatch:
+    inputs:
+      force_reembed:
+        description: "임베딩 재생성 강제 여부"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build manifest
+        run: node scripts/generate-content-manifest.mjs
+
+      - name: Rebuild embeddings
+        if: ${{ inputs.force_reembed == true }}
+        run: npm run embed-content
+
+      - name: Check embeddings exist
+        id: check_embed
+        run: |
+          if [ -f "public/embeddings.json" ]; then
+            SIZE=$(wc -c < public/embeddings.json)
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "size=$SIZE" >> $GITHUB_OUTPUT
+            echo "✅ embeddings.json 존재 (${SIZE} bytes)"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "⚠️ embeddings.json 없음 — 재생성"
+          fi
+
+      - name: Rebuild embeddings if missing
+        if: steps.check_embed.outputs.exists == 'false'
+        run: npm run embed-content
+
+      - name: Run shadow benchmark
+        id: benchmark
+        run: |
+          OUTPUT=$(node scripts/shadow-benchmark.mjs 2>&1)
+          echo "$OUTPUT"
+
+          # 적중률 추출 (예: "Hit Rate: 85.0%")
+          HIT_RATE=$(echo "$OUTPUT" | grep -oE "Hit Rate.*[0-9]+\.[0-9]+%" | grep -oE "[0-9]+\.[0-9]+" | head -1 || echo "0")
+          # 토큰 절감률 추출
+          TOKEN_SAVINGS=$(echo "$OUTPUT" | grep -oE "Token Savings.*[0-9]+\.[0-9]+%" | grep -oE "[0-9]+\.[0-9]+" | head -1 || echo "0")
+
+          echo "hit_rate=$HIT_RATE" >> $GITHUB_OUTPUT
+          echo "token_savings=$TOKEN_SAVINGS" >> $GITHUB_OUTPUT
+          echo "output<<EOF" >> $GITHUB_OUTPUT
+          echo "$OUTPUT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Check quality threshold
+        id: threshold
+        run: |
+          HIT_RATE="${{ steps.benchmark.outputs.hit_rate }}"
+          THRESHOLD=75
+
+          # bc로 부동소수점 비교
+          if (( $(echo "$HIT_RATE < $THRESHOLD" | bc -l 2>/dev/null || echo 1) )); then
+            echo "below_threshold=true" >> $GITHUB_OUTPUT
+            echo "⚠️ 적중률 ${HIT_RATE}% — 임계치 ${THRESHOLD}% 미달"
+          else
+            echo "below_threshold=false" >> $GITHUB_OUTPUT
+            echo "✅ 적중률 ${HIT_RATE}% — 임계치 통과"
+          fi
+
+      - name: Create alert issue if below threshold
+        if: steps.threshold.outputs.below_threshold == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          DATE=$(TZ=Asia/Seoul date +%Y-%m-%d)
+          gh issue create \
+            --title "⚠️ JIT 검색 품질 저하 감지 — ${DATE} (적중률 ${{ steps.benchmark.outputs.hit_rate }}%)" \
+            --label "search-quality" \
+            --body "## 🔍 JIT 검색 품질 알림
+
+          **날짜**: ${DATE}
+          **적중률**: ${{ steps.benchmark.outputs.hit_rate }}% (임계치: 75%)
+          **토큰 절감률**: ${{ steps.benchmark.outputs.token_savings }}%
+
+          ### 원인 가능성
+          - 신규 엔트리 추가 후 임베딩 미갱신
+          - 쿼리 패턴 변화로 라우터 튜닝 필요
+          - multilingual-e5-small 모델 한계 도달
+
+          ### 권장 조치
+          1. \`npm run embed-content\` 실행 후 재벤치마크
+          2. \`scripts/lib/query-router.mjs\` 라우팅 규칙 점검
+          3. 임계치 미달 쿼리 유형 분석
+
+          <details>
+          <summary>벤치마크 전체 출력</summary>
+
+          \`\`\`
+          ${{ steps.benchmark.outputs.output }}
+          \`\`\`
+          </details>"
+
+      - name: Summary
+        run: |
+          echo "### 🔍 JIT 검색 품질 벤치마크" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| 지표 | 값 |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| 적중률 | ${{ steps.benchmark.outputs.hit_rate }}% |" >> $GITHUB_STEP_SUMMARY
+          echo "| 토큰 절감률 | ${{ steps.benchmark.outputs.token_savings }}% |" >> $GITHUB_STEP_SUMMARY
+          echo "| 임계치 미달 | ${{ steps.threshold.outputs.below_threshold }} |" >> $GITHUB_STEP_SUMMARY

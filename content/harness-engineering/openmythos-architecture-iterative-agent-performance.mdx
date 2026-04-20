@@ -4,6 +4,8 @@ category: harness-engineering
 date: "2026-04-20"
 tags: [iterative-thinking, agent-architecture, self-correction, harness-engineering, compound-engineering, scratchpad, feedback-loop, aidy]
 confidence: 2
+last_verified: "2026-04-20"
+applicable_to: ["any"]
 connections: [harness-engineering/compound-engineering-philosophy, harness-engineering/five-levers-of-harness-engineering, harness-engineering/ai-call-patterns-circuit-breaker-fallback, harness-engineering/aidy-journal-000-architect-worker-baseline, harness-engineering/harness-journal-023-closed-loop-ai-quality]
 status: complete
 description: "Mythos의 내부 자기 교정 루프와 우리 하네스·컴파운드 엔지니어링의 외부 피드백 루프를 3개 스케일로 비교 분석하고, 두 패러다임을 우리 방법론에 이식하는 구체적 경로를 탐색한다."
@@ -243,6 +245,48 @@ interface AiCallLog {
 - [ ] `generate-on-pick.yml`에 Gemini self-critique 단계 삽입 — connections dangling 체크 + Zod frontmatter 검사
 - [ ] AI 호출 로그에 `scratchpad` 필드 추가하고 `ai-cost-tracking` 대시보드에 시각화
 - [ ] Journal 엔트리 템플릿에 "AI가 처음 제안한 것 vs 자가 비평 후 바뀐 것" 섹션 추가
+
+## AI Agent Directive
+
+**Trigger**: Architect 에이전트의 단일 패스 설계안 품질이 낮을 때 / Gemini 자동 생성 엔트리가 ai-review에서 반복 거절될 때 / AI 출력의 누락 항목이 예측 가능한 패턴으로 반복될 때
+
+**Prerequisites**:
+- [하네스 엔지니어링 5대 레버](/wiki/harness-engineering/five-levers-of-harness-engineering) — 비평 기준 파악
+- 적용 대상 에이전트의 기존 프롬프트
+
+### Actionable Steps
+
+*aidy Architect에 적용 시*:
+1. Architect 프롬프트 끝에 self-critique 섹션 추가
+   ```
+   After drafting, critique using these 4 harness criteria:
+   1. 모든 AI 출력에 Zod 스키마 있는가?
+   2. 실패 경로(retry/fallback) 명시됐는가?
+   3. 비용/레이턴시 트레이드오프 고려됐는가?
+   4. 관찰 가능성 레이어(로깅) 있는가?
+   List gaps, then produce refined final output.
+   ```
+2. scratchpad(draft + critique)를 Journal에 기록해 다음 세션 컨텍스트로 활용
+
+*Gemini 파이프라인에 적용 시*:
+1. `generate-on-pick.yml`에서 생성 후 self-critique 단계 삽입
+   ```
+   Review the generated entry:
+   - connections 슬러그가 실제 존재하는가? (dangling 체크)
+   - frontmatter Zod 스키마 통과하는가?
+   - AI Agent Directive 섹션 있는가?
+   Fix any issues before PR.
+   ```
+
+### Anti-patterns
+
+- ❌ 비평 기준 없는 "검토해라" — 모든 것을 동시에 비평하면 아무것도 고치지 않음
+- ❌ 단순 구조화 작업(slug 생성, JSON 추출)에 Mythos 루프 적용 — Zod 게이트로 충분
+- ❌ 비평 없이 draft 그대로 최종 출력 — 루프를 돌지 않은 것과 동일
+
+**적용 범위**: any (비평 기준을 프로젝트 하네스 기준으로 교체하면 범용 적용 가능)
+
+---
 
 ## 자기 점검
 

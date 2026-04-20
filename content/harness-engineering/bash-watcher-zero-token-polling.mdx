@@ -4,6 +4,8 @@ category: harness-engineering
 date: "2026-04-20"
 tags: [tokenomics, multi-agent, tmux, polling, bash, aidy, orchestration, zero-token]
 confidence: 3
+last_verified: "2026-04-20"
+applicable_to: ["aidy", "any"]
 connections: [harness-engineering/aidy-journal-000-architect-worker-baseline, harness-engineering/multi-session-ai-ops-patterns, harness-engineering/compound-engineering-philosophy]
 status: complete
 description: "멀티 에이전트 오케스트레이션에서 워커 완료 여부를 AI가 직접 폴링하는 대신, bash가 tmux pane 텍스트 패턴으로 idle 상태를 감지해 폴링 토큰을 100% 제거한 실전 패턴."
@@ -238,6 +240,39 @@ done
 - [ ] `messages/` 파일 큐와 연동: 워커가 완료 메시지 파일 쓰면 bash 워처가 감지 → 허브에 알림
 - [ ] `watch-workers` timeout 값 조정: 라운드 평균 소요 시간의 2배로 설정 (s27 실측: 20~40분 → timeout 1800초)
 - [ ] `is_pane_idle` 패턴을 Claude Code 버전 업데이트 시 재검증 (UI 텍스트 변경 가능성)
+
+## AI Agent Directive
+
+**Trigger**: 멀티 에이전트 환경에서 워커 완료 여부를 LLM 호출로 확인하고 있을 때 / 폴링 비용이 전체 토큰의 20% 이상일 때
+
+**Prerequisites**:
+- tmux 세션이 Architect + Worker pane으로 분리돼 있을 것 (`architect-cli.sh tmux-setup`)
+- `architect-cli.sh`가 프로젝트 루트에 존재할 것
+
+### Actionable Steps
+
+1. 워커에게 작업 dispatch 직후 백그라운드로 워처 실행
+   ```bash
+   ./architect-cli.sh watch-workers 1800 &
+   ```
+2. Architect는 폴링하지 않고 다음 스펙/WO 작성에 집중
+3. `[워커 전원 완료]` 메시지 수신 시 다음 단계로 진행
+4. tmux 없는 환경이면 파일 기반 시그널로 대체
+   ```bash
+   # 워커가 완료 시: echo "done" > /tmp/worker-server.done
+   # 워처: until [ -f /tmp/worker-server.done ]; do sleep 30; done
+   ```
+
+### Anti-patterns
+
+- ❌ LLM에게 "워커 완료됐나?" 직접 폴링 — 판단 없는 반복 작업에 AI 호출 낭비
+- ❌ `is_pane_idle` 패턴 없이 sleep으로 고정 대기 — 완료 후에도 계속 대기
+- ❌ timeout 미설정 — 워커가 멈추면 무한 대기
+- ❌ dispatch 직후 즉시 감시 시작 — 10초 대기 없으면 working 진입 전 idle로 오판
+
+**적용 범위**: aidy-architect tmux 환경 / 파일 기반 변형은 any
+
+---
 
 ## 자기 점검
 
