@@ -2,6 +2,32 @@
 
 모든 주목할 만한 변경사항을 이 파일에 기록합니다.
 
+## [2026-04-20] 세션 17 — 위키 AI 에이전트 실용성 강화 + bash-watcher 패턴 추출
+
+> 위키가 사람용 서사 중심이라 AI 에이전트가 즉시 행동으로 연결하기 어렵다는 자기 비판에서 시작. 전체 146개 엔트리에 last_verified + applicable_to 백필, AI Agent Directive 추가, JIT 검색 품질 자동화. aidy s27에서 bash 워처 패턴 추출 → 엔트리로 박제.
+
+### Added
+
+- **bash-watcher-zero-token-polling 엔트리** — aidy s6→s26→s27 3단계 진화: LLM 폴링 → 20분 간격 → bash tmux pane 감시. 폴링 토큰 100% 제거 + 파이프라이닝 효과
+- **weekly-search-benchmark.yml** — JIT 검색 품질 주간 자동화. 매주 월요일 shadow-benchmark 실행 → 적중률 75% 미달 시 이슈 자동 생성
+- **scripts/backfill-frontmatter.mjs** — MDX 전체 last_verified + applicable_to 백필 스크립트 (dry-run / --apply 모드)
+- **AI Agent Directive** — bash-watcher, openmythos, ai-coding-brain-training 3개 엔트리 추가
+
+### Changed
+
+- **OpenMythos 엔트리 전면 재작성** — Gemini 자동생성(프론트엔드 시나리오) → 하네스/컴파운드 비교 분석. 3개 피드백 루프(마이크로/메소/매크로), Scratchpad↔Journal 동형, aidy Architect self-critique 이식 경로
+- **schema.ts** — last_verified + applicable_to 옵셔널 필드 추가
+- **SummaryCard** — 🤖 AI 생성 배지, applicable_to 범위, last_verified 날짜 표시 추가
+- **ai-agent-start-here** — 스냅샷 갱신(144→146) + 신뢰도 필드 설명 테이블 추가
+- **146개 엔트리 전체** — last_verified + applicable_to 백필
+
+### Metrics
+
+- 엔트리: 144 → 146 (+2)
+- AI Agent Directive 커버리지: harness-engineering 100%
+- 자동화 워크플로우: 5 → 6 (+weekly-search-benchmark)
+- projects-sync 대상: 2개 → 6개 (aidy×4 추가)
+
 ## [2026-04-19] 세션 16i — 히든 이력서 페이지 + iOS/FDE 탭
 
 > R키 5회 이스터에그로 접근하는 히든 Resume 페이지. iOS Engineer / FDE(채널톡) 탭 전환. 그린카 608건 실적 기반 내용 + Harness/Context/Compound 방법론 강조. PDF 다운로드, 프로필 사진, 기술블로그 링크 포함.

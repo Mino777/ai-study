@@ -83,7 +83,7 @@ docs/hermes/       → Hermes 에이전트 SOUL.md (VPS와 동기화, git 추적
 docs/designs/      → CEO Plan 승격 문서 (hermes-first-stack.md 등)
 public/            → search-index.json (gitignored, SearchDialog lazy fetch용 슬림 인덱스),
                      embeddings.json (gitignored, Layer 3 벡터 인덱스 ~12MB)
-.github/workflows/ → daily-lesson, generate-on-pick, vercel-retry
+.github/workflows/ → daily-lesson, generate-on-pick, vercel-retry, weekly-search-benchmark
 ```
 
 ## Key Commands
@@ -100,6 +100,7 @@ public/            → search-index.json (gitignored, SearchDialog lazy fetch용
 - `node scripts/fix-one-way-connections.mjs [--apply]` — 일방향 연결 감지 + 역링크 일괄 추가
 - `node scripts/graph-query.mjs <cmd>` — 지식 그래프 쿼리 CLI (neighbors/dangling/islands/hubs/path/weak-links/suggest)
 - `node scripts/scan-promotions.mjs` — 솔루션 승격 스캐너 (N=3+ 자동 감지 → 승격 제안, --json CI 연동)
+- `node scripts/backfill-frontmatter.mjs [--apply]` — MDX frontmatter 백필 (last_verified + applicable_to, dry-run 기본)
 
 ## Content System
 - All content in `content/` as MDX files with frontmatter
@@ -113,6 +114,8 @@ public/            → search-index.json (gitignored, SearchDialog lazy fetch용
 - dailyEntries: prebuild에서 날짜별 엔트리 수 맵 생성 (히트맵용)
 - Optional `quiz` 필드: 객관식 자가 점검 문항 배열 (`question` / `choices` / `answer` / `explanation`). 위키 엔트리 본문 하단에 Quiz 컴포넌트로 자동 렌더. Gemini 파이프라인이 새 엔트리 생성 시 3문항 자동 작성.
 - Optional `generated_by` 필드: 엔트리 생성 출처 추적 ("gemini" | "hermes"). 없으면 사람 작성 또는 기존 파이프라인.
+- Optional `last_verified` 필드: `YYYY-MM-DD` — 내용이 마지막으로 검증된 날짜. AI 에이전트 신뢰 신호.
+- Optional `applicable_to` 필드: `["any"]` | `["aidy", "any"]` | `["moneyflow"]` 등. AI 에이전트 적용 범위 신호. `["any"]`면 UI 배지 표시 안 함.
 
 ## AI 과외 선생님 Pipeline
 - 매일 09:00 KST: GitHub Actions → 3개 주제 추천 Issue 생성
