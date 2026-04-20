@@ -63,7 +63,7 @@ graph LR
 
     subgraph s27 ["s27 — bash 워처 (토큰 0)"]
         B[bash watch-workers &] -- "30초마다 pane 체크" --> W[tmux capture-pane]
-        W -- "전원 idle 감지" --> N[tmux send-keys → Architect에 알림]
+        W -- "전원 idle 감지" --> N["tmux send-keys → Architect에 알림"]
         A3[Architect] -- "다음 스펙 작성 중" --> A3
         N -- "[워커 전원 완료] 수신" --> A3
     end
