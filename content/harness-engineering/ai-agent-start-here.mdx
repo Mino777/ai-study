@@ -12,6 +12,8 @@ tags:
   - ios
   - web
 confidence: 5
+last_verified: "2026-04-12"
+applicable_to: ["aidy", "any"]
 connections:
   - harness-engineering/llm-first-wiki-principles
   - harness-engineering/harness-journal-000-baseline
@@ -497,21 +499,31 @@ Web은 *배포가 push = 즉시 반영*이므로 pre-commit 게이트가 더 중
 
 *내가 처리할 수 없는 것*을 *사용자에게 알리는 것*도 자율의 일부.
 
-## 현재 위키 상태 스냅샷 (2026-04-18)
+## 현재 위키 상태 스냅샷 (2026-04-20)
 
 | 항목 | 값 |
 |---|---|
-| 총 엔트리 | 131 |
+| 총 엔트리 | 146 |
 | 카테고리 | 13개 (prompt/context/harness/tokenomics/rag/agents/fine-tuning/evaluation/infrastructure/ios-ai/frontend-ai/android-ai/backend-ai) |
 | 주 시리즈 | Harness Journal (000~024) + iOS Journal (000~009) + Aidy Journal (000~009) |
 | 슬래시 커맨드 | 7개 (`/compound`, `/autoceo`, `/wt-branch`, `/ingest`, `/cross-session-review`, `/curate-inbound`, `/projects-sync`) |
 | 플랫폼별 가이드 | Web (Next.js) + iOS (Swift/SPM) |
 | 허브-워커 모델 | ai-study(허브) + moneyflow/tarosaju/aidy(워커) — 양방향 기여 인프라 확립 |
 | Runtime Validator | moneyflow 10/10 에이전트 Layer 1-4 완료 + tarosaju 3 route 5-Layer 완료 |
-| LLM-as-a-Judge | 3 프로젝트 적용 (moneyflow/tarosaju/ai-study) |
-| CI/CD | ai-review.yml (3 프로젝트) + hybrid fallback (ADR-010) + validate-content.mjs + vitest 회귀 테스트 |
-| JIT 검색 | 4 프로젝트 배포 (Layer 3 벡터 인덱스) |
+| CI/CD | ai-review.yml + hybrid fallback (ADR-010) + weekly-search-benchmark (JIT 품질 자동 감지) |
+| JIT 검색 | 전 프로젝트 배포 (Layer 3 벡터 인덱스, 주간 품질 벤치마크 자동화) |
 | Self-hosted Runner | 6개 등록 (ai-study/moneyflow/tarosaju/aidy-ios/server/android) |
+
+### 엔트리 신뢰도 필드 (AI 에이전트용)
+
+각 엔트리의 frontmatter에 다음 필드가 있다. 엔트리 선택 시 우선 확인하라.
+
+| 필드 | 의미 | 사용법 |
+|---|---|---|
+| `last_verified` | 마지막으로 내용이 검증된 날짜 | 오래된 날짜면 적용 전 현재 코드와 교차 확인 |
+| `applicable_to` | 적용 범위 (`["any"]` / `["aidy", "any"]` 등) | 현재 작업 프로젝트와 맞지 않으면 패턴만 참고 |
+| `generated_by` | `gemini` 등 AI 자동 생성 표시 | 자동 생성 엔트리는 사람 검토 여부 불확실 — 비판적으로 읽기 |
+| `confidence` | 저자의 체화 수준 (1~5) | 3 미만이면 보조 자료 교차 확인 권장 |
 
 이 상태는 *스냅샷*이다. 최신 큐는 [Harness Journal 000 베이스라인의 갱신 로그](/wiki/harness-engineering/harness-journal-000-baseline#갱신-로그) 확인.
 

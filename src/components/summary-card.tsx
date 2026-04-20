@@ -38,6 +38,26 @@ export function SummaryCard({ frontmatter, slug, readingTime, searchHitCount }: 
             JIT {searchHitCount}회
           </span>
         )}
+        {frontmatter.generated_by && (
+          <span
+            className="text-xs font-code px-1.5 py-0.5 rounded"
+            style={{ background: "color-mix(in srgb, #f59e0b 15%, transparent)", color: "#f59e0b" }}
+            title={`AI 생성 (${frontmatter.generated_by}) — 사람 검토 권장`}
+          >
+            🤖 AI 생성
+          </span>
+        )}
+        {frontmatter.applicable_to && frontmatter.applicable_to.length > 0 &&
+          !frontmatter.applicable_to.includes("any") && (
+          <span className="text-xs text-muted font-code" title="적용 범위">
+            {frontmatter.applicable_to.join(", ")}
+          </span>
+        )}
+        {frontmatter.last_verified && (
+          <span className="text-xs text-muted font-code" title="마지막 검증일">
+            검증 {frontmatter.last_verified}
+          </span>
+        )}
         {frontmatter.status !== "complete" && (
           <span className="text-xs text-warning font-code">{frontmatter.status}</span>
         )}
