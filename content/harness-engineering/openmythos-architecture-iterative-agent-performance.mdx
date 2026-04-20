@@ -1,180 +1,265 @@
 ---
-title: "OpenMythos 분석: 반복적 사고로 에이전트 성능을 극대화하는 Mythos 아키텍처"
+title: "OpenMythos와 우리 방법론 비교 — 내부 루프 vs 외부 루프, 자기 교정의 두 얼굴"
 category: harness-engineering
 date: "2026-04-20"
-tags: [iterative-thinking, agent-architecture, chain-of-thought, self-correction, llm-internals, harness-engineering, harness-engineering]
-confidence: 1
-connections: [harness-engineering/ai-agent-start-here, harness-engineering/ai-api-cost-tracking-pattern, harness-engineering/ai-call-patterns-circuit-breaker-fallback]
-status: draft
-description: "LLM이 복잡한 작업을 해결하기 위해 내부적으로 초안을 작성하고 수정하는 '반복적 사고' 메커니즘을 탐구하고, 이를 프론트엔드 개발에 적용하는 방법을 제시합니다."
+tags: [iterative-thinking, agent-architecture, self-correction, harness-engineering, compound-engineering, scratchpad, feedback-loop, aidy]
+confidence: 2
+connections: [harness-engineering/compound-engineering-philosophy, harness-engineering/five-levers-of-harness-engineering, harness-engineering/ai-call-patterns-circuit-breaker-fallback, harness-engineering/aidy-journal-000-architect-worker-baseline, harness-engineering/harness-journal-023-closed-loop-ai-quality]
+status: complete
+description: "Mythos의 내부 자기 교정 루프와 우리 하네스·컴파운드 엔지니어링의 외부 피드백 루프를 3개 스케일로 비교 분석하고, 두 패러다임을 우리 방법론에 이식하는 구체적 경로를 탐색한다."
 type: entry
-generated_by: gemini
 quiz:
-  - question: Mythos 아키텍처가 기존의 단일 패스(single-pass) LLM과 구별되는 가장 핵심적인 특징은 무엇인가요?
+  - question: "Mythos 아키텍처의 '내부 루프'와 우리 하네스 엔지니어링의 '외부 게이트'가 작동하는 스케일의 차이를 가장 정확하게 설명한 것은?"
     choices:
-      - 더 큰 파라미터 모델을 사용하여 한 번에 더 정확한 답변을 생성합니다.
-      - Chain-of-Thought(CoT) 프롬프팅을 사용해 생각의 과정을 최종 결과물에 모두 포함시킵니다.
-      - 최종 결과물을 내놓기 전에, 내부적으로 초안 작성, 자가 비평, 수정 단계를 반복하는 '사고 루프'를 가지고 있습니다.
-      - 외부 API나 도구를 호출하여 생성된 내용의 사실 관계를 확인하고 스스로 검증합니다.
+      - "Mythos는 모델 파라미터 수준에서 작동하고, 하네스는 프롬프트 수준에서 작동한다."
+      - "Mythos는 단일 추론 사이클 내부(ms~수초)에서 교정이 일어나고, 하네스는 한 세션의 AI 호출 사이(수초~수분)에서 교정이 일어난다."
+      - "Mythos는 비동기적이고 하네스는 동기적이다."
+      - "둘은 사실상 같은 것이며, 구현 언어만 다르다."
+    answer: 1
+    explanation: "Mythos의 draft→critique→refine 루프는 단일 추론 사이클 내부에서 모델이 스스로 돌리는 것이다. 하네스의 Zod validation, circuit breaker, CI gate는 AI가 출력을 내놓은 '이후' 외부에서 검증하는 구조다. 둘은 보완 관계이지 중복이 아니다."
+  - question: "우리 컴파운드 엔지니어링의 '매크로 루프'와 Mythos의 '마이크로 루프'를 연결하는 인터페이스로 가장 적합한 것은?"
+    choices:
+      - "GitHub Actions CI 워크플로우"
+      - "Zod 런타임 스키마 검증"
+      - "세션 저널(NEXT.md + Journal 엔트리)에 AI 스크래치패드를 기록하는 관찰 가능성 레이어"
+      - "wt-branch 커맨드의 squash merge 전략"
     answer: 2
-    explanation: |-
-      정답은 2번입니다. Mythos 아키텍처의 가장 큰 핵심은 LLM이 최종 답변을 한 번에 생성하는 것이 아니라, 내부적으로 '생각의 공간(scratchpad)'에서 초안 생성(draft), 자가 비평(self-critique), 수정(refine) 과정을 여러 번 반복하는 '내부 루프'를 갖는다는 점입니다. 이는 본문의 다이어그램과 설명에서 명확히 강조됩니다.
-
-      오답 해설:
-      1) 모델의 크기보다는 아키텍처의 차이에 중점을 둡니다. 본문에서는 하이브리드 모델 사용도 언급합니다.
-      2) 본문은 Mythos가 CoT의 발전된 형태이지만, CoT처럼 과정을 출력에 포함시키는 것이 아니라 '내재화'하고 '최종 결과물만 깔끔하게' 보여준다는 차이가 있다고 설명합니다.
-      4) 외부 도구 사용은 에이전트의 한 방식일 수 있으나, Mythos의 핵심은 '자가 비평'과 '내부 반복'을 통한 개선 과정 자체에 있습니다.
-  - question: OpenMythos의 '스크래치패드(Scratchpad)' 역할과, Harness Engineering 관점에서 이를 분석하는 것이 중요한 이유에 대한 설명으로 가장 적절한 것은 무엇인가요?
+    explanation: "Mythos의 scratchpad는 AI가 '어떻게 생각했는가'를 담는다. 이 중간 과정을 우리 Journal이나 NEXT.md에 박제하면, 다음 세션에서 컴파운드 루프의 입력으로 활용된다. 마이크로 루프의 산물이 매크로 루프의 컨텍스트가 되는 연결 지점이다."
+  - question: "aidy Architect 에이전트에 Mythos 패턴을 이식할 때 가장 먼저 설계해야 하는 것은?"
     choices:
-      - 모델의 미세 조정(fine-tuning)을 위한 데이터셋을 자동으로 생성하여 장기적인 성능 향상을 목표로 하기 때문입니다.
-      - 최종 결과물을 생성하기 전 임시로 데이터를 저장하는 캐시 메모리로, 응답 속도를 향상시키는 역할을 하기 때문입니다.
-      - 이전 단계의 초안과 비평 내용을 누적하여 다음 단계의 입력으로 사용하며, 이 과정을 분석하면 에이전트의 의사결정 과정을 추적하고 개선할 수 있기 때문입니다.
-      - 사용자의 프롬프트에서 개인정보를 제거하고 익명화하여 안전한 처리를 보장하는 보안 계층의 역할을 하기 때문입니다.
+      - "워커 에이전트의 병렬 실행 수 최적화"
+      - "Scratchpad 데이터를 저장할 데이터베이스 스키마"
+      - "Architect가 설계안을 자가 비평할 때 사용할 '메타 비평 프롬프트'"
+      - "Gemini API 호출 비용 예산 한도"
     answer: 2
-    explanation: |-
-      정답은 2번입니다. 본문에 따르면 스크래치패드는 각 반복 단계의 결과물(초안)과 비평 내용을 누적하여 다음 단계의 입력으로 사용하는 핵심적인 역할을 합니다. Harness Engineering 관점에서 이 스크래치패드를 로깅하고 분석하는 것은 '관찰 가능성(Observability)'을 높이는 행위로, 에이전트가 왜 특정 방향으로 결정을 내렸는지, 어떤 실수를 바로잡았는지 등을 추적하여 성능을 개선하는 데 필수적이라고 설명합니다.
-
-      오답 해설:
-      1) 스크래치패드는 추론(inference) 시점에 사용되는 단기 기억 공간이며, 미세 조정을 위한 데이터셋 생성과는 직접적인 관련이 없습니다.
-      2) 스크래치패드를 활용하는 반복 과정은 여러 번의 LLM 호출을 유발하므로 응답 속도를 향상시키는 것이 아니라 오히려 지연시킵니다.
-      4) 스크래치패드는 보안이 아닌, 모델의 '사고 과정'을 기록하고 활용하기 위한 장치입니다.
-  - question: Mythos 스타일의 '반복적 사고' 아키텍처를 실제 프로덕션 환경에 적용할 때, 본문에서 강조하는 가장 중요한 기술적/비용적 트레이드오프(trade-off)는 무엇인가요?
-    choices:
-      - 결과물의 품질이 비약적으로 향상되는 대신, 프롬프트 엔지니어링의 난이도가 매우 높아져 관리가 어렵습니다.
-      - 구현 코드는 단순해지지만, 다양한 종류의 작업에 대한 범용성이 떨어지는 문제가 발생합니다.
-      - 응답 생성에 더 적은 컴퓨팅 자원을 사용하게 되어 환경 친화적이지만, 결과물의 창의성이 다소 떨어질 수 있습니다.
-      - 더 높은 품질의 결과물을 얻을 수 있지만, 내부적으로 LLM을 여러 번 호출하기 때문에 비용과 응답 지연 시간이 증가합니다.
-    answer: 3
-    explanation: |-
-      정답은 3번입니다. 본문의 'Harness Engineering 관점의 시사점' 섹션에서는 명확하게 '비용과 지연 시간(Cost & Latency)의 트레이드오프'를 언급합니다. 내부적으로 여러 번 LLM을 호출하므로, 한 번만 호출하는 기존 방식에 비해 당연히 더 많은 비용과 시간이 소요됩니다. 이것이 고품질 결과물을 얻기 위해 감수해야 할 중요한 트레이드오프입니다.
-
-      오답 해설:
-      1) 메타-프롬프팅의 중요성이 언급되지만, '관리가 어렵다'는 점보다는 '품질을 좌우한다'는 긍정적 측면과 설계의 중요성을 강조합니다.
-      2) 본문의 예시 코드에서 볼 수 있듯, 단일 호출보다 여러 단계를 조율하는 로직이 필요하므로 구현 코드는 더 복잡해집니다.
-      3) 여러 번 LLM을 호출하므로 컴퓨팅 자원을 더 많이 사용하게 됩니다. 따라서 환경 친화적이라는 설명은 본문의 내용과 정반대입니다.
-
+    explanation: "Mythos 루프의 품질은 self-critique 단계의 프롬프트에 달려 있다. 어떤 기준으로 설계안을 비평할 것인가 — 즉 메타 비평 프롬프트 — 를 먼저 정의해야 나머지 구조가 의미 있다. 이는 하네스 엔지니어링의 '게이트 설계'와 동일한 원리다."
 ---
 
-## 왜 '반복적 사고'가 중요한가?
+## 왜 지금 이 주제인가
 
-프론트엔드 개발에서 복잡한 UI 컴포넌트를 한 번에 완벽하게 작성하는 개발자는 거의 없습니다. 보통 초안을 만들고, 화면에 렌더링해 본 뒤, 어색한 부분을 수정하고, 상태 관리 로직을 추가하며, 접근성 표준을 검토하는 과정을 반복합니다. 이처럼 인간의 문제 해결 과정은 본질적으로 '반복적'입니다.
+우리 방법론에는 이미 두 개의 강력한 피드백 루프가 있다.
 
-하지만 지금까지의 LLM(거대 언어 모델)은 대부분 '단일 패스(single-pass)' 방식으로 작동했습니다. 프롬프트를 받으면, 학습된 통계에 따라 가장 그럴듯한 다음 토큰을 순차적으로 생성하여 한 번에 결과물을 내놓습니다. 이는 간단한 질문에 답하거나 짧은 코드를 생성하는 데는 효과적이지만, 여러 제약 조건과 맥락을 동시에 고려해야 하는 복잡한 작업에서는 종종 실패합니다. 결과물이 논리적 비약을 보이거나, 중요한 요구사항을 누락하거나, 스스로 모순에 빠지는 '환각' 현상이 발생하는 이유입니다.
+**하네스 엔지니어링**은 AI가 출력을 내놓으면 외부에서 검증한다. Zod로 스키마를 깨고, CI gate로 빌드를 막고, circuit breaker로 재시도를 제어한다. AI는 '블랙박스 제조기'이고 하네스는 그 출구에 설치된 검문소다.
 
-Claude Mythos 모델과 이를 역설계한 오픈소스 구현체 OpenMythos가 제시하는 '반복적 사고(Repetitive Thinking)' 트랜스포머 아키텍처는 바로 이 한계를 정면으로 돌파하려는 시도입니다. LLM이 최종 답변을 내놓기 전에, 내부적으로 '생각의 공간(scratchpad)'을 갖고 여러 번 초안을 작성하고(draft), 스스로 비평하며(self-critique), 수정하는(refine) 과정을 거치게 하는 것입니다. 이는 마치 개발자가 코드를 리팩토링하듯, 모델 스스로 결과물의 품질을 점진적으로 향상시키는 메커니즘을 내장한 것과 같습니다.
+**컴파운드 엔지니어링**은 세션과 세션 사이를 연결한다. NEXT.md가 다음 세션에 컨텍스트를 넘기고, Journal이 의사결정을 박제하며, 각 스프린트의 산물이 다음 스프린트의 지식이 된다.
 
-## Mythos 아키텍처의 핵심: 내부 루프
+그런데 두 루프 모두 AI가 **출력을 내놓은 이후**에 작동한다. AI가 그 출력을 **만들어내는 과정 내부**에는 손을 대지 않는다.
 
-Mythos 아키텍처의 핵심은 외부 사용자에게는 보이지 않는 내부적인 '사고 루프'입니다. 이 과정을 다이어그램으로 표현하면 기존 방식과의 차이가 명확해집니다.
+OpenMythos가 역설계한 Mythos 아키텍처는 바로 그 내부 — 단일 추론 사이클 안에서 모델이 스스로 초안을 쓰고, 비평하고, 수정하는 루프 — 를 다룬다. 이 세 번째 루프를 우리 방법론과 어떻게 연결할 수 있는지가 이 엔트리의 주제다.
+
+## 세 개의 피드백 루프
 
 ```mermaid
 graph TD
-    subgraph std ["Standard LLM Inference"]
-        A[User Prompt] --> B{LLM} --> C[Final Output]
+    subgraph macro ["매크로 루프 — 컴파운드 엔지니어링 (세션 간, 수일~수주)"]
+        J[Journal 엔트리] --> N[NEXT.md 핸드오프]
+        N --> S2[다음 세션]
+        S2 --> J
     end
 
-    subgraph mythos ["Mythos-style Iterative Thinking"]
-        D[User Prompt] --> E{LLM: Draft v1}
-        E --> F{"Self-Critique:\nIs draft v1 complete?\nDoes it meet all constraints?"}
-        F -- "No, needs refinement" --> G{LLM: Refine to v2}
-        G --> F
-        F -- "Yes, complete" --> H[Final Output]
+    subgraph meso ["메소 루프 — 하네스 엔지니어링 (세션 내, 수초~수분)"]
+        AI[AI 출력] --> V{Zod / CI Gate}
+        V -- 실패 --> RT[Retry / Fallback]
+        RT --> AI
+        V -- 통과 --> OUT[검증된 결과]
     end
+
+    subgraph micro ["마이크로 루프 — Mythos 아키텍처 (추론 내부, ms~수초)"]
+        P[프롬프트] --> D[Draft v1]
+        D --> C{Self-Critique}
+        C -- 개선 필요 --> R[Refine]
+        R --> C
+        C -- 완료 --> F[Final Output]
+    end
+
+    F --> AI
+    OUT --> J
 ```
 
-이 내부 루프는 Chain-of-Thought (CoT) 프롬프팅의 발전된 형태로 볼 수 있습니다. CoT가 모델에게 "단계별로 생각하라"고 지시하여 그 과정을 출력에 포함시키는 것이라면, Mythos는 아예 모델 구조 자체에 이런 사고 과정을 내재화하고 최종 결과물만 깔끔하게 정제해서 보여준다는 차이가 있습니다.
+세 루프는 **시간 스케일**이 다르고 **교정 주체**가 다르다.
 
-### OpenMythos의 구현 들여다보기
+| 루프 | 스케일 | 교정 주체 | 피드백 신호 | 우리 구현 |
+|---|---|---|---|---|
+| 마이크로 (Mythos) | ms ~ 수초 | 모델 내부 | 자가 비평 프롬프트 | 미구축 → 이식 대상 |
+| 메소 (하네스) | 수초 ~ 수분 | 외부 게이트 | schema 오류, exit code | Zod, circuit breaker, CI |
+| 매크로 (컴파운드) | 수일 ~ 수주 | 저장된 지식 | journal 패턴 비교 | NEXT.md, Journal, 솔루션 DB |
 
-OpenMythos는 이 개념을 실제 코드로 구현한 사례입니다. 핵심은 '스크래치패드(Scratchpad)'의 활용입니다. 모델은 각 반복 단계에서 이전 단계의 결과물과 비평 내용을 스크래치패드에 누적하며, 이를 다음 단계의 입력으로 사용합니다.
+세 루프가 쌓이면 피드백이 세 겹으로 중첩된다. **출력 품질**은 하네스가 보장하고, **학습 복리**는 컴파운드가 담당하며, **추론 품질**은 Mythos가 끌어올린다.
 
-이 패턴을 TypeScript로 간단하게 시뮬레이션해 보면 다음과 같습니다. 이는 실제 모델 아키텍처는 아니지만, Harness Engineering 관점에서 우리가 이 패턴을 어떻게 활용할 수 있는지 보여줍니다.
+## Mythos 아키텍처 핵심 구조
+
+Mythos의 내부 루프는 세 단계로 구성된다.
+
+```mermaid
+sequenceDiagram
+    participant H as Harness (외부)
+    participant M as Mythos 내부 루프
+    participant S as Scratchpad
+
+    H->>M: 프롬프트 전달
+    M->>S: Draft v1 기록
+    M->>M: Self-Critique: 요구사항 충족?
+    M->>S: Critique v1 기록
+    M->>S: Draft v2 기록
+    M->>M: Self-Critique: 충분히 개선됐나?
+    M->>H: Final Output (스크래치패드 제거, 결과만 반환)
+    H->>H: Zod 검증 / CI Gate
+```
+
+단일 LLM 호출처럼 보이지만 내부에서는 여러 번의 draft-critique-refine 사이클이 돈다. 하네스 입장에서는 출구에 정제된 결과물이 도착한다는 점에서 기존과 동일하지만, 그 결과물의 **시작 품질**이 이미 한 단계 높아진 상태다.
+
+## 우리 방법론과의 구조적 비교
+
+### 자기 교정의 위치
+
+| 방법론 | 교정 발생 위치 | 교정을 아는 주체 |
+|---|---|---|
+| Mythos | AI 추론 **내부** | 모델 자신 |
+| 하네스 엔지니어링 | AI 출력 **이후** | 하네스 (Zod, CI, 서킷브레이커) |
+| 컴파운드 엔지니어링 | 세션 **이후** | 다음 세션의 나 / AI |
+
+하네스는 "출력이 틀렸다"를 감지하지만 **왜 틀렸는지** 모른다. Mythos는 "내 초안이 왜 부족한지"를 스스로 진단하고 고친다. 컴파운드는 "지난번 패턴에서 뭘 놓쳤는지"를 기록으로 추적한다.
+
+세 가지가 서로 다른 질문에 답하고 있다.
+
+### Scratchpad vs Journal
+
+Mythos의 **scratchpad**는 AI가 최종 결과를 내놓기까지의 중간 사고 과정을 누적한다. 우리의 **Journal 엔트리와 NEXT.md**도 같은 역할을 — 단지 세션 스케일에서 — 한다.
+
+```
+Mythos scratchpad:   [Draft v1] → [Critique v1] → [Draft v2] → Final
+우리 컴파운드:       [Journal 019] → [NEXT.md] → [Journal 020] → Sprint 결과
+```
+
+구조가 동형(isomorphic)이다. 차이는 시간 해상도뿐이다. Mythos는 수초 안에 이 사이클을 완료하고, 우리는 수일에 걸쳐 수동으로 한다.
+
+이 관찰에서 나오는 실용적 결론이 있다: **Mythos의 scratchpad를 Journal에 박제하면 마이크로 루프의 산물이 매크로 루프의 컨텍스트가 된다.** AI가 "왜 이 설계를 선택했는가"를 스크래치패드로 남기고, 그걸 Journal에 포함시키면 다음 세션은 그 추론 과정 위에서 출발한다.
+
+### Self-Critique Prompt vs 하네스 게이트 설계
+
+하네스에서 게이트의 품질은 "무엇을 검사하는가"에 달려 있다. Mythos에서 루프의 품질은 "어떻게 비평하는가"에 달려 있다. 둘 다 **기준 설계**가 핵심이다.
+
+| 하네스 게이트 | Mythos Self-Critique 등가 |
+|---|---|
+| Zod schema (출력 구조 검사) | "요구사항을 모두 충족하는가?" |
+| CI test gate (행동 검사) | "엣지케이스를 놓쳤는가?" |
+| ai-review.yml (의미 검사) | "논리적 비약이 있는가?" |
+
+우리 `ai-review.yml`이 하는 일이 사실상 외부에서 돌리는 Mythos self-critique다. 차이는 타이밍뿐이다. ai-review는 PR이 올라온 후에 돌고, Mythos critique는 AI가 초안을 완성하는 즉시 돈다.
+
+## 우리 방법론에 이식하는 경로
+
+### 1. aidy Architect 에이전트에 Mythos 루프 이식
+
+현재 aidy의 Architect 에이전트는 단일 패스로 설계안을 생성하고 Worker에게 넘긴다. 여기에 Mythos 루프를 심으면 Worker가 받는 설계안의 품질이 달라진다.
 
 ```typescript
-// Conceptual simulation of the Mythos pattern
-async function invokeMythosPattern(
-  initialPrompt: string,
-  maxIterations: number = 3
-): Promise<string> {
-  let scratchpad = `Initial Prompt: ${initialPrompt}\n\n`;
-  let currentResult = "";
+async function architectWithSelfCritique(task: string): Promise<ArchitectureDoc> {
+  const scratchpad: string[] = [];
 
-  console.log("Starting iterative thinking process...");
+  // Draft: 초안 설계
+  const draft = await architect.generate(`Task: ${task}\nGenerate an initial architecture proposal.`);
+  scratchpad.push(`DRAFT:\n${draft}`);
 
-  for (let i = 1; i <= maxIterations; i++) {
-    console.log(`\nIteration ${i}:`);
+  // Self-Critique: 우리 하네스 기준으로 비평
+  const critique = await architect.generate(`
+${scratchpad.join('\n')}
 
-    const draftPrompt = `
-      ${scratchpad}
-      Based on the above, generate the next version of the solution.
-      Think step-by-step and create a draft.
-      ---
-      DRAFT ${i}:
-    `;
-    // 1. 초안 생성 (Draft)
-    const draft = await llm.generate(draftPrompt);
-    scratchpad += `DRAFT ${i}:\n${draft}\n\n`;
-    console.log(`- Draft generated.`);
+Critique the draft using these harness engineering criteria:
+1. 모든 AI 출력에 Zod 스키마가 있는가?
+2. 실패 경로(retry, fallback)가 명시됐는가?
+3. 비용/레이턴시 트레이드오프가 고려됐는가?
+4. 관찰 가능성 레이어(로깅, 오류 추적)가 있는가?
 
-    const critiquePrompt = `
-      ${scratchpad}
-      Critique the latest DRAFT ${i}.
-      - Does it fully address the initial prompt?
-      - Are there any logical errors, missing pieces, or potential improvements?
-      - Provide a concise critique.
-      ---
-      CRITIQUE ${i}:
-    `;
-    // 2. 자가 비평 (Self-Critique)
-    const critique = await llm.generate(critiquePrompt);
-    scratchpad += `CRITIQUE ${i}:\n${critique}\n\n`;
-    console.log(`- Critique generated: ${critique.substring(0, 80)}...`);
-    
-    currentResult = draft; // 마지막 초안을 현재 결과로 유지
-  }
+List what's missing or weak.`);
+  scratchpad.push(`CRITIQUE:\n${critique}`);
 
-  console.log("\nFinalizing output...");
-  const finalizationPrompt = `
-    ${scratchpad}
-    Based on the entire thought process above, including all drafts and critiques,
-    provide the final, clean, and complete answer to the initial prompt.
-    Do not include any of the scratchpad contents like "DRAFT" or "CRITIQUE".
-  `;
-  // 3. 최종 결과물 정제 (Finalize)
-  const finalOutput = await llm.generate(finalizationPrompt);
+  // Refine: 비평 반영 수정
+  const refined = await architect.generate(`
+${scratchpad.join('\n')}
 
-  return finalOutput;
+Now produce the final architecture document addressing all critique points.`);
+
+  // 스크래치패드를 Journal에 박제 (매크로 루프 연결)
+  await journal.append({ task, scratchpad, result: refined });
+
+  return parseArchitectureDoc(refined);
 }
-
-// 예제 사용
-// const llm = new LLMProvider();
-// const complexRequest = "Create a TypeScript interface 'UserProfile' with id, name, email, and an optional 'lastLogin' date. Also, create a validation function using Zod for this interface.";
-// const finalCode = await invokeMythosPattern(complexRequest);
-// console.log("\n--- FINAL OUTPUT ---\n", finalCode);
 ```
 
-이 코드에서 볼 수 있듯, 여러 번의 LLM 호출을 조합하여 하나의 고품질 결과물을 만들어냅니다. 이것이 바로 Mythos 아키텍처를 외부에서 모방하는 Harness Engineering의 핵심입니다.
+여기서 `critique` 프롬프트의 4개 기준이 우리 **하네스 엔지니어링 5대 레버**에서 나온다는 점이 핵심이다. Mythos 루프를 채우는 내용이 우리 방법론 자체다.
 
-## iOS/프론트엔드 개발자의 실무 적용 시나리오
+### 2. Gemini 일일 레슨 파이프라인에 Mythos 루프 추가
 
-| 시나리오 | 기존 단일 패스 접근 방식 | Mythos 아키텍처 접근 방식 |
-| :--- | :--- | :--- |
-| **SwiftUI 컴포넌트 생성** | `// TODO: Add accessibility labels` 주석만 남기거나, 로딩/에러 상태를 누락하는 경우가 많음. | **초안:** 기본 `View` 구조 생성 <br /> **비평:** "접근성(Accessibility)과 상태(State) 처리가 빠져있음" <br /> **수정:** `@State` 변수와 `ProgressView`, 에러 메시지 뷰, `accessibilityIdentifier` 추가. |
-| **복잡한 API 요청 로직** | 사용자의 모호한 요청("다음 주 도쿄행 비행기 예약")에 대해 필요한 정보를 되묻지 않고 바로 함수 호출을 시도하여 실패. | **초안:** `bookFlight(destination: "Tokyo", date: ?)` 함수 호출 계획 <br /> **비평:** "날짜가 명확하지 않음. 사용자에게 되물어야 함" <br /> **수정:** 사용자에게 날짜를 물어보는 질문을 생성하고, 응답을 기다리는 다음 액션 계획 수립. |
-| **기획서 기반 코드 스캐폴딩** | 기획서의 특정 항목(예: "데이터는 실시간으로 갱신되어야 함")을 놓치고 일반적인 `fetch` 코드만 생성. | **초안:** `useEffect` / `onAppear`에서 `fetch`하는 코드 생성 <br /> **비평:** "기획서에 '실시간' 요구사항이 있었음. WebSocket 또는 SSE가 적합" <br /> **수정:** `URLSessionWebSocketTask` 또는 `AsyncStream`을 사용하는 코드로 리팩토링. |
+현재 `generate-on-pick.yml`은 Gemini가 단일 패스로 MDX를 생성하고 PR을 올린다. 생성 → 자가 비평 → 수정 사이클을 추가하면 ai-review에서 걸리는 빈도가 줄어든다.
 
-이처럼 Mythos 아키텍처는 단순히 더 나은 코드를 생성하는 것을 넘어, 에이전트가 스스로의 결과물을 검증하고 개선하게 함으로써 훨씬 더 신뢰할 수 있고 견고한(robust) 자동화 시스템을 구축할 수 있게 해줍니다.
+```
+현재: Gemini 생성 → PR → ai-review(외부 비평) → 수정 요청 → 재작성
+개선: Gemini 초안 → Gemini self-critique("Zod 스키마 있나? connections 실제 존재하나?") → 수정 → PR → ai-review
+```
 
-## Harness Engineering 관점의 시사점
+ai-review가 잡아야 할 문제를 Gemini가 먼저 걸러내면 외부 리뷰 루프의 부하가 줄고, PR 사이클이 짧아진다.
 
-1.  **관찰 가능성(Observability)의 재정의**: 최종 결과물만 보는 것은 더 이상 충분하지 않습니다. 모델의 '생각 과정' 즉, 스크래치패드의 내용을 모두 로깅하고 분석해야 합니다. 왜 특정 방향으로 리팩토링했는지, 어떤 요구사항을 놓쳤다가 다시 바로잡았는지 추적할 수 있어야 에이전트의 성능을 개선할 수 있습니다.
-2.  **비용과 지연 시간(Cost & Latency)의 트레이드오프**: 내부적으로 여러 번 LLM을 호출하므로 비용과 응답 시간이 증가합니다. 따라서 `maxIterations`를 적절히 제한하거나, 초안 생성은 강력한 모델(e.g., GPT-4o, Claude 3.5 Sonnet)로, 비평 및 수정은 더 작고 빠른 모델로 수행하는 '하이브리드' 전략을 고려해야 합니다.
-3.  **메타-프롬프팅(Meta-Prompting)의 중요성**: `invokeMythosPattern` 예제 코드의 `critiquePrompt`처럼, '어떻게 비평할 것인가'를 정의하는 메타 프롬프트의 품질이 전체 결과물의 품질을 좌우합니다. 이는 단순한 프롬프트 엔지니어링을 넘어, 에이전트의 행동 철학을 설계하는 '거버넌스'의 영역에 해당합니다.
+### 3. Scratchpad 관찰 가능성 레이어
+
+현재 우리 AI 호출 로깅은 최종 입출력만 기록한다. Mythos 패턴을 적용하면 중간 draft와 critique도 로그에 남길 수 있다.
+
+```typescript
+interface AiCallLog {
+  sessionId: string;
+  finalPrompt: string;
+  finalOutput: string;
+  // Mythos 확장
+  scratchpad?: Array<{
+    iteration: number;
+    type: 'draft' | 'critique' | 'refine';
+    content: string;
+    tokenCount: number;
+  }>;
+}
+```
+
+이 로그가 쌓이면 "어떤 작업에서 AI가 몇 번의 자기 교정을 거쳐야 하는가"를 측정할 수 있다. 교정 횟수가 많은 작업 유형 = 초기 프롬프트 설계를 개선해야 하는 신호다.
+
+## 안티패턴과 한계
+
+**Mythos 루프를 쓰면 안 되는 경우:**
+
+- **단순 구조화 작업**: JSON 추출, slug 생성처럼 출력이 명확히 정의된 경우 → Zod 하드 게이트만으로 충분, Mythos 루프는 비용 낭비
+- **이미 외부 게이트가 충분한 경우**: CI test suite가 촘촘하면 내부 루프 없이도 품질이 보장됨
+- **비용 민감 파이프라인**: 내부 루프는 LLM 호출 횟수를 2~4배 증가시킨다. haiku로 critique, sonnet으로 draft하는 **하이브리드 모델** 전략이 필요
+
+**우리 하네스가 Mythos보다 나은 경우:**
+
+- 실패 기준이 **코드로 명시 가능**할 때 (Zod schema, exit code 0/1)
+- AI의 주관적 판단보다 **객관적 검증**이 필요할 때
+- 여러 AI 호출에 걸쳐 **일관된 기준**을 유지해야 할 때
+
+두 패러다임은 경쟁하지 않는다. Mythos는 "AI가 더 좋은 초안을 만들게" 하고, 하네스는 "그 초안이 시스템 기준에 맞는지" 확인한다.
+
+## 내 프로젝트에 적용하기
+
+- [ ] aidy Architect 프롬프트에 "하네스 기준 4가지로 설계안을 자가 비평하라" 섹션 추가 (위 코드 참조)
+- [ ] `generate-on-pick.yml`에 Gemini self-critique 단계 삽입 — connections dangling 체크 + Zod frontmatter 검사
+- [ ] AI 호출 로그에 `scratchpad` 필드 추가하고 `ai-cost-tracking` 대시보드에 시각화
+- [ ] Journal 엔트리 템플릿에 "AI가 처음 제안한 것 vs 자가 비평 후 바뀐 것" 섹션 추가
 
 ## 자기 점검
 
-1.  Mythos 아키텍처가 기존의 단일 LLM 호출 방식과 다른 가장 큰 차이점은 무엇인가요?
-2.  '반복적 사고' 과정에서 '스크래치패드(Scratchpad)'는 어떤 역할을 하며, 이를 로깅하는 것이 왜 중요한가요?
-3.  Mythos와 같은 아키텍처를 프로덕션에 도입할 때 고려해야 할 주요 트레이드오프(trade-off) 두 가지는 무엇인가요?
-4.  이 Mythos 아키텍처의 개념을 Chain-of-Thought (CoT)와 비교하여 동료 개발자에게 설명한다면, 어떤 점을 강조하시겠습니까?
-5.  **실습 과제**: 현재 진행 중인 프로젝트에서 LLM을 사용하는 기능 하나를 선택하세요. (예: 커밋 메시지 생성, 코드 리뷰 요약 등). 이 기능에 위 TypeScript 예제와 같이 '초안 생성 → 자가 비평 → 수정' 사이클을 수동으로 적용하는 프롬프트 체인을 만들어 보세요. LLM 채팅 UI에서 3단계에 걸쳐 직접 프롬프트를 입력하며 역할을 부여하고, 단일 프롬프트로 요청했을 때와 결과물의 품질이 어떻게 달라지는지 비교해 보세요.
+1. 세 개의 피드백 루프(마이크로/메소/매크로)가 각각 무엇에 답하는가?
+2. Mythos scratchpad와 우리 Journal이 구조적으로 동형인 이유는 무엇인가?
+3. ai-review.yml이 "외부에서 돌리는 Mythos self-critique"라고 할 수 있는 근거는?
+4. Mythos 루프를 적용하면 안 되는 작업 유형은 무엇이고, 그 이유는?
+5. **열린 질문**: aidy의 Worker 에이전트에도 Mythos 루프를 심어야 할까, 아니면 Architect만으로 충분할까?
+
+### 실습 과제
+
+aidy의 현재 Architect 프롬프트를 꺼내서, "하네스 엔지니어링 4가지 기준(Zod, retry, cost, observability)으로 네 설계안의 취약점을 스스로 나열하라"는 self-critique 섹션을 추가한다. 그 다음 동일한 태스크를 기존 Architect와 Mythos-Architect에게 각각 던지고, 최종 출력의 차이를 비교해서 Journal에 기록한다.
+
+## 출처
+
+- 원본: [OpenMythos — AI Study Wiki (기존 자동 생성 엔트리)](https://ai-study-wheat.vercel.app/wiki/harness-engineering/openmythos-architecture-iterative-agent-performance)
+- 보강 자료:
+  - [하네스 엔지니어링 5대 레버](/wiki/harness-engineering/five-levers-of-harness-engineering)
+  - [컴파운드 엔지니어링 철학](/wiki/harness-engineering/compound-engineering-philosophy)
+  - [Circuit Breaker & Fallback 패턴](/wiki/harness-engineering/ai-call-patterns-circuit-breaker-fallback)
