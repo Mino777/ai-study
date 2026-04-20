@@ -1,0 +1,260 @@
+---
+title: "bash 워처 패턴 — AI 폴링 토큰 0 달성: tmux pane 상태 감지로 완전 대체"
+category: harness-engineering
+date: "2026-04-20"
+tags: [tokenomics, multi-agent, tmux, polling, bash, aidy, orchestration, zero-token]
+confidence: 3
+connections: [harness-engineering/aidy-journal-000-architect-worker-baseline, harness-engineering/multi-session-ai-ops-patterns, harness-engineering/compound-engineering-philosophy]
+status: complete
+description: "멀티 에이전트 오케스트레이션에서 워커 완료 여부를 AI가 직접 폴링하는 대신, bash가 tmux pane 텍스트 패턴으로 idle 상태를 감지해 폴링 토큰을 100% 제거한 실전 패턴."
+type: entry
+quiz:
+  - question: "bash 워처 패턴에서 Claude Code가 '작업 중'임을 판단하는 tmux pane 텍스트 시그니처는?"
+    choices:
+      - '"Running..." 또는 "Please wait..."'
+      - '"esc to interrupt" 또는 "ctrl+t"'
+      - '"Thinking..." 또는 "Generating..."'
+      - '"[tool use]" 또는 "[bash]"'
+    answer: 1
+    explanation: 'Claude Code가 작업 중일 때는 하단에 "esc to interrupt"가 표시된다. bash는 tmux capture-pane으로 마지막 5줄을 캡처해서 이 패턴을 감지한다. 반대로 "? for shortcuts" 같은 프롬프트 시그니처가 보이면 idle로 판단한다.'
+  - question: "5분 폴링 → 20분 폴링 → bash 워처 순서로 최적화된 이유를 가장 잘 설명한 것은?"
+    choices:
+      - "bash가 LLM보다 정확하게 idle 상태를 감지할 수 있어서"
+      - "워커 작업 시간이 평균 20분이라 5분 폴링은 낭비이고, 결국 폴링 자체가 AI 호출을 소모하는 구조적 문제를 bash 감시로 해결"
+      - "tmux가 5분 간격 타이머를 지원하지 않아서"
+      - "LLM 폴링은 rate limit에 걸리기 때문에"
+    answer: 1
+    explanation: "5분 폴링은 60분짜리 워커 작업에서 12번 LLM 호출을 낭비(토큰 60% 낭비, s26 실측). 20분으로 줄이면 3번으로 개선되지만 여전히 폴링 자체가 AI 호출을 소모한다. bash는 LLM 호출 없이 30초마다 상태를 체크하므로 폴링 비용이 구조적으로 0이 된다."
+  - question: "bash 워처 패턴이 단순한 토큰 절약을 넘어서 제공하는 추가 이점은?"
+    choices:
+      - "워커 에이전트의 오류를 자동으로 수정해준다"
+      - "Architect가 대기 중에 다음 스펙/WO를 작성할 수 있는 파이프라이닝이 가능해진다"
+      - "워커 간 통신 지연을 줄여준다"
+      - "tmux 세션이 재시작되어도 작업이 유지된다"
+    answer: 1
+    explanation: "bash가 백그라운드에서 감시를 담당하므로, Architect Claude는 워커 완료를 기다리는 동안 다음 라운드 스펙 작성이나 WO 준비를 할 수 있다. 이 파이프라이닝이 실제 스프린트 처리량을 높인다. 단순 토큰 절약보다 큰 가치다."
+---
+
+## 왜 지금 이 주제인가
+
+aidy 멀티 에이전트 시스템(Architect + Server/iOS/Android 워커)을 운영하면서 반복된 질문이 있었다: **워커가 작업을 마쳤는지 어떻게 아는가?**
+
+초기엔 Architect Claude가 직접 폴링했다. 5분마다 깨어나 "워커들 다 됐나?" 를 확인하는 방식. s6에서 이걸 구현했을 때 토큰이 예상보다 훨씬 빨리 소진됐다. s26에서 실측해보니 5분 폴링은 실제 작업 시간의 60%를 폴링에 낭비하고 있었다. 20분으로 늘려서 개선했지만, 본질적인 문제는 그대로였다.
+
+**폴링 자체가 AI 호출을 소모한다.** 대기 중에 Claude를 깨우면 컨텍스트가 로드되고, 판단 없이 "아직 작업 중" 이라는 답을 내놓기 위해 토큰을 쓴다. 이 판단에는 AI가 필요하지 않다.
+
+s27에서 이 구조적 문제를 해결했다. bash가 tmux pane을 감시하면 Claude는 폴링을 한 번도 하지 않는다. **폴링 토큰 100% 제거.**
+
+## 3단계 진화
+
+```mermaid
+graph LR
+    subgraph s6 ["s6 — 5분 폴링"]
+        A1[Architect] -- "5분마다 깨어남" --> P1[폴링 LLM 호출]
+        P1 -- "아직 작업 중" --> A1
+    end
+
+    subgraph s26 ["s26 — 20분 폴링 (60% 절약)"]
+        A2[Architect] -- "20분마다" --> P2[폴링 LLM 호출]
+        P2 -- "아직 작업 중" --> A2
+    end
+
+    subgraph s27 ["s27 — bash 워처 (토큰 0)"]
+        B[bash watch-workers &] -- "30초마다 pane 체크" --> W[tmux capture-pane]
+        W -- "전원 idle 감지" --> N[tmux send-keys → Architect에 알림]
+        A3[Architect] -- "다음 스펙 작성 중" --> A3
+        N -- "[워커 전원 완료] 수신" --> A3
+    end
+```
+
+| 단계 | 폴링 주체 | 60분 작업 시 LLM 호출 | 토큰 낭비 |
+|---|---|---|---|
+| s6 (5분) | Claude | 12회 | ~60% |
+| s26 (20분) | Claude | 3회 | ~15% |
+| s27 (bash) | bash | **0회** | **0%** |
+
+## 핵심 메커니즘: tmux pane idle 감지
+
+Claude Code는 작업 중일 때와 idle일 때 pane에 다른 텍스트를 표시한다.
+
+```
+작업 중 (working):
+  ╭─────────────────────────────────╮
+  │  ● Bash(npm run build...)       │
+  │  esc to interrupt               │  ← 이 패턴이 핵심
+  ╰─────────────────────────────────╯
+
+Idle (프롬프트 대기):
+  ╭─────────────────────────────────╮
+  │  > _                            │
+  │  ? for shortcuts                │  ← idle 시그니처
+  ╰─────────────────────────────────╯
+```
+
+bash는 `tmux capture-pane`으로 각 워커 pane의 마지막 5줄을 캡처해서 이 패턴을 30초마다 체크한다.
+
+```bash
+is_pane_idle() {
+    local target=$1
+    local tmux_target="$TMUX_SESSION:$target"
+
+    local last_lines
+    last_lines=$(tmux capture-pane -t "$tmux_target" -p 2>/dev/null \
+                 | grep -v "^$" | tail -5)
+
+    # 작업 중 시그니처 → working
+    if echo "$last_lines" | grep -q "esc to interrupt\|ctrl+t"; then
+        return 1
+    fi
+
+    # idle 시그니처 → idle
+    if echo "$last_lines" | grep -q "bypass permissions on\|accept edits on\|? for shortcuts"; then
+        return 0
+    fi
+
+    return 1  # 알 수 없음 → working으로 취급 (안전 기본값)
+}
+```
+
+불확실할 때 working으로 취급하는 것이 중요하다. idle로 잘못 판단하면 미완성 작업 위에 다음 라운드가 쌓이는 재앙이 생긴다.
+
+## watch-workers 전체 구조
+
+```bash
+watch_workers() {
+    local timeout="${1:-1800}"  # 기본 30분 timeout
+    local poll=30
+    local elapsed=0
+    local workers=("server" "ios" "android")
+
+    # dispatch 직후 working 진입 대기
+    sleep 10
+
+    while [ "$elapsed" -lt "$timeout" ]; do
+        local all_idle=true
+        local status_line=""
+
+        for w in "${workers[@]}"; do
+            if is_pane_idle "$w"; then
+                status_line="$status_line [$w:✅]"
+            else
+                all_idle=false
+                status_line="$status_line [$w:⏳]"
+            fi
+        done
+
+        if $all_idle; then
+            # 각 워커의 마지막 커밋 수집
+            local report=""
+            for w in "${workers[@]}"; do
+                local last_commit
+                last_commit=$(cd "$HOME/Develop/aidy-$w" \
+                              && git log --oneline -1 2>/dev/null)
+                report="$report\n  $w: $last_commit"
+            done
+
+            # Architect pane에 알림 전송 — Claude가 유저 메시지로 수신
+            local msg="[워커 전원 완료] ${elapsed}초 소요${report}"
+            tmux send-keys -t "$TMUX_SESSION:0.0" "$msg" Enter
+            return 0
+        fi
+
+        sleep "$poll"
+        elapsed=$((elapsed + poll))
+    done
+
+    # timeout 시 경고 알림
+    tmux send-keys -t "$TMUX_SESSION:0.0" \
+        "[워커 감시 timeout] ${timeout}초 경과. 수동 확인 필요." Enter
+    return 1
+}
+```
+
+### 사용 방법
+
+```bash
+# 워커에게 작업 지시 후 즉시 백그라운드로 실행
+./architect-cli.sh send server "[R3] feat: Quick Notes API..."
+./architect-cli.sh send ios "[R3] feat: Quick Notes UI..."
+./architect-cli.sh send android "[R3] feat: Quick Notes UI..."
+
+# bash 워처를 백그라운드로 띄우고
+./architect-cli.sh watch-workers 1800 &
+
+# Architect는 폴링 없이 다음 라운드 스펙 작성에 집중
+# → 30초 이내에 전원 완료 감지 시 "[워커 전원 완료]" 알림 수신
+```
+
+## 파이프라이닝 효과
+
+단순한 토큰 절약보다 더 중요한 부수 효과가 있다.
+
+**이전 (폴링)**: Architect가 대기 → 폴링 → 대기 → 폴링 → 완료 확인 → 다음 스펙 작성
+
+**이후 (bash 워처)**: Architect가 다음 스펙 작성 → (백그라운드에서 bash가 감시 중) → 완료 알림 수신 → 즉시 다음 라운드 dispatch
+
+워커가 작업하는 20~40분 동안 Architect는 다음 2~3 라운드의 WO를 미리 준비할 수 있다. aidy s27에서 이 파이프라이닝 덕분에 8라운드 작업이 실질적으로 더 빨리 완료됐다.
+
+## 일반화: tmux 없는 환경
+
+tmux가 없는 환경에서는 같은 원리를 파일 기반 상태로 구현할 수 있다.
+
+```bash
+# 워커가 완료 시 파일 생성
+echo "done" > /tmp/worker-server.done
+echo "done" > /tmp/worker-ios.done
+
+# bash 워처 (파일 기반)
+while true; do
+    if [ -f /tmp/worker-server.done ] && \
+       [ -f /tmp/worker-ios.done ] && \
+       [ -f /tmp/worker-android.done ]; then
+        echo "[워커 전원 완료]"
+        rm /tmp/worker-*.done
+        break
+    fi
+    sleep 30
+done
+```
+
+워커 에이전트가 작업 완료 시 파일을 쓰도록 약속하면 동일한 효과를 낼 수 있다. 이 패턴은 aidy의 `messages/` 디렉토리 기반 메시지 큐와도 연결된다.
+
+## 안티패턴
+
+**AI에게 반복 판단 없는 폴링을 시키지 말라.** "워커 완료됐나?" 는 `grep` 수준의 패턴 매칭이다. 이걸 LLM이 하면 매 폴링마다 컨텍스트 로드 비용을 낸다.
+
+일반화하면: **결정 없이 반복 실행되는 작업은 bash에 맡겨라.** AI가 해야 할 일은 판단이지 감시가 아니다.
+
+| bash에 맡길 것 | AI가 해야 할 것 |
+|---|---|
+| 워커 idle 감지 (패턴 매칭) | 다음 스펙 설계 |
+| 파일/디렉토리 변경 감지 | 코드 리뷰 |
+| 빌드 성공/실패 체크 | 아키텍처 결정 |
+| 타임아웃 카운팅 | 에러 원인 분석 |
+
+## 내 프로젝트에 적용하기
+
+- [ ] aidy-architect의 `architect-cli.sh watch-workers` 패턴을 `ai-study` 허브 세션 워커 감시에도 적용 검토
+- [ ] `messages/` 파일 큐와 연동: 워커가 완료 메시지 파일 쓰면 bash 워처가 감지 → 허브에 알림
+- [ ] `watch-workers` timeout 값 조정: 라운드 평균 소요 시간의 2배로 설정 (s27 실측: 20~40분 → timeout 1800초)
+- [ ] `is_pane_idle` 패턴을 Claude Code 버전 업데이트 시 재검증 (UI 텍스트 변경 가능성)
+
+## 자기 점검
+
+1. bash 워처가 "불확실할 때 working으로 취급"하는 이유는 무엇인가?
+2. 5분 폴링 → 20분 폴링 → bash 워처의 진화가 가리키는 설계 원칙은?
+3. 파이프라이닝 효과가 토큰 절약보다 더 중요할 수 있는 이유는?
+4. tmux 없는 환경에서 같은 패턴을 구현하는 방법은?
+5. **열린 질문**: `is_pane_idle`의 텍스트 패턴이 Claude Code 업데이트로 바뀌면? 이 취약점을 어떻게 방어할 수 있을까?
+
+### 실습 과제
+
+현재 멀티 에이전트 또는 멀티 세션 작업 중 "완료를 어떻게 알 수 있는가?" 가 LLM 호출로 해결되고 있는 지점을 찾아라. `messages/` 파일 큐, 파일 생성 시그널, 또는 bash 루프 중 하나로 교체하고 토큰 절약량을 측정한다.
+
+## 출처
+
+- 원본: aidy-architect `architect-cli.sh` — `watch_workers()` 구현 (commit `20347c0`)
+- 진화 맥락: aidy-architect compound 회고 s6, s26, s27
+- 보강 자료:
+  - [멀티 세션 AI Ops 패턴](/wiki/harness-engineering/multi-session-ai-ops-patterns)
+  - [aidy Architect-Worker 베이스라인](/wiki/harness-engineering/aidy-journal-000-architect-worker-baseline)
