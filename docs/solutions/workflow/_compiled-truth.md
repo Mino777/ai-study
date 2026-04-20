@@ -1,8 +1,8 @@
 # [workflow] Compiled Truth
 
-## 종합 (7건, 최종 갱신 2026-04-19)
+## 종합 (8건, 최종 갱신 2026-04-20)
 
-- **재발 횟수**: 7건 (독립 문제)
+- **재발 횟수**: 8건 (독립 문제)
 - **핵심 패턴**: 멀티 세션/멀티 에이전트 환경에서 워크플로 안전성 확보
 - **코드 게이트 승격**: 완료 2건 (validator promotion, cross-session review), 진행 중 0건
 
@@ -17,6 +17,7 @@
 | 5 | Edge Runtime crypto 미지원 | Web Crypto API HMAC+XOR 비교 | 코드 적용 |
 | 6 | 솔루션 N=3+ 승격 규칙 | idempotent+<5% false positive → auto-fix, else warning-only | 프로세스 |
 | 7 | 교훈→도구→사례 3단 체인 끊김 | 양 끝 엔트리 "출처" 섹션 역링크 보강 | 프로세스 |
+| 8 | 레포 간 .claude/ 인프라 격차 | SessionStart hook + permissions.deny + 모델별 에이전트 이식 | 프로세스 |
 
 ### 메타 패턴
 
@@ -33,3 +34,4 @@
 5. [edge-runtime-timing-safe-comparison](2026-04-15-edge-runtime-timing-safe-comparison.md)
 6. [solution-to-validator-promotion](2026-04-16-solution-to-validator-promotion.md)
 7. [lesson-tool-application-3-tier-linking](2026-04-17-lesson-tool-application-3-tier-linking.md)
+8. [cross-project-infra-porting](2026-04-20-cross-project-infra-porting.md)

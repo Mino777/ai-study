@@ -2,6 +2,37 @@
 
 모든 주목할 만한 변경사항을 이 파일에 기록합니다.
 
+## [2026-04-20] 세션 18 — gma-ios 인프라 이식 + applicable_to 정밀화 + 이슈 정리
+
+> gma-ios에서 SessionStart hook / permissions.deny / 모델별 에이전트 패턴을 이식. applicable_to를 단순 ["any"]에서 프로젝트 특화(moneyflow/tarosaju/aidy)로 91개 정밀화. shadow-benchmark CI 파싱 버그 수정.
+
+### Added
+
+- **.claude/hooks/session-start.sh** — 세션 시작 시 엔트리 수 + NEXT.md 최우선 큐 + git 상태 자동 표시
+- **aidy-architect agents** — architect-advisor(opus), code-reviewer(sonnet), researcher(haiku) 3개 전문 에이전트 추가
+- **GitHub 이슈 7건** — NEXT.md 미완료 항목 이슈화 (#63~#69)
+
+### Changed
+
+- **settings.json** — includeGitInstructions: false + permissions.deny(.env*/secrets) + Bash 훅 python3 json 파싱으로 안정화
+- **backfill-frontmatter.mjs** — moneyflow/tarosaju 감지 추가 + --refine 플래그 (기존 ["any"] 재추론)
+- **91개 엔트리** applicable_to 재추론: ["any"] → 프로젝트 특화
+- **shadow-benchmark.mjs** — CI용 영문 Hit Rate/Token Savings summary 라인 추가 (grep 패턴 불일치 수정)
+- **bash-watcher Mermaid** — → 화살표 노드 라벨 따옴표 수정
+
+### Fixed
+
+- **#63** weekly-search-benchmark.yml grep 패턴 → shadow-benchmark 영문 출력으로 해결
+- **#64** Mermaid 충돌 63건 → 이미 해결됨 확인 후 클로즈
+- **#65** applicable_to 2차 정밀화 → 완료
+- **#66** SummaryCard 배지 브라우저 검증 → HTML 직접 확인, 3개 배지 정상
+
+### Metrics
+
+- applicable_to 정밀도: 0% → 74% (108/146 프로젝트 특화)
+- 자동화 워크플로우: 6 → 10 (기존 포함)
+- aidy-architect 전문 에이전트: 2 → 5
+
 ## [2026-04-20] 세션 17 — 위키 AI 에이전트 실용성 강화 + bash-watcher 패턴 추출
 
 > 위키가 사람용 서사 중심이라 AI 에이전트가 즉시 행동으로 연결하기 어렵다는 자기 비판에서 시작. 전체 146개 엔트리에 last_verified + applicable_to 백필, AI Agent Directive 추가, JIT 검색 품질 자동화. aidy s27에서 bash 워처 패턴 추출 → 엔트리로 박제.
