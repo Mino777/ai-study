@@ -2,40 +2,42 @@
 title: "AI Native 시스템 — 결정론적 제어가 CLAUDE.md를 이긴다"
 category: harness-engineering
 date: "2026-04-20"
-tags: [ai-native, deterministic-control, ci, pre-commit-hook, parallel-execution, worktree, architecture-test]
+tags: [ai-native, deterministic-control, ci, pre-commit-hook, parallel-execution, worktree, architecture-test, ddd, ast-analysis]
 confidence: 2
 connections: [harness-engineering/compound-engineering-philosophy, harness-engineering/architect-flow-map-via-aidy-architect, harness-engineering/five-levers-of-harness-engineering, harness-engineering/aidy-journal-000-architect-worker-baseline]
 status: complete
-description: "채널톡 Perry의 'AI Native 시스템' — CLAUDE.md 대신 CI/린터/포매터/프리커밋으로 LLM을 결정론적으로 제어하는 방법론과 우리 프로젝트 적용점"
+description: "채널톡 Perry의 'AI Native 시스템' 2부작 — CLAUDE.md 대신 CI/린터/아키텍처 테스트로 LLM을 결정론적으로 제어하는 방법론 + 우리 Next.js 프로젝트 적용 로드맵"
 type: entry
 quiz:
   - question: "CLAUDE.md만으로 LLM 행동을 통제할 때의 핵심 문제는?"
     choices: ["토큰 비용 증가", "자연어 모호성 + 긴 컨텍스트 후반부 무시 + 규칙 충돌 시 임의 결정", "모델 호환성 문제", "파일 크기 제한"]
     answer: 1
     explanation: "연구 데이터에 따르면 CLAUDE.md는 SWE-bench -0.5%, AgentBench -2%, 추론 비용 +20~23% — 자연어 규칙은 '부탁'이지 '강제'가 아니다."
-  - question: "Perry가 제시한 4가지 결정론적 제어 메커니즘이 아닌 것은?"
-    choices: ["CI (아키텍처/유닛/통합 테스트)", "포매터", "CLAUDE.md 규칙 강화", "프리커밋 훅"]
-    answer: 2
-    explanation: "4가지는 CI, 포매터, 린터, 프리커밋 훅. CLAUDE.md는 오히려 '부족한 방식'으로 지적됨."
-  - question: "LLM 병렬 실행에서 컨텍스트 스위칭 비용이 0에 가까운 이유는?"
-    choices: ["모델이 빠르기 때문", "맥락이 사람 머리가 아니라 LLM 컨텍스트 윈도우에 존재하기 때문", "작업이 단순하기 때문", "Git worktree가 자동 관리하기 때문"]
+  - question: "Perry의 아키텍처 테스트가 CLAUDE.md보다 효과적인 근본 이유는?"
+    choices: ["더 자세해서", "AI가 에러 메시지를 해석하고 자동 수정하는 피드백 루프가 생기므로", "파일 크기가 작아서", "Go 전용이라서"]
     answer: 1
-    explanation: "사람의 컨텍스트 스위칭 비용은 '머리에서 맥락을 내리고 올리는 것'인데, LLM은 각 세션이 독립적으로 맥락을 보유하므로 비용이 0에 수렴한다."
+    explanation: "아키텍처 테스트 실패 → 에러 메시지 → AI 자동 수정 → 재실행의 루프가 핵심. CLAUDE.md는 위반해도 피드백이 없다."
+  - question: "우리 ai-study 프로젝트에서 '점진적 enforcement' 전략의 1단계로 가장 적합한 것은?"
+    choices: ["Go AST 프레임워크 도입", "validate-content.test.mjs에 frontmatter 스키마 + import 규칙 추가", "전체 코드베이스 DDD 리팩토링", "CLAUDE.md 삭제"]
+    answer: 1
+    explanation: "이미 존재하는 vitest 인프라(validate-content.test.mjs)에 규칙을 추가하는 것이 최소 비용 최대 효과. Go AST는 Go 프로젝트용이고, 우리는 Next.js/TypeScript다."
 ---
 
 ## 왜 지금 이 주제인가
 
-우리 프로젝트(ai-study)는 이미 [Compound Engineering](/wiki/harness-engineering/compound-engineering-philosophy)과 [Architect-Worker 모델](/wiki/harness-engineering/architect-flow-map-via-aidy-architect)을 운용 중이다. pre-commit 빌드 체크, `/compound` 플라이휠까지 돌리고 있다. 하지만 채널톡 Perry의 글을 보면서 **우리가 아직 안 당긴 레버**가 선명하게 보였다:
+우리 프로젝트(ai-study)는 이미 [Compound Engineering](/wiki/harness-engineering/compound-engineering-philosophy)과 [Architect-Worker 모델](/wiki/harness-engineering/architect-flow-map-via-aidy-architect)을 운용 중이다. pre-commit 빌드 체크, `/compound` 플라이휠, `.claude/hooks/no-company-names.sh` 같은 행동 가드까지 돌리고 있다.
 
-1. **아키텍처 테스트** — 우리는 `npm run build` 통과 여부만 보지, "이 import가 허용된 의존성인가"를 코드로 강제하지 않는다.
-2. **병렬 10개 동시 실행** — 우리는 허브-워커 3프로젝트 병렬이지만, 단일 프로젝트 내 병렬은 아직 worktree 수동 관리 수준이다.
-3. **"CLAUDE.md는 부탁, 시스템은 강제"** — 이 프레이밍이 핵심. 우리 CLAUDE.md도 200줄 넘게 규칙을 적어뒀지만, 결국 LLM이 지킬지 말지는 확률적이다.
+하지만 채널톡 Perry의 2부작을 읽으면서 **우리가 아직 안 당긴 레버 3개**가 선명하게 보였다:
+
+1. **아키텍처 테스트** — 우리는 `npm run build` 통과 여부만 보지, "이 컴포넌트가 허용된 의존성만 import하는가"를 코드로 강제하지 않는다.
+2. **점진적 enforcement** — WARNING → ERROR 전환 전략 없이, 규칙은 "있거나 없거나" 이분법이다.
+3. **구조 정리 → 테스트 강제 → AI 자율성** 순서 — 우리는 구조가 이미 정리돼 있지만, 그 구조를 "테스트로 잠그는" 단계가 빠져있다.
 
 ## 핵심 개념
 
 ### "AI의 비결은 AI가 아니라 시스템이다"
 
-Perry는 6개월간 코드 0줄을 직접 타이핑하면서 97만 줄을 수정하고 560+ PR을 머지했다. 핵심은 도구 선택이 아니라 **LLM이 실수해도 시스템이 잡아주는 구조**를 먼저 만든 것이다.
+Perry는 6개월간 코드 0줄을 직접 타이핑하면서 97만 줄을 수정하고 560+ PR을 머지했다. 핵심은 도구가 아니라 **LLM이 실수해도 시스템이 잡아주는 구조**를 먼저 만든 것이다.
 
 ### CLAUDE.md의 한계 (데이터 기반)
 
@@ -44,119 +46,209 @@ Perry는 6개월간 코드 0줄을 직접 타이핑하면서 97만 줄을 수정
 | SWE-bench Lite | -0.5% |
 | AgentBench | -2% |
 | 추론 비용 | +20~23% ↑ |
+| 문서 없는 레포 | +2.7% (유일한 개선) |
 
 자연어 규칙의 3대 실패 원인:
 1. **모호성** — "가급적"인지 "절대"인지 불명확
 2. **위치 효과** — 긴 컨텍스트 후반부 규칙 무시
 3. **충돌 해결 불가** — 규칙끼리 모순되면 LLM이 임의 결정
 
-### 4가지 결정론적 제어 메커니즘
+### 제어 우선순위 피라미드
 
-| 메커니즘 | 역할 | 위반 시 |
-|----------|------|---------|
-| **CI** | 아키텍처/유닛/통합 테스트 | PR 머지 불가 |
-| **포매터** | 코드 스타일 강제 통일 | 자동 수정 |
-| **린터** | 정적 분석, 의심 패턴 탐지 | 경고/에러 |
-| **프리커밋 훅** | 커밋 전 자동 검사 | 커밋 차단 |
+Perry가 제시한 효과 순서:
 
-### 병렬 실행의 비밀: 컨텍스트 스위칭 비용 = 0
+| 순위 | 메커니즘 | 효과 | 비용 |
+|------|----------|------|------|
+| 1 | 아키텍처 테스트 + 타입 체크 + 린터 | 위반 100% 감지 | 0 (자동) |
+| 2 | 예측 가능한 코드 구조 (DDD/대칭성) | AI 패턴 학습 가능 | 1회 리팩토링 |
+| 3 | CLAUDE.md / 컨텍스트 파일 (최후 수단) | -0.5% ~ +4% | +20~23% 토큰 |
 
-사람이 10개를 동시에 못 하는 이유는 **맥락이 머리에 있기 때문**이다. LLM은 각 세션마다 컨텍스트 윈도우에 맥락을 독립 보유하므로, Git worktree로 물리적 분리만 해주면 10개 병렬이 가능하다.
+### AI 자율 수정 루프 (핵심 메커니즘)
+
+아키텍처 테스트의 진짜 가치는 **피드백 루프**를 만드는 것이다:
+
+```
+AI가 코드 작성 → 테스트 실행 → 실패 에러 메시지 → AI가 해석 → 자동 수정 → 재실행
+```
+
+CLAUDE.md는 위반해도 **아무 피드백이 없다**. 그래서 "부탁"이다. 테스트는 실패하면 에러 메시지가 나오고, AI는 그걸 읽고 고친다. 그래서 "강제"다.
+
+### 병렬 실행: 컨텍스트 스위칭 비용 = 0
+
+사람이 10개를 동시에 못 하는 이유는 **맥락이 머리에 있기 때문**. LLM은 각 세션마다 컨텍스트 윈도우에 맥락을 독립 보유하므로, Git worktree 물리적 분리 + 결정론적 검증만 있으면 10개 병렬이 가능하다.
 
 ### LLM은 작은 워터폴을 애자일보다 잘한다
 
 - **최적**: 설계 → 구현 → 테스트 (한 번에 완결)
 - **비효율**: 반복적 피드백, 점진적 개선
 
-이것은 우리 WO(Work Order) 시스템의 설계 근거와 정확히 일치한다 — 명확한 스펙을 한 번에 주고, 게이트에서 검증.
+우리 WO(Work Order) 시스템이 정확히 이 원칙 위에 설계되어 있다 — 명확한 스펙을 한 번에 주고, 게이트에서 검증.
 
 ## 구조 / 프레임워크
 
+### 결정론적 제어의 전체 그림
+
 ```mermaid
 flowchart TD
-    subgraph Human["사람 역할"]
-        D["의사결정"]
-        A["아키텍처 설계"]
-        R["결과 검증"]
+    subgraph Human["사람: 의사결정자"]
+        D["아키텍처 설계"]
+        V["결과 검증"]
     end
 
     subgraph System["결정론적 제어 시스템"]
-        CI["CI 파이프라인"]
-        FMT["포매터"]
-        LINT["린터"]
-        HOOK["프리커밋 훅"]
+        HOOK["Pre-commit Hook"]
+        FMT["Formatter"]
+        LINT["Linter"]
+        ARCH["Architecture Test"]
+        CI["CI Pipeline"]
     end
 
-    subgraph AI["LLM 에이전트"]
+    subgraph AI["LLM Workers - Worktree 병렬"]
         W1["Worker 1"]
         W2["Worker 2"]
         W3["Worker N"]
     end
 
-    D --> W1
-    D --> W2
-    D --> W3
+    D -->|"한 줄 프롬프트"| W1
+    D -->|"한 줄 프롬프트"| W2
+    D -->|"한 줄 프롬프트"| W3
     W1 --> HOOK
     W2 --> HOOK
     W3 --> HOOK
     HOOK --> FMT
     FMT --> LINT
-    LINT --> CI
-    CI -->|PASS| R
-    CI -->|FAIL| W1
+    LINT --> ARCH
+    ARCH -->|"FAIL: 에러 메시지"| W1
+    ARCH -->|"PASS"| CI
+    CI -->|"PASS"| V
+    CI -->|"FAIL"| W1
 ```
 
-### Perry의 8단계 워크플로우
+### Perry의 DDD 리팩토링 Before/After
 
-| Step | 행위 | 주체 |
-|------|------|------|
-| 1 | Git Worktree 생성 | 사람 |
-| 2 | 한 줄 프롬프트 | 사람 |
-| 3 | 계획 수립 | AI |
-| 4 | 계획 검토·승인 | 사람 |
-| 5 | 의사결정 개입 (필요 시만) | 사람 |
-| 6 | 단계별 커밋 (세이브 포인트) | AI |
-| 7 | Self-review + 테스트 | AI |
-| 8 | PR → CI → CodeRabbit 반영 | 시스템 |
+Perry는 **구조 정리가 먼저**임을 강조한다. God Object가 있으면 규칙 자체를 정의할 수 없다.
+
+| 항목 | Before | After |
+|------|--------|-------|
+| 모듈 결합도 | 200+ 파일 cross-import | **90% 감소** |
+| 변경 영향 범위 | 7개 패키지 | **1개 모듈** |
+| 아키텍처 위반 감지 | 불가능 | **100% 자동** |
+| AI 자율 리팩토링 | 불가 | **가능** (에러→수정 루프) |
+
+### 점진적 Enforcement 전략
+
+```mermaid
+flowchart LR
+    P1["Phase 1: WARNING"]
+    P2["Phase 2: ERROR - 일부 도메인"]
+    P3["Phase 3: ERROR - 전체"]
+
+    P1 -->|"위반 수정"| P2
+    P2 -->|"팀 피드백"| P3
+```
+
+이 전략의 핵심: **기존 코드를 한 번에 깨뜨리지 않으면서** 점진적으로 규칙을 강제한다.
 
 ## 실전 팁 / 안티패턴
 
 ### Do
 
-- **규칙을 문서로 적지 말고 코드로 강제하라** — AST 기반 아키텍처 테스트, pre-commit 훅
-- **CI를 피드백 루프의 핵심으로** — Go CI 10분→2분 (-78%) 사례. CI가 느리면 병렬의 의미 없음
-- **코드 소유권 내려놓기** — "누가 타이핑했냐"가 아니라 "아키텍처 결정 품질"이 경쟁력
-- **리팩토링을 별도 작업으로 분리하지 말 것** — 병렬 작업 중 하나로 동시에 진행
+- **규칙을 문서로 적지 말고 코드로 강제하라** — AST/테스트 기반 아키텍처 검증
+- **CI를 피드백 루프의 핵심으로** — CI가 느리면 병렬의 의미 없음 (Go CI 10분→2분 사례)
+- **대칭성(Symmetry) 확보** — 모든 모듈이 동일 패턴이면 AI가 "하나를 보고 전체를 안다"
+- **코드 소유권 내려놓기** — 중요한 건 "누가 타이핑했냐"가 아니라 "아키텍처 결정 품질"
+- **리팩토링을 병렬 작업 중 하나로** — 별도 스프린트 할당 불필요
 
 ### Don't
 
 - ❌ CLAUDE.md에 규칙을 계속 추가하면서 "이번엔 지키겠지" 기대
 - ❌ LLM이 못한다고 단정 → "시스템을 어떻게 개선할까"로 전환
-- ❌ 애자일식 점진적 피드백을 LLM 작업에 적용 (워터폴이 더 효율적)
-- ❌ CI 대기 시간을 방치 (전체 처리량의 병목)
+- ❌ 구조 정리 없이 테스트만 추가 (God Object에 테스트 붙이면 규칙 정의 불가)
+- ❌ 한 번에 모든 규칙을 ERROR로 (점진적 WARNING → ERROR)
 
-## 내 프로젝트에 적용하기
+## 우리 프로젝트 적용 로드맵
 
-- **아키텍처 테스트 도입**: `content/` MDX의 frontmatter 규칙, import 제약 등을 vitest로 강제. 현재 `scripts/__tests__/validate-content.test.mjs`가 Mermaid만 검증 중 → frontmatter 스키마 위반도 CI 단계에서 차단
-- **CI 속도 측정**: 현재 `npm run build` 시간 벤치마크 → 병목 식별 → 개선 (Perry처럼 AI에게 자율 반복 실험 위임)
-- **린터 규칙 강화**: MDX lint (remark-lint) 도입 검토. CLAUDE.md에 적어둔 "self-closing 태그 필수" 같은 규칙을 린터로 전환
-- **worktree 병렬 확장**: 현재 `/wt-branch` 스킬이 있지만 수동. 독립 작업 식별 → 자동 worktree 생성 → 병렬 실행 파이프라인 구축
-- **hollon-ai 패턴 참고**: 우리의 [Architect-Worker 모델](/wiki/harness-engineering/architect-flow-map-via-aidy-architect)이 이미 같은 방향. Orchestrator + Worker 분리를 더 자동화할 여지 확인
+Perry의 원칙을 ai-study Next.js/TypeScript 프로젝트에 번역하면:
+
+### Phase 1: 기존 인프라 위에 규칙 추가 (즉시 가능)
+
+우리에겐 이미 `scripts/__tests__/validate-content.test.mjs`(vitest)와 pre-commit 빌드 체크가 있다. 여기에 규칙만 추가하면 된다.
+
+**CLAUDE.md → vitest 전환 대상 3개:**
+
+| CLAUDE.md 규칙 | 테스트로 전환 | 감지 방식 |
+|----------------|--------------|-----------|
+| "MDX self-closing 태그 필수" | `validate-content.test.mjs` | `<br>` `<hr>` 패턴 grep |
+| "connections는 실존 slug만" | `validate-content.test.mjs` | manifest 대조 |
+| "slug 영문 only" | `validate-content.test.mjs` | `/[가-힣]/` 정규식 |
+
+**이미 코드로 강제 중인 것들** (현재 상태 인식):
+- `.claude/hooks/no-company-names.sh` — 회사명 유출 차단 (Perry의 pre-commit hook과 동일 패턴!)
+- `npm run build` pre-commit — 빌드 깨지면 커밋 차단
+- `scripts/lib/mermaid-fix.mjs` — Mermaid 자동 수정
+
+### Phase 2: 아키텍처 테스트 도입 (1주 내)
+
+Next.js 프로젝트의 "의존성 규칙"을 vitest로 강제:
+
+```typescript
+// scripts/__tests__/architecture.test.ts (예시 방향)
+
+// 규칙 1: components/는 lib/만 import 가능 (content/ 직접 접근 금지)
+// 규칙 2: src/app/ 라우트는 src/components/만 사용 (cross-route import 금지)
+// 규칙 3: scripts/는 src/ import 금지 (빌드 도구 독립성)
+// 규칙 4: content/ MDX frontmatter는 schema.ts 스키마 100% 준수
+```
+
+Perry의 Go AST를 우리에게 번역하면:
+- Go `go/ast` → TypeScript **ts-morph** 또는 단순 **glob + regex**
+- 의존성 매트릭스 → `src/` 디렉토리 간 import 방향 규칙
+- alias.go 패턴 → barrel `index.ts` 패턴으로 진입점 통제
+
+### Phase 3: CI 속도 최적화 (2주 내)
+
+현재 `npm run build` 시간을 측정하고, AI에게 자율 최적화를 위임:
+- 빌드 캐시 활용도 분석
+- MDX 컴파일 병렬화 가능성
+- 목표: 현재 시간 -50% (Perry의 Go CI -78% 벤치마크 참고)
+
+### Phase 4: 병렬 실행 자동화 (장기)
+
+현재 `/wt-branch` 스킬 → 자동 병렬 디스패치로 확장:
+- 독립 작업 감지 (connections 그래프에서 겹치지 않는 엔트리군)
+- worktree 자동 생성 + 작업 할당
+- 각 worktree에서 독립 빌드 검증 후 머지
+
+### 핵심 인사이트: "구조 → 테스트 → AI 자율성" 순서
+
+```
+우리의 현재 위치:
+✅ 구조 정리됨 (13 카테고리, schema.ts, manifest 시스템)
+✅ 일부 테스트 있음 (mermaid validation, build check)
+⬜ 아키텍처 테스트로 "잠금" ← 여기가 다음 스텝
+⬜ AI 자율 수정 루프 완성
+```
+
+Perry의 사례에서 가장 중요한 교훈: **구조가 이미 정리되어 있다면, 테스트를 추가하는 것만으로 AI 자율성이 극적으로 올라간다.** 우리는 이미 1단계를 지났으므로, Phase 1~2만 실행하면 즉시 효과를 볼 수 있다.
 
 ## 자기 점검
 
-1. 현재 내 CLAUDE.md 규칙 중 "코드로 강제 가능한데 문서로만 적어둔 것"은 몇 개인가?
-2. `npm run build`의 현재 소요 시간은? 이게 병렬 실행의 병목이 되고 있는가?
-3. Perry의 "LLM은 작은 워터폴을 잘한다" 원칙이 우리 WO 시스템에 이미 반영되어 있는가, 아니면 추가 조정이 필요한가?
-4. 아키텍처 테스트(import 제약, 의존성 방향 검증)를 Next.js 프로젝트에 적용한다면 어떤 규칙부터 시작할까?
-5. (열린 질문) "코드 소유권"을 내려놓는다는 것은 코드 리뷰의 역할을 어떻게 바꾸는가? 리뷰가 "교육"에서 "검증"으로 이동하면 팀 성장은 어디서 오는가?
+1. 현재 내 CLAUDE.md 규칙 중 "코드로 강제 가능한데 문서로만 적어둔 것"은 몇 개인가? (힌트: Phase 1 표에서 3개 식별)
+2. `npm run build`의 현재 소요 시간은? Perry의 "CI = 피드백 루프 병목" 원칙에서, 우리 빌드가 병목인가?
+3. Perry의 "대칭성" 원칙 — 우리 `content/` 디렉토리의 모든 카테고리가 동일 패턴을 따르는가? 예외 카테고리가 있다면 AI 실수의 원인일 수 있다.
+4. `.claude/hooks/no-company-names.sh`는 Perry의 pre-commit hook과 동일 패턴이다. 이 훅이 차단한 실제 사례가 있었는가? 있었다면 그것이 "시스템이 강제한다"의 증거다.
+5. (열린 질문) Perry는 "리팩토링을 병렬 작업 중 하나로" 했다. 우리가 위키 엔트리 작성과 동시에 아키텍처 테스트를 추가한다면, 그 두 작업은 충돌 없이 병렬 가능한가?
 
 ### 실습 과제
 
-현재 CLAUDE.md에 있는 규칙 중 3개를 골라 pre-commit 훅 또는 vitest 케이스로 전환해보라. 전환 후 해당 규칙을 CLAUDE.md에서 제거하고, 다음 5개 AI 작업에서 위반율이 실제로 0이 되는지 관찰하라.
+`validate-content.test.mjs`에 아래 3개 규칙을 WARNING으로 추가하라:
+1. frontmatter `connections`의 모든 slug가 실제 존재하는 파일을 가리키는지 검증
+2. MDX 본문에 `<br>`, `<hr>` (self-closing 아닌) 패턴이 있으면 경고
+3. frontmatter `date`가 미래 날짜가 아닌지 검증
+
+추가 후, CLAUDE.md에서 해당 규칙 문장을 제거하고, 다음 5개 AI 작업에서 위반이 테스트에 의해 잡히는지 관찰하라.
 
 ## 출처
 
-- 원본: [6개월간 코드 한 줄도 안 쓰고, 100만 줄 기여하기](https://channel.io/ko/team/blog/articles/ai-native-system-69c5a365)
-- 보강 자료:
-  - [AI가 규칙을 "알잘딱" 지키는 백엔드 레포 만들기 — Perry, Channel Corp.](https://channel.io/ko/team/blog/articles/ai-native-ddd-refactoring-98c23cdb) (동일 저자 후속 글, DDD 리팩토링 상세)
+- 원본: [6개월간 코드 한 줄도 안 쓰고, 100만 줄 기여하기 — Perry, Channel Corp.](https://channel.io/ko/team/blog/articles/ai-native-system-69c5a365) (전체 방법론 + 성과 수치 + hollon-ai 비전)
+- 보강: [AI가 규칙을 "알잘딱" 지키는 백엔드 레포 만들기 — Perry, Channel Corp.](https://channel.io/ko/team/blog/articles/ai-native-ddd-refactoring-98c23cdb) (DDD 리팩토링 + Go AST 아키텍처 테스트 상세 구현)
