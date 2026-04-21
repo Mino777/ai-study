@@ -1,0 +1,186 @@
+---
+title: "Aidy Journal 015 — Agent Teams 도입 + 파이프라이닝으로 8R→5R 압축 (s30~s31)"
+category: harness-engineering
+series: aidy-journal
+date: "2026-04-22"
+tags: [aidy-journal, agent-teams, pipelining, parallel-dispatch, h2-compatibility, gradlew, swap-memory, 5r-sprint]
+confidence: 4
+last_verified: "2026-04-22"
+applicable_to: ["aidy", "any"]
+connections:
+  - harness-engineering/aidy-journal-014-shared-memories-memory-tags-ai-chat-suggestions
+  - harness-engineering/aidy-journal-009-stall-detection-3way-dispatch-feature-sprint
+  - harness-engineering/aidy-journal-003-parallel-dispatch-token-economics
+  - agents/multi-agent-orchestration-patterns-2026
+  - evaluation/test-strategy-3-client-via-aidy
+  - context-engineering/api-contract-as-3-client-source-of-truth
+  - harness-engineering/compound-engineering-philosophy
+status: complete
+description: "s30~s31(10R): Agent Teams 도입으로 워커 내부 병렬화 달성. 파이프라이닝으로 8R→5R 압축. v3.5~v4.2 (8피처, 24 WO). 서버 H2 빌드 병목 40분→해결. Advisor 자문 프로토콜 미사용 교훈."
+type: entry
+quiz:
+  - question: "Agent Teams 도입으로 얻은 가장 큰 효과는?"
+    choices:
+      - "코드 품질이 높아짐"
+      - "워커 내부 태스크 병렬화 — Entity/View/Tests 동시 진행으로 완료 시간 단축"
+      - "테스트 커버리지가 증가함"
+      - "API 명세 변경이 줄어듦"
+    answer: 1
+    explanation: "Agent Teams는 하나의 WO를 여러 서브태스크로 분해해 병렬 처리한다. 서버는 Entity/Migration/Repo 병렬 + Service/Controller 순차, iOS는 Feature/View/Tests 병렬, Android는 5분대 완료를 달성했다."
+  - question: "파이프라이닝 최적화의 핵심 원리는?"
+    choices:
+      - "모든 워커가 동시에 같은 피처를 작업"
+      - "서버 완료 즉시 다음 라운드 dispatch + 클라이언트에 선행 dispatch — idle 최소화"
+      - "워커 수를 2배로 늘림"
+      - "Gate 검증을 생략"
+    answer: 1
+    explanation: "R2에서 서버 완료 즉시 R3 dispatch, 동시에 클라이언트에 v3.5 선행 dispatch. R4에서 Gate-1을 백그라운드 병렬 실행. Architect idle 시간 30% 이하 달성. 워커 수 증가 없이 순서 최적화만으로 8R→5R 압축."
+  - question: "s31에서 서버 빌드가 40분 걸린 원인과 해결책은?"
+    choices:
+      - "네트워크 지연 — VPN 변경"
+      - "Flyway migration + H2 DDL 차이 — ddl-auto: create 설정으로 H2 스키마 자동 생성"
+      - "Gradle 버전 문제 — 업그레이드"
+      - "테스트 수 과다 — 테스트 삭제"
+    answer: 1
+    explanation: "Flyway migration SQL이 H2 문법과 호환되지 않아 테스트가 반복 실패. gradlew clean test + Swap 48% 환경에서 매우 느렸다. ddl-auto: create로 H2가 엔티티 기반 스키마를 자동 생성하게 하고, gradlew clean 없이 gradlew test만 실행(증분 빌드)으로 해결."
+---
+
+## Before — 순차 라운드의 한계
+
+Journal 014(s29)까지의 autoceo는 **서버→클라 순차 dispatch**가 기본이었다. 서버 WO 완료를 기다린 뒤 클라이언트 WO를 보내는 구조.
+
+- 5R 스프린트에서 서버 2R + 클라 2R + Gate 1R = **최소 5R**이지만, 실제로는 서버-클라 간 대기 시간이 누적되어 **8R**까지 늘어남
+- 워커 각각은 WO 하나를 통으로 처리 — 내부적으로 순차 진행 (Entity 작성 → Service → Controller → Test)
+- Architect가 워커 완료를 기다리는 idle 시간이 체감 50% 이상
+
+## After — Agent Teams + 파이프라이닝
+
+### Agent Teams 도입 (s30~s31)
+
+Anthropic 공식 패턴 3종(Orchestrator-Workers, Evaluator-Optimizer, Parallelizer)을 참고해 **워커 내부 병렬화**를 도입.
+
+| 워커 | 병렬 구조 | 효과 |
+|------|-----------|------|
+| **Server** | Entity/Migration/Repo 병렬 → Service/Controller 순차 | 코드 생성 빠름 (빌드 단계가 병목) |
+| **iOS** | Feature/View/Tests 병렬 | Agent Teams 태스크 분해 활용 |
+| **Android** | 전체 병렬 | **5분대 완료** — 가장 체감 큰 개선 |
+
+### 파이프라이닝 (s30 핵심)
+
+**기존 (8R)**:
+```
+R1: 스펙+WO → R2: 서버 v3.5 → R3: 서버 v3.6 → R4: 클라 v3.5 → R5: 클라 v3.6 → R6~R7: 나머지 → R8: Gate
+```
+
+**최적화 (5R)**:
+```
+R1: 스펙 4개 + WO 12개 (계획)
+R2: 서버 v3.5+v3.6 (서버 먼저)
+R3: 서버 v3.7+v3.8 + 클라 v3.5+v3.6 (3-way 병렬)
+R4: 클라 v3.7+v3.8 + Gate-1 (2-way + 백그라운드 검증)
+R5: Gate-2 verify + WO done + Compound
+```
+
+핵심: **서버 완료 즉시 다음 라운드 dispatch + 클라이언트에 선행 dispatch**. Gate-1은 R4에서 백그라운드 병렬 실행. Architect idle 시간 **30% 이하** 달성.
+
+### 서버 H2 빌드 병목 40분 (s31)
+
+s31 R3에서 서버 빌드+테스트가 40분 소요.
+
+- **원인**: Flyway migration SQL이 H2 DDL 문법과 호환되지 않음 + Swap 48% 환경에서 `gradlew clean test`가 극도로 느림
+- 워커가 `--no-build-cache`, `--rerun-tasks` 등 다양한 옵션을 시도했지만 효과 없음
+- **해결**: `ddl-auto: create` 설정으로 H2가 엔티티 기반 스키마를 자동 생성하도록 전환
+- **추가 교훈**: `gradlew clean` 없이 `gradlew test`만 실행하면 증분 빌드로 시간 대폭 단축
+
+### Advisor 자문 프로토콜 — 미사용 교훈
+
+s31에서 도입한 Advisor 자문 프로토콜(워커가 아키텍처 판단이 필요할 때 Architect에게 질의)의 실전 사용 횟수: **0건**.
+
+- 단순 CRUD 피처(v3.5~v4.2)에서는 워커가 API 명세만으로 자율 판단 가능
+- **교훈**: Advisor 프로토콜은 아키텍처 변경이 동반되는 피처에서 효과 기대. 오케스트레이션 오버헤드를 피처 복잡도에 비례해 조절해야 함
+
+## 운영 데이터
+
+### s30 (v3.5~v3.8)
+| 지표 | 값 |
+|------|-----|
+| 라운드 | 5R (기존 8R 대비 37.5% 단축) |
+| 피처 | 4개 (v3.5~v3.8) |
+| WO | 12개 완료 |
+| 서버 | 5커밋, 934 tests |
+| iOS | 4커밋, 610 tests |
+| Android | 7커밋, 804 tests |
+| Gate-1 | PASS — 14 엔드포인트, 104 필드 일치 |
+| Gate-2 | PASS — 빌드+테스트 전원 통과 |
+| iOS 크래시 | 0회 (s29 대비 개선) |
+
+### s31 (v3.9~v4.2)
+| 지표 | 값 |
+|------|-----|
+| 라운드 | 5R |
+| 피처 | 4개 (v3.9~v4.2) |
+| WO | 12개 완료 |
+| 서버 | 6커밋, 969 tests |
+| iOS | 3커밋, 616 tests |
+| Android | 4커밋, 838 tests |
+| Gate-2 | PASS |
+| iOS 크래시 | 0회 |
+| Advisor 자문 | 0건 |
+
+### 누적 (s29~s31, 3세션)
+- **12 피처** (v3.2~v4.2) 완료
+- **36 WO** 처리
+- 서버 969 / iOS 616 / Android 838 tests
+- iOS 크래시: s29에서 4회 → s30~s31에서 **0회**
+
+## 배운 것 / 다음 후보
+
+1. **파이프라이닝 > 동시성 증가**: 워커 수를 늘리는 것보다 dispatch 순서를 최적화하는 게 더 효과적. 16GB 맥북에서 4 에이전트 동시 실행은 swap 압박의 원인
+2. **H2 호환성은 서버 팀의 영구 과제**: Flyway + H2 조합에서 DDL 차이가 반복적으로 문제. `ddl-auto: create`가 테스트 환경 해결책이지만 프로덕션과 스키마 드리프트 위험
+3. **Advisor 프로토콜은 피처 복잡도에 비례**: 단순 CRUD에서는 오버헤드만 추가. 아키텍처 결정이 필요한 피처에서만 활성화
+4. **watch-workers 오탐 2세션 연속 발생**: dispatch 후 최소 1분 working 확인 로직 미구현 상태. 다음 세션에서 수정 필요
+5. **다음 후보**: UI Smoke Test + Robot Pattern (s32에서 진행 중), preflight 메모리 체크 자동화
+
+## AI Agent Directive
+
+**Trigger**: 멀티 에이전트 파이프라인에서 라운드 수가 기대보다 많을 때, 또는 워커 idle 시간이 체감 30% 이상일 때.
+
+**Prerequisites**:
+- [Aidy Journal 009 — 3-way dispatch](/wiki/harness-engineering/aidy-journal-009-stall-detection-3way-dispatch-feature-sprint)
+- [Multi-Agent Orchestration Patterns](/wiki/agents/multi-agent-orchestration-patterns-2026)
+
+**Actionable Steps**:
+1. 현재 라운드 구조를 시각화 — 어디서 대기가 발생하는지 식별
+2. 서버-클라 간 의존성 분석 — 클라가 서버 API 없이 UI 레이어만 선행 가능한지 확인
+3. 선행 dispatch 가능한 WO 식별 — 서버 완료 전에 클라에 보낼 수 있는 작업 분리
+4. Gate 검증을 백그라운드로 이동 — 다음 피처 작업과 병렬 실행
+5. Agent Teams 적용 — 워커 내부 태스크를 병렬 가능한 그룹으로 분해
+6. 증분 빌드 활용 — `gradlew clean` 생략, `gradlew test`만 실행
+
+**Anti-patterns**:
+- 워커 수를 늘려서 병렬도를 높이려는 시도 — 16GB에서 4 에이전트 이상은 swap 진입
+- Gate 검증 생략 — 파이프라이닝으로 시간을 벌었으면 검증에 투자
+- 모든 피처에 Advisor 프로토콜 강제 — 단순 CRUD에서는 오버헤드
+
+## 자기 점검
+
+1. 당신의 멀티 에이전트 파이프라인에서 가장 긴 대기 구간은 어디인가?
+2. 서버 완료 전에 클라이언트에 선행 dispatch할 수 있는 작업이 있는가?
+3. 워커 내부에서 병렬화 가능한 태스크 그룹을 식별했는가?
+4. Swap 사용률이 30%를 넘는 시점을 모니터링하고 있는가?
+
+## 출처
+
+**위키 내부**:
+- [Aidy Journal 014 — s29](/wiki/harness-engineering/aidy-journal-014-shared-memories-memory-tags-ai-chat-suggestions) — 직전 에피소드
+- [Aidy Journal 009 — 3-way dispatch](/wiki/harness-engineering/aidy-journal-009-stall-detection-3way-dispatch-feature-sprint) — 파이프라이닝 기초
+- [Aidy Journal 003 — 토큰 경제성](/wiki/harness-engineering/aidy-journal-003-parallel-dispatch-token-economics) — dispatch 최적화 원점
+
+**Aidy 내부 문서**:
+- `aidy-architect/docs/solutions/2026-04-21-autoceo-s30-lessons.md` — s30 교훈 (파이프라이닝 상세)
+- `aidy-architect/docs/solutions/2026-04-21-autoceo-s31-lessons.md` — s31 교훈 (Agent Teams + H2 병목)
+
+### 검증 메모
+- 운영 데이터는 s30~s31 세션에서 직접 수집. Gate-1/Gate-2 PASS는 aidy-architect의 gate review 기록에서 확인.
+- Agent Teams 효과(Android 5분대)는 s31 교훈 문서의 기록. 정확한 타이머 측정은 아님.
+- 8R→5R 압축 비율은 s30 교훈 문서의 라운드 구조 비교에서 산출.
