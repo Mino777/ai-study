@@ -1,17 +1,30 @@
 # /projects-sync — 허브 세션의 워커 프로젝트 read-only 진단
 
-이 ai-study 세션은 *허브*로서 mino-moneyflow, mino-tarosaju 두 *워커* 프로젝트를 분석/연구한다.
-두 프로젝트는 각자 별도 Claude 세션이 동시에 작업할 수 있다.
+이 ai-study 세션은 *허브*로서 아래 6개 *워커* 프로젝트를 분석/연구한다.
+각 프로젝트는 별도 Claude 세션이 동시에 작업할 수 있다.
+
+| 프로젝트 | 경로 | GitHub |
+|----------|------|--------|
+| mino-moneyflow | ~/Develop/mino-moneyflow | Mino777/mino-moneyflow |
+| mino-tarosaju | ~/Develop/mino-tarosaju | Mino777/mino-tarosaju |
+| aidy-architect | ~/Develop/aidy-architect | Mino777/aidy-architect |
+| aidy-server | ~/Develop/aidy-server | Mino777/aidy-server |
+| aidy-ios | ~/Develop/aidy-ios | Mino777/aidy-ios |
+| aidy-android | ~/Develop/aidy-android | Mino777/aidy-android |
 
 이 커맨드는 **쓰기 0, 읽기만** 수행하는 안전한 진단 도구다.
-호출하면 양쪽 워커 프로젝트의 현재 상태를 한 번에 리포트한다.
+호출하면 모든 워커 프로젝트의 현재 상태를 한 번에 리포트한다.
 
 ## 호출 방식
 
 ```
 /projects-sync
-/projects-sync moneyflow        # 한 쪽만
-/projects-sync tarosaju         # 한 쪽만
+/projects-sync moneyflow        # 한 프로젝트만
+/projects-sync tarosaju
+/projects-sync aidy-architect
+/projects-sync aidy-server
+/projects-sync aidy-ios
+/projects-sync aidy-android
 ```
 
 ## 왜 이 커맨드가 필요한가
@@ -21,19 +34,19 @@
 
 이전 세션의 NEXT.md는 다음 리듬을 권장한다:
 ```bash
-rtk git -C /Users/jominho/Develop/mino-moneyflow fetch origin
-rtk git -C /Users/jominho/Develop/mino-tarosaju fetch origin
-rtk git -C /Users/jominho/Develop/mino-moneyflow log origin/main --oneline -5
-rtk git -C /Users/jominho/Develop/mino-tarosaju log origin/main --oneline -5
+for p in mino-moneyflow mino-tarosaju aidy-architect aidy-server aidy-ios aidy-android; do
+  rtk git -C /Users/jominho/Develop/$p fetch origin
+  rtk git -C /Users/jominho/Develop/$p log origin/main --oneline -5
+done
 ```
 
-이 4개의 명령을 *한 커맨드*로 묶고, 추가로 *내가 모르는 변화*(다른 세션 흔적)를 감지한다.
+이 명령들을 *한 커맨드*로 묶고, 추가로 *내가 모르는 변화*(다른 세션 흔적)를 감지한다.
 
 ## 커맨드 범위
 
 ### 1. Fetch + 상태 스냅샷
 
-양쪽 프로젝트 각각:
+6개 프로젝트 각각:
 
 ```bash
 rtk git -C <project-root> fetch origin
@@ -67,9 +80,13 @@ rtk git -C <project-root> worktree list
 ```bash
 rtk gh pr list -R Mino777/mino-moneyflow --state all --limit 5
 rtk gh pr list -R Mino777/mino-tarosaju --state all --limit 5
+rtk gh pr list -R Mino777/aidy-architect --state all --limit 5
+rtk gh pr list -R Mino777/aidy-server --state all --limit 5
+rtk gh pr list -R Mino777/aidy-ios --state all --limit 5
+rtk gh pr list -R Mino777/aidy-android --state all --limit 5
 ```
 
-* 양쪽 최근 5개 PR — open/merged/closed 전체. 다른 세션이 PR을 올렸는지 감지.
+* 6개 프로젝트 최근 5개 PR — open/merged/closed 전체. 다른 세션이 PR을 올렸는지 감지.
 
 ### 5. 다른 세션 작업 흔적 감지
 
@@ -91,7 +108,7 @@ for f in messages/*-to-hub-*.json; do
 done
 
 # 워커 messages/ 에서 허브→워커 미읽은 메시지
-for project in mino-moneyflow mino-tarosaju; do
+for project in mino-moneyflow mino-tarosaju aidy-architect aidy-server aidy-ios aidy-android; do
   for f in /Users/jominho/Develop/$project/messages/hub-to-*.json; do
     # read: false 인 것만 필터
   done
