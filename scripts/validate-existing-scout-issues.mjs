@@ -6,7 +6,7 @@
  * node scripts/validate-existing-scout-issues.mjs --dry-run -- 검증만 (close 없음)
  */
 
-import { execSync } from "child_process";
+import { execSync, spawnSync } from "child_process";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const args = process.argv.slice(2);
@@ -31,7 +31,7 @@ async function validateBatch(issues, projectDirection, model) {
     `### 이슈 ${i} (번호: #${iss.number})
 제목: ${iss.title}
 본문:
-${iss.body.slice(0, 800)}`
+${(iss.body ?? "").slice(0, 800)}`
   ).join("\n\n---\n\n");
 
   const prompt = `아래 Scout 이슈들이 실제로 이 프로젝트에 가치 있는 작업인지 엄격하게 검증하세요.
@@ -91,10 +91,17 @@ function closeIssue(repo, number, reason) {
     return;
   }
   try {
-    execSync(
-      `gh issue close ${number} --repo "${repo}" --comment "🤖 자동 검증 결과 기준 미달 (7점 미만) — ${reason}" --reason "not planned"`,
+    const result = spawnSync(
+      "gh",
+      [
+        "issue", "close", String(number),
+        "--repo", repo,
+        "--comment", `🤖 자동 검증 결과 기준 미달 (7점 미만) — ${reason}`,
+        "--reason", "not planned",
+      ],
       { encoding: "utf-8", timeout: 15000 }
     );
+    if (result.status !== 0) throw new Error(result.stderr || "unknown error");
     console.log(`  🗑️  Closed #${number}`);
   } catch (err) {
     console.error(`  ❌ Close failed for #${number}: ${err.message}`);
