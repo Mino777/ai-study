@@ -134,19 +134,9 @@ function parseAtomFeed(xml) {
   return entries;
 }
 
-// ─── 2. Gemini로 전체 스캔 + 프로젝트 매칭 ────────────────────────
+// ─── 2. Gemini로 전체 스캔 + 프로젝트 매칭 (1차: 후보 추출) ────────
 
-async function scoutArticles(articles) {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    console.error("❌ GEMINI_API_KEY not set");
-    process.exit(1);
-  }
-
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const MODELS = ["gemini-2.5-flash", "gemini-2.5-pro"];
-  let model = genAI.getGenerativeModel({ model: MODELS[0] });
-
+async function scoutArticles(articles, model) {
   const articleList = articles
     .slice(0, 30)
     .map((a, i) => `${i + 1}. [${a.title}] — ${a.description.slice(0, 300)}`)
@@ -156,7 +146,8 @@ async function scoutArticles(articles) {
     (p) => `### ${p.name} (${p.repo})\n${p.direction}`
   ).join("\n\n");
 
-  const prompt = `당신은 기술 스카우터입니다. 긱뉴스 기사 목록을 보고, 아래 4개 프로젝트에 **실제로 이식/반영할 수 있는** 기사를 찾아주세요.
+  const prompt = `당신은 기술 스카우터입니다. 긱뉴스 기사 목록을 보고, 아래 4개 프로젝트에 관련 있을 수 있는 기사를 찾아주세요.
+이 단계는 **후보 추출**입니다. 심층 검증은 다음 단계에서 따로 합니다.
 
 ## 프로젝트 정보
 
@@ -166,18 +157,12 @@ ${projectDescriptions}
 
 ${articleList}
 
-## 평가 기준 (모두 AND 조건)
-
-1. **구체적 적용 가능**: 해당 프로젝트의 기존 코드/아키텍처에 구체적으로 적용 가능한 변경이 있는가?
-2. **즉시 실행 가능**: 추가 리서치 없이 바로 작업에 착수할 수 있는가?
-3. **측정 가능한 효과**: 성능, 비용, 안정성, UX 등 효과를 측정할 수 있는가?
-
 ## 응답 형식
 
 반드시 아래 JSON 형식으로만 응답하세요 (마크다운 코드 펜스 없이).
 매칭되는 기사가 없으면 빈 배열 \`[]\` 을 반환.
 한 기사가 여러 프로젝트에 매칭될 수 있음.
-**최대 5개까지만** 반환 (가장 임팩트 큰 순서).
+**최대 8개까지만** 반환.
 
 [
   {
@@ -193,9 +178,7 @@ ${articleList}
 
 주의:
 - 단순 뉴스/발표 기사는 제외 (기술적 깊이가 있는 것만)
-- "흥미롭지만 적용할 곳이 없는" 기사는 제외
-- 억지로 매칭하지 말 것 — 3 조건 AND를 엄격히 적용
-- relevance: high = 즉시 착수 권장, medium = 다음 스프린트에 고려`;
+- "흥미롭지만 적용할 곳이 없는" 기사는 제외`;
 
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
@@ -204,12 +187,9 @@ ${articleList}
       text = text.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
       const parsed = JSON.parse(text);
 
-      if (!Array.isArray(parsed)) {
-        throw new Error("Response is not an array");
-      }
+      if (!Array.isArray(parsed)) throw new Error("Response is not an array");
 
-      // 유효성 검증
-      const valid = parsed.filter(
+      return parsed.filter(
         (m) =>
           typeof m.article_index === "number" &&
           m.project_id &&
@@ -217,21 +197,116 @@ ${articleList}
           m.action_title &&
           m.action_plan
       );
-
-      return valid;
     } catch (err) {
       console.warn(`⚠️  Attempt ${attempt + 1} failed: ${err.message}`);
-      if (attempt === 0) {
-        model = genAI.getGenerativeModel({ model: MODELS[1] });
-        console.log(`🔄 Switching to: ${MODELS[1]}`);
+      if (attempt === 2) throw err;
+      await new Promise((r) => setTimeout(r, 2000));
+    }
+  }
+}
+
+// ─── 2b. 2차 검증: 후보를 4문항 게이트로 개별 심층 평가 ──────────
+
+async function validateMatches(candidates, articles, model) {
+  if (candidates.length === 0) return [];
+
+  const candidateList = candidates.map((m, i) => {
+    const article = articles[m.article_index - 1];
+    const project = PROJECTS.find((p) => p.id === m.project_id);
+    return `### 후보 ${i + 1}: [${m.project_id}] ${m.action_title}
+기사: ${article?.title || m.article_title}
+기사 내용: ${article?.description?.slice(0, 400) || ""}
+프로젝트 방향: ${project?.direction || ""}
+제안 계획: ${m.action_plan}`;
+  }).join("\n\n---\n\n");
+
+  const prompt = `아래 ${candidates.length}개 스카우트 후보를 각각 엄격하게 검증하세요.
+각 후보가 실제로 이슈를 생성할 가치가 있는지 4개 질문으로 판단합니다.
+
+${candidateList}
+
+## 4가지 검증 질문 (각 후보에 적용)
+
+Q1 구체성: 이 기법을 적용할 **프로젝트 내 구체적인 파일명/모듈명/컴포넌트명**을 하나라도 특정할 수 있는가?
+   (단순히 "가능하다"가 아니라 실제로 어떤 파일인지 생각했을 때 떠오르는가)
+
+Q2 신규성: 프로젝트 방향성 설명에 이미 **동일하거나 유사한 기능이 명시**되어 있지 않은가?
+   (이미 구현된/계획된 것이면 NO)
+
+Q3 임팩트: 성능/비용/사용자 경험에 **수치나 체감으로 측정 가능한** 효과가 있는가?
+   ("좋아질 것 같다"가 아닌 "N% 절감" 또는 "응답속도 Xms 감소" 수준)
+
+Q4 실행성: 이 이슈를 받은 개발자가 **별도 리서치 없이 바로 착수**할 수 있는가?
+   (더 조사해야 한다면 NO)
+
+## 응답 형식 (JSON만, 마크다운 없이)
+
+[
+  {
+    "candidate_index": 0,
+    "q1": true/false,
+    "q2": true/false,
+    "q3": true/false,
+    "q4": true/false,
+    "score": 1~10,
+    "pass": true/false,
+    "reject_reason": "불합격 사유 한 줄 (pass=true면 빈 문자열)"
+  }
+]
+
+score 기준: YES 4개=8~10, YES 3개=5~7, YES 2개 이하=1~4
+pass 기준: score >= 7 (YES 3개 이상이더라도 핵심 Q1·Q4가 NO면 pass=false 가능)
+엄격하게 평가할 것 — 애매하면 NO.`;
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const result = await model.generateContent(prompt);
+      let text = result.response.text().trim();
+      text = text.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
+      const verdicts = JSON.parse(text);
+
+      if (!Array.isArray(verdicts)) throw new Error("Response is not an array");
+
+      const passed = [];
+      for (const v of verdicts) {
+        const candidate = candidates[v.candidate_index];
+        if (!candidate) continue;
+
+        const status = v.pass ? "✅ PASS" : "🚫 FAIL";
+        const qs = [v.q1, v.q2, v.q3, v.q4].map((q) => (q ? "Y" : "N")).join("");
+        console.log(
+          `   ${status} [${candidate.project_id}] ${candidate.action_title}`
+        );
+        console.log(`      Q1~4: ${qs} | 점수: ${v.score}/10${v.reject_reason ? ` | ${v.reject_reason}` : ""}`);
+
+        if (v.pass) passed.push({ ...candidate, validation_score: v.score });
       }
+
+      return passed;
+    } catch (err) {
+      console.warn(`⚠️  Validation attempt ${attempt + 1} failed: ${err.message}`);
       if (attempt === 2) {
-        console.error("❌ All retries failed");
-        process.exit(1);
+        console.warn("⚠️  검증 실패 — 1차 후보를 그대로 사용합니다.");
+        return candidates;
       }
       await new Promise((r) => setTimeout(r, 2000));
     }
   }
+}
+
+// ─── Gemini 클라이언트 초기화 ──────────────────────────────────────
+
+function initGemini() {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    console.error("❌ GEMINI_API_KEY not set");
+    process.exit(1);
+  }
+  const genAI = new GoogleGenerativeAI(apiKey);
+  return {
+    fast: genAI.getGenerativeModel({ model: "gemini-2.5-flash" }),
+    pro: genAI.getGenerativeModel({ model: "gemini-2.5-pro" }),
+  };
 }
 
 // ─── 3. GitHub Issue 생성 ──────────────────────────────────────────
@@ -290,12 +365,13 @@ function generateSummary(matches, articles) {
   }
 
   let summary = "## 🔭 긱뉴스 데일리 스카우트\n\n";
-  summary += `| 프로젝트 | 기사 | 액션 | 관련도 |\n|---|---|---|---|\n`;
+  summary += `| 프로젝트 | 기사 | 액션 | 관련도 | 검증점수 |\n|---|---|---|---|---|\n`;
 
   for (const m of matches) {
     const article = articles[m.article_index - 1];
     const articleTitle = article ? article.title : m.article_title;
-    summary += `| ${m.project_id} | ${articleTitle} | ${m.action_title} | ${m.relevance} |\n`;
+    const score = m.validation_score != null ? `${m.validation_score}/10` : "-";
+    summary += `| ${m.project_id} | ${articleTitle} | ${m.action_title} | ${m.relevance} | ${score} |\n`;
   }
 
   return summary;
@@ -317,62 +393,70 @@ async function main() {
     process.exit(0);
   }
 
-  // 2. Gemini로 전체 스캔
-  console.log("2️⃣ Gemini로 프로젝트 매칭 중...");
-  const matches = await scoutArticles(articles);
-  console.log(`\n   📊 ${matches.length}개 매칭 발견\n`);
+  const { fast: fastModel, pro: proModel } = initGemini();
 
-  if (matches.length === 0) {
-    console.log("ℹ️ 오늘은 이식할 만한 기사가 없습니다.");
-    // GitHub Actions summary
-    if (process.env.GITHUB_STEP_SUMMARY) {
-      fs.appendFileSync(
-        process.env.GITHUB_STEP_SUMMARY,
-        generateSummary([], articles)
-      );
-    }
-    if (process.env.GITHUB_OUTPUT) {
-      fs.appendFileSync(process.env.GITHUB_OUTPUT, "match_count=0\n");
-    }
+  // 2. 1차: 후보 추출 (최대 8개)
+  console.log("2️⃣ [1차] Gemini로 후보 추출 중...");
+  let candidates;
+  try {
+    candidates = await scoutArticles(articles, fastModel);
+  } catch {
+    console.log("   Flash 실패 → Pro로 재시도...");
+    candidates = await scoutArticles(articles, proModel);
+  }
+  console.log(`   📋 후보 ${candidates.length}개 추출\n`);
+
+  if (candidates.length === 0) {
+    console.log("ℹ️ 오늘은 후보 기사가 없습니다.");
+    writeOutputs([], articles);
     return;
   }
 
-  // 3. 결과 출력
-  console.log("3️⃣ 매칭 결과:\n");
-  for (const m of matches) {
+  // 3. 2차: 4문항 게이트 검증
+  console.log("3️⃣ [2차] 후보별 심층 검증 중...\n");
+  const matches = await validateMatches(candidates, articles, fastModel);
+  // 점수 높은 순 정렬, 최대 5개
+  matches.sort((a, b) => (b.validation_score ?? 0) - (a.validation_score ?? 0));
+  const finalMatches = matches.slice(0, 5);
+
+  console.log(`\n   ✅ 최종 통과: ${finalMatches.length}개 / 후보 ${candidates.length}개\n`);
+
+  if (finalMatches.length === 0) {
+    console.log("ℹ️ 오늘은 검증 통과 기사가 없습니다.");
+    writeOutputs([], articles);
+    return;
+  }
+
+  // 4. 결과 출력
+  console.log("4️⃣ 최종 결과:\n");
+  for (const m of finalMatches) {
     const article = articles[m.article_index - 1];
-    console.log(`   📰 [${m.project_id}] ${m.action_title}`);
+    console.log(`   📰 [${m.project_id}] ${m.action_title} (점수: ${m.validation_score ?? "-"}/10)`);
     console.log(`      기사: ${article?.title || m.article_title}`);
-    console.log(`      관련도: ${m.relevance}`);
     console.log(`      이유: ${m.reason}`);
-    console.log(`      계획: ${m.action_plan.split("\n")[0]}...`);
     console.log();
   }
 
-  // 4. Issue 생성
-  console.log("4️⃣ GitHub Issue 생성 중...\n");
-  for (const m of matches) {
+  // 5. Issue 생성
+  console.log("5️⃣ GitHub Issue 생성 중...\n");
+  for (const m of finalMatches) {
     const article = articles[m.article_index - 1];
-    if (article) {
-      createIssue(m, article);
-    }
+    if (article) createIssue(m, article);
   }
 
-  // 5. GitHub Actions output
+  writeOutputs(finalMatches, articles);
+  console.log("\n✅ 스카우트 완료!");
+}
+
+function writeOutputs(matches, articles) {
   if (process.env.GITHUB_OUTPUT) {
     fs.appendFileSync(process.env.GITHUB_OUTPUT, `match_count=${matches.length}\n`);
     const projectIds = [...new Set(matches.map((m) => m.project_id))].join(",");
     fs.appendFileSync(process.env.GITHUB_OUTPUT, `matched_projects=${projectIds}\n`);
   }
-
   if (process.env.GITHUB_STEP_SUMMARY) {
-    fs.appendFileSync(
-      process.env.GITHUB_STEP_SUMMARY,
-      generateSummary(matches, articles)
-    );
+    fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, generateSummary(matches, articles));
   }
-
-  console.log("\n✅ 스카우트 완료!");
 }
 
 main().catch((err) => {
