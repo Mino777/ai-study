@@ -1,0 +1,257 @@
+---
+title: "Aidy Journal 011 — Shared Memories + Memory Tags + AI Chat Suggestions (s29)"
+category: harness-engineering
+series: aidy-journal
+date: "2026-04-21"
+tags: [aidy-journal, shared-memories, memory-tags, ai-chat-suggestions, ios-crash, watch-workers, context-aware-ai, 5r-sprint]
+confidence: 4
+last_verified: "2026-04-21"
+applicable_to: ["aidy", "any"]
+connections:
+  - harness-engineering/aidy-journal-010-smart-notifications-relationship-map-interaction-log
+  - harness-engineering/aidy-journal-009-stall-detection-3way-dispatch-feature-sprint
+  - agents/multi-agent-orchestration-patterns-2026
+  - evaluation/test-strategy-3-client-via-aidy
+  - context-engineering/api-contract-as-3-client-source-of-truth
+status: complete
+description: "s29(5R): v3.2 Shared Memories + v3.3 Memory Tags + v3.4 AI Chat Suggestions. iOS 4회 크래시 → 메모리 압박 패턴 확인. watch-workers 오탐 발견. server 880 / iOS 590 / Android 1225 tests."
+type: entry
+quiz:
+  - question: "AI Chat Suggestions(v3.4)의 4가지 추천 타입은?"
+    choices:
+      - "like, comment, share, remind"
+      - "followup, reminder, exploration, check_in"
+      - "reply, forward, archive, delete"
+      - "urgent, normal, low, scheduled"
+    answer: 1
+    explanation: "followup: 2주+ 된 미해결 메모리에 후속 질문. reminder: 7일 내 기념일/일정. exploration: 2주+ 메모리 없는 카테고리 탐색. check_in: healthScore 40 미만 인물 안부. 모두 메모리 컨텍스트를 분석해서 생성한다."
+  - question: "s29에서 iOS 워커 크래시가 반복된 주요 원인은?"
+    choices:
+      - "Swift 컴파일 오류"
+      - "네트워크 타임아웃"
+      - "메모리 부족 또는 세션 길이 제한 (토큰 초과)"
+      - "xcodebuild 버전 불일치"
+    answer: 2
+    explanation: "crash-log 원인 분류: UNKNOWN + ERROR. 시스템 swap 331MB 사용, 6개 Claude 인스턴스 동시 실행. task 표시는 완료되지만 커밋 전 세션 종료 — 토큰 소진 패턴. 대응: iOS 프롬프트 간결화 + WO 2개 분리 전송."
+  - question: "v3.3 Memory Tags에서 메모리당 최대 태그 수가 5개로 제한된 이유로 가장 적절한 것은?"
+    choices:
+      - "데이터베이스 컬럼 크기 제한"
+      - "iOS UI에서 5개 이상 표시가 어려움"
+      - "태그 남용을 방지하고 의미 있는 분류를 강제"
+      - "성능 최적화를 위한 JOIN 제한"
+    answer: 2
+    explanation: "5개 제한은 아키텍처 결정. 제한이 없으면 태그가 검색 키워드처럼 남발되어 분류 체계가 붕괴된다. 5개 강제는 '이 메모리에서 가장 중요한 맥락 5개'를 선택하게 만드는 UX 설계."
+---
+
+## Before — s28 종료 후 상태
+
+| 지표 | 값 |
+|------|-----|
+| server 테스트 | 814+ (s28 에지 케이스 포함) |
+| iOS 테스트 | 577 |
+| Android 테스트 | 693+ |
+| api-contract | §5.22 까지 (v3.1 Interaction Log) |
+| 다음 목표 | 메모리 공유 + 태그 + AI 대화 추천 |
+
+---
+
+## s29 스프린트 — 5R, 3개 피처
+
+### 피처 목록
+
+| 버전 | 피처 | WO | 스펙 섹션 |
+|------|------|-----|----------|
+| v3.2 | Shared Memories | WO-112~114 | §5.23 |
+| v3.3 | Memory Tags | WO-115~117 | §5.24 |
+| v3.4 | AI Chat Suggestions | WO-118~120 | §5.25 |
+
+### Round 구조
+
+```
+R1: 스펙 정의 (api-contract.md §5.23~5.25) + WO-112~120 발행
+R2: server → iOS/Android (Shared Memories + Memory Tags 동시)
+R3: iOS 크래시 3회 연속 → 4차 시도 성공
+R4: AI Chat Suggestions (server → iOS/Android)
+R5: 빌드 검증 + compound
+```
+
+---
+
+## v3.2 — Shared Memories
+
+메모리를 공유 링크로 내보내는 기능. 인증 불필요한 공개 엔드포인트 포함.
+
+```kotlin
+data class MemoryShare(
+    val shareId: String,       // 12자 랜덤 — 예측 불가능성 확보
+    val expiresAt: Instant,    // 만료 시각 (기본값: 24h)
+)
+```
+
+`GET /api/shared/{shareId}`는 **인증 없이 접근 가능**. 공유 받은 상대가 앱을 설치하지 않아도 메모리 내용을 확인할 수 있어야 하므로. 만료 후 접근하면 404 반환.
+
+3개 엔드포인트:
+```
+POST   /api/memories/{id}/share    # 공유 링크 생성 (expiresInHours)
+GET    /api/shared/{shareId}       # 공유 메모리 조회 (인증 불필요)
+DELETE /api/memories/{id}/share    # 공유 해제
+```
+
+---
+
+## v3.3 — Memory Tags
+
+메모리에 사용자 정의 태그를 붙이는 기능. 중간 테이블 패턴.
+
+```
+Tag (id, userId, name, color)
+  ↕  ← MemoryTag 중간 테이블
+Memory (id, ...)
+```
+
+**메모리당 최대 5개 제한**을 코드로 강제한다:
+
+```kotlin
+// TagService.addTagsToMemory
+if (existingTagCount + tagIds.size > 5) {
+    throw AidyException(ErrorCode.TAG_LIMIT_EXCEEDED)
+}
+```
+
+기존 `GET /api/memories`에 `?tag={tagId}` 쿼리 파라미터 추가 — 태그 필터링. 기존 메모리 엔티티 필드는 변경하지 않고 중간 테이블만 추가한다.
+
+---
+
+## v3.4 — AI Chat Suggestions
+
+채팅 화면 상단에 Claude가 추천 대화 시작 문구를 제시하는 기능. **메모리 컨텍스트를 분석해서 능동적으로 대화를 유도**한다.
+
+### 4가지 추천 타입
+
+| 타입 | 조건 | 예시 |
+|------|------|------|
+| `followup` | 2주+ 된 미해결 메모리 | "지난번 취업 준비 잘 되어가?" |
+| `reminder` | 7일 내 기념일/일정 | "민수 생일 5일 남았어. 뭔가 준비하고 있어?" |
+| `exploration` | 2주+ 메모리 없는 카테고리 | "요즘 독서는 안 하는 것 같던데 최근에 읽은 책 있어?" |
+| `check_in` | healthScore < 40인 인물 | "지수랑 한동안 연락 없었네. 안부 물어봐?" |
+
+각 추천은 `reason` 필드에 생성 근거를 명시해서 사용자가 왜 이 추천이 나왔는지 알 수 있다.
+
+### 클라이언트 구현
+
+iOS(`ChatSuggestionClient`): 채팅 화면 상단 수평 스크롤 추천 카드. type별 아이콘과 색상, reason 표시. 탭하면 `inputText` 자동 채움 + use API 호출 + 목록에서 제거.
+
+Android(`ChatSuggestionViewModel`): `LazyRow` 추천 카드. 동일 UX.
+
+### markUsed 멱등성
+
+```kotlin
+// POST /api/chat/suggestions/{id}/use
+// 이미 사용된 추천을 다시 use해도 에러 없음
+// 멱등(idempotent): 네트워크 재시도 안전
+fun markUsed(userId: Long, suggestionId: Long) {
+    val usage = repository.findByUserIdAndSuggestionId(userId, suggestionId)
+    if (usage == null) {
+        repository.save(ChatSuggestionUsage(userId, suggestionId))
+    }
+    // else: no-op
+}
+```
+
+---
+
+## iOS 반복 크래시 — 4회 (R3)
+
+s29의 가장 큰 장애물. R3에서 iOS 워커가 3회 연속 세션 종료.
+
+### 크래시 패턴
+
+```
+[crash-log] ios: UNKNOWN
+시스템: Swap 331MB / Claude 6인스턴스 / Memory 17GB
+task 표시 완료 → 커밋 전 세션 종료
+```
+
+3회 연속 크래시 후 4차 시도에서 성공. **총 4회 시도 = R3에서 iOS가 4개의 Claude 세션을 소비**.
+
+### 원인 분석
+
+crash-log 원인 분류는 UNKNOWN/ERROR였지만, 상황 맥락:
+- 6개 Claude 인스턴스 동시 실행 (architect + server + ios + android + ai-study + α)
+- iOS WO가 Shared Memories + Memory Tags 2개를 한 번에 처리
+- task 완료 표시가 뜨는 시점은 Claude가 모든 파일 편집을 마친 후 → 이후 commit 실행 중 세션 종료 = **토큰 소진 패턴** 유력
+
+### 대응 (다음 스프린트 입력)
+
+```
+iOS WO: 2개 기능을 한 번에 → 1개씩 분리해서 전송
+프롬프트: 간결하게 (배경 설명 축소, 핵심 작업만)
+병렬 인스턴스: 가능하면 5개 이하로 유지
+```
+
+---
+
+## watch-workers 오탐 발견
+
+s29에서 `watch-workers` 명령이 잘못된 신호를 보낸 사례:
+
+- **오탐 상황**: iOS/Android가 아직 dispatch 안 됐는데 idle 감지 → "전원 완료" 보고
+- **실제**: dispatch 전 idle 상태를 "작업 완료" idle로 잘못 판정
+
+```bash
+# watch-workers 현재 감지 로직 (버그)
+if pane_idle: report "완료"
+
+# 필요한 로직
+if was_dispatched AND now_idle: report "완료"
+# else: report "대기 중 (미dispatch)"
+```
+
+dispatch 여부를 추적하는 상태가 없어서 발생. 다음 바선생 업그레이드에서 "dispatch 후 최소 1분 working 확인" 로직 추가 예정.
+
+---
+
+## s29 종료 수치
+
+| 지표 | s29 전 | s29 후 | 증감 |
+|------|--------|--------|------|
+| server 테스트 | ~814 | **880** | +66 |
+| iOS 테스트 | 577 | **590** | +13 |
+| Android 테스트 | ~693 | **1,225** | +532 |
+| 완료 WO | 111 | **120** | +9 |
+| api-contract | §5.22 | **§5.25** | +3 섹션 |
+
+Android 테스트가 693→1,225으로 급증한 이유: s29에서 ViewModel 단위 테스트를 대폭 추가. SharedMemory, Tag, ChatSuggestion 각각의 ViewModel 시나리오를 전수 커버.
+
+---
+
+## AI Chat Suggestions 패턴의 의미
+
+단순 채팅 인터페이스에서 **맥락 인식 대화 유도**로 전환하는 분기점.
+
+기존 aidy 채팅 흐름:
+```
+사용자가 먼저 말을 걸어야 대화 시작
+```
+
+v3.4 이후:
+```
+Claude가 메모리/기념일/건강점수를 분석
+→ "지금 이 대화를 시작하면 의미 있겠다" 판단
+→ 채팅 화면 상단에 추천 표시
+→ 사용자는 탭 한 번으로 맥락 있는 대화 시작
+```
+
+이는 기억 보조 앱에서 **능동적 관계 관리 코치**로의 전환이다. 사용자가 기억하지 못하는 것을 Claude가 대신 기억하고 때를 알려준다.
+
+---
+
+## 교훈 요약
+
+| 문제 | 원인 | 대응 |
+|------|------|------|
+| iOS 4회 크래시 | 메모리 압박 + WO 2개 동시 처리 | WO 분리 전송, 프롬프트 간결화 |
+| watch-workers 오탐 | dispatch 상태 추적 없음 | dispatch 마커 + 1분 working 확인 로직 |
+| crash-log 원인 UNKNOWN | 실제 오류 메시지가 pane에 없음 | 크래시 순간 pane 캡처 타이밍 개선 필요 |
+
+다음 스프린트: P-004 Phase 2 (Multi-Provider Fallback — OpenAI 등) + Hub 개선.

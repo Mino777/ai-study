@@ -1,0 +1,242 @@
+---
+title: "Aidy Journal 010 — Smart Notifications + Relationship Map + Interaction Log (s28)"
+category: harness-engineering
+series: aidy-journal
+date: "2026-04-21"
+tags: [aidy-journal, smart-notifications, relationship-map, interaction-log, crash-log, gate-1, 5r-sprint, baseongsaeng, feature-sprint]
+confidence: 4
+last_verified: "2026-04-21"
+applicable_to: ["aidy", "any"]
+connections:
+  - harness-engineering/aidy-journal-009-stall-detection-3way-dispatch-feature-sprint
+  - harness-engineering/aidy-journal-011-shared-memories-memory-tags-ai-chat-suggestions
+  - agents/multi-agent-sprint-optimization-patterns
+  - evaluation/test-strategy-3-client-via-aidy
+  - context-engineering/api-contract-as-3-client-source-of-truth
+status: complete
+description: "s28(5R): v2.9 Smart Notifications + v3.0 Relationship Map + v3.1 Interaction Log 3연타. WO-103~111 done. iOS 554→577 tests. 바선생 L5.5→L6.0: crash-log 명령 + FAIL/META/VERIFY 3축 개선."
+type: entry
+quiz:
+  - question: "v3.0 Relationship Map의 strength 자동 산출 기준은?"
+    choices:
+      - "사용자가 직접 1~5 숫자를 입력"
+      - "두 인물이 공동 등장한 메모리 수 기반으로 Architect가 계산"
+      - "두 인물이 공동 등장한 메모리 수 기반 — 코드 자동 산출"
+      - "AI가 메모리 감정 분석 후 점수 부여"
+    answer: 2
+    explanation: "PersonLink 엔티티의 strength(1~5)는 서버가 두 인물이 함께 등장하는 메모리 수를 쿼리해서 자동 산출한다. 사용자 입력 없음, AI 추론 없음 — 순수 데이터 집계."
+  - question: "바선생 L5.5→L6.0에서 crash-log 명령이 분류하는 원인 유형 중 포함되지 않는 것은?"
+    choices:
+      - "OOM (메모리 부족)"
+      - "TOKEN_OVERFLOW (컨텍스트 초과)"
+      - "RATE_LIMIT (429 오류)"
+      - "USER_CANCEL (사용자 중단)"
+    answer: 3
+    explanation: "crash-log 명령의 원인 분류: OOM, TOKEN_OVERFLOW, RATE_LIMIT, NETWORK, ERROR, SESSION_END, UNKNOWN 7가지. USER_CANCEL은 없다 — 워커가 자체 종료할 때는 이미 다른 원인이 감지된다."
+  - question: "s28의 서버 우선 → 클라 병렬 패턴에서 '클라 병렬'이 가능한 조건은?"
+    choices:
+      - "서버 WO가 Gate-1 PASS를 받은 후 iOS/Android WO를 동시 dispatch"
+      - "서버와 iOS가 동시에 작업을 시작하되 서버가 1시간 앞서 시작"
+      - "API 변경이 없을 때만 가능"
+      - "iOS와 Android가 같은 레이아웃을 구현할 때만 가능"
+    answer: 0
+    explanation: "서버 Gate-1 PASS가 확인된 후 iOS/Android를 2-way 동시 dispatch. 이 시점에서 API 스펙이 검증 완료 상태이므로 클라이언트 둘이 독립적으로 구현 가능. API 변경이 없어도 서버 Gate-1 PASS 전에는 클라를 보내지 않는다."
+---
+
+## Before — Journal 009 이후 상태
+
+s14(Session 14) 종료 시점 베이스라인:
+
+| 지표 | 값 |
+|------|-----|
+| 테스트 (server) | 796 |
+| 테스트 (iOS) | 554 |
+| 테스트 (Android) | 693 |
+| 완료 WO | WO-001~102 |
+| api-contract | v0.4 (메모리/채팅 기본 CRUD + Timeline + QuickNotes) |
+
+다음 목표: 알림 지능화 + 인물 관계 시각화 + 상호작용 기록
+
+---
+
+## s28 스프린트 — 5R, 3개 피처
+
+### 피처 목록
+
+| 버전 | 피처 | WO | 스펙 섹션 |
+|------|------|-----|----------|
+| v2.9 | Smart Notifications | WO-103~105 | §5.20 |
+| v3.0 | Relationship Map | WO-106~108 | §5.21 |
+| v3.1 | Interaction Log | WO-109~111 | §5.22 |
+
+### Round 구조
+
+```
+R1: 스펙 정의 (api-contract.md §5.20~5.22) + WO-103~111 발행
+R2: server → iOS/Android 동시 dispatch (Smart Notifications + Relationship Map)
+R3: server → iOS/Android 동시 dispatch (Interaction Log)
+R4: Gate-1 검증 (9개 WO 전체)
+R5: 에지 케이스 테스트 보강 (server + iOS)
+```
+
+---
+
+## v2.9 — Smart Notifications
+
+AI가 메모리/기념일/건강점수를 분석해서 능동적으로 알림을 생성하는 기능.
+
+### 핵심 설계 결정
+
+```kotlin
+// SmartNotificationService.generateNotifications(userId)
+// AI가 아닌 규칙 기반 분석 — 예측 가능성 > AI 자유도
+data class SmartNotification(
+    val type: NotificationType,  // ANNIVERSARY, HEALTH_CHECK, MEMORY_REMINDER
+    val priority: Priority,      // HIGH, MEDIUM, LOW
+    val triggerReason: TriggerReason,  // 알림 생성 근거 명시
+    val expiresAt: Instant       // 7일 후 자동 만료
+)
+```
+
+**기존 NotificationPreference와 분리**: WO 금지 항목에 명시. 스마트 알림은 별도 Entity, 기존 설정 코드 무침범. 두 시스템이 공존하면서 각자 역할 분담.
+
+### 3개 엔드포인트
+
+```
+GET  /api/notifications/smart           # 미처리 알림 조회 (7일 내)
+POST /api/notifications/smart/generate  # 즉시 생성 트리거
+POST /api/notifications/smart/{id}/dismiss
+```
+
+---
+
+## v3.0 — Relationship Map
+
+인물 간 관계를 그래프로 시각화. 노드 = 인물, 엣지 = 관계 링크.
+
+### strength 자동 산출
+
+직접 입력 없음. 코드가 두 인물의 공동 등장 메모리 수를 쿼리해 1~5로 환산:
+
+```kotlin
+// PersonLink.strength 자동 계산
+// "지난달 민수랑 같이 간 여행" → personId A와 B가 공동 등장
+// 공동 등장 횟수가 많을수록 strength 높아짐
+val strength = minOf(5, coAppearanceCount / 2 + 1)
+```
+
+### 클라이언트 그래프 렌더링
+
+iOS: `RelationshipMapView` — 외부 라이브러리 금지, **커스텀 Canvas/Path로 그래프 직접 그림**.
+
+Android: `RelationshipMapScreen` — Compose Canvas 기반.
+
+외부 라이브러리를 쓰지 않은 이유: 번들 사이즈 통제 + 앱 의존성 최소화. 노드 20~30개 수준이라 custom Canvas로 충분.
+
+### 3개 엔드포인트
+
+```
+GET    /api/people/map              # 노드 + 엣지 전체
+POST   /api/people/map/link         # 관계 연결 생성
+DELETE /api/people/map/link/{id}    # 관계 연결 삭제
+```
+
+---
+
+## v3.1 — Interaction Log
+
+채팅과 별개로 실제 만남/통화/이벤트를 기록하는 기능.
+
+```kotlin
+data class Interaction(
+    val type: InteractionType,  // CALL, MEETING, MESSAGE, EVENT, OTHER
+    val title: String,
+    val note: String?,
+    val occurredAt: Instant,    // 과거 날짜 소급 입력 가능
+    val duration: Int?          // 분 단위, nullable
+)
+```
+
+`occurredAt`이 과거 날짜를 허용한다는 점이 중요. 메모리 시스템에서 "3주 전에 만났었는데"를 소급 입력할 수 있어야 한다. Relationship Timeline(v2.7)에 연동되어 `INTERACTION` 타입으로 통합 표시.
+
+---
+
+## Gate-1 검증
+
+**9/9 WO 전체 PASS**
+
+| 항목 | 결과 |
+|------|------|
+| 엔드포인트 URL/Method | ✅ 9/9 일치 |
+| Request/Response 스키마 | ✅ 완전 일치 |
+| 신규 에러 코드 | ✅ 4개 (NOTIFICATION_NOT_FOUND, LINK_EXISTS, LINK_NOT_FOUND, INTERACTION_NOT_FOUND) |
+| 빌드 | ✅ server BUILD SUCCESSFUL, android BUILD SUCCESSFUL, iOS 568 tests/0 failures |
+
+iOS 세션 1회 크래시 → 재시작 후 정상 완료. server 빌드 직접 검증 2회(R2, R3).
+
+---
+
+## 바선생 L5.5 → L6.0
+
+s28에서 `architect-cli.sh`에 `crash-log` 명령 추가. 바선생(Architect 워커 제어 CLI)의 6번째 마일스톤.
+
+### crash-log 명령 동작
+
+```bash
+./architect-cli.sh crash-log ios
+# → docs/crash-logs/2026-04-21_115925_ios.md 생성
+```
+
+워커 세션이 죽었을 때:
+1. `tmux capture-pane` — pane 마지막 500줄 캡처
+2. 시스템 상태 수집 (swap, memory pressure, claude 인스턴스 수)
+3. 원인 자동 분류 (OOM / TOKEN_OVERFLOW / RATE_LIMIT / NETWORK / ERROR / SESSION_END / UNKNOWN)
+4. 마크다운 파일로 저장
+
+### FAIL/META/VERIFY 3축
+
+바선생 진화의 핵심 프레임. 각 축은 독립적으로 성장:
+
+| 축 | 목적 | L5.5→L6.0 개선 |
+|----|------|---------------|
+| FAIL | 실패 수집/분류 | crash-log 명령으로 자동화 |
+| META | 패턴 학습/문서화 | crash-log docs 디렉토리 체계화 |
+| VERIFY | 검증 의무화 | Android testDebugUnitTest 의무 실행 |
+
+크래시가 발생할 때마다 docs/crash-logs/에 기록이 쌓이고, 다음 세션에서 패턴을 분석해 대응 로직을 개선한다. 사후 분석이 아니라 **사전 방어의 데이터 축적**.
+
+---
+
+## s28 종료 수치
+
+| 지표 | s28 전 | s28 후 | 증감 |
+|------|--------|--------|------|
+| server 테스트 | 814 | 814+ | R5 에지 케이스 보강 |
+| iOS 테스트 | 554 | 577 | +23 |
+| Android 테스트 | 693 | 693+ | 에지 케이스 보강 |
+| 완료 WO | 102 | 111 | +9 |
+| api-contract | §5.19 | §5.22 | +3 섹션 |
+
+---
+
+## 패턴: 서버 우선 → 클라 병렬
+
+s28에서 완전히 정착한 dispatch 패턴:
+
+```
+[R2-server] Smart Notifications API (WO-103) 구현
+      ↓
+[Gate-1 서버 PASS 확인]
+      ↓
+[R2-ios] WO-104 + [R2-android] WO-105  ← 2-way 동시 dispatch
+```
+
+API 스펙이 확정(server Gate-1 PASS)된 후에야 클라이언트를 보낸다. 서버가 미완성 상태에서 iOS/Android가 작업하면 인터페이스 불일치로 재작업이 발생한다. 이 패턴 덕분에 s27~s28 동안 Gate 충돌 0건.
+
+---
+
+## 다음: s29
+
+- v3.2 Shared Memories, v3.3 Memory Tags, v3.4 AI Chat Suggestions
+- iOS 워커 반복 크래시 첫 조짐 — crash-log로 추적 예정
+- → **Journal 011**에서 계속
