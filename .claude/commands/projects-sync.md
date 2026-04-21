@@ -1,30 +1,20 @@
 # /projects-sync — 허브 세션의 워커 프로젝트 read-only 진단
 
-이 ai-study 세션은 *허브*로서 아래 6개 *워커* 프로젝트를 분석/연구한다.
-각 프로젝트는 별도 Claude 세션이 동시에 작업할 수 있다.
-
-| 프로젝트 | 경로 | GitHub |
-|----------|------|--------|
-| mino-moneyflow | ~/Develop/mino-moneyflow | Mino777/mino-moneyflow |
-| mino-tarosaju | ~/Develop/mino-tarosaju | Mino777/mino-tarosaju |
-| aidy-architect | ~/Develop/aidy-architect | Mino777/aidy-architect |
-| aidy-server | ~/Develop/aidy-server | Mino777/aidy-server |
-| aidy-ios | ~/Develop/aidy-ios | Mino777/aidy-ios |
-| aidy-android | ~/Develop/aidy-android | Mino777/aidy-android |
+이 ai-study 세션은 *허브*로서 **mino-moneyflow, mino-tarosaju, aidy-architect** 세 *워커* 프로젝트를 분석/연구한다.
+세 프로젝트는 각자 별도 Claude 세션이 동시에 작업할 수 있다.
 
 이 커맨드는 **쓰기 0, 읽기만** 수행하는 안전한 진단 도구다.
-호출하면 모든 워커 프로젝트의 현재 상태를 한 번에 리포트한다.
+호출하면 **3개 워커 프로젝트 전부**의 현재 상태를 한 번에 리포트한다.
+
+> ⚠️ **절대 규칙**: 3프로젝트(moneyflow + tarosaju + aidy-architect) 전부 진단할 것. 일부만 하면 **계약 위반**. 2개만 진단하고 끝내면 안 된다.
 
 ## 호출 방식
 
 ```
-/projects-sync
-/projects-sync moneyflow        # 한 프로젝트만
-/projects-sync tarosaju
-/projects-sync aidy-architect
-/projects-sync aidy-server
-/projects-sync aidy-ios
-/projects-sync aidy-android
+/projects-sync                   # 3프로젝트 전부 (기본)
+/projects-sync moneyflow         # 한 쪽만
+/projects-sync tarosaju          # 한 쪽만
+/projects-sync aidy              # 한 쪽만
 ```
 
 ## 왜 이 커맨드가 필요한가
@@ -34,19 +24,21 @@
 
 이전 세션의 NEXT.md는 다음 리듬을 권장한다:
 ```bash
-for p in mino-moneyflow mino-tarosaju aidy-architect aidy-server aidy-ios aidy-android; do
-  rtk git -C /Users/jominho/Develop/$p fetch origin
-  rtk git -C /Users/jominho/Develop/$p log origin/main --oneline -5
-done
+rtk git -C /Users/jominho/Develop/mino-moneyflow fetch origin
+rtk git -C /Users/jominho/Develop/mino-tarosaju fetch origin
+rtk git -C /Users/jominho/Develop/aidy-architect fetch origin
+rtk git -C /Users/jominho/Develop/mino-moneyflow log origin/main --oneline -5
+rtk git -C /Users/jominho/Develop/mino-tarosaju log origin/main --oneline -5
+rtk git -C /Users/jominho/Develop/aidy-architect log origin/main --oneline -5
 ```
 
-이 명령들을 *한 커맨드*로 묶고, 추가로 *내가 모르는 변화*(다른 세션 흔적)를 감지한다.
+이 6개의 명령을 *한 커맨드*로 묶고, 추가로 *내가 모르는 변화*(다른 세션 흔적)를 감지한다.
 
 ## 커맨드 범위
 
 ### 1. Fetch + 상태 스냅샷
 
-6개 프로젝트 각각:
+**3개** 프로젝트 각각 (`mino-moneyflow`, `mino-tarosaju`, `aidy-architect`):
 
 ```bash
 rtk git -C <project-root> fetch origin
@@ -81,12 +73,9 @@ rtk git -C <project-root> worktree list
 rtk gh pr list -R Mino777/mino-moneyflow --state all --limit 5
 rtk gh pr list -R Mino777/mino-tarosaju --state all --limit 5
 rtk gh pr list -R Mino777/aidy-architect --state all --limit 5
-rtk gh pr list -R Mino777/aidy-server --state all --limit 5
-rtk gh pr list -R Mino777/aidy-ios --state all --limit 5
-rtk gh pr list -R Mino777/aidy-android --state all --limit 5
 ```
 
-* 6개 프로젝트 최근 5개 PR — open/merged/closed 전체. 다른 세션이 PR을 올렸는지 감지.
+* 3프로젝트 각각 최근 5개 PR — open/merged/closed 전체. 다른 세션이 PR을 올렸는지 감지.
 
 ### 5. 다른 세션 작업 흔적 감지
 
@@ -99,7 +88,7 @@ rtk gh pr list -R Mino777/aidy-android --state all --limit 5
 
 ### 6. 메시지 큐 확인
 
-양쪽 프로젝트의 `messages/` 디렉토리에서 미읽은 메시지를 확인한다.
+3개 프로젝트의 `messages/` 디렉토리에서 미읽은 메시지를 확인한다.
 
 ```bash
 # 허브 messages/ 에서 워커→허브 미읽은 메시지
@@ -108,7 +97,7 @@ for f in messages/*-to-hub-*.json; do
 done
 
 # 워커 messages/ 에서 허브→워커 미읽은 메시지
-for project in mino-moneyflow mino-tarosaju aidy-architect aidy-server aidy-ios aidy-android; do
+for project in mino-moneyflow mino-tarosaju aidy-architect; do
   for f in /Users/jominho/Develop/$project/messages/hub-to-*.json; do
     # read: false 인 것만 필터
   done
@@ -158,9 +147,9 @@ mino-tarosaju (⚠️ 주의)
 
 ## 성공 조건
 
-* 양쪽 프로젝트 상태를 한 화면에 보여줌
+* **3개** 프로젝트 상태를 한 화면에 보여줌 (moneyflow + tarosaju + aidy-architect)
 * 다른 세션 작업 흔적이 있으면 경고
-* 쓰기 0 — 이 커맨드 실행 후 양쪽 프로젝트의 git 상태는 *fetch한 것 외에는* 변화 없음
+* 쓰기 0 — 이 커맨드 실행 후 3개 프로젝트의 git 상태는 *fetch한 것 외에는* 변화 없음
 
 ## 부작용 검토
 
@@ -168,8 +157,8 @@ mino-tarosaju (⚠️ 주의)
 * `gh pr list`는 GitHub API 호출 — rate limit 안에서 안전.
 * 이 커맨드 자체는 여러 번 빠르게 돌려도 안전.
 
-## 양쪽 워커 프로젝트 관점
+## 3개 워커 프로��트 관점
 
 이 커맨드는 *ai-study 전용*이다. 워커 프로젝트에는 이식하지 않는다.
-워커들은 각자의 `/wt-branch`로 작업을 시작하고, 허브는 `/projects-sync`로 그들의 상태를 관찰한다.
-두 역할은 분리되어 있다.
+워커들(moneyflow, tarosaju, aidy-architect)은 각자의 `/wt-branch`로 작업을 시작하고, 허브는 `/projects-sync`로 그들의 상태를 관찰한다.
+세 역할은 분리되어 있다.
