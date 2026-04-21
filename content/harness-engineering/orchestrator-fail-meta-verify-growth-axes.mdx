@@ -1,0 +1,185 @@
+---
+title: "오케스트레이터 성장 3축 — FAIL·META·VERIFY로 자기 개선하는 CLI"
+category: harness-engineering
+date: "2026-04-21"
+tags: [orchestrator, fail-meta-verify, baseongsaeng, architect-cli, self-improvement, crash-log, compound, knowledge-accumulation]
+confidence: 4
+last_verified: "2026-04-21"
+applicable_to: ["aidy", "any"]
+connections:
+  - harness-engineering/aidy-journal-010-smart-notifications-relationship-map-interaction-log
+  - harness-engineering/worker-memory-pressure-crash-recovery
+  - harness-engineering/compound-engineering-philosophy
+  - harness-engineering/multi-agent-sprint-optimization-patterns
+status: complete
+description: "멀티에이전트 오케스트레이터(바선생)의 성장 모델. FAIL(실패 수집)/META(패턴 학습)/VERIFY(검증 의무화) 3축이 독립적으로 발전해 전체 레벨을 끌어올리는 구조. 6개 능력 축 레벨 시스템 포함."
+type: entry
+quiz:
+  - question: "FAIL/META/VERIFY 3축 중 '특정 워커가 반복해서 크래시된다'는 신호를 처리하는 축은?"
+    choices:
+      - "VERIFY — 빌드 검증이 부족해서"
+      - "META — 패턴을 문서화하는 축"
+      - "FAIL — 실패 데이터를 수집하고 원인을 분류하는 축"
+      - "ORCH — 오케스트레이션 전략 문제"
+    answer: 2
+    explanation: "FAIL 축은 실패 데이터 수집과 분류. crash-log 명령이 FAIL 축의 대표 도구. '반복 크래시'는 FAIL 축에서 패턴이 쌓여야 META 축(원인 문서화)과 VERIFY 축(예방 체크리스트 추가)으로 전파된다."
+  - question: "META 축이 FAIL 축보다 '한 단계 위'인 이유는?"
+    choices:
+      - "META는 더 어려운 작업이어서"
+      - "FAIL은 개별 실패를 기록하고, META는 그 기록에서 패턴을 추출해 다음 세션에 적용할 수 있는 규칙으로 변환"
+      - "META가 더 많은 토큰을 사용해서"
+      - "FAIL은 워커가 처리하고 META는 Architect가 처리해서"
+    answer: 1
+    explanation: "FAIL: 발생 → 기록. META: 기록 → 분석 → 규칙. crash-log가 FAIL 축이라면, s29 교훈 파일('iOS 크래시 반복 패턴 → WO 분리 전송')이 META 축. META 없이 FAIL만 쌓이면 데이터가 있어도 행동이 바뀌지 않는다."
+  - question: "VERIFY 축 점수가 낮을 때 나타나는 증상은?"
+    choices:
+      - "워커가 자주 stall에 빠짐"
+      - "같은 유형의 검증 누락이 여러 스프린트에 걸쳐 retro에서 반복 언급됨"
+      - "Gate-1이 자주 FAIL남"
+      - "토큰 소비가 급증"
+    answer: 1
+    explanation: "VERIFY 점수가 낮다 = 검증 항목이 의무화되지 않았다. 의무화 안 된 것은 바쁜 라운드에서 생략된다. 결과: retro에서 'Android 빌드 미검증', 'iOS 테스트 누락' 같은 문구가 s20, s21, s22, s23 4세션 연속 반복. 규칙이 아닌 리마인더는 작동하지 않는다."
+---
+
+## 오케스트레이터가 성장해야 하는 이유
+
+멀티에이전트 시스템에서 워커는 각 피처 구현을 담당하고 오케스트레이터(Architect)는 스프린트를 조율한다. 워커는 매번 새 컨텍스트로 시작하지만 오케스트레이터는 스프린트 사이에 배운 것을 다음 스프린트에 적용할 수 있다.
+
+이 학습을 체계화하지 않으면 같은 실수가 반복된다. aidy의 autoceo s20~s23에서 "Android 빌드 미검증"이 4스프린트 연속 retro에 등장한 것이 그 예다.
+
+3축 모델은 이 학습을 **구조화**한다.
+
+---
+
+## FAIL / META / VERIFY 3축
+
+### FAIL 축 — 실패 데이터 수집
+
+실패가 발생했을 때 데이터를 잃지 않는 능력.
+
+낮은 수준: "크래시 났다. 재시작했다. 계속 진행."
+높은 수준: crash-log 명령으로 원인 분류, pane 스냅샷, 시스템 상태를 자동 기록.
+
+```bash
+./architect-cli.sh crash-log ios
+# → docs/crash-logs/2026-04-21_115925_ios.md
+# 원인: OOM / TOKEN_OVERFLOW / RATE_LIMIT / NETWORK / ERROR / SESSION_END / UNKNOWN
+```
+
+FAIL 축 성장 지표:
+- 크래시를 얼마나 빠르게 감지하는가
+- 원인 분류가 얼마나 정확한가
+- 같은 원인의 재발을 얼마나 감지하는가
+
+### META 축 — 패턴 학습과 문서화
+
+FAIL 데이터에서 패턴을 추출해 규칙으로 변환하는 능력.
+
+낮은 수준: crash-log가 쌓이지만 읽지 않음.
+높은 수준: 세션 교훈 파일(`docs/solutions/`) 작성 → 다음 세션의 CLAUDE.md 또는 WO 템플릿에 반영.
+
+```
+크래시 3회 → 교훈 파일 작성
+"iOS WO를 2개 동시 전송하면 TOKEN_OVERFLOW 확률이 높다"
+→ 다음 스프린트부터 iOS WO는 1개씩 분리 전송
+```
+
+META 축 성장 지표:
+- 세션 종료 후 교훈을 문서화하는가
+- 문서화된 교훈이 다음 세션에서 실제로 적용되는가
+- 교훈이 일회성이 아닌 재사용 가능한 체크리스트로 변환되는가
+
+### VERIFY 축 — 검증 의무화
+
+"확인했다"가 아니라 "명령어가 통과했다"를 기준으로 삼는 능력.
+
+낮은 수준: 워커의 자기 보고를 믿음 ("테스트 다 통과했습니다").
+높은 수준: `./architect-cli.sh verify android` 명령이 숫자를 출력하고 그 숫자가 기준을 넘어야 다음 라운드 진행.
+
+```bash
+./architect-cli.sh verify server
+# BUILD SUCCESSFUL
+# Tests run: 880, Failures: 0
+
+./architect-cli.sh verify android
+# BUILD SUCCESSFUL
+# Tests run: 1225, Failures: 0 ← 이 숫자가 나와야 Gate 통과
+```
+
+VERIFY 축 성장 지표:
+- 빌드와 테스트 검증이 선택사항이 아닌 필수 단계인가
+- 검증 누락이 retro에서 반복되는가 (반복되면 아직 낮음)
+- 검증 결과가 숫자로 기록되어 추적 가능한가
+
+---
+
+## 3축의 상호작용
+
+세 축은 독립적이지만 서로를 강화한다:
+
+```
+FAIL: "iOS R3에서 3회 크래시, 원인 UNKNOWN"
+           ↓
+META: "6인스턴스 동시 + WO 2개 = TOKEN_OVERFLOW 패턴 추정
+       → 다음 스프린트: iOS WO 1개씩 분리"
+           ↓
+VERIFY: "iOS dispatch 후 pane에서 working 확인을
+         1분간 감시하는 로직 추가 (watch-workers 개선)"
+```
+
+FAIL 없이 META는 추측. META 없이 VERIFY는 방향 없는 검증. VERIFY 없이 FAIL은 데이터만 쌓이고 행동이 없다.
+
+---
+
+## 바선생(바선생) 6능력 축 레벨 시스템
+
+aidy-architect의 오케스트레이터 CLI(`architect-cli.sh`)는 6개 능력 축으로 성장 수준을 추적한다:
+
+| 축 | 의미 |
+|----|------|
+| **ORCH** | 오케스트레이션 — dispatch, 라운드 구조, 파이프라이닝 |
+| **VERIFY** | 검증 의무화 — 빌드/테스트 숫자 검증 |
+| **DECOMP** | 작업 분해 — WO 단위 설계, 선행 의존성 관리 |
+| **FAIL** | 실패 처리 — 감지, 분류, 복구 |
+| **CTX** | 컨텍스트 관리 — 토큰 최적화, /compact 타이밍 |
+| **META** | 메타 학습 — 교훈 추출, 다음 스프린트 반영 |
+
+현재 레벨 (2026-04-21 기준):
+
+```
+바선생 L5.5 Engineer+ ⬡
+ORCH 6.0 | VERIFY 5.5 | DECOMP 5.5 | FAIL 5.0 | CTX 5.0 | META 5.0
+목표: L6.0 Orchestrator (FAIL/META 5.5+)
+```
+
+ORCH가 먼저 올라간 이유: dispatch 전략(서버 우선 → 클라 병렬, 파이프라이닝)이 먼저 최적화됐기 때문. FAIL/META가 뒤처진 이유: 실패 기록과 학습 문서화가 의무가 아니었기 때문.
+
+---
+
+## 레벨 상승 패턴
+
+각 스프린트에서 3축 중 하나라도 개선되면 전체 레벨이 오른다. 한 번에 3축을 다 올리려 하지 않는다.
+
+**s28 사이클**: FAIL 축 — crash-log 명령 추가. FAIL 5.0 → 5.5 방향.
+
+**s29 사이클**: FAIL 축 — crash-log 3건 기록. META 축 — 세션 교훈 파일 작성. VERIFY 축 — Android testDebugUnitTest 의무화.
+
+---
+
+## 다른 오케스트레이터에 이식하기
+
+3축 모델은 aidy 전용이 아니다. 어떤 멀티에이전트 오케스트레이터든 같은 축이 필요하다.
+
+**FAIL 축 이식**:
+- 워커 실패 시 자동 로그 수집 스크립트
+- 실패 원인 분류 (빌드/테스트/타임아웃/크래시)
+
+**META 축 이식**:
+- 세션 종료 시 교훈 파일 작성 (compound 단계)
+- 교훈을 다음 세션 CLAUDE.md 또는 WO 템플릿에 반영
+
+**VERIFY 축 이식**:
+- 빌드/테스트 결과를 숫자로 출력하는 verify 명령
+- Gate 통과 기준을 숫자로 명시 (예: 880 tests, 0 failures)
+
+3축 중 어느 것이 가장 취약한지 확인하는 방법: retro를 읽어서 같은 문구가 반복되면 그 축이 낮다.

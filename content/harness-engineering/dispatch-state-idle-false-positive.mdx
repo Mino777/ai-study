@@ -1,0 +1,176 @@
+---
+title: "Dispatch State 추적 — 모니터링 idle 오탐 방지 패턴"
+category: harness-engineering
+date: "2026-04-21"
+tags: [dispatch-state, watch-workers, idle-detection, false-positive, monitoring, orchestrator, polling]
+confidence: 4
+last_verified: "2026-04-21"
+applicable_to: ["aidy", "any"]
+connections:
+  - harness-engineering/aidy-journal-011-shared-memories-memory-tags-ai-chat-suggestions
+  - harness-engineering/bash-watcher-zero-token-polling
+  - harness-engineering/orchestrator-fail-meta-verify-growth-axes
+  - harness-engineering/aidy-journal-009-stall-detection-3way-dispatch-feature-sprint
+status: complete
+description: "워커 모니터링 도구가 'dispatch 전 idle'과 '작업 완료 idle'을 구분하지 못해 오보를 내는 문제. dispatch 상태를 별도 추적하지 않는 모든 polling 기반 모니터에서 공통 발생. 패턴과 해결 방향 정리."
+type: entry
+quiz:
+  - question: "watch-workers 오탐이 발생하는 구조적 원인은?"
+    choices:
+      - "tmux pane 읽기 권한 부족"
+      - "워커 프로세스가 응답하지 않아서"
+      - "모니터가 워커 상태(idle/working)만 보고, 해당 워커에게 작업이 dispatch됐는지 여부를 추적하지 않음"
+      - "폴링 간격이 너무 길어서"
+    answer: 2
+    explanation: "idle 자체는 두 가지 의미를 가진다: (1) dispatch 전 대기, (2) 작업 완료 후 대기. 모니터가 dispatch 기록 없이 idle만 보면 두 상태를 구분 불가. 미dispatch 워커도 '완료'로 보고."
+  - question: "dispatch 상태 추적을 구현하는 가장 단순한 방법은?"
+    choices:
+      - "워커에게 완료 시 특별 토큰을 출력하게 하기"
+      - "dispatch 시각을 파일/변수에 기록하고, idle 감지 시 'dispatch 후 최소 N초 이상인가'를 함께 확인"
+      - "폴링 간격을 1초로 줄이기"
+      - "워커마다 별도 모니터 프로세스 실행"
+    answer: 1
+    explanation: "dispatch 시각 기록이 핵심. idle이 감지됐을 때 'dispatch 후 충분한 시간(예: 60초)이 지났는가'를 확인하면 dispatch 전 idle과 완료 idle을 구분 가능. 추가 변경 없이 기존 모니터 로직에 조건 하나만 추가."
+---
+
+## 문제 상황
+
+aidy s29에서 발생한 오보:
+
+```bash
+./architect-cli.sh watch-workers
+
+# 출력
+[watch-workers] ios: idle
+[watch-workers] android: idle
+[watch-workers] 전원 완료 ← ❌ 오탐
+```
+
+실제 상황: iOS와 Android에게 아직 dispatch를 보내지 않은 상태. 워커들이 이전 작업 완료 후 대기 중이었는데 "전원 완료"로 오보.
+
+---
+
+## 원인: 두 가지 idle의 혼동
+
+모니터가 워커 pane의 "idle" 상태만 확인한다:
+
+```
+Case A: dispatch 전 → pane 프롬프트만 있음 → idle
+Case B: 작업 완료 → pane에 결과 표시 후 프롬프트 → idle
+```
+
+두 케이스가 pane 화면에서 동일하게 보인다. 모니터가 dispatch 기록을 갖고 있지 않으면 구분 불가능.
+
+```bash
+# 현재 watch-workers 로직 (버그)
+if pane_is_idle(worker):
+    report "완료"  # dispatch 여부 무관
+
+# 필요한 로직
+if was_dispatched(worker) AND pane_is_idle(worker) AND elapsed_since_dispatch > 60:
+    report "완료"
+elif NOT was_dispatched(worker):
+    report "대기 중 (미dispatch)"  # ← 이게 없으면 오탐
+```
+
+---
+
+## 패턴: Dispatch State 추적
+
+### 단순 파일 기반 구현
+
+```bash
+# dispatch 시 기록
+dispatch_worker() {
+    local worker=$1
+    local timestamp=$(date +%s)
+    echo "$timestamp" > /tmp/aidy-dispatch-state/$worker
+    # ... 실제 dispatch 로직
+}
+
+# 모니터에서 확인
+check_worker_done() {
+    local worker=$1
+    local dispatch_file="/tmp/aidy-dispatch-state/$worker"
+
+    # dispatch 기록이 없으면 → 미dispatch 상태
+    if [ ! -f "$dispatch_file" ]; then
+        echo "$worker: 미dispatch (작업 없음)"
+        return 1
+    fi
+
+    local dispatch_time=$(cat "$dispatch_file")
+    local elapsed=$(( $(date +%s) - dispatch_time ))
+
+    # dispatch 후 60초 미만이면 → 아직 작업 중일 가능성
+    if [ "$elapsed" -lt 60 ]; then
+        echo "$worker: 작업 시작 직후 (60초 미충족)"
+        return 1
+    fi
+
+    # dispatch 됐고 60초 이상 경과했고 idle이면 → 완료
+    if pane_is_idle "$worker"; then
+        echo "$worker: 완료"
+        return 0
+    else
+        echo "$worker: 진행 중"
+        return 1
+    fi
+}
+```
+
+### 상태 초기화
+
+```bash
+# 스프린트 시작 시 초기화
+mkdir -p /tmp/aidy-dispatch-state
+rm -f /tmp/aidy-dispatch-state/*
+
+# 스프린트 종료 시 정리
+rm -rf /tmp/aidy-dispatch-state
+```
+
+---
+
+## 더 넓은 패턴
+
+이 문제는 polling 기반 모니터 전반에 공통으로 나타난다.
+
+**공통 구조**:
+```
+Observer: "X가 어떤 상태인가?"
+문제: "X가 A 상태인 이유"를 Observer가 모름
+결과: A 상태의 원인이 다를 때 오탐/오보
+```
+
+**다른 사례들**:
+
+| 상황 | idle의 두 의미 | 해결 |
+|------|--------------|------|
+| CI 워커 | 빌드 대기 중 / 빌드 완료 후 | job queue에 task 있는지 확인 |
+| HTTP health check | 아직 안 띄움 / 요청 없음 | 기동 시각 추적 |
+| DB connection pool | 연결 전 / 연결 후 유휴 | connection state 명시 |
+| git worktree | 작업 전 / commit 완료 | HEAD가 main과 다른지 확인 |
+
+---
+
+## Worker Stall Detection과의 차이
+
+[Journal 009](aidy-journal-009-stall-detection-3way-dispatch-feature-sprint)의 Stall Detection 4단계는 "dispatch된 워커가 응답 없을 때" 처리. 이 패턴은 "아직 dispatch 안 된 워커를 완료로 착각하는 것" 예방. 두 문제는 상호보완적.
+
+```
+Stall Detection: dispatch됨 + idle → stall 가능성 진단
+Dispatch State:  dispatch됨 여부 자체를 먼저 확인
+                 → dispatch 안 됐으면 Stall Detection 대상도 아님
+```
+
+---
+
+## 구현 우선순위
+
+오탐이 발생하는 빈도가 낮으면 로그 확인으로 충분하다. 바쁜 스프린트에서 "전원 완료" 오보를 믿고 다음 단계로 넘어갔다가 실제로 미완료인 워커가 있으면 데이터 누락이 발생한다.
+
+구현 우선도 기준:
+- **높음**: 오보를 믿고 다음 단계를 진행할 위험이 있는 경우
+- **중간**: 오보가 나와도 Architect가 수동 확인하는 경우
+- **낮음**: 모니터를 참고용으로만 쓰는 경우
