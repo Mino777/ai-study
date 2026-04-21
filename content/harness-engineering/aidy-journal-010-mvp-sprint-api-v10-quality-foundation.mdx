@@ -1,0 +1,176 @@
+---
+title: "Aidy Journal 010 — MVP API v1.0 완성 + 품질 기초 (s17~s20)"
+category: harness-engineering
+series: aidy-journal
+date: "2026-04-21"
+tags: [aidy-journal, api-v1, mvp, quality-sprint, gate-skip, wo-less-dispatch, rate-limit, memory-import, chat-summary, accessibility]
+confidence: 4
+last_verified: "2026-04-21"
+applicable_to: ["aidy", "any"]
+connections:
+  - harness-engineering/aidy-journal-009-stall-detection-3way-dispatch-feature-sprint
+  - harness-engineering/aidy-journal-011-gate1-enforcement-turning-point
+  - context-engineering/api-contract-as-3-client-source-of-truth
+  - harness-engineering/orchestrator-fail-meta-verify-growth-axes
+  - evaluation/test-strategy-3-client-via-aidy
+status: complete
+description: "s17~s20(4세션): API v0.6→v1.0 MVP 완성. Settings/Chat/Memory/Auth 12개 엔드포인트 추가. s20은 기능 0, 테스트+보안+성능+접근성 전용 스프린트. Gate-1 생략 문제가 3세션 내내 반복. 총 테스트 ~571→~1085."
+type: entry
+quiz:
+  - question: "s18에서 WO(Work Order)를 발행하지 않고 직접 dispatch한 것의 트레이드오프는?"
+    choices:
+      - "속도 향상이 없고 추적성만 나빠짐"
+      - "WO 발행 오버헤드를 줄여 속도를 높이지만, done 폴더 기록 부재로 나중에 무엇을 했는지 추적이 어려워짐"
+      - "워커에게 컨텍스트를 충분히 전달할 수 없음"
+      - "Gate-1 검증이 불가능해짐"
+    answer: 1
+    explanation: "WO 없이 직접 dispatch는 발행 오버헤드(스펙 작성 + 파일 생성 + done 이동)를 제거해서 라운드를 빠르게 돌릴 수 있다. 단점: done 폴더가 비어서 '스프린트에서 무엇을 했는가' 추적이 세션 후반에 어렵다. 고속 이터레이션과 추적성의 트레이드오프."
+  - question: "s20이 '기능 추가 0' 품질 전용 스프린트로 설계된 이유는?"
+    choices:
+      - "API가 완성되어 추가할 기능이 없었음"
+      - "API v1.0이 MVP 스펙을 달성했으므로, 다음 기능 추가 전에 테스트·보안·성능·접근성을 안정화해야 기술 부채가 쌓이지 않음"
+      - "워커가 준비가 안 됐음"
+      - "토큰 예산 부족"
+    answer: 1
+    explanation: "기능 추가와 품질 강화는 동시에 진행하면 검증 범위가 계속 확장된다. s20처럼 기능을 동결하고 품질만 집중하는 스프린트는 '현재 상태의 완성도'를 측정 가능하게 만든다. 이후 s21+의 기능 추가가 검증된 베이스 위에서 시작됨."
+  - question: "s17~s20 기간 동안 Gate-1이 반복 생략된 구조적 원인은?"
+    choices:
+      - "gate-reviewer 에이전트 버그"
+      - "워커들이 Gate-1을 거부"
+      - "'빌드 통과 = 품질 확인'이라는 편의적 자기 합리화 — Gate-1은 단순 빌드 통과가 아닌 API 스펙 필드 레벨 대조"
+      - "Gate-1 체크리스트가 너무 복잡"
+    answer: 2
+    explanation: "s18, s19, s20 세 세션 모두 retro에서 'Gate-1 생략' 반성이 등장한다. 공통 패턴: 빌드 SUCCESSFUL + 테스트 수 증가 = '이 정도면 됐다'는 자기 합리화. Gate-1의 핵심인 'API 스펙 필드 레벨 대조'와 '에러 코드 네이밍 확인'은 빌드 성공으로 검증되지 않는다."
+---
+
+## Before — s14 종료 후 상태
+
+journal-009(s11-s14) 종료 시점:
+
+| 지표 | 값 |
+|------|-----|
+| 총 테스트 | ~637 (server 396, iOS ?, Android ?) |
+| api-contract | v0.4 (기본 CRUD + Timeline + QuickNotes) |
+| 완료 WO | WO-001~032 |
+| 다음 목표 | 설정/인증/페이지네이션/메모리 인사이트 |
+
+---
+
+## s17~s18 — API v0.6→v0.9 (2세션 연속)
+
+### 추가된 12개 엔드포인트
+
+| 라운드 | 기능 | 스펙 버전 |
+|--------|------|----------|
+| s17-R1 | Settings API (GET/PUT) — 다중 기기 설정 동기화 | v0.7 |
+| s17-R2 | 비밀번호 변경 + 계정 삭제 (CASCADE) | v0.7 |
+| s17-R3 | Chat pagination + 전체 대화 삭제 | v0.8 |
+| s17-R4 | Memory Insights — 카테고리 분포 + streak | v0.8 |
+| s17-R5 | chat/stream 스펙 공식 반영 (ADR-008) | v0.8 |
+| s18-R1 | Settings theme → 앱 dark/light/system 적용 | v0.9 |
+| s18-R2 | Rate limit 헤더 (X-RateLimit-Remaining + Retry-After) | v0.9 |
+| s18-R3 | Memory import (export JSON 재가져오기) | v0.9 |
+| s18-R4 | Chat summary — AI 기반 최근 대화 요약 + in-memory 1h 캐시 | v0.9 |
+
+### WO 없는 직접 dispatch (s18)
+
+s18에서 WO 발행 없이 스펙만 정의하고 바로 dispatch. 라운드를 빠르게 돌릴 수 있지만 done 폴더에 기록이 없다.
+
+```
+WO 발행 포함 흐름:
+  스펙 정의 → WO 파일 생성 → in-progress/ → 워커 dispatch → done/ 이동
+  
+WO 없는 직접 dispatch (s18):
+  스펙 정의 → 워커 직접 dispatch
+  (done 폴더 비어있음 → 추적 불가)
+```
+
+tradeoff: 단기 속도 vs 장기 추적성. s18 retro에서 "속도 vs 추적성 트레이드오프를 의식적으로 결정하지 않았다"고 명시.
+
+### 수치 (s17~s18 종료)
+
+| 지표 | s14 종료 | s18 종료 |
+|------|---------|---------|
+| Server tests | 235 | 344 (+109) |
+| iOS tests | ~166 | 245 (+79) |
+| Android tests | ~170 | ~200 (+30) |
+| api-contract | v0.4 | v0.9 |
+
+---
+
+## s19 — API v0.9→v1.0 MVP 달성
+
+10라운드에서 MVP 스펙 완성:
+
+| 라운드 | 기능 |
+|--------|------|
+| R1 | Memory timeline — 날짜별 그룹핑 |
+| R2 | Quick actions — 퀵 프롬프트 6개 |
+| R3 | Memory 공유 — 공유 링크 + 공개 조회 |
+| R4 | Reminders — 일정 메모리 알림 |
+| R5 | App config — 최소 버전, 기능 플래그 |
+| R6 | Custom tags — 사용자 정의 태그 |
+| R7 | Markdown 렌더링 (클라이언트) |
+| R8 | 다국어 ko/en 2개 언어 |
+
+### dispatch 체이닝 금지 규칙 발견
+
+s19-R5에서 iOS dispatch 누락 사고:
+
+```bash
+# 위험한 패턴 — iOS dispatch가 조용히 실패
+./architect-cli.sh send server "[R5] 작업 지시..." && \
+./architect-cli.sh send ios "[R5] 작업 지시..."
+# && 체이닝: 서버 성공해도 iOS 전달 실패 시 에러 없이 통과
+
+# 안전한 패턴 — 각각 별도 호출
+./architect-cli.sh send server "[R5] 작업 지시..."
+./architect-cli.sh send ios "[R5] 작업 지시..."
+```
+
+iOS R8 빌드 28분 병목도 발생. DerivedData 잠금으로 재빌드. 빌드 전 `rm -rf ~/Library/Developer/Xcode/DerivedData/<project>` 선제 실행 필요.
+
+---
+
+## s20 — 품질 전용 스프린트 (기능 추가 0)
+
+MVP(v1.0) 달성 직후 기능 동결하고 품질만 집중.
+
+| 라운드 | 작업 내용 |
+|--------|---------|
+| R1, R3, R4 | 서버 Unit + E2E 테스트 갭 보강 (+50건), Android Repository 테스트 3종 (+44건) |
+| R2 | Android Insights UI (iOS 패리티) |
+| R5 | API 카탈로그 v0.6→v1.0 동기화 (14개 엔드포인트 추가, 804줄 변경) |
+| R6 | iOS VoiceOver + Android TalkBack 접근성 |
+| R7 | V18 인덱스 마이그레이션 (chat_messages + memories), AppConfig 캐싱 |
+| R8 | 서버 입력 길이 제한, JWT 강화, iOS Keychain, Android EncryptedSharedPreferences |
+| R9 | 3개 프로젝트 import 정리 + 미사용 코드 제거 |
+
+품질 스프린트의 핵심: **API 카탈로그 동기화**. 기능을 빠르게 추가하다 보면 스펙 문서가 구현을 따라가지 못한다. s20에서 v0.6→v1.0 구간의 14개 엔드포인트를 한 번에 동기화했다.
+
+---
+
+## 3세션 연속 Gate-1 생략
+
+s18, s19, s20 모두 retro에 "Gate-1 생략" 반성이 등장한다.
+
+```
+s18 retro: "s17에서는 gate-reviewer 돌렸으나 s18에서 커밋 확인 + 테스트 수만으로 판단"
+s19 retro: "Gate-1 생략. 속도 우선으로 gate-reviewer 미실행. 코드 품질 리스크 남음"
+s20 retro: "Gate-1 전면 생략. '빌드 통과니까 괜찮다'는 편의적 판단"
+```
+
+다짐은 반복됐지만 실행은 없었다. → [Journal 011](aidy-journal-011-gate1-enforcement-turning-point)에서 계속.
+
+---
+
+## s17~s20 종료 수치
+
+| 지표 | s14 종료 | s20 종료 | 증감 |
+|------|---------|---------|------|
+| Server tests | 235 | ~440 | +205 |
+| iOS tests | ~166 | ~285 | +119 |
+| Android tests | ~170 | ~360 | +190 |
+| **총 테스트** | **~571** | **~1,085** | **+514** |
+| api-contract | v0.4 | v1.0 | MVP 완성 |
+| WO done | 32 | 50 | +18 |

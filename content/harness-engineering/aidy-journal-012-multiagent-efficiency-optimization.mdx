@@ -1,0 +1,220 @@
+---
+title: "Aidy Journal 012 — 멀티에이전트 효율화 — 폴링·파이프라이닝·Swap 관리 (s24~s27)"
+category: harness-engineering
+series: aidy-journal
+date: "2026-04-21"
+tags: [aidy-journal, polling-optimization, pipelining, swap-management, autoceo-efficiency, gate-1-automation, health-score, daily-digest, conversation-starters]
+confidence: 4
+last_verified: "2026-04-21"
+applicable_to: ["aidy", "any"]
+connections:
+  - harness-engineering/aidy-journal-011-gate1-enforcement-turning-point
+  - harness-engineering/aidy-journal-013-smart-notifications-relationship-map-interaction-log
+  - harness-engineering/worker-memory-pressure-crash-recovery
+  - harness-engineering/bash-watcher-zero-token-polling
+  - agents/multi-agent-sprint-optimization-patterns
+status: complete
+description: "s24~s27(4세션): Swap 90% 경고, 폴링 60% 토큰 소비, iOS 빌드 병목 3가지 문제를 차례로 해결. 폴링 5분→20분, 파이프라이닝, 스펙 4개/라운드, /compact 2라운드 주기. API v1.5→v2.8(Conversation Starters/Health Score/Daily Digest/Timeline/QuickNotes)."
+type: entry
+quiz:
+  - question: "autoceo 폴링 간격을 5분에서 20분으로 늘렸을 때 토큰 절감이 가능한 이유는?"
+    choices:
+      - "20분 폴링은 워커 결과를 더 늦게 확인하므로 Architect가 더 적게 깨어남"
+      - "워커 평균 완료 시간이 10~15분이므로, 5분 간격 폴링은 완료 전 6~10회 확인(tmux 캡처 누적)을 만들지만, 20분 간격은 대부분 1회 확인에 결과를 얻음"
+      - "20분 폴링은 토큰 사용량에 직접 영향을 주지 않음"
+      - "폴링 자체가 토큰을 소비하지 않음"
+    answer: 1
+    explanation: "tmux capture-pane 결과가 매번 컨텍스트에 누적된다. 10분 작업을 5분 간격으로 폴링하면 완료 전에 1회, 완료 후 1회 = 최소 2회. 실제로는 워커 응답을 기다리며 3~5회 이상 폴링이 발생. 20분 간격이면 대부분 1회 폴링에 완료 여부 확인 가능."
+  - question: "s25에서 'Swap 80%+ autoceo 금지' 규칙을 Claude 메모리에 기록한 이유는?"
+    choices:
+      - "규칙을 CLAUDE.md에 추가하기보다 쉬워서"
+      - "임시 규칙이라서"
+      - "Swap 90% 상태에서 autoceo를 시작해 스프린트가 조기 종료되는 사고를 겪은 직후, 다음 세션에서 동일 실수를 방지하기 위해 즉각 메모리에 기록"
+      - "메모리가 CLAUDE.md보다 더 강력한 규칙이어서"
+    answer: 2
+    explanation: "s25에서 Swap 90% 상태에서 autoceo를 시작 → 서버 R2에서 3.5시간 stall → 조기 종료. 사고 직후 메모리에 'Swap 80%+ = autoceo 금지' 규칙을 기록. 이 패턴은 FAIL→META→VERIFY 3축의 META 축 사례다."
+  - question: "Architect 라운드 파이프라이닝에서 '워커 대기 중 Architect가 다음 스펙을 작성한다'는 것의 핵심 가정은?"
+    choices:
+      - "워커가 빠르게 완료해야 함"
+      - "워커 구현 작업이 Architect의 스펙 작성 작업과 독립적 — 워커가 현재 WO를 구현하는 동안 다음 WO 스펙을 병렬로 정의할 수 있음"
+      - "Architect가 멀티태스킹이 가능함"
+      - "스펙 작성이 구현보다 빠름"
+    answer: 1
+    explanation: "파이프라이닝의 핵심 전제: 워커가 WO-103을 구현하는 동안 Architect가 WO-104/105를 정의해도 서로 간섭하지 않는다. 의존성이 없을 때만 병렬화 가능. API 변경이 있는 경우 서버 구현 완료 전에 클라이언트 WO를 작성하면 스펙 불일치가 생길 수 있으므로 서버 Gate-1 PASS 후 클라이언트 WO 확정."
+---
+
+## Before — s23 종료 후 상태
+
+| 지표 | 값 |
+|------|-----|
+| 총 테스트 | ~1,484 |
+| api-contract | v1.5 (Chat Bookmarks/Feedback/Topics/Export) |
+| Architect idle 비율 | ~55% |
+| 폴링 간격 | 5분 |
+| iOS 게이트 | xcodebuild test (2분+ 시뮬레이터 부팅) |
+
+---
+
+## s24 — 4개 버전 파이프라이닝 (v1.6~v1.9)
+
+### 구현 피처
+
+| 버전 | 피처 | WO | 방식 |
+|------|------|-----|------|
+| v1.6 | Memory Smart Review UI | WO-064,065 | Android만 (서버+iOS 기완료) |
+| v1.7 | Chat Sentiment Dashboard | WO-067,068 | iOS+Android 2-way |
+| v1.8 | Weekly Summary Report | WO-070,071,072 | 서버 우선 → 클라 병렬 |
+| v1.9 | Memory Connections | WO-073,074,075 | 서버 우선 → 클라 병렬 |
+
+### 라운드 파이프라이닝 도입
+
+```
+Before:
+  [R1 Android dispatch] → [대기 8분] → [R2 서버 dispatch] → [대기 8분] → ...
+  Architect idle: 55%
+
+After:
+  [R1 Android dispatch] → [대기 중: v1.8+v1.9 스펙 + WO 6개 작성] → [R2 완료] → ...
+  Architect idle: ~30%
+```
+
+워커 대기 시간을 다음 WO 선작성에 활용. s24에서 WO 6개를 R1 대기 중에 미리 작성했다.
+
+### 축약 Gate-1 도입
+
+엔드포인트 3개 이하 시 haiku Explore로 빠른 검증:
+
+```bash
+# 풀 Gate-1 (EP 4개+)
+gate-reviewer 서브에이전트 × 3개 프로젝트 → ~6만 토큰
+
+# 축약 Gate-1 (EP 3개 이하)
+Architect가 api-contract 해당 섹션만 읽고 직접 git diff 대조 → ~2만 토큰
+결과: 리뷰 파일 동일하게 gates/reviews/에 기록
+```
+
+s24 9개 WO 전원 PASS. 서버/Android 빌드 직접 검증 6회.
+
+---
+
+## s25 — Swap 조기 종료 → 재개 + iOS 자발 통합
+
+### Swap 80%+ 금지 규칙 수립
+
+s25 시작 시 Swap 90%로 autoceo 시작 → 서버 R2에서 3.5시간 stall → 조기 종료.
+
+유저 요청으로 재개 시 물리 메모리 2GB 여유 확인 후 2-way 병렬 dispatch → 완주 성공.
+
+**이 사고 직후 메모리 기록**: "Swap 80%+ 상태에서 autoceo 하면 안 됨."
+
+```bash
+# s25 이후 autoceo preflight 체크
+sysctl vm.swapusage
+# used 80%+ → 앱 종료 후 재확인 (시작 금지)
+```
+
+### iOS 워커 자발 통합
+
+v2.0(Health Score) WO만 보냈는데 iOS 워커가 v2.0과 v2.1(Daily Digest)를 한 번에 구현:
+
+```
+WO-078 (iOS v2.0 Health Score) dispatch
+→ iOS 워커가 v2.1 Daily Digest WO까지 자발적으로 구현
+→ 별도 dispatch 불필요, 라운드 1개 절감
+```
+
+패턴: "다음 WO를 미리 제공하면 워커가 자발적 통합 가능."
+
+---
+
+## s26 — 3가지 최적화 동시 적용 + 인프라 확충
+
+### 폴링 간격 5분→20분
+
+```
+Before: 5분 × 워커 평균 10분 = 라운드당 폴링 6~10회
+        tmux capture-pane × 6~10 = 컨텍스트의 ~60% 폴링 소비
+
+After: 20분 간격 (워커 완료 시간 × 1.5~2배)
+       대부분 1회 폴링에 결과 확인
+       컨텍스트 절감 → 10라운드 완주 가능
+```
+
+### iOS 게이트 변경
+
+```
+Before: xcodebuild test (시뮬레이터 부팅 2분+, 전체 테스트 실행 시간)
+After:  tuist build 통과 = 커밋 OK
+        xcodebuild test는 Gate-2에서만 (또는 선택적)
+```
+
+### 스펙 4개/라운드 배치
+
+```
+Before: R1에 v2.2 스펙, R3에 v2.3 스펙 (2개 나누어 처리)
+After:  R1에 v2.2+v2.3+v2.4+v2.5 한 번에 처리
+        스펙 전용 라운드를 1개로 압축 → 라운드 수 절감
+```
+
+### /compact 2라운드 주기
+
+매 2라운드마다 `/compact` 실행. 컨텍스트 누적으로 인한 폴링 토큰 낭비 사전 차단.
+
+### 인프라 확충 (s26)
+
+```
+scripts/tmux-setup.sh     ← tmux 1:3 패널 레이아웃 재현 스크립트
+scripts/swap-monitor.sh   ← Swap 30분 간격 모니터 + crontab
+.claude/commands/consult.md ← 에페메럴 전문가 자문 커맨드
+messages/                 ← 허브↔워커 메시지큐 디렉토리
+NEXT.md KPI 테이블        ← MetricsEvaluator 기반 스프린트 수치 추적
+```
+
+---
+
+## s27 — 1-way 순차 안정 + 플래키 테스트 발견
+
+### 구현 피처 (v2.7~v2.8)
+
+| 버전 | 피처 | 특징 |
+|------|------|------|
+| v2.7 | Relationship Timeline | chat/memory/anniversary 3타입 통합 + isFuture 정렬 |
+| v2.8 | Quick Notes | 채팅 없이 직접 메모리 생성 (단건 + batch 10개) |
+
+### 6인스턴스 환경에서 1-way 순차 안정
+
+6개 Claude 인스턴스(architect + server + ios + android + ai-study + α) 동시 실행 환경에서도 1-way 순차 dispatch로 워커 크래시 0건.
+
+보수적 전략의 효과: 병렬도를 줄이는 대신 안정성 확보.
+
+### 플래키 테스트 감지
+
+서버 첫 verify에서 FAIL → 재실행 PASS. 근본 원인 미파악 채로 다음 단계 진행.
+
+retro: "어떤 테스트가 flaky한지 특정하지 않았다. 다음 세션에서 `./gradlew test --rerun-tasks` 3회 반복으로 재현 시도 필요."
+
+---
+
+## s24~s27 수치
+
+| 지표 | s23 종료 | s27 종료 | 증감 |
+|------|---------|---------|------|
+| Server tests | 604 | 814 | +210 |
+| iOS tests | ~400 | 554 | +154 |
+| Android tests | ~480 | 693 | +213 |
+| **총 테스트** | **~1,484** | **2,061** | **+577** |
+| api-contract | v1.5 | v2.8 | v1.6~v2.8 (+13 섹션) |
+| WO done | 62 | 102 | +40 |
+
+---
+
+## 4세션 효율화 요약
+
+| 문제 | 발견 | 해결 | 스프린트 |
+|------|------|------|---------|
+| Architect idle 55% | s23 분석 | 라운드 파이프라이닝 | s24 |
+| Swap 경고 무시 | s25 사고 | 80%+ 금지 규칙 메모리 기록 | s25 |
+| 폴링 토큰 60% 소비 | s26 측정 | 간격 5분→20분 | s26 |
+| iOS 빌드 병목 | s26 경험 | tuist build로 게이트 변경 | s26 |
+
+→ [Journal 013](aidy-journal-013-smart-notifications-relationship-map-interaction-log)에서 s28 이후 계속.

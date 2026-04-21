@@ -138,12 +138,12 @@ graph TD
     C -- Optional --> E(Task-Specific Constraints Prompt);
     C -- Optional --> F(Safety & Guardrail Prompt);
     D & E & F --> G{Combine System Prompts};
-    G --> H[LLM API Call (e.g., Anthropic Claude)];
+    G --> H["LLM API Call (e.g., Anthropic Claude)"];
     H --> I[LLM Response];
     I --> B;
     B --> J[iOS App Display];
 
-    subgraph System Prompt Layer
+    subgraph "System Prompt Layer"
         C
         D
         E
