@@ -18,7 +18,7 @@ FDE의 핵심 문제: **"혼자서 이걸 다 어떻게 돌리는가?"**
 | **ai-study** | AI 엔지니어링 위키 | Next.js + MDX | 학습한 방법론을 다른 프로젝트에 즉시 배포 가능한 형태로 박제 |
 | **moneyflow** | AI 투자 분석 | Next.js + Supabase | 14-에이전트 분석 파이프라인의 AI 호출 안정성·비용 제어 |
 | **tarosaju** | AI 타로 서비스 | Next.js + Supabase | AI 출력의 품질을 사람 없이 검증·방어 |
-| **aidy** | AI 다이어리 (4레포) | Spring Boot + SwiftUI + Compose | 서버·iOS·Android를 AI 에이전트 4개로 동시 진행 |
+| **aidy** | AI 다이어리 (4레포) | Spring Boot + SwiftUI/TCA + Compose | 서버·iOS·Android를 AI 에이전트 4개로 동시 진행 |
 
 **해답: AI를 "도구"가 아니라 "배치 가능한 병력"으로 운용한다.**
 
