@@ -255,7 +255,7 @@ Q4 실행성: 이 이슈를 받은 개발자가 **별도 리서치 없이 바로
 ]
 
 score 기준: YES 4개=8~10, YES 3개=5~7, YES 2개 이하=1~4
-pass 기준: score >= 7 (YES 3개 이상이더라도 핵심 Q1·Q4가 NO면 pass=false 가능)
+pass 기준: score >= 6 (YES 3개 이상이더라도 핵심 Q1·Q4가 NO면 pass=false 가능)
 엄격하게 평가할 것 — 애매하면 NO.`;
 
   for (let attempt = 0; attempt < 3; attempt++) {
