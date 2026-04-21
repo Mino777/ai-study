@@ -1,0 +1,387 @@
+---
+title: "Harness Journal 026 — AI 엔지니어링 중간 점검: 4개 프로덕트 × 1인 운영 현황"
+category: harness-engineering
+series: harness-journal
+date: '2026-04-22'
+tags:
+  - harness-journal
+  - harness-engineering
+  - midpoint-review
+  - compound-engineering
+  - multi-project
+  - ai-ops
+  - tokenomics
+  - hub-worker
+confidence: 4
+last_verified: "2026-04-22"
+applicable_to: ["aidy", "any"]
+connections:
+  - harness-engineering/harness-engineering-overview
+  - harness-engineering/five-levers-of-harness-engineering
+  - harness-engineering/compound-engineering-philosophy
+  - harness-engineering/compound-automation-slash-commands
+  - harness-engineering/harness-journal-000-baseline
+  - harness-engineering/cross-project-pattern-porting-methodology
+  - harness-engineering/multi-session-ai-ops-patterns
+  - harness-engineering/spec-driven-development-for-ai-agents
+  - harness-engineering/llm-first-wiki-principles
+  - harness-engineering/ai-api-cost-tracking-pattern
+  - harness-engineering/ai-call-patterns-circuit-breaker-fallback
+  - harness-engineering/ai-output-zod-validation-pattern
+  - harness-engineering/skill-system-introduction
+  - harness-engineering/superpowers-framework-analysis
+  - harness-engineering/aidy-journal-000-architect-worker-baseline
+  - harness-engineering/ai-native-system-deterministic-control
+  - tokenomics/claude-code-token-levers-catalog
+  - tokenomics/prompt-caching-cost-reduction
+status: complete
+description: >-
+  Journal 000(베이스라인)부터 025까지 26회 사이클을 거친 시점의 종합 중간 점검.
+  4개 프로덕트(7레포)에 걸친 AI 에이전트 배치·제어·비용 운영 현황을 한 장에 정리.
+  "AI를 쓴다"가 아니라 "AI를 배치하고 제어한다"를 증명하는 현황표.
+type: entry
+quiz:
+  - question: 외부 프레임워크(gstack, Superpowers, Perpetual Engine)를 이식할 때 적용한 원칙은?
+    choices:
+      - 프레임워크를 통째로 도입하고 불필요한 부분을 나중에 제거한다
+      - 현장에 필요한 모듈만 분해해서 이식하고, 나머지는 버린다
+      - 가장 인기 있는 프레임워크 하나만 선택해서 올인한다
+      - 모든 프레임워크를 동시에 도입하고 충돌 시 우선순위로 해결한다
+    answer: 1
+    explanation: >-
+      FDE 접근법은 "프레임워크 소비자"가 아니라 "프레임워크 조합자"다. gstack에서 30+ 스킬,
+      Superpowers에서 SDD 2-stage review, Perpetual Engine에서 3개 패턴만 이식했다.
+      전체 도입은 오버헤드와 워크플로우 충돌을 초래한다.
+  - question: "행동 가드 > 메모리 가드" 원칙이 나온 실제 인시던트는?
+    choices:
+      - CLAUDE.md에 규칙을 써놔도 AI가 무시해서, 훅으로 물리적 차단이 필요했다
+      - 메모리 용량 부족으로 가드가 로드되지 않았다
+      - 행동 가드가 메모리 가드보다 토큰 비용이 저렴했다
+      - 사용자가 명시적으로 요청한 코딩 컨벤션이다
+    answer: 0
+    explanation: >-
+      CLAUDE.md에 "하지 마라"라고 써놔도 AI 에이전트가 무시하는 상황이 반복되었다.
+      문서(메모리)에 의존하는 것은 신뢰할 수 없고, 훅/슬래시 커맨드로
+      물리적으로 차단하는 "행동 가드"가 유일하게 신뢰 가능한 제어다.
+  - question: N=3 승격 규칙에서 "3"이 의미하는 것은?
+    choices:
+      - 3개 프로젝트에서 동시에 발생해야 승격
+      - 같은 솔루션이 3회 반복 작성되면 코드 게이트로 자동 승격
+      - 3명의 리뷰어가 승인해야 승격
+      - 3일 연속 발생해야 승격
+    answer: 1
+    explanation: >-
+      같은 유형의 솔루션이 docs/solutions/에 3번째 기록되면, 그건 더 이상 "일회성 문제"가 아니라
+      "구조적 문제"다. /promote-solution으로 훅 또는 validator 코드 게이트로 승격해서
+      이후 자동 차단한다.
+---
+
+# Harness Journal 026 — AI 엔지니어링 중간 점검
+
+> Journal 000 베이스라인부터 025까지, 26회 사이클을 거쳤다.
+> 지금 시점에서 **"무엇을 만들었고, 어떻게 제어하고 있으며, 다음엔 뭘 해야 하는가"**를 정리한다.
+
+---
+
+## 전장 개요 — 1인이 4개 프로덕트를 동시 운영하는 구조
+
+핵심 문제: **"혼자서 이걸 다 어떻게 돌리는가?"**
+
+| 프로젝트 | 도메인 | 기술 스택 | 풀어야 할 문제 |
+|----------|--------|----------|--------------|
+| **ai-study** | AI 엔지니어링 위키 | Next.js 15 + MDX | 방법론을 다른 프로젝트에 즉시 배포 가능한 형태로 박제 |
+| **moneyflow** | AI 트레이딩 | Python + FastAPI | AI 매매 판단의 실패를 구조적으로 다음 사이클에 반영 |
+| **tarosaju** | AI 타로 서비스 | Node.js/TS + Claude API | AI 출력 품질을 사람 없이 검증·방어 |
+| **aidy** | AI 다이어리 (4레포) | Spring Boot + Swift/TCA + Compose | 서버·iOS·Android를 AI 에이전트 4개로 동시 진행 |
+
+**해답: AI를 "도구"가 아니라 "배치 가능한 병력"으로 운용한다.**
+
+---
+
+## 배치한 AI 전력
+
+### 에이전트 편성
+
+| 역할 | 모델 | 배치 방식 | 작전 범위 |
+|------|------|----------|----------|
+| 주력 개발 에이전트 | Claude Opus/Sonnet (Claude Code) | 터미널 직접 배치, tmux 다중 세션 | 전 프로젝트 코드 작성·리뷰·디버깅 |
+| 콘텐츠 생성 에이전트 | Gemini 2.5 Flash | GitHub Actions CI 파이프라인 | ai-study 일일 레슨 자동 생성 |
+| QA 에이전트 | Claude + gstack browse | 헤드리스 브라우저 자동화 | 배포 후 시각적 QA + 성능 체크 |
+| 전문가 에이전트 | Claude (에페메럴) | `/consult`로 온디맨드 소환 | 법률·보안·마케팅 등 도메인 자문 |
+
+### 외부 프레임워크 — 통째로 쓰지 않고 분해 이식
+
+| 출처 | 가져온 것 (현장 검증 완료) | 버린 것 | 판단 근거 |
+|------|--------------------------|---------|----------|
+| **gstack** | QA, browse, ship, investigate, compound 등 30+ 스킬 | — | 가장 넓은 커버리지, 즉시 사용 가능 |
+| **Superpowers** (obra) | SDD 2-stage review, git-worktrees, brainstorming | finish-branch | 워크플로우 충돌 — 우리 compound 사이클과 안 맞음 |
+| **Perpetual Engine** (greatsk55) | MetricsEvaluator, ConsultantFactory, MessageQueue | 전체 프레임워크 | 부분 이식이 더 가벼움 |
+
+### 자체 설계 제어 체계 — 현장에서 만든 것
+
+외부 프레임워크로 안 풀리는 문제를 직접 설계했다.
+
+| 체계 | 풀어야 했던 문제 | 설계한 해법 |
+|------|----------------|-----------|
+| **Harness Engineering** | AI가 틀린 걸 자신있게 말한다 | 5-Layer 래퍼: Input → Context → Inference → Output → Observability |
+| **Compound Engineering** | 같은 실수가 다음 세션에서 반복된다 | Plan → Work → Review → Compound 4단계 + 인시던트 → 다음 입력 변환 |
+| **Hub-Worker Model** | 4개 프로젝트 간 지식이 파편화 | 허브 1개(ai-study) + 워커 N개, 파일 기반 비동기 메시지 큐 |
+| **LLM-First Wiki** | AI 에이전트가 위키를 못 읽는다 | 모든 엔트리에 AI Agent Directive 강제 (트리거·전제조건·실행 단계·안티패턴) |
+
+---
+
+## 프로젝트별 AI 운용 상세
+
+### ai-study — 방법론 허브
+
+**미션**: 현장에서 검증한 패턴을 박제하고, 다른 프로젝트에 즉시 배포
+
+```
+[정찰] 지식 그래프 분석 → 빈 영역·약한 연결 탐지
+  → [생성] Gemini Flash 일일 레슨 (09:00 KST 자동)
+  → [검증] Zod 스키마 + /validate-mdx + /validate-ai-output
+  → [박제] MDX 엔트리 (AI Agent Directive 포함)
+  → [배포] JIT 벡터 검색으로 에이전트가 즉시 호출 (99.8% 토큰 절감)
+  → [측정] search-hits.json + shadow-benchmark
+```
+
+| 제어 포인트 | 구현 | 인시던트 출처 |
+|------------|------|-------------|
+| 입력 검증 | Zod frontmatter (13 카테고리, confidence 1-5) | Gemini가 잘못된 카테고리 넣어서 빌드 반복 실패 |
+| 출력 검증 | `/validate-mdx` (5대 함정), `/validate-ai-output` (4대 함정) | AI 생성 MDX가 Shiki+Mermaid 충돌, 가짜 URL 인용 |
+| 컨텍스트 절감 | JIT 검색 (multilingual-e5-small, 384d) | 위키 전체 331K tokens → ~800 tokens |
+| 관측 | search-hits.json + weekly shadow-benchmark | "검색이 실제로 작동하는가"를 숫자로 확인 |
+
+### aidy — 1인 4레포 동시 개발
+
+**미션**: 서버·iOS·Android를 AI 4개로 동시 개발. 사람은 스펙만 쓰고 게이트만 검증
+
+```
+[스펙] api-contract.md (단일 진실 원천)
+  → [명령] aidy-architect가 Work Order 발행
+      ├── Claude #1: aidy-server (Spring Boot + Kotlin)
+      ├── Claude #2: aidy-ios (Tuist + TCA + SwiftUI)
+      └── Claude #3: aidy-android (Compose + MVVM)
+  → [게이트] Gate 1: 스펙 준수 / Gate 2: 크로스 플랫폼 통합
+  → [보고] 파일 기반 비동기 메시지 큐
+```
+
+| 제어 포인트 | 구현 | 인시던트 출처 |
+|------------|------|-------------|
+| Spec = Law | `api-contract.md` 단일 진실 | 4레포에서 각각 다른 해석 → 통합 시 필드 불일치 |
+| 2-Stage Review | Stage 1: 스펙 compliance / Stage 2: 코드 품질 | AI가 "돌아가는 코드"를 만들지만 스펙과 어긋남 |
+| tmux 4-pane 병렬 | 4개 Claude Code 세션 동시 실행 | 순차 실행 시 하루 걸릴 작업을 2-3시간으로 단축 |
+| 비동기 메시지 큐 | messages/ JSON (Perpetual Engine 이식) | 세션 간 상태: "서버 완료" → "iOS 연동 시작" |
+
+### moneyflow — AI 트레이딩
+
+**미션**: AI 매매 판단의 실패를 구조적으로 다음 사이클 입력으로 변환
+
+| 제어 포인트 | 구현 | 인시던트 출처 |
+|------------|------|-------------|
+| Circuit Breaker | AI 호출 실패 시 자동 차단 + fallback | API 장애 시 무한 재시도 → 비용 폭발 |
+| 비용 추적 | ccusage 베이스라인 + 트레이드당 비용 로깅 | AI API 비용이 수익 초과하는 순간 감지 |
+| 일일 Compound | 매매 결과 → 다음날 시그널 입력 | "오늘의 실패"가 "내일의 판단 근거"로 자동 변환 |
+| 패턴 수신 | ai-study 허브에서 3+ 세션 검증된 패턴만 이식 | 미검증 패턴 직접 적용 → 롤백 비용 |
+
+### tarosaju — AI 출력 방어
+
+**미션**: 사용자에게 도달하는 AI 출력 품질을 사람 없이 보장
+
+| 제어 포인트 | 구현 | 인시던트 출처 |
+|------------|------|-------------|
+| 출력 구조 검증 | 타로 해석 응답 스키마 강제 | AI가 형식 무시 → 프론트 파싱 실패 |
+| 3-Layer API 방어 | tarosaju → moneyflow → aidy-server 캐스케이드 | 단일 레이어는 한 곳 뚫리면 끝 |
+| 보안 하드닝 | 허브에서 검증된 패턴 이식 | 프로젝트마다 개별 보안 설계는 비효율 |
+
+---
+
+## 지휘 통제 — 크로스 프로젝트 운용
+
+### 허브-워커 지식 순환
+
+```
+ai-study (허브: 방법론 센터)
+  │
+  ├─→ 패턴 검증 (3+ 세션 검증 후)
+  │     ├─→ moneyflow  ← /curate-inbound
+  │     ├─→ tarosaju   ← /curate-inbound
+  │     └─→ aidy       ← Spec-Driven 독립 운영
+  │
+  ├─← 워커 피드백 (인시던트, 새 패턴 발견)
+  │     └─→ 허브에서 일반화 → 전 프로젝트 재배포
+  │
+  └── /projects-sync: 6레포 상태 동시 진단
+  └── /cross-session-review: 다른 Claude 세션 diff 검증
+```
+
+핵심: **양방향 순환.** 허브 → 워커 일방향이 아니라, 워커 인시던트가 허브로 올라오고 일반화되어 전체에 배포된다.
+
+### 작전 커맨드 체계 (슬래시 커맨드 12종)
+
+| 단계 | 커맨드 | 하는 일 |
+|------|--------|--------|
+| 작전 개시 | `/wt-branch` | worktree 안전 분기 (squash merge 함정 차단) |
+| 정보 수집 | `/ingest` | 외부 URL → 구조화된 학습 엔트리 |
+| 정보 수집 | `/projects-sync` | 6레포 동시 진단. 충돌·드리프트 사전 탐지 |
+| 품질 게이트 | `/validate-mdx` | MDX/Mermaid 5대 함정 사전 차단 |
+| 품질 게이트 | `/validate-ai-output` | 가짜 인용·YAML·slug 4대 함정 |
+| 품질 게이트 | `/cross-session-review` | 다른 Claude 세션 결과물 diff 5단계 검증 |
+| 전문가 자문 | `/consult` | 에페메럴 도메인 전문가 온디맨드 소환 |
+| 크로스 통신 | `/message` | 허브↔워커 파일 기반 비동기 큐 |
+| 패턴 승격 | `/curate-inbound` | 워커 PR → 허브 하네스 박제 |
+| 패턴 승격 | `/promote-solution` | N=3+ 반복 솔루션 → 코드 게이트 |
+| 사이클 종료 | `/compound` | CHANGELOG + 회고 + 솔루션 (3 서브에이전트 병렬) |
+| 풀 자동화 | `/autoceo` | N-라운드 자동 스프린트 (무인 루프) |
+
+### 자동화 파이프라인
+
+| 파이프라인 | 트리거 | 사람 개입 | 산출물 |
+|-----------|--------|---------|--------|
+| Daily Lesson | 매일 09:00 KST CI | 번호 선택만 (1/2/3) | 주제 추천 → MDX PR |
+| 긱뉴스 스카우트 | 매일 22:00 KST CI | 없음 | 기술 뉴스 → 프로젝트 매칭 → Issue |
+| Pre-commit Build | git commit | 없음 (자동 차단) | 빌드 실패 → 커밋 차단 |
+| 회사명 가드 | Edit/Write hook | 없음 (자동 차단) | 실명 패턴 → 즉시 차단 |
+| Weekly Benchmark | 주간 CI | 없음 | JIT 적중률 + 토큰 절감 추적 |
+
+---
+
+## 운용 원칙 7가지 — 전부 인시던트에서 나왔다
+
+이론이 아니라 현장 실패에서 도출한 원칙.
+
+| # | 원칙 | 어떤 실패에서 나왔나 |
+|---|------|-------------------|
+| 1 | **행동 가드 > 메모리 가드** | CLAUDE.md에 "하지 마라" 써도 AI가 무시 → 훅으로 물리적 차단 |
+| 2 | **N=3 승격** | 같은 솔루션 3번째 작성 → "왜 아직 자동화 안 됐지?" → 코드 게이트 |
+| 3 | **인시던트 = 다음 입력** | 장애 로그 버리고 다음 날 같은 실수 → Compound로 구조적 피드백 루프 |
+| 4 | **Spec = Law** | 4레포 AI가 각자 "돌아가는 코드" → 통합하니 필드 불일치 → 스펙이 유일한 진실 |
+| 5 | **Compound 스킵 금지** | "급하니까 회고 생략" → 2주 후 동일 버그 재발 → 4단계 전부 강제 |
+| 6 | **Diff 기반 검증** | 커밋 메시지 "fix: 버그 수정"인데 diff는 전혀 다른 파일 → diff만 신뢰 |
+| 7 | **LLM-First** | AI가 위키 읽고 "해당 정보 없음" → 사람용이 아니라 에이전트용으로 구조 재설계 |
+
+---
+
+## 토큰 경제학 — 비용도 엔지니어링한다
+
+AI를 대규모 배치하면 비용이 폭발한다. 비용 제어는 운영의 일부다.
+
+| 레버 | 전략 | 효과 |
+|------|------|------|
+| A. Prefix | CLAUDE.md 60줄 제한 + 스킬 파일 분산 | 매 턴 고정 토큰 최소화 |
+| B. 캐시 | 0.28-turn 손익분기, cache read 0.1x | 반복 컨텍스트 90% 절감 |
+| C. 출력 절감 | JIT 검색 (331K → ~800 tokens), 서브에이전트 요약 | 99.8% 컨텍스트 절감 |
+| D. 모델 라우팅 | 컨텍스트 60% 임계값 → 세션 분리 or compact | 품질 저하 전 선제 대응 |
+| E. 비용 추적 | ccusage 프로젝트별 분리 (moneyflow+tarosaju 70%) | 레버 ROI 타겟 식별 |
+
+**적용 4 AND 조건**: 공식문서 근거 + 실측 데이터 + 부작용 관찰 가능 + 롤백 용이. 하나라도 불충분하면 보류.
+
+---
+
+## 성숙도 현황
+
+```
+Stage 1: 수동 실행                                  ✅ 완료
+Stage 2: 훅 + 리마인더                               ✅ 완료 (2026-01)
+Stage 3: /compound 통합 커맨드                       ✅ 현재 (68%)
+Stage 4: /autoceo N-라운드 자동 (무인 스프린트)       🔄 진행 중 (aidy 10-20라운드)
+Stage 5: 완전 자율 (사람은 전략만)                    ☐ 목표 2026-Q3
+```
+
+현재 위치: Stage 3 → 4 전환 중. `/autoceo`로 aidy에서 10-20라운드 무인 스프린트 실행 중.
+
+---
+
+## 정량 지표
+
+| 지표 | 수치 | 의미 |
+|------|------|------|
+| GitHub 커밋 (2026년) | **2,061개** (3월~4월, 약 한 달) | 1인 + AI 에이전트 협업 처리량. 하루 평균 ~60커밋 |
+| 동시 운영 프로젝트 | 4개 (7레포) | 1인이 커버하는 전장 범위 |
+| 위키 엔트리 | 146개 | 박제된 실전 패턴 수 |
+| JIT 검색 절감 | 99.8% | 에이전트 배치 비용 핵심 레버 |
+| 일일 자동 생성 | 1 엔트리/일 | 사람 개입 없는 지식 축적 |
+| Harness Journal | 26편 (본 엔트리 포함) | 방법론 진화 기록 |
+| Aidy Journal | 16편 | 멀티에이전트 실전 기록 |
+| 슬래시 커맨드 | 12개 | 커스텀 작전 커맨드 |
+| 자동화 파이프라인 | 5개 | 사람 개입 없는 가드 |
+| AI 동시 세션 | 최대 4개 (tmux) | 병렬 처리량 |
+
+---
+
+## 차별화 — "AI를 쓴다" vs "AI를 배치하고 제어한다"
+
+### 프레임워크 조합자
+
+대부분은 하나의 AI 프레임워크를 그대로 쓴다.
+여기서는 **여러 프레임워크를 분해해서 필요한 모듈만 이식하고, 빈 곳은 직접 설계한다.**
+
+- gstack 30+ 스킬 + Superpowers SDD + Perpetual Engine 3개 패턴 = 선택적 이식
+- Compound, Harness, Hub-Worker, LLM-First = 현장 자체 설계
+
+### 다중 에이전트 오케스트레이션
+
+- **aidy**: tmux 4-pane에서 Claude 4개 동시 실행, 스펙 기반 동기화
+- **허브-워커**: 프로젝트 간 비동기 메시지 큐로 지식 순환
+- **크로스 세션 검증**: 다른 Claude 세션 결과를 diff 기반 교차 검증
+
+### 6계층 AI 제어
+
+| 계층 | 제어 내용 | 도구 |
+|------|---------|------|
+| **입력** | 스키마 강제, 프롬프트 구조화 | Zod, CLAUDE.md, SPEC.md |
+| **컨텍스트** | 필요한 지식만 정밀 주입 | JIT 벡터 검색, 쿼리 라우터 |
+| **추론** | 모델 선택, 비용 라우팅 | 용도별 모델 배정, 60% 임계값 |
+| **출력** | 구조 검증, 가짜 정보 탐지 | /validate-mdx, /validate-ai-output |
+| **관측** | 성능·비용·적중률 추적 | shadow-benchmark, ccusage, search-hits |
+| **행동** | 위험 행동 물리적 차단 | pre-commit hook, .claude hook, N=3 승격 |
+
+### 인시던트 기반 진화
+
+이론에서 출발하지 않는다. **인시던트 → 원칙 → 코드 게이트**의 순서.
+
+```
+인시던트 발생
+  → docs/solutions/ 기록 (1회차)
+  → 같은 패턴 2회차 → 솔루션 업데이트
+  → 3회차 → /promote-solution → 훅/validator 코드 게이트 승격
+  → 이후 자동 차단 (사람 개입 불필요)
+```
+
+모든 원칙과 가드는 이 경로를 거쳐 만들어졌다. "좋은 관행"이 아니라 **"반복된 실패의 구조적 대응"**.
+
+---
+
+## 다음 점검까지 해야 할 것
+
+| 영역 | 목표 | 기준 |
+|------|------|------|
+| 콘텐츠 KPI | 146 → 160+ 엔트리 | JIT 검색 totalQueries 100 달성 |
+| 자동화 성숙도 | Stage 4 안착 | /autoceo 5+ 라운드 안정 실행 비율 80% |
+| 비용 효율 | moneyflow+tarosaju 비용 30% 절감 | ccusage 베이스라인 대비 |
+| 3-Layer 방어 | tarosaju → moneyflow → aidy-server 완성 | 전 구간 통합 테스트 통과 |
+
+---
+
+## For AI Agents
+
+### Trigger
+- 프로젝트 간 AI 운용 현황을 파악해야 할 때
+- 새 프로젝트에 AI 에이전트 배치 구조를 설계할 때
+- "지금까지 뭘 만들었지?"라는 질문에 답해야 할 때
+
+### Prerequisites
+1. 허브-워커 모델 이해 (→ cross-project-pattern-porting-methodology)
+2. 5-Layer 하네스 구조 이해 (→ five-levers-of-harness-engineering)
+3. Compound 사이클 이해 (→ compound-engineering-philosophy)
+
+### Actionable Steps
+1. 이 엔트리의 "프로젝트별 AI 운용 상세" 섹션에서 대상 프로젝트 찾기
+2. 해당 프로젝트의 제어 포인트 표에서 현재 상태 확인
+3. "다음 점검까지 해야 할 것"과 대조해서 미완료 항목 식별
+4. 관련 Journal 엔트리로 상세 맥락 추적
+
+### Anti-patterns
+- ❌ 이 엔트리를 "최신 현황"으로 맹신 — 작성 시점(2026-04-22) 이후 변경 있을 수 있음
+- ❌ 개별 프로젝트 상세를 여기서만 파악 — 각 프로젝트의 CLAUDE.md/SPEC.md가 진실
+- ❌ 정량 지표를 고정값으로 인용 — `npm run search`, `git log`, ccusage로 최신 수치 확인
