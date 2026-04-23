@@ -30,7 +30,7 @@ connections:
     harness-engineering/aidy-journal-009-stall-detection-3way-dispatch-feature-sprint
 status: complete
 description: >-
-  Flow Map 시리즈 7편. iOS 개발자가 회사에서 체화한 'XCTest + CI 통과 = 안전' 관성을 벗고, aidy
+  Flow Map 시리즈 7편. iOS 개발자가 프로덕션에서 체화한 'XCTest + CI 통과 = 안전' 관성을 벗고, aidy
   3-client(Server Kotlin + iOS Swift/TCA + Android Compose)가 공통 universal 정책 위에서
   각자 스택 고유 규율을 지키는 구조를 '한 WO 의 테스트 여정'으로 관통. 핵심: '실행 증거 제출 필수 · 빌드 성공은 증거 아님 ·
   api-contract Error Code 100% 커버리지 · 외부 의존성(Anthropic API, DB) 완전 격리'. 실제 사고 사례
@@ -82,7 +82,7 @@ quiz:
 
 ## 한 줄 요약
 
-Flow Map 시리즈 **7편**. iOS 개발자가 회사에서 몸에 익은 "`xcodebuild test` 가 `BUILD SUCCEEDED` 면 안전" 관성을 벗어나, aidy 3-client (Server Kotlin + iOS Swift/TCA + Android Compose) 가 **공통 universal 정책 P1~P6 위에서 각 스택 고유 규율** 을 지키는 구조를 "한 WO 의 테스트 여정" 으로 관통한다. 핵심 장치 4가지 — (1) 실행 증거 제출 강제 (숫자까지), (2) 빌드 성공과 테스트 통과의 분리, (3) api-contract Error Code 100% 커버리지, (4) 외부 의존성 완전 격리. 실제 사고 사례 "iOS 테스트가 Session 4 까지 한 번도 안 돈 버그" 를 곁들여 왜 이 정책들이 존재하는지 이해한다.
+Flow Map 시리즈 **7편**. iOS 개발자가 프로덕션 현장에서 몸에 익은 "`xcodebuild test` 가 `BUILD SUCCEEDED` 면 안전" 관성을 벗어나, aidy 3-client (Server Kotlin + iOS Swift/TCA + Android Compose) 가 **공통 universal 정책 P1~P6 위에서 각 스택 고유 규율** 을 지키는 구조를 "한 WO 의 테스트 여정" 으로 관통한다. 핵심 장치 4가지 — (1) 실행 증거 제출 강제 (숫자까지), (2) 빌드 성공과 테스트 통과의 분리, (3) api-contract Error Code 100% 커버리지, (4) 외부 의존성 완전 격리. 실제 사고 사례 "iOS 테스트가 Session 4 까지 한 번도 안 돈 버그" 를 곁들여 왜 이 정책들이 존재하는지 이해한다.
 
 ---
 
@@ -222,10 +222,10 @@ flowchart TD
 | **워커 시작 로딩** | api-contract · test-policy 의무 로드 | 주니어 개발자 온보딩 문서 + 팀 테스트 가이드 |
 | **서버 단위 테스트** | Service · Util · Validator MockK 로 격리 | 서비스 레이어 단위 테스트 (JUnit) |
 | **서버 컨트롤러 @WebMvcTest** | 모든 엔드포인트 200 + 4xx/5xx + 인증 401 | MockMvc 통합 |
-| **iOS Feature 테스트** | TestStore 로 Reducer state/action 시퀀스 검증 | 회사에서 익숙한 패턴 (TCA 경험자) 또는 MVVM ViewModel 단위 테스트 |
-| **iOS APIClient 테스트** | URLSession 실호출 금지 → MockURLProtocol | 회사 앱의 네트워크 모킹 패턴 |
-| **'no tests to run' 검출** | Test Suite 실제 실행됐는가 line-level 확인 | 흔히 놓치는 함정 — 회사 CI 도 같은 위험 있음 |
-| **Android ViewModel · Repository 테스트** | Compose State 검증 + MockWebServer | 회사 Android 팀과 구조 동일 |
+| **iOS Feature 테스트** | TestStore 로 Reducer state/action 시퀀스 검증 | 프로덕션에서 익숙한 패턴 (TCA 경험자) 또는 MVVM ViewModel 단위 테스트 |
+| **iOS APIClient 테스트** | URLSession 실호출 금지 → MockURLProtocol | 프로덕션 앱의 네트워크 모킹 패턴 |
+| **'no tests to run' 검출** | Test Suite 실제 실행됐는가 line-level 확인 | 흔히 놓치는 함정 — 프로덕션 CI 에서도 같은 위험 있음 |
+| **Android ViewModel · Repository 테스트** | Compose State 검증 + MockWebServer | 엔터프라이즈 Android 팀과 구조 동일 |
 | **커밋 메시지 숫자 포함** | "NN passed / 0 failed" 강제 | PR description 에 test 결과 첨부 관행 |
 | **Gate 1 테스트 관점** | 파일 존재 · happy+edge · 실행 증거 · @Disabled 없음 · Error Code 1:1 | 시니어 PR 리뷰에서 "테스트 커버리지" 섹션 |
 | **Gate 2 통합** | 전체 스위트 PASS + 3-client 교차 호환 | QA + 통합 테스트 + 성능 확인 |
@@ -304,17 +304,17 @@ flowchart TD
 | **Error Code 1:1 커버리지** | 일반적으로 없음 | api-contract 와 테스트 파일 집합 동일성 강제 |
 | **단위 (Service) / Repository / Controller / E2E 4계층** | 일반 JUnit 계층 | Spring Boot 의 `@WebMvcTest · @DataJpaTest · @SpringBootTest` 명확 |
 | **MockK (Kotlin Mock)** | MockK / mockito | 서버 전용 |
-| **TestStore (TCA)** | 회사 RIBs/ReactorKit 의 유사 테스트 | Action send → state 전이 + receive → effect 검증 |
+| **TestStore (TCA)** | RIBs/ReactorKit 기반 프로덕션의 유사 테스트 | Action send → state 전이 + receive → effect 검증 |
 | **`@Dependency` + `testValue = unimplemented()`** | RIBs `Dependency` 프로토콜 Mock 주입 | *호출 안 한 의존성* 이 실수로 호출되면 테스트 즉시 실패 (엄격함 차원이 다름) |
-| **MockURLProtocol** | URLSession stub | 회사 패턴과 동일 |
+| **MockURLProtocol** | URLSession stub | 프로덕션 패턴과 동일 |
 | **@MockkBean** | SpringMock — Anthropic API 격리 | 필수 |
-| **H2 테스트 DB** | 회사 SQLite 또는 Docker test containers | 가장 빠른 옵션 |
+| **H2 테스트 DB** | 프로덕션 SQLite 또는 Docker test containers | 가장 빠른 옵션 |
 | **MockWebServer (Android)** | iOS MockURLProtocol 과 동형 | OkHttp 기반 |
 | **'no tests to run' 검출** | iOS 개발자가 대체로 놓치는 함정 | xcodebuild 출력 line-level 확인 |
-| **Tuist PackageSettings** | 회사 SPM 직접 관리 경험 | .framework 명시 누락 → 테스트 조용한 실패 |
+| **Tuist PackageSettings** | 프로덕션 SPM 직접 관리 경험 | .framework 명시 누락 → 테스트 조용한 실패 |
 | **@Disabled 금지** | XCTSkip · @Ignore 오용 방지 | 예외는 반드시 주석 + TODO |
-| **한국어 에러 메시지 assert** | 회사 i18n 테스트 | Bean Validation 메시지 검증까지 |
-| **통합 테스트 (E2E 시나리오)** | 회사 staging 테스트 | signup → login → 기능 사용 1 시나리오 필수 |
+| **한국어 에러 메시지 assert** | 프로덕션 i18n 테스트 | Bean Validation 메시지 검증까지 |
+| **통합 테스트 (E2E 시나리오)** | 프로덕션 staging 테스트 | signup → login → 기능 사용 1 시나리오 필수 |
 | **Gate 1 테스트 관점** | 시니어 PR 리뷰 "테스트 섹션" | Architect 가 라인 대조 · 요약 금지 |
 | **Gate 2 통합 테스트 관점** | QA + 스테이징 | 로컬 실측 필수 · CI 위임 금지 |
 | **3-client 교차 호환 검증** | Contract testing (Pact) 유사 | Gate 2 에서 Request/Response 스키마 수동 대조 |

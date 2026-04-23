@@ -98,8 +98,8 @@ grep -rn "<new_field>" src/ --include="*.tsx" --include="*.ts"
 git log --since="today" --pretty=format:"%B" | grep -iE 'codex|cursor|cline|aider'
 git diff <hash> -- 'CLAUDE.md' 'docs/**' | grep -iE 'codex|cursor|cline|aider'
 
-# 함정 4: 회사 프로젝트명 노출
-git diff <hash> | grep -E 'gma|GreenCar|LOTTIMS'
+# 함정 4: 사설 식별자 노출 (금지 패턴 정확한 목록은 메모리 feedback_company_project_names.md 참조)
+git diff <hash> | grep -E '<사설 식별자 정규식>'
 
 # 함정 5: 가짜 코드 / 환각
 git diff <hash> | grep '^+.*import' | sort -u

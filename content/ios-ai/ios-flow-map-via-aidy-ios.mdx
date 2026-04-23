@@ -28,7 +28,7 @@ connections:
   - harness-engineering/aidy-journal-008-ui-test-automation-backlog-zero
 status: complete
 description: >-
-  RIBs/ReactorKit 기반 회사 프로덕션 iOS 앱에 익숙한 개발자가 aidy-ios(TCA + SwiftUI + Tuist)를 통해
+  RIBs/ReactorKit 기반 레거시 프로덕션 iOS 앱에 익숙한 개발자가 aidy-ios(TCA + SwiftUI + Tuist)를 통해
   같은 플랫폼을 '다른 아키텍처'로 다시 보며 흐름을 정리한다. Flow Map 시리즈의 역방향 학습 편: 메시지 한 번의 여정을 View →
   Action → Reducer → Effect → State → 재렌더로 관통하고, RIBs/ReactorKit ↔ TCA와 Compose
   ↔ TCA를 양방향 매핑한다.
@@ -79,7 +79,7 @@ quiz:
 
 ## 한 줄 요약
 
-Flow Map 시리즈의 **역방향 학습 편**. iOS 프로덕션 앱(RIBs + ReactorKit 기반 `gma-ios`)에 익숙한 개발자가 `aidy-ios`(TCA + SwiftUI + Tuist)로 **같은 플랫폼을 다른 아키텍처로 다시** 관통한다. "메시지 한 번의 여정"을 View → Action → Reducer → Effect → State → 재렌더로 따라가면, TCA가 왜 Redux/Elm 계보인지와 Android Compose/Spring Boot 계층이 결국 같은 **단방향 상태 머신** 패턴의 변형임이 선명해진다.
+Flow Map 시리즈의 **역방향 학습 편**. iOS 프로덕션 앱(RIBs + ReactorKit 기반 레거시 프로덕션 앱)에 익숙한 개발자가 `aidy-ios`(TCA + SwiftUI + Tuist)로 **같은 플랫폼을 다른 아키텍처로 다시** 관통한다. "메시지 한 번의 여정"을 View → Action → Reducer → Effect → State → 재렌더로 따라가면, TCA가 왜 Redux/Elm 계보인지와 Android Compose/Spring Boot 계층이 결국 같은 **단방향 상태 머신** 패턴의 변형임이 선명해진다.
 
 ---
 
@@ -102,7 +102,7 @@ iOS 개발자가 TCA 코드를 처음 열었을 때 흔한 당혹감:
 
 ## aidy-ios가 학습 재료로 좋은 이유
 
-`~/Develop/aidy-ios` — Tuist + SPM + SwiftUI + TCA + URLSession + Keychain. 회사 프로덕션에서 쓰는 RIBs/ReactorKit 조합과 **다른 아키텍처지만 플랫폼은 같다**.
+`~/Develop/aidy-ios` — Tuist + SPM + SwiftUI + TCA + URLSession + Keychain. 레거시 프로덕션에서 쓰는 RIBs/ReactorKit 조합과 **다른 아키텍처지만 플랫폼은 같다**.
 
 ```
 [프로젝트 관리]    Tuist + SPM (Project.swift / Package.swift)
@@ -219,7 +219,7 @@ flowchart TD
 
 ### APIClient (URLSession async/await)
 - **구조체 + 클로저 필드**: 각 엔드포인트가 `@Sendable () async throws -> T` 클로저. 테스트에서 필드만 override.
-- **`authorizedRequest`**: Keychain에서 토큰 읽어 Bearer 헤더 자동 첨부. 회사 프로젝트의 Alamofire Interceptor 대응.
+- **`authorizedRequest`**: Keychain에서 토큰 읽어 Bearer 헤더 자동 첨부. 프로덕션 프로젝트의 Alamofire Interceptor 대응.
 - **`checkResponse`**: 401 감지 → `NotificationCenter.default.post(name: .unauthorizedDetected)` → AppFeature가 받아 로그아웃 처리.
 
 ### 에러 모델
@@ -321,7 +321,7 @@ flowchart TD
 - **작은 실습**: 서버 JWT 시크릿을 바꾸고 앱에서 API 호출 → 401 → 로그인 화면 복귀 관찰
 
 ### Week 5 — 역방향 비교 학습
-- 회사 프로젝트(gma-ios)에서 유사 기능 하나 고르기 (예: 로그인)
+- 레거시 프로덕션 프로젝트에서 유사 기능 하나 고르기 (예: 로그인)
 - RIBs + ReactorKit 흐름 vs aidy-ios TCA 흐름을 표로 대비
 - "무엇이 남고 무엇이 사라지는가?"를 본인 언어로 정리
 - (옵션) aidy-server + aidy-android 3자 대응으로 확장 — 같은 `POST /api/chat`이 세 코드베이스에서 어떻게 구현되는지
@@ -397,7 +397,7 @@ s27 autoceo 스프린트에서 4개 피처가 iOS에 추가되었다. TCA + Swif
 
 - [aidy-server로 그리는 백엔드 흐름 맵](/wiki/backend-ai/backend-flow-map-via-aidy-server) — 서버가 받는 요청의 여정
 - [aidy-android로 그리는 안드로이드 흐름 맵](/wiki/android-ai/android-flow-map-via-aidy-android) — 같은 API를 Compose로 호출
-- [iOS Harness Journal 000 — 베이스라인](/wiki/ios-ai/ios-ai-journal-000-baseline) — 회사 프로덕션 iOS 앱에 AI 하네스 설치
+- [iOS Harness Journal 000 — 베이스라인](/wiki/ios-ai/ios-ai-journal-000-baseline) — 레거시 프로덕션 iOS 앱에 AI 하네스 설치
 - [aidy-architect로 보는 멀티 세션 오케스트레이션](/wiki/harness-engineering/architect-flow-map-via-aidy-architect) — 세 클라이언트를 하나의 스펙으로 묶는 구조
 
 ---

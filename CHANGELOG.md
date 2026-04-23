@@ -39,9 +39,9 @@
 - 신규 솔루션: 2 (workflow/+2)
 - test 커버리지: +6 vitest 케이스
 
-## [2026-04-20] 세션 18 — gma-ios 인프라 이식 + applicable_to 정밀화 + 이슈 정리
+## [2026-04-20] 세션 18 — 외부 iOS repo 인프라 이식 + applicable_to 정밀화 + 이슈 정리
 
-> gma-ios에서 SessionStart hook / permissions.deny / 모델별 에이전트 패턴을 이식. applicable_to를 단순 ["any"]에서 프로젝트 특화(moneyflow/tarosaju/aidy)로 91개 정밀화. shadow-benchmark CI 파싱 버그 수정.
+> 외부 iOS repo에서 SessionStart hook / permissions.deny / 모델별 에이전트 패턴을 이식. applicable_to를 단순 ["any"]에서 프로젝트 특화(moneyflow/tarosaju/aidy)로 91개 정밀화. shadow-benchmark CI 파싱 버그 수정.
 
 ### Added
 
@@ -1007,7 +1007,7 @@
 - **`rag/vector-search-basics.mdx`** (120줄) — 임베딩 / 코사인 / k-NN / ANN(HNSW/IVF/LSH) / 모델 선택 / Recall@k / 벡터 DB 7 개념. dangling connection 1건 해소
 
 ### Added — 신규 인프라 5
-- **`.claude/hooks/no-company-names.sh`** — Edit/Write 직전 `gma-ios|GreenCar|LOTTIMS` grep → 발견 시 차단. settings.json `Edit|Write` matcher로 등록. 메모리 의존을 못 믿겠어서 행동 레벨로
+- **`.claude/hooks/no-company-names.sh`** — Edit/Write 직전 사설 식별자 grep → 발견 시 차단. settings.json `Edit|Write` matcher로 등록. 메모리 의존을 못 믿겠어서 행동 레벨로
 - **`.claude/commands/cross-session-review.md`** — Journal 019의 5단 프로토콜 자동화 슬래시 커맨드. CLAUDE.md skill routing 등록
 - **`scripts/lib/mermaid-fix.mjs`** — `validate-content.mjs`에서 `fixAndValidateMermaid` 함수 추출. 두 과거 버그(슬라이싱 / regex 누적) docstring 박제
 - **`scripts/__tests__/validate-content.test.mjs`** — 6 회귀 테스트 (슬라이싱 idempotent / regex idempotent / 정상 라벨 / 다중 블록 / 5-quote 누적 잔재 / 추가 손상 방지). 13 passed (기존 7 + 신규 6)
@@ -1031,12 +1031,12 @@
 - **tokenomics 카탈로그 재구조화** — 503 → 443줄. 적용 로그/메타 → applied-log entry로 분리. 본문 순서 정비
 - **`apple-intelligence-api.mdx` §3 손상 복구** — mermaid 블록이 Swift 코드 블록 시작부에 잘못 끼어들어가 acorn 파서 에러
 
-### Changed — 회사 프로젝트명 익명화 (메모리 룰 위반 정정)
-- 4 에이전트가 iOS Journal 재작성 시 회사 프로젝트 식별자(`gma-ios` / `GreenCar.xcodeproj` / `LOTTIMS-SPM`)를 노출 — 본인 책임 (에이전트 prompt에 익명화 지시 누락)
+### Changed — 사설 식별자 익명화 (메모리 룰 위반 정정)
+- 4 에이전트가 iOS Journal 재작성 시 사설 식별자를 노출 — 본인 책임 (에이전트 prompt에 익명화 지시 누락)
 - 9건 grep + 치환:
-  - `gma-ios` → `moneyflow-ios` (5건)
-  - `GreenCar` → `MoneyFlow` (1건)
-  - `LOTTIMS-SPM/` → `external-spm/` (3건, 두 번째 발견)
+  - iOS repo 식별자 치환 (5건)
+  - 앱 이름 치환 (1건)
+  - 모듈 경로 치환 (3건, 두 번째 발견)
   - 메모리 경로도 익명화
 - 메모리 강화: 위반 사례 박제 + grep 가드 프로토콜 + 에이전트 위임 시 익명화 지시 룰 + PreToolUse 훅으로 행동 레벨 차단까지
 
