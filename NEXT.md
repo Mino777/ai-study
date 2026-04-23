@@ -9,8 +9,8 @@
 
 ## 🕒 작성 시점
 
-- **작성 일시**: 2026-04-22 (Session 19 — moneyflow tmux 4-Pane 오케스트레이션 인프라)
-- **작성 주체**: Claude (Session 19)
+- **작성 일시**: 2026-04-23 (Session 20 — Skillify 인프라 8 repo 동시 롤아웃)
+- **작성 주체**: Claude (Session 20)
 - **이유**: compound 완료 후 세션 핸드오프
 
 ---
@@ -18,17 +18,22 @@
 ## 📸 현재 상태 스냅샷
 
 ### ai-study Wiki
-- **엔트리 수**: 156 (target 152 초과달성)
-- **카테고리**: 13 (방법론 4 + 시스템 3 + 평가&인프라 2 + 응용 4)
+- **엔트리 수**: 163 (+7 from 156)
+- **카테고리**: 13 (변동 없음)
 - **Git 상태**: main clean (compound 커밋 후)
-- **applicable_to 정밀도**: 74% (108/146 프로젝트 특화, Session 18 기준)
-- **자동화 워크플로우**: 10개
-- **Solutions 현황**: workflow 10건, mdx 8건, ai-pipeline 5건, github-actions 5건, next-patterns 3건
+- **Solutions 현황**: workflow **12**건 (+2), mdx 8, ai-pipeline 5, github-actions 5, next-patterns 3, performance 1
+- **새 npm script**: `npm run check:skills` (Skillify Step 8 정합 감사)
+- **테스트 커버리지**: 47 케이스 (vitest), +6 신규
 
-### moneyflow Claude Harness
-- **orchestration**: tmux 4-pane + git worktree 격리 + 양방향 통신 + 토큰 절감 완비
-- **Git 상태**: main에 7커밋 추가 (push 예정)
-- **다음 기회**: workflow solutions `_compiled-truth.md` 존재 → `/promote-solution` 검토
+### Skillify 인프라 상태 (전 9 repo)
+- **정합 완료**: ai-study · mino-moneyflow · mino-tarosaju · aidy-architect · aidy-server · aidy-ios · aidy-android (7 GitHub)
+- **로컬 완료, push 대기**: gma-ios (Bitbucket 인증)
+- **check-skills-reachable 전원 exit 0**: unreachable=0 orphan=0
+
+### moneyflow / tarosaju / aidy Harness
+- **Git 상태**: 각 main clean, 로컬 working tree 정리됨
+- **resolver 정합**: CLAUDE.md `## Skill routing` 전원 존재
+- **다음 기회**: Skillify Step 5 (LLM eval) + Step 7 (resolver routing eval) 착수
 
 ### Hermes-First 스택 상태
 - **판정**: 현재 불필요 (2026-04-19)
@@ -40,39 +45,47 @@
 
 ### 🔴 High
 
-1. **콘텐츠 생성 집중** — 엔트리 KPI 156 달성했으나 AI 방법론 심화 필요
-   - `npm run generate-lesson` 으로 주제 추천 후 작성
-   - 특히 tokenomics / harness-engineering 심화
+1. **gma-ios push 해결** — Bitbucket 인증 갱신 후 `git -C ~/Develop/gma-ios push origin chore/claude-setup`. 이 한 줄로 Skillify 전 9 repo 동기화 완료
+   - 예상 크기: XS
+
+2. **Skillify Step 5 — LLM Eval 씨드 도구** — `scripts/extract-failure-moments.mjs`
+   - `~/.claude/projects/*/` 세션 transcript grep ("fucking", "wtf", "짜증", "아 이게 왜")
+   - 실패 순간 추출 → resolver eval 케이스 씨드
+   - Garry Tan 휴리스틱 직접 차용
    - 예상 크기: M
 
-2. **[워커] AI API 프록시 3단계 방어선** (tarosaju → moneyflow → aidy-server)
-   - tarosaju: `feat/ai-api-3layer-defense` 브랜치 작업 중
-   - 예상 크기: M (프로젝트당)
+3. **Skillify Step 7 — Resolver Routing Eval** — intent golden set 20~30개
+   - `benchmark-models.mjs` 인프라 재활용
+   - weekly GitHub Action으로 Claude 라우팅 정확도 측정
+   - 통과율 하락 시 이슈 생성
+   - 예상 크기: M
 
 ### 🟡 Medium
 
-3. **workflow solutions `/promote-solution` 검토** (N=10)
-   - `_compiled-truth.md` 이미 존재 → 스킬로 공식화 여부 결정
-   - 사람 리뷰 필수
+4. **콘텐츠 생성 재개** — 엔트리 163 → target 170
+   - `npm run generate-lesson` 주제 추천
+   - 특히 harness-engineering 심화 (Skillify 후속)
+   - 예상 크기: M
 
-4. **이력서 노션 동기화** (#67)
-   - page.tsx와 노션 md 파일 내용 불일치 — iOS 노션 파일 업데이트 필요
+5. **github-actions 솔루션 N=5 promote 검토** — 이미 workflow 패턴으로 성공 이식한 패턴. `.claude/commands/` 자동 생성 후 리뷰
+   - 예상 크기: S
 
-5. **이력서 디자인 최종 폴리싱** (#68)
-   - 글자 크기/마진 미세 조정, 모바일 반응형 확인
+6. **ccusage 베이스라인 자동 수집** — dispatch 토큰 절감 KPI 미측정 방치를 끝낼 도구
+   - 스프린트 전후 자동 측정 + diff 리포트
+   - 예상 크기: S
 
 ### 🟢 Low
 
-6. **JIT 검색 성과 검증** (#69) — totalQueries 100 도달 시
+7. **Skillify entry Step-by-Step 워크스루** — 실습 과제 "check-skills-reachable.mjs MVP" 완료했으므로 엔트리 끝에 "제작 노트" 섹션 추가 (실제 구현 경험 → 엔트리 신뢰도 강화)
+8. **JIT 검색 성과 검증** (#69) — totalQueries 100 도달 시
 
 ---
 
 ## ⚠️ 블로커 / 대기 사항
 
-### 다른 세션 주의
-- moneyflow: conductor worktree `la-paz` 존재 — 만지지 말 것
-- tarosaju: `feat/ai-api-3layer-defense` 브랜치 작업 중
-- aidy-architect: ahead 상태 (2026-04-19 기준, 재확인 필요)
+- **gma-ios Bitbucket 인증** — 세션 종료 시 Keychain 갱신 후 push 1줄
+- **aidy-architect local 정합** — 이번 세션에 정리됨 (29a7669 → 99674b3 cherry-pick PR #15)
+- 이전 세션 "moneyflow conductor worktree la-paz" — 여전히 존재할 수 있음 (확인 필요)
 
 ---
 
@@ -80,9 +93,10 @@
 
 | 지표 | baseline | target | direction | actual |
 |------|----------|--------|-----------|--------|
-| 엔트리 수 | 156 | 165 | higher | ? |
-| workflow solutions N | 10 | 10 (promote) | maintain | ? |
-| moneyflow dispatch 토큰 절감 | 0 | 50K/워커 | lower_cost | 적용됨 (미측정) |
+| 엔트리 수 | 163 | 170 | higher | ? |
+| Skillify Step 5 구현 | 미착수 | 착수 | achieve | ? |
+| Skillify Step 7 intent 케이스 | 0 | 20 | higher | ? |
+| ccusage 베이스라인 | 미구축 | 구축 | achieve | ? |
 
 ---
 
@@ -97,16 +111,17 @@
 - [ ] 현재 상태 스냅샷 · 큐 · 블로커 확인
 - [ ] 가장 임팩트 큰 작업 1개 선택
 
-### Phase 3: Git 동기화 (5분)
+### Phase 3: Git 동기화 + 정합 확인 (5분)
 - [ ] `rtk git fetch` (ai-study)
-- [ ] `/projects-sync` 실행 (메시지 큐 확인 포함)
+- [ ] `/projects-sync` 실행 (aidy 4 포함, 메시지 큐 확인)
+- [ ] `npm run check:skills` (이 세션부터 관례 — 전 repo dark skill 방지)
 
 ### Phase 4: 최근 박제 훑기 (3분)
 - [ ] `node scripts/graph-query.mjs suggest`
-- [ ] `node scripts/scan-promotions.mjs`
+- [ ] `node scripts/scan-promotions.mjs` (github-actions N=5 후보 확인)
 
 ### Phase 5: 작업 시작 (2분 내)
-- [ ] 콘텐츠 생성 우선 (심화 엔트리)
+- [ ] High 큐 1번부터 (gma-ios push) 10초 안에 처리 후 나머지
 - [ ] 작업 완료 후 `/compound`
 - [ ] 세션 종료 직전 이 NEXT.md 교체
 
@@ -114,10 +129,12 @@
 
 ## 📜 최근 갱신
 
-### 2026-04-22 (Session 19 — moneyflow tmux 4-Pane 오케스트레이션)
-- **완료**: tmux 4-pane 레이아웃 + 마우스 지원
-- **완료**: 워커 양방향 통신 (notify_architect + watch_inbox)
-- **완료**: git worktree 병렬 격리 (create_worker_worktree + wo_merge)
-- **완료**: 워커 프롬프트 구조화 + 토큰 절감 (가이드 파일 로드 제거)
-- **완료**: compound + moneyflow push
-- **다음**: 콘텐츠 생성 집중 + workflow promote-solution 검토
+### 2026-04-23 (Session 20 — Skillify 8 repo 동시 롤아웃)
+- **완료**: /ingest Skillify (Garry Tan X 포스트) → harness-engineering 엔트리 박제
+- **완료**: scripts/check-skills-reachable.mjs MVP + vitest 6 케이스
+- **완료**: 7 워커(+gma-ios 로컬) CLAUDE.md Skill routing 백필 — 전원 unreachable=0 orphan=0
+- **완료**: aidy-architect 로컬 29a7669 복구 (cherry-pick → PR #15)
+- **완료**: mermaid auto-fix 2 MDX 박제 (#78)
+- **완료**: workflow solutions +2 (multi-repo-resolver-rollout, write-tool-hook-bash-bypass)
+- **완료**: 메모리 +1 (feedback_worktree_merge_back)
+- **다음**: gma-ios push + Skillify Step 5/7 도구 구축 (resolver LLM eval)

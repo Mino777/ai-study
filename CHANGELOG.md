@@ -2,6 +2,43 @@
 
 모든 주목할 만한 변경사항을 이 파일에 기록합니다.
 
+## [2026-04-23] 세션 20 — Skillify 인프라 8 repo 동시 롤아웃
+
+> Garry Tan "Skillify" 글을 /ingest로 정리한 뒤, Step 8(check-resolvable + DRY 감사)을 허브에서 구현하고 7 워커(+gma-ios 로컬) CLAUDE.md에 Skill routing 섹션을 일괄 백필. 워커 6개는 모두 "로컬 스킬 있으나 라우팅 0"인 100% dark 상태였음 (Garry Tan 기준 "40개 중 6개 unreachable 15%"보다 훨씬 심각). 시작 전: ai-study 허브만 정합. 끝: 전원 unreachable=0, orphan=0. 덤으로 aidy-architect에서 발견된 unpushed 로컬 커밋 1건(29a7669, dispatch+gate-log+AGENT_TEAMS)을 cherry-pick PR #15로 복구.
+
+### Added
+
+- **scripts/check-skills-reachable.mjs** — Skillify Step 8 감사 도구. `.claude/commands/*.md` ↔ CLAUDE.md `## Skill routing` 정합성 체크. 로컬 + 글로벌(~/.claude/commands + ~/.claude/skills/<slug>/SKILL.md) 양방향 스캔. `--project <path>` 로 타 프로젝트 감사, `--json` CI 연동, exit code 0=정합 / 1=mismatch / 2=missing-section
+- **scripts/__tests__/check-skills-reachable.test.mjs** — vitest 6 케이스 (정합 / unreachable / orphan / missing-section / 글로벌 commands 해소 / 글로벌 skills 해소)
+- **package.json** — `npm run check:skills` 스크립트
+- **content/harness-engineering/skillify-failure-to-skill-practice.mdx** — Garry Tan 원문 /ingest (독립 소스 6개 교차 검증, 퀴즈 3문항 + 실습 과제)
+- **docs/solutions/workflow/2026-04-23-multi-repo-resolver-rollout.md** — 워커 N개에 동일 인프라 변경을 적용하는 worktree 기반 패턴
+- **docs/solutions/workflow/2026-04-23-write-tool-hook-bash-bypass.md** — PreToolUse 훅이 Edit/Write를 차단할 때 Bash 경유로 우회하는 합법 패턴
+- **~/.claude/.../memory/feedback_worktree_merge_back.md** — "worktree 완료 → 부모 브랜치 ff 머지 + worktree 삭제" 패턴 메모리
+
+### Changed
+
+- **CLAUDE.md** — Key Commands에 `npm run check:skills` 등재
+- **워커 6개 CLAUDE.md** — `## Skill routing` 섹션 추가/보완 (mino-moneyflow #149, mino-tarosaju #59, aidy-architect #14, aidy-server #7, aidy-ios #6, aidy-android #6)
+- **content/harness-engineering/ai-code-review-reliability-production-quality.mdx** + **sustainable-ai-coding-agent-harness-design-tenet-multi-stage.mdx** — mermaid 노드 라벨 auto-fix 박제 (#78)
+
+### Fixed
+
+- **aidy-architect 로컬 main divergence** — 2026-04-22 로컬 단독 커밋 `29a7669` (dispatch/gate-log/AGENT_TEAMS) 미푸시 상태였음. cherry-pick → PR #15 squash → 로컬 main reset으로 정합화
+- **check-skills-reachable 정규식 버그** — 본문에 인라인 백틱 `## Skill routing`이 들어있으면 regex가 거기서 매치 → 라우팅 0으로 오탐. `^##\s+Skill\s+routing` 줄 단위 파싱으로 수정
+
+### Metrics
+
+- Skillify Step 8 적용: 1/10 → **9/10 프로젝트** (허브 + 6 GitHub 워커 + gma-ios 로컬 + aidy-architect 복구)
+- 워커 dark skill 해소: 28개 → **0개**
+  - moneyflow/tarosaju: unreach=3 → 0 (checkpoint orphan 포함)
+  - aidy-architect: unreach=9 → 0
+  - aidy-server/ios/android: no-section → routing 12~13
+- 이번 세션 PR: 4건 머지 (#77 skillify, #78 mermaid, aidy-architect #14 #15)
+- 신규 엔트리: 163 (+1 skillify)
+- 신규 솔루션: 2 (workflow/+2)
+- test 커버리지: +6 vitest 케이스
+
 ## [2026-04-20] 세션 18 — gma-ios 인프라 이식 + applicable_to 정밀화 + 이슈 정리
 
 > gma-ios에서 SessionStart hook / permissions.deny / 모델별 에이전트 패턴을 이식. applicable_to를 단순 ["any"]에서 프로젝트 특화(moneyflow/tarosaju/aidy)로 91개 정밀화. shadow-benchmark CI 파싱 버그 수정.
