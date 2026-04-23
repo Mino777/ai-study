@@ -14,7 +14,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "embed-content": "node scripts/embed-content.mjs",
-    "search": "node scripts/search.mjs"
+    "search": "node scripts/search.mjs",
+    "check:skills": "node scripts/check-skills-reachable.mjs"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
