@@ -23,7 +23,7 @@ connections:
   - harness-engineering/ai-native-system-deterministic-control
   - harness-engineering/compound-engineering-philosophy
 status: complete
-description: "Garry Tan의 Skillify 글을 /ingest로 정리한 세션 당일, Step 8(check-resolvable)을 허브에 구현하고 자기 프로젝트 9개(허브 1 + 워커 6 + 회사 iOS 1 + 허브 자신)에 dogfood. 워커 6개가 100% dark 상태였다는 발견과 28개 dark skill을 0으로 만든 3시간 기록. 숫자 위주, 서사 최소."
+description: "Garry Tan의 Skillify 글을 /ingest로 정리한 세션 당일, Step 8(check-resolvable)을 허브에 구현하고 자기 프로젝트 9개(허브 1 + 워커 6 + 추가 iOS 2)에 dogfood. 워커 6개가 100% dark 상태였다는 발견과 28개 dark skill을 0으로 만든 3시간 기록. 숫자 위주, 서사 최소."
 type: entry
 quiz:
   - question: "이번 실측에서 발견된 워커 6개의 초기 Skill routing 상태는?"
@@ -47,7 +47,7 @@ quiz:
       - "ai-study main이 origin과 완전 분기"
       - "aidy-architect 로컬 main에 2026-04-22 unpushed 커밋(29a7669, dispatch+gate-log+AGENT_TEAMS) 존재 — 세션 시작 시 projects-sync를 안 해서 뒤늦게 감지"
       - "워커 프로젝트 전원 uncommitted 변경 보유"
-      - "gma-ios Bitbucket 브랜치 삭제됨"
+      - "추가 iOS repo의 Bitbucket 브랜치 삭제됨"
     answer: 1
     explanation: "Anti-rationalization 관점: '다른 세션의 작업' 탓이 아니라 '사전 점검 스킵'이 내 실수. feedback_projects_sync_includes_aidy.md 룰이 존재하는데 반사적으로 트리거 못 함. cherry-pick PR #15로 복구 완료."
 ---
@@ -71,7 +71,7 @@ quiz:
 | aidy-server | 3 | ❌ 섹션 없음 | 3 (100%) | — |
 | aidy-ios | 3 | ❌ 섹션 없음 | 3 (100%) | — |
 | aidy-android | 3 | ❌ 섹션 없음 | 3 (100%) | — |
-| gma-ios (회사 iOS) | 15 | ❌ 섹션 없음 | 14 (1개는 DEPRECATED) | — |
+| iOS (추가 1) | 15 | ❌ 섹션 없음 | 14 (1개는 DEPRECATED) | — |
 
 **합계**: 로컬 55 스킬 중 **38개 dark (69%)**. Garry Tan의 15%보다 4.6배 나쁨.
 
@@ -120,7 +120,7 @@ CLAUDE.md에 *인라인 코드*로 "\`## Skill routing\`" 문자열이 들어있
 | aidy-server | 섹션 신규 (gstack base + api-test/review/wt-branch) | 0/0 ✅ PR #7 |
 | aidy-ios | 섹션 신규 (gstack base + tca-check/ios-test/review/wt-branch) | 0/0 ✅ PR #6 |
 | aidy-android | 섹션 신규 (gstack base + compose-check/review/wt-branch) | 0/0 ✅ PR #6 |
-| gma-ios | 섹션 신규 + orchestrate-layer DEPRECATED 삭제 | 0/0 ✅ 로컬 (Bitbucket auth 대기) |
+| iOS (추가 1) | 섹션 신규 + orchestrate-layer DEPRECATED 삭제 | 0/0 ✅ 로컬 (Bitbucket auth 대기) |
 
 **dark skill 38 → 0**. 순증 스킬: 0 (기존 스킬만 reachable하게 만듦). 순증 routing 엔트리: **+38**.
 

@@ -10,7 +10,7 @@
 
 - 각 repo 작업 트리가 다른 브랜치 / uncommitted 상태일 수 있음
 - 일괄 `git checkout -b` 사용 금지 (메모리 룰 — 반드시 `/wt-branch`)
-- 각 repo의 parent 브랜치가 다를 수 있음 (대부분 main, 예외: gma-ios는 `chore/claude-setup`)
+- 각 repo의 parent 브랜치가 다를 수 있음 (대부분 main, 예외: 일부 repo는 `chore/claude-setup` 같은 인프라 작업 브랜치가 활성)
 - 푸시 후 auto-review가 squash-merge → 로컬 브랜치와 원격이 **SHA 불일치**로 fast-forward 실패 (Journal 003 재발)
 - 한 repo(Bitbucket 등)는 인증 실패로 push 불가 → 다른 repo는 계속 진행되어야
 
@@ -99,7 +99,7 @@ merge_and_cleanup() {
 
 ## 근본 원인
 
-- **동일성 환상** — "8 repo 모두 GitHub니까 같이 처리되겠지" → 1개(gma-ios)는 Bitbucket. 이질성을 처음부터 가정.
+- **동일성 환상** — "8 repo 모두 GitHub니까 같이 처리되겠지" → 1개는 Bitbucket. 이질성을 처음부터 가정.
 - **set -e 과용** — 한 repo 실패 시 나머지도 중단. orchestrator는 `set -uo pipefail`만 + 각 함수 내부 `|| return`.
 - **Squash-merge 트랩 반복** — [Journal 003](../../content/harness-engineering/harness-journal-003-squash-merge-trap-pattern.mdx)에서 이미 박제했는데 또 만남. 이번엔 8배 증폭.
 

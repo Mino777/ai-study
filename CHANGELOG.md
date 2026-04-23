@@ -4,7 +4,7 @@
 
 ## [2026-04-23] 세션 20 — Skillify 인프라 8 repo 동시 롤아웃
 
-> Garry Tan "Skillify" 글을 /ingest로 정리한 뒤, Step 8(check-resolvable + DRY 감사)을 허브에서 구현하고 7 워커(+gma-ios 로컬) CLAUDE.md에 Skill routing 섹션을 일괄 백필. 워커 6개는 모두 "로컬 스킬 있으나 라우팅 0"인 100% dark 상태였음 (Garry Tan 기준 "40개 중 6개 unreachable 15%"보다 훨씬 심각). 시작 전: ai-study 허브만 정합. 끝: 전원 unreachable=0, orphan=0. 덤으로 aidy-architect에서 발견된 unpushed 로컬 커밋 1건(29a7669, dispatch+gate-log+AGENT_TEAMS)을 cherry-pick PR #15로 복구.
+> Garry Tan "Skillify" 글을 /ingest로 정리한 뒤, Step 8(check-resolvable + DRY 감사)을 허브에서 구현하고 7 워커(+iOS 1 로컬) CLAUDE.md에 Skill routing 섹션을 일괄 백필. 워커 6개는 모두 "로컬 스킬 있으나 라우팅 0"인 100% dark 상태였음 (Garry Tan 기준 "40개 중 6개 unreachable 15%"보다 훨씬 심각). 시작 전: ai-study 허브만 정합. 끝: 전원 unreachable=0, orphan=0. 덤으로 aidy-architect에서 발견된 unpushed 로컬 커밋 1건(29a7669, dispatch+gate-log+AGENT_TEAMS)을 cherry-pick PR #15로 복구.
 
 ### Added
 
@@ -29,7 +29,7 @@
 
 ### Metrics
 
-- Skillify Step 8 적용: 1/10 → **9/10 프로젝트** (허브 + 6 GitHub 워커 + gma-ios 로컬 + aidy-architect 복구)
+- Skillify Step 8 적용: 1/10 → **9/10 프로젝트** (허브 + 6 GitHub 워커 + iOS 1 로컬 + aidy-architect 복구)
 - 워커 dark skill 해소: 28개 → **0개**
   - moneyflow/tarosaju: unreach=3 → 0 (checkpoint orphan 포함)
   - aidy-architect: unreach=9 → 0
