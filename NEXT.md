@@ -27,7 +27,7 @@
 
 ### Skillify 인프라 상태 (전 9 repo)
 - **정합 완료**: ai-study · mino-moneyflow · mino-tarosaju · aidy-architect · aidy-server · aidy-ios · aidy-android (7 GitHub)
-- **로컬 완료, push 대기**: iOS (추가 1) (Bitbucket 인증)
+- **로컬 완료, push 대기**: 사설 iOS repo (Bitbucket 인증)
 - **check-skills-reachable 전원 exit 0**: unreachable=0 orphan=0
 
 ### moneyflow / tarosaju / aidy Harness
@@ -45,7 +45,7 @@
 
 ### 🔴 High
 
-1. **iOS (추가 1) push 해결** — Bitbucket 인증 갱신 후 `git -C ~/Develop/iOS (추가 1) push origin chore/claude-setup`. 이 한 줄로 Skillify 전 9 repo 동기화 완료
+1. **사설 iOS repo push 해결** — Bitbucket 인증 갱신 후 로컬 worktree에서 `git push origin chore/claude-setup` (경로는 로컬에서 확인). 이 한 줄로 Skillify 전 9 repo 동기화 완료
    - 예상 크기: XS
 
 2. **Skillify Step 5 — LLM Eval 씨드 도구** — `scripts/extract-failure-moments.mjs`
@@ -83,7 +83,7 @@
 
 ## ⚠️ 블로커 / 대기 사항
 
-- **iOS (추가 1) Bitbucket 인증** — 세션 종료 시 Keychain 갱신 후 push 1줄
+- **사설 iOS repo Bitbucket 인증** — 세션 종료 시 Keychain 갱신 후 push 1줄
 - **aidy-architect local 정합** — 이번 세션에 정리됨 (29a7669 → 99674b3 cherry-pick PR #15)
 - 이전 세션 "moneyflow conductor worktree la-paz" — 여전히 존재할 수 있음 (확인 필요)
 
@@ -121,7 +121,7 @@
 - [ ] `node scripts/scan-promotions.mjs` (github-actions N=5 후보 확인)
 
 ### Phase 5: 작업 시작 (2분 내)
-- [ ] High 큐 1번부터 (iOS (추가 1) push) 10초 안에 처리 후 나머지
+- [ ] High 큐 1번부터 (사설 iOS repo push) 10초 안에 처리 후 나머지
 - [ ] 작업 완료 후 `/compound`
 - [ ] 세션 종료 직전 이 NEXT.md 교체
 
@@ -132,9 +132,9 @@
 ### 2026-04-23 (Session 20 — Skillify 8 repo 동시 롤아웃)
 - **완료**: /ingest Skillify (Garry Tan X 포스트) → harness-engineering 엔트리 박제
 - **완료**: scripts/check-skills-reachable.mjs MVP + vitest 6 케이스
-- **완료**: 7 워커(+iOS (추가 1) 로컬) CLAUDE.md Skill routing 백필 — 전원 unreachable=0 orphan=0
+- **완료**: 7 워커(+사설 iOS repo 로컬) CLAUDE.md Skill routing 백필 — 전원 unreachable=0 orphan=0
 - **완료**: aidy-architect 로컬 29a7669 복구 (cherry-pick → PR #15)
 - **완료**: mermaid auto-fix 2 MDX 박제 (#78)
 - **완료**: workflow solutions +2 (multi-repo-resolver-rollout, write-tool-hook-bash-bypass)
 - **완료**: 메모리 +1 (feedback_worktree_merge_back)
-- **다음**: iOS (추가 1) push + Skillify Step 5/7 도구 구축 (resolver LLM eval)
+- **다음**: 사설 iOS repo push + Skillify Step 5/7 도구 구축 (resolver LLM eval)
