@@ -101,6 +101,7 @@ public/            → search-index.json (gitignored, SearchDialog lazy fetch용
 - `node scripts/graph-query.mjs <cmd>` — 지식 그래프 쿼리 CLI (neighbors/dangling/islands/hubs/path/weak-links/suggest)
 - `node scripts/scan-promotions.mjs` — 솔루션 승격 스캐너 (N=3+ 자동 감지 → 승격 제안, --json CI 연동)
 - `node scripts/backfill-frontmatter.mjs [--apply]` — MDX frontmatter 백필 (last_verified + applicable_to, dry-run 기본)
+- `npm run check:skills` — Skillify Step 8: `.claude/commands/*.md` ↔ CLAUDE.md `## Skill routing` 정합성 감사 (unreachable + orphan 감지, `--project <path>` 으로 타 프로젝트 감사, `--json` CI 연동)
 
 ## Content System
 - All content in `content/` as MDX files with frontmatter
