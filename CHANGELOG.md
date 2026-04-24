@@ -2,6 +2,31 @@
 
 모든 주목할 만한 변경사항을 이 파일에 기록합니다.
 
+## [2026-04-24] 세션 22 — Journal 028/029 박제 + 6 워커 resolver-eval rollout 완료
+
+> Journal 028(3-lever playbook)을 박은 동일 세션에 워커 6개 전원에 적용. baseline 분포: moneyflow 54.5% / architect 81.8% / aidy 3개 ~27-36%. 전원 100% 달성. 총 45분(7분/워커). Skillify 트릴로지(027/028/029) 닫힘. weekly CI 활성 repo 1→7. 엔트리 167 (+Journal 028, 029).
+
+### Added
+
+- **content/harness-engineering/harness-journal-028-skillify-100-playbook.mdx** — 3-lever playbook 박제. Lever 1(tokenizer 조사 제거) 52→68%, Lever 2(한국어 키워드 보강) 68→100%, Lever 3(regex tail fix 잠복 파싱 실패 복구). golden set 25→48 100% 유지
+- **content/harness-engineering/harness-journal-029-skillify-6of6-rollout.mdx** — 6 워커 rollout 실측. 7분/워커. 비-Node 예외, compound↔autoceo 충돌, wt-branch 누락 실시간 탐지·수정 기록
+- **docs/solutions/workflow/2026-04-24-resolver-eval-multi-worker-rollout.md** — 워커 이식 8단계 체크리스트 + 예상 이슈 테이블
+
+### Changed (6 worker repos — all pushed)
+
+- **mino-moneyflow, mino-tarosaju**: resolver-eval.mjs + cases.json + weekly CI + CLAUDE.md 한국어 보강 (54.5→100%)
+- **aidy-architect**: 동일 + autoceo↔compound 충돌 해소 + wt-branch routing 추가 (81.8→100%)
+- **aidy-server, aidy-ios, aidy-android**: 동일 + mkdir -p 예외 처리 (27-36→100%)
+
+### Metrics
+
+- 엔트리: 165 → 167 (+2)
+- 워커 resolver-eval 이식: 0/6 → 6/6
+- weekly CI 활성 repo: 1 → 7
+- Skillify 트릴로지(027+028+029) 닫힘
+
+---
+
 ## [2026-04-24] 세션 21 — Skillify Step 5/7 도구 + accuracy 52→100% + weekly CI
 
 > Skillify 10단계 중 구조 레이어(Step 8) 다음 두 단계(Step 5 씨드 추출기, Step 7 resolver eval)를 박제. 한국어 조사 tokenizer + CLAUDE.md 라우팅 키워드 보강으로 정확도 52% → 100% 달성. 48 케이스 golden set로 스트레스 테스트 후에도 100% 유지. 회귀는 weekly GitHub Action이 자동 감시 (threshold 80%, 하락 시 Issue 생성·복구 시 close). 세션 중 발견된 부차 이슈: `no-company-names.sh` 훅이 envvar only였는데 최신 하네스가 stdin 스키마로 바뀐 걸 몰라 silent pass 상태였음 → fail-closed 기본값으로 교정 + 역사적 사설 식별자 29건 전역 익명화.
