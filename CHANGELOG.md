@@ -2,6 +2,43 @@
 
 모든 주목할 만한 변경사항을 이 파일에 기록합니다.
 
+## [2026-04-24] 세션 21 — Skillify Step 5/7 도구 + accuracy 52→100% + weekly CI
+
+> Skillify 10단계 중 구조 레이어(Step 8) 다음 두 단계(Step 5 씨드 추출기, Step 7 resolver eval)를 박제. 한국어 조사 tokenizer + CLAUDE.md 라우팅 키워드 보강으로 정확도 52% → 100% 달성. 48 케이스 golden set로 스트레스 테스트 후에도 100% 유지. 회귀는 weekly GitHub Action이 자동 감시 (threshold 80%, 하락 시 Issue 생성·복구 시 close). 세션 중 발견된 부차 이슈: `no-company-names.sh` 훅이 envvar only였는데 최신 하네스가 stdin 스키마로 바뀐 걸 몰라 silent pass 상태였음 → fail-closed 기본값으로 교정 + 역사적 사설 식별자 29건 전역 익명화.
+
+### Added
+
+- **scripts/extract-failure-moments.mjs** — Skillify Step 5 씨드 추출기. `~/.claude/projects/*/` JSONL transcript에서 한/영 frustration 14 패턴 매치 → 가중치 정렬 → 상위 N개 markdown/JSON 출력. length/system-message 필터. vitest 6 케이스
+- **scripts/resolver-eval.mjs** — Skillify Step 7 structural eval. CLAUDE.md `## Skill routing` 파싱 + 키워드 중첩 점수. null expectedSkill 케이스로 over-routing 방지 체크. LLM 호출 0. vitest 5 케이스
+- **data/resolver-eval-cases.json** — 48 golden cases (20 skill + 4 null + 다양한 intent 변형). v0.2에서 extract-failures 씨드 기반 확장
+- **.github/workflows/weekly-resolver-eval.yml** — 매주 월 09:30 KST + CLAUDE.md/cases.json 변경 시 실행. accuracy < 80%면 `resolver-eval` 라벨 Issue 생성/업데이트, 복구 시 close
+- **docs/solutions/workflow/2026-04-24-fail-closed-hook-defense.md** — 훅 silent pass 방어 원칙 박제
+- **content/harness-engineering/harness-journal-027-skillify-resolver-backfill.mdx** — Step 8 9 repo dogfood 실측 기록
+- **npm scripts**: `eval:resolver`, `extract:failures`
+
+### Changed
+
+- **.claude/hooks/no-company-names.sh** — stdin 우선 + envvar fallback + **입력 없으면 fail-closed(차단)**. `tool_input` 중첩 스키마 대응. 금지 패턴에 `회사 (iOS|프로젝트|repo|레포|안드로이드|서버|앱)` 간접 지칭 추가. 화이트리스트에 `.claude/settings*.json`, `.gitignore` 추가
+- **CLAUDE.md `## Skill routing`** — 10 엔트리에 한국어 키워드 보강 (review/investigate/ship/office-hours/qa/document-release/design-consultation/design-review/plan-eng-review/compound/wt-branch)
+- **scripts/resolver-eval.mjs tokenizer** — 한국어 조사/어미 제거 + slash·backslash 분리
+- **CLAUDE.md Key Commands** — `eval:resolver`, `extract:failures` 등재
+- **역사적 사설 식별자 29건 전역 익명화** (content/, docs/, CHANGELOG, NEXT 10 파일)
+
+### Fixed
+
+- **훅 silent pass 버그** — envvar only 로직이 stdin 스키마와 불일치. Session 20 Journal 027 write에서 금지 패턴이 훅 우회하던 원인
+- **review rule regex 파싱 누락** — `invoke review (2-Stage: ...)` 꼬리 때문에 `$` 앵커에 안 걸려 rules 21→20 집계되던 버그. 꼬리를 desc 내부로 이동
+- **NEXT.md 손상된 shell 커맨드** — `"iOS (추가 1)"` 괄호·공백 치환이 경로로 들어가 bash-unsafe. "사설 iOS repo" 서술로 교체
+
+### Metrics
+
+- Resolver accuracy: **52% → 100%** (13/25 → 48/48). 4단 개선 (tokenizer +16%p, 키워드 +32%p, regex fix +4%p, scale 유지)
+- Golden set 크기: 25 → **48** (+92%)
+- 테스트: 47 → **58** (+11)
+- 사설 식별자 노출: 29 → **0**
+- PR 머지: 4 (#80/81/82/83) + 3 interim
+- 엔트리 수: 163 → 165 (Journal 027 + auto-lesson)
+
 ## [2026-04-23] 세션 20 — Skillify 인프라 8 repo 동시 롤아웃
 
 > Garry Tan "Skillify" 글을 /ingest로 정리한 뒤, Step 8(check-resolvable + DRY 감사)을 허브에서 구현하고 7 워커(+사설 iOS repo 로컬) CLAUDE.md에 Skill routing 섹션을 일괄 백필. 워커 6개는 모두 "로컬 스킬 있으나 라우팅 0"인 100% dark 상태였음 (Garry Tan 기준 "40개 중 6개 unreachable 15%"보다 훨씬 심각). 시작 전: ai-study 허브만 정합. 끝: 전원 unreachable=0, orphan=0. 덤으로 aidy-architect에서 발견된 unpushed 로컬 커밋 1건(29a7669, dispatch+gate-log+AGENT_TEAMS)을 cherry-pick PR #15로 복구.

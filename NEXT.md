@@ -9,25 +9,26 @@
 
 ## 🕒 작성 시점
 
-- **작성 일시**: 2026-04-24 (Session 21 후반 — resolver accuracy 100% 도달 + weekly CI)
+- **작성 일시**: 2026-04-24 (Session 21 — Skillify Step 5/7 + 100% accuracy + weekly CI)
 - **작성 주체**: Claude (Session 21)
-- **이유**: 세션 핸드오프
+- **이유**: compound 후 세션 핸드오프
 
 ---
 
 ## 📸 현재 상태 스냅샷
 
 ### ai-study Wiki
-- **엔트리 수**: 164
-- **Solutions**: workflow 12, mdx 8, ai-pipeline 5, github-actions 5 (promote 후보), next-patterns 3, performance 1
-- **npm scripts**: `check:skills` / `eval:resolver` / `extract:failures`
+- **엔트리 수**: 165
+- **Solutions**: workflow 13 (+fail-closed-hook-defense), mdx 8, ai-pipeline 5, github-actions 5, next-patterns 3, performance 1
+- **Skillify 도구**: `check:skills` (Step 8) · `eval:resolver` (Step 7) · `extract:failures` (Step 5)
+- **Resolver eval**: **48/48 = 100% accuracy** (golden set 25 → 48 확장 후 유지)
+- **Weekly CI**: `.github/workflows/weekly-resolver-eval.yml` — threshold 80%, 회귀 시 Issue 자동
 - **테스트**: 58 케이스 (vitest)
-- **Workflows**: 10 (weekly-resolver-eval 신규)
+- **훅**: fail-closed 전환 + 간접 지칭(회사 iOS 등) 차단
 
-### Skillify 인프라 — 전원 green
-- **Step 8** (check-resolvable): 9 repo 정합 완료
-- **Step 7** (resolver eval): ai-study **100%** (25/25). weekly CI로 회귀 감시
-- **Step 5** (failure extractor): 도구 완료, 씨드 추출 성공
+### 타 repo Skillify 상태
+- **허브(ai-study) + 워커 6 + 사설 iOS repo**: 전원 check:skills 0/0
+- 워커들은 resolver-eval 미이식 (다음 스프린트 큐)
 
 ### Hermes-First 스택: 불필요 유지
 
@@ -37,22 +38,22 @@
 
 ### 🔴 High
 
-1. **Skillify Step 5 golden set 확장** — `extract:failures --since 2026-03-01` 출력에서 실제 frustration intent 큐레이션 → cases.json (25 → 40+). 현재 100%는 "25개 좁은 샘플" 기준, 다양성 확보 필요
-   - 예상 크기: S
+1. **워커 6개에 resolver-eval 이식** — 허브 accuracy만 관리하는 건 반쪽. 각 워커(moneyflow/tarosaju/aidy×4)에도 `data/resolver-eval-cases.json` 작게 두고 weekly CI 적용
+   - 크기: M
 
-2. **다른 repo (워커 6개) resolver-eval 통합** — 워커 각 CLAUDE.md에도 수동으로 `data/resolver-eval-cases.json` 두고 동일 회귀 감시. 또는 허브에서 일괄 감사 스크립트
-   - 예상 크기: M
+2. **Harness Journal 028 — Skillify 52→100% 박제** — accuracy 끌어올린 방법론(tokenizer + 한국어 키워드 + regex fix + golden set 확장)을 재사용 가능 playbook로
+   - 크기: S
 
 ### 🟡 Medium
 
-3. **콘텐츠 생성 재개** — 엔트리 164 → 170
+3. **콘텐츠 생성 재개** — 엔트리 165 → 175 (이번 스프린트 의식적 deprioritize, 이제 다시 집중)
 4. **github-actions 솔루션 N=5 promote** — 스킬 자동 생성 + 리뷰
-5. **ccusage 설치 + 베이스라인 수집** — KPI 측정 인프라. ccusage 미설치 상태
-6. **Harness Journal 028** — Skillify Phase B/C 실측 기록 (52→68→96→100% 개선 과정)
+5. **ccusage 설치 + 베이스라인 수집** — 3 스프린트 연속 방치 방지. 먼저 `brew install ccusage` 여부 확인
+6. **정책 훅 self-test 체크리스트** — fail-closed 훅 자체 검증 스킬(`validate-hooks`) 또는 docs/solutions 가이드
 
 ### 🟢 Low
 
-7. **LLM-기반 resolver eval** (Claude Haiku) — 구조적 eval의 한계 보완
+7. **LLM-기반 resolver eval** (Claude Haiku) — 구조적 eval 한계 보완
 8. **JIT 검색 성과 검증** (#69) — totalQueries 100 도달 시
 
 ---
@@ -67,10 +68,10 @@
 
 | 지표 | baseline | target | direction | actual |
 |------|----------|--------|-----------|--------|
-| resolver-eval cases | 25 | 40 | higher | ? |
+| 워커 resolver-eval 이식 | 0개 | 3개 (주요 워커) | higher | ? |
+| 엔트리 수 | 165 | 175 | higher | ? |
 | resolver-eval accuracy | 100% | 90% (유지) | maintain | ? |
-| 엔트리 수 | 164 | 170 | higher | ? |
-| ccusage 베이스라인 | 미구축 | 구축 | achieve | ? |
+| ccusage 베이스라인 | 미구축 | 구축 or blocker 확정 | achieve | ? |
 
 ---
 
@@ -89,20 +90,21 @@
 
 ### Phase 4: 최근 박제 훑기 (3분)
 - [ ] `node scripts/graph-query.mjs suggest`
-- [ ] `node scripts/scan-promotions.mjs`
+- [ ] `node scripts/scan-promotions.mjs` (github-actions N=5 후보)
 
 ### Phase 5: 작업 시작 (2분 내)
-- [ ] High #1 또는 #2 먼저
+- [ ] High #1 (워커 resolver-eval 이식) 또는 #2 (Journal 028) 먼저
 - [ ] `/compound` 후 NEXT.md 교체
 
 ---
 
 ## 📜 최근 갱신
 
-### 2026-04-24 후반 (Session 21 — resolver 100% + weekly CI)
-- **완료**: tokenizer 한국어 조사 제거 + slash split (+16%p)
-- **완료**: CLAUDE.md routing 10개 엔트리 한국어 키워드 보강 (+32%p)
-- **완료**: review rule "(2-Stage…)" 꼬리 regex 버그 수정
-- **완료**: `.github/workflows/weekly-resolver-eval.yml` — 매주 월 09:30 KST + CLAUDE.md/cases.json 변경 시 자동 실행. 80% 미만이면 Issue 생성, 복구되면 close
-- **측정**: resolver-eval accuracy **52% → 100%** (25/25 전원 통과)
-- **다음**: golden set 다양성 확장 (25 → 40+)
+### 2026-04-24 (Session 21 — Skillify Step 5/7 + 100%)
+- **완료**: `scripts/extract-failure-moments.mjs` (Step 5 씨드) + vitest 6
+- **완료**: `scripts/resolver-eval.mjs` (Step 7 structural eval) + vitest 5
+- **완료**: Golden set 25 → 48 확장 + 100% 유지
+- **완료**: `weekly-resolver-eval.yml` (회귀 자동 감시)
+- **완료**: `no-company-names.sh` stdin 버그 + fail-closed 전환
+- **완료**: 역사적 사설 식별자 29건 전역 0건
+- **다음**: 워커 resolver-eval 이식 / Journal 028 / 콘텐츠 재개
