@@ -1,7 +1,7 @@
 {
   "$schema": "inline",
   "description": "Skillify Step 7 — Resolver routing eval golden set. 각 케이스는 사용자 intent 문장과 라우팅되어야 할 skill을 쌍으로 묶는다. Step 5 extract-failure-moments 출력물을 사람이 다듬어 만든다.",
-  "version": "0.1",
+  "version": "0.2",
   "updated": "2026-04-24",
   "cases": [
     {
@@ -128,6 +128,121 @@
       "intent": "Skillify Step 8 감사 돌려줘",
       "expectedSkill": null,
       "notes": "음성-틱: 'npm run check:skills' 커맨드 직접 실행이 맞음. skill 라우팅 필요 없음 — null 케이스 (over-routing 방지 체크)"
+    },
+    {
+      "intent": "드라이런이 안되는 것 같은데",
+      "expectedSkill": "investigate",
+      "notes": "v0.2 — 실제 transcript에서 추출한 버그 제보 패턴"
+    },
+    {
+      "intent": "빌드 깨졌어 왜 그런지 봐줘",
+      "expectedSkill": "investigate",
+      "notes": "빌드 실패 원인 조사"
+    },
+    {
+      "intent": "테스트 다 실패하네 문제 뭐야",
+      "expectedSkill": "investigate",
+      "notes": "테스트 실패 = 버그 제보"
+    },
+    {
+      "intent": "이 논문 요약해서 엔트리로 박아줘",
+      "expectedSkill": "ingest",
+      "notes": "논문 → 위키 엔트리 가공"
+    },
+    {
+      "intent": "블로그 글 하나 정리해서 위키에 올려줘",
+      "expectedSkill": "ingest",
+      "notes": "블로그 → 엔트리"
+    },
+    {
+      "intent": "기능 한번 쭉 QA 돌려봐",
+      "expectedSkill": "qa",
+      "notes": "QA 기능 테스트"
+    },
+    {
+      "intent": "새 작업 들어가자 브랜치 파줘",
+      "expectedSkill": "wt-branch",
+      "notes": "새 브랜치 분기 — '파다' 동사"
+    },
+    {
+      "intent": "worktree 하나 만들어서 거기서 작업하자",
+      "expectedSkill": "wt-branch",
+      "notes": "worktree 명시"
+    },
+    {
+      "intent": "지금까지 한거 회고 쓰고 솔루션 박아줘",
+      "expectedSkill": "compound",
+      "notes": "회고 + 솔루션 = compound 파이프라인"
+    },
+    {
+      "intent": "스프린트 정리 한번 하고 넘어가자",
+      "expectedSkill": "compound",
+      "notes": "스프린트 정리"
+    },
+    {
+      "intent": "코드 좀 봐줘 PR",
+      "expectedSkill": "review",
+      "notes": "매우 짧은 리뷰 요청"
+    },
+    {
+      "intent": "diff 훑어봐 BLOCK/PASS만 알려줘",
+      "expectedSkill": "review",
+      "notes": "BLOCK/PASS 형식 언급 — 2-Stage review"
+    },
+    {
+      "intent": "moneyflow에 patterns: PR 들어왔는데 큐레이션 해줘",
+      "expectedSkill": "curate-inbound",
+      "notes": "워커 inbound PR 박제"
+    },
+    {
+      "intent": "각 프로젝트들 상태 점검 한번",
+      "expectedSkill": "projects-sync",
+      "notes": "projects-sync 발동"
+    },
+    {
+      "intent": "자동으로 풀 스프린트 돌려봐",
+      "expectedSkill": "autoceo",
+      "notes": "autoceo 풀 자동 루프"
+    },
+    {
+      "intent": "이 mdx mermaid 파일 커밋 전 검증만 해줘",
+      "expectedSkill": "validate-mdx",
+      "notes": "커밋 전 MDX/Mermaid 검증"
+    },
+    {
+      "intent": "Gemini가 만든 엔트리 가짜인용 있는지 검증",
+      "expectedSkill": "validate-ai-output",
+      "notes": "가짜 인용 = validate-ai-output 핵심 관심사"
+    },
+    {
+      "intent": "보안 전문가 시각으로 조언 한번",
+      "expectedSkill": "consult",
+      "notes": "특정 도메인 consult"
+    },
+    {
+      "intent": "워커 프로젝트한테 이 지시 메시지 큐로 보내줘",
+      "expectedSkill": "message",
+      "notes": "허브 → 워커 메시지 큐"
+    },
+    {
+      "intent": "이번에 머지된 거 README 반영",
+      "expectedSkill": "document-release",
+      "notes": "릴리스 후 문서 업데이트"
+    },
+    {
+      "intent": "기존 이슈들 다시 쫙 돌려서 점수 7 이하면 삭제",
+      "expectedSkill": null,
+      "notes": "v0.2 — 실제 transcript 추출, ad-hoc 배치 작업. 어떤 skill도 정확히 맞지 않음 (over-routing 방지 체크)"
+    },
+    {
+      "intent": "develop에 잘못 들어간 커밋 빼서 직전으로 롤백",
+      "expectedSkill": null,
+      "notes": "v0.2 — git surgery, skill 없음. (상세 롤백은 사람 직접)"
+    },
+    {
+      "intent": "리모트 싱크 맞춰줘",
+      "expectedSkill": null,
+      "notes": "v0.2 — 일반 git sync, 특정 skill 매핑 없음. fetch/pull 직접"
     }
   ]
 }
