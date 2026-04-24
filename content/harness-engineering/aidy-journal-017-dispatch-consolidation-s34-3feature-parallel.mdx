@@ -1,0 +1,218 @@
+---
+title: "Aidy Journal 017 — dispatch 단일 함수 통합 + AGENT_TEAMS=1 + s34 3-Feature 병렬 스프린트 (v4.7~v4.9)"
+category: harness-engineering
+series: aidy-journal
+date: "2026-04-24"
+tags: [aidy-journal, dispatch, agent-teams, parallel-sprint, avatar, search-filters, heatmap, gate-1, tokenomics]
+confidence: 4
+last_verified: "2026-04-24"
+applicable_to: ["aidy", "any"]
+connections:
+  - harness-engineering/aidy-journal-016-ui-smoke-test-robot-pattern-preflight
+  - harness-engineering/aidy-journal-015-agent-teams-pipelining-8r-to-5r
+  - harness-engineering/aidy-journal-011-gate1-enforcement-turning-point
+  - harness-engineering/aidy-journal-012-multiagent-efficiency-optimization
+  - harness-engineering/compound-engineering-philosophy
+status: complete
+description: "Journal 016(s32)이 preflight + UI Smoke Test의 '예방 인프라'였다면, 이 글은 두 가지 축의 기록이다. 첫째, dispatch 함수 23개 중복 → 단일 함수 통합 + gate-log 스크립트 + AGENT_TEAMS=1 활성화 (gma-ios 패턴 이식). 둘째, 그 인프라 위에서 s34가 v4.7 Avatar + v4.8 Search Filters + v4.9 Activity Heatmap을 5라운드 45분에 완주한 기록. 서버 1056 / iOS 748 / Android 998 테스트. iOS 3-feature 동시 dispatch의 빌드 에러 리스크(15분 수정)를 박제하고 2+1 분할 권장을 도출."
+type: entry
+quiz:
+  - question: "dispatch 함수를 23개에서 1개로 통합한 핵심 이유는?"
+    choices:
+      - "코드가 길어서 읽기 어려워서"
+      - "23개 함수가 거의 동일한 패턴(send-keys → 대기 → 확인)이었고, 플랫폼/WO번호만 다른 파라미터. 중복 제거 + 변경 시 1곳만 수정하면 되는 구조"
+      - "bash 함수 개수 제한에 걸려서"
+      - "테스트를 위해 mock하기 쉬운 구조가 필요해서"
+    answer: 1
+    explanation: "dispatch_server_wo_100, dispatch_ios_wo_101 같은 함수들이 사실상 같은 로직이었다. 플랫폼(server/ios/android) + WO 번호 + Brief 파일 경로만 다른 파라미터인데 각각 별도 함수로 존재. 통합 후 dispatch(platform, wo_number, brief_path) 하나로 모든 dispatch가 가능."
+  - question: "s34에서 iOS에 3개 피처를 동시 dispatch한 결과 15분 빌드 수정이 발생한 근본 원인은?"
+    choices:
+      - "iOS 빌드 시스템이 느려서"
+      - "Agent Teams가 3개 피처의 코드를 동시에 생성하면서 SearchFeature 수정 충돌 + IRGen 크래시가 발생. 서버와 달리 iOS는 UI 레이어에서 피처 간 타입 간섭이 있어 동시 생성이 위험"
+      - "Xcode 버전이 맞지 않아서"
+      - "테스트가 너무 많아서"
+    answer: 1
+    explanation: "서버는 독립 Controller/Service라 병렬 생성이 안전하지만, iOS는 TCA Feature 구조에서 AppFeature → SearchFilterFeature → AvatarFeature 간 의존이 있고, Agent Teams가 이를 동시에 건드리면서 충돌이 발생. Android는 Activity/Fragment가 비교적 독립적이라 16분에 성공. 플랫폼별 병렬 안전성이 다르다는 실측."
+  - question: "AGENT_TEAMS=1 설정의 의미는?"
+    choices:
+      - "에이전트 팀 수를 1개로 제한하는 것"
+      - "Claude Code의 Agent Teams 기능 활성화 — 워커가 서브에이전트를 스폰해서 병렬 처리 가능"
+      - "모든 에이전트를 하나의 팀으로 묶는 것"
+      - "에이전트 간 통신을 활성화하는 것"
+    answer: 1
+    explanation: "settings.json에 AGENT_TEAMS=1을 추가하면 각 워커 Claude 세션이 Agent tool로 서브에이전트를 스폰할 수 있다. s34에서 Android 워커가 3개 피처를 서브에이전트로 분리해 병렬 처리한 게 이 설정 덕분. 16분에 빌드 포함 3피처 완료."
+---
+
+## Before — 23개 dispatch 함수 + Agent Teams 비활성
+
+Journal 016(s32)까지의 `architect-cli.sh`:
+
+```bash
+dispatch_server_wo_100() { tmux send-keys -t server "..." Enter; }
+dispatch_ios_wo_101() { tmux send-keys -t ios "..." Enter; }
+dispatch_android_wo_102() { tmux send-keys -t android "..." Enter; }
+# ... 20개 더
+```
+
+WO마다 별도 함수. 로직은 동일한데 파라미터만 다르다. 변경할 때 23곳 모두 수정해야 하고, 빠뜨리면 silent failure.
+
+Agent Teams는 비활성 — 워커가 서브에이전트를 스폰할 수 없어서 3개 피처를 받으면 **순차 처리**만 가능.
+
+## After — 단일 dispatch + gate-log + AGENT_TEAMS=1
+
+### dispatch 단일 함수
+
+```bash
+dispatch() {
+  local platform=$1 wo_number=$2 brief_path=$3
+  local pane_target="${platform}"
+  
+  tmux send-keys -t "$pane_target" \
+    "Read ${brief_path} && 실행" Enter
+}
+
+# 사용
+dispatch server 158 /tmp/wo-158-brief.md
+dispatch ios    161 /tmp/wo-161-brief.md
+dispatch android 164 /tmp/wo-164-brief.md
+```
+
+23개 → 1개. 플랫폼 + WO번호 + Brief 경로가 파라미터. **변경 1곳, 적용 전체.**
+
+### gate-log 스크립트
+
+Gate-1 리뷰 결과를 `gates/reviews/` 디렉토리에 자동 기록. 수동으로 파일 만들고 포맷 맞추던 작업을 스크립트화.
+
+### AGENT_TEAMS=1
+
+```json
+// .claude/settings.json
+{
+  "env": {
+    "AGENT_TEAMS": "1"
+  }
+}
+```
+
+gma-ios에서 먼저 검증된 패턴을 이식. 이제 각 워커가 Agent tool로 서브에이전트를 스폰 가능 — **3개 피처를 받으면 3개 서브에이전트로 병렬 처리**.
+
+---
+
+## Sprint s34 — v4.7 ~ v4.9 병렬 스프린트
+
+### 5라운드 구조
+
+| 라운드 | 역할 | 소요 |
+|---|---|---|
+| R1 | 스펙 정의 + WO-158~166 발행 (3피처 × 3플랫폼) | ~5분 |
+| R2 | 서버 dispatch (3 WO 동시) | ~12분 |
+| R3 | iOS + Android dispatch (각 3 WO 동시) | ~25분 |
+| R4 | Gate-1 검증 (3 플랫폼 전체) | ~5분 |
+| R5 | Compound (회고 + CHANGELOG) | ~3분 |
+
+**총 ~45분에 3피처 × 3플랫폼 = 9 WO 완주.**
+
+### v4.7 User Avatar
+
+프로필 사진 업로드/조회/삭제. 서버: `POST/GET/DELETE /api/auth/avatar`, `UserAvatar` 엔티티 + AvatarController/Service. iOS: `AvatarClient` + `AvatarFeature`. Android: `AvatarRepository` + `AvatarViewModel`.
+
+**Memory Media(v4.5) 패턴 재사용**으로 Avatar 구현이 매우 빠름 — 파일 업로드/조회 패턴이 동일.
+
+### v4.8 Advanced Search Filters
+
+날짜/인물/카테고리/타입/정렬 복합 필터 + 페이지네이션. 서버: `SearchService` 확장, Querydsl 동적 쿼리. iOS: `SearchFilterFeature`. Android: `SearchViewModel` 확장.
+
+### v4.9 Activity Heatmap
+
+월간/연간 활동 히트맵. level 사분위수 계산 (상위 25/50/75%), streak 연속 기록일 추적. 서버: `ActivityController/Service`, 날짜별 집계 쿼리. iOS/Android: 히트맵 뷰 컴포넌트.
+
+### 테스트 커버리지
+
+| 플랫폼 | s33 | s34 | 증감 |
+|---|---|---|---|
+| Server | 1033 | **1056** | +23 |
+| iOS | - | **748** | - |
+| Android | 968 | **998** | +30 |
+
+---
+
+## 플랫폼별 병렬 안전성 — 실측 결과
+
+s34에서 3개 피처를 **3플랫폼 모두 동시 dispatch**한 결과:
+
+| 플랫폼 | 동시 피처 수 | 소요 | 결과 |
+|---|---|---|---|
+| **Server** | 3 | 12분 | ✅ WO별 1커밋, 깔끔 |
+| **Android** | 3 | 16분 (빌드 포함) | ✅ Agent Teams 병렬 효과 |
+| **iOS** | 3 | 25분 (수정 15분 포함) | ⚠️ 빌드 에러 수정 필요 |
+
+### 서버: 독립 Controller/Service → 병렬 안전
+
+각 피처가 독립된 Controller + Service 쌍. 공유 타입이 거의 없어서 3개를 동시에 생성해도 충돌 없음.
+
+### Android: Activity/Fragment 독립 + Agent Teams 효과
+
+Agent Teams가 3개 서브에이전트를 스폰해서 병렬 처리. Activity/Fragment가 비교적 독립적이라 타입 충돌 없이 16분에 빌드 포함 완료.
+
+### iOS: TCA Feature 간 의존 → 3-feature 동시는 위험
+
+Agent Teams가 3개 피처를 동시에 생성했지만:
+
+1. `AppFeature` → `SearchFilterFeature` → `AvatarFeature` 간 의존이 있어 **SearchFeature 수정 충돌**
+2. **IRGen 크래시** 회피 작업 발생 (컴파일러 버그 가능성)
+3. 빌드 에러 수정에 **15분** 소요
+
+**결론: iOS는 2+1 분할이 안전하다.** 2개 먼저 dispatch → 빌드 통과 확인 → 나머지 1개 dispatch.
+
+---
+
+## 함정 박제
+
+### 1. iOS 3-feature 동시 dispatch 빌드 에러
+
+- **증상**: Agent Teams가 3개 피처 코드를 동시 생성 후 빌드 실패. SearchFeature 수정 + IRGen 크래시.
+- **원인**: TCA Feature 구조에서 AppFeature가 모든 하위 Feature를 조합. 3개를 동시에 건드리면 타입 간섭.
+- **대안**: iOS는 **2+1 분할**. 서버/Android는 3개 동시 OK.
+- **규칙**: `피처 수 × 플랫폼 병렬 안전성` 매트릭스로 dispatch 전략 결정.
+
+### 2. watch-workers timeout 부족
+
+- **증상**: 1200초(20분) timeout에 걸림. 3개 피처 작업에 25분+.
+- **대안**: **피처 수 × 10분**으로 timeout 설정. 3피처면 1800초(30분).
+
+### 3. 서버 테스트 수 불일치
+
+- **증상**: 워커 보고 1086 vs verify 1056. 30개 차이.
+- **원인**: 카운트 방식 차이로 추정 (미조사).
+- **규칙**: **verify 결과를 authoritative로 사용**. 워커 자기 보고는 참고용.
+
+### 4. iOS 커밋 컨벤션 누락
+
+- **증상**: 첫 커밋이 `WO-162: Advanced Search Filters UI with...` (R3 prefix 누락).
+- **대안**: dispatch 프롬프트 첫 줄에 커밋 형식 예시 명시: `커밋: [R{N}-ios] feat: 설명`
+
+---
+
+## 교훈
+
+1. **23개 중복 함수 → 1개 통합은 "변경 1곳, 적용 전체" 원칙의 직접 적용이다.** dispatch 패턴이 동일한데 WO마다 별도 함수를 만든 건 초기 프로토타이핑의 잔재. 파라미터화하면 되는 걸 복사해서 만드는 순간 유지보수 부채가 쌓인다.
+
+2. **플랫폼별 병렬 안전성은 아키텍처에 의해 결정된다.** 서버(독립 Controller)와 Android(독립 Activity)는 3-feature 동시 dispatch가 안전하지만, iOS(TCA Feature 계층 의존)는 위험하다. 이건 "AI가 더 잘하면 해결되는" 문제가 아니라 **아키텍처 구조의 물리적 제약**.
+
+3. **AGENT_TEAMS 활성화는 워커의 병렬 처리 능력을 한 단계 올린다.** 단일 워커가 3개 서브에이전트를 스폰해서 병렬 처리 — Android가 빌드 포함 16분에 3피처를 완료한 게 증거. 하지만 iOS처럼 병렬 안전성이 낮은 플랫폼에서는 오히려 **동시 수정 충돌을 유발**한다.
+
+4. **스펙 라운드를 먼저 분리하면 파이프라인이 깔끔해진다.** R1에서 3개 피처의 API 스펙 + WO를 전부 정의한 뒤 R2(서버) → R3(클라) 순차 실행. 스펙이 먼저 확정되니 워커가 "뭘 만들어야 하는지" 혼동 없이 바로 구현에 집중.
+
+5. **timeout은 작업 크기에 비례해서 설정한다.** "넉넉하게 20분"이 아니라 "피처 수 × 10분". 정적 상수보다 동적 계산이 현실적.
+
+6. **verify 결과가 authoritative다.** 워커 자기 보고와 verify 수치가 다르면 verify를 믿는다. 자기 보고는 로컬 환경 차이, 테스트 필터 차이 등으로 오차가 생길 수 있다.
+
+---
+
+## 연결
+
+- **[Journal 016 — UI Smoke Test + Robot Pattern + Preflight](/wiki/harness-engineering/aidy-journal-016-ui-smoke-test-robot-pattern-preflight)**: 직전 기록. preflight 예방 인프라 위에서 s34가 안정적으로 동작.
+- **[Journal 015 — Agent Teams + 8R→5R 압축](/wiki/harness-engineering/aidy-journal-015-agent-teams-pipelining-8r-to-5r)**: Agent Teams 첫 도입. s34에서 AGENT_TEAMS=1로 본격 활성화.
+- **[Journal 012 — 멀티에이전트 효율 최적화](/wiki/harness-engineering/aidy-journal-012-multiagent-efficiency-optimization)**: Swap 90% 경고, polling 60% 토큰 소비 해결. 그 위에서 s34의 3-feature 병렬이 가능해짐.
+- **[Journal 011 — Gate-1 강제화 전환점](/wiki/harness-engineering/aidy-journal-011-gate1-enforcement-turning-point)**: Gate-1이 의무화된 s22 이후, s34에서 전원 PASS.
+- **[Compound Engineering Philosophy](/wiki/harness-engineering/compound-engineering-philosophy)**: s34의 R5 compound가 이 회고를 남김. "사이클마다 자산을 남긴다"의 실행.
