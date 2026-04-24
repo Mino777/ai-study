@@ -9,26 +9,32 @@
 
 ## 🕒 작성 시점
 
-- **작성 일시**: 2026-04-24 (Session 21 — Skillify Step 5/7 + 100% accuracy + weekly CI)
-- **작성 주체**: Claude (Session 21)
-- **이유**: compound 후 세션 핸드오프
+- **작성 일시**: 2026-04-24 (Session 22 — Journal 028 + 6 워커 resolver-eval 이식 6/6 100%)
+- **작성 주체**: Claude (Session 22)
+- **이유**: High #1 & #2 동시 완료 후 세션 핸드오프
 
 ---
 
 ## 📸 현재 상태 스냅샷
 
 ### ai-study Wiki
-- **엔트리 수**: 165
-- **Solutions**: workflow 13 (+fail-closed-hook-defense), mdx 8, ai-pipeline 5, github-actions 5, next-patterns 3, performance 1
-- **Skillify 도구**: `check:skills` (Step 8) · `eval:resolver` (Step 7) · `extract:failures` (Step 5)
-- **Resolver eval**: **48/48 = 100% accuracy** (golden set 25 → 48 확장 후 유지)
-- **Weekly CI**: `.github/workflows/weekly-resolver-eval.yml` — threshold 80%, 회귀 시 Issue 자동
-- **테스트**: 58 케이스 (vitest)
-- **훅**: fail-closed 전환 + 간접 지칭(회사 iOS 등) 차단
+- **엔트리 수**: 166 (Journal 028 추가)
+- **Solutions**: workflow 13, mdx 8, ai-pipeline 5, github-actions 5, next-patterns 3, performance 1
+- **Skillify 도구**: `check:skills` · `eval:resolver` · `extract:failures`
+- **Resolver eval**: **48/48 = 100%** 유지
+- **Weekly CI**: `weekly-resolver-eval.yml` — threshold 80% 회귀 시 Issue
 
-### 타 repo Skillify 상태
-- **허브(ai-study) + 워커 6 + 사설 iOS repo**: 전원 check:skills 0/0
-- 워커들은 resolver-eval 미이식 (다음 스프린트 큐)
+### 워커 Skillify 상태 (직전 스프린트 100% 달성)
+| repo | resolver-eval | weekly CI | accuracy |
+|---|:---:|:---:|---:|
+| mino-moneyflow | ✅ | ✅ | 100% (54.5 → 100) |
+| mino-tarosaju | ✅ | ✅ | 100% |
+| aidy-architect | ✅ | ✅ | 100% (81.8 → 100) |
+| aidy-server | ✅ | ✅ | 100% (36.4 → 100) |
+| aidy-ios | ✅ | ✅ | 100% (27.3 → 100) |
+| aidy-android | ✅ | ✅ | 100% (27.3 → 100) |
+
+**합계**: 6/6 워커 100% accuracy + 매주 월요일 09:30 KST 회귀 감시 ON.
 
 ### Hermes-First 스택: 불필요 유지
 
@@ -38,23 +44,20 @@
 
 ### 🔴 High
 
-1. **워커 6개에 resolver-eval 이식** — 허브 accuracy만 관리하는 건 반쪽. 각 워커(moneyflow/tarosaju/aidy×4)에도 `data/resolver-eval-cases.json` 작게 두고 weekly CI 적용
-   - 크기: M
-
-2. **Harness Journal 028 — Skillify 52→100% 박제** — accuracy 끌어올린 방법론(tokenizer + 한국어 키워드 + regex fix + golden set 확장)을 재사용 가능 playbook로
-   - 크기: S
+1. **콘텐츠 생성 재개** — 엔트리 166 → 180. 3 스프린트 deprioritize 후 누적. 크기: L
+2. **LLM-기반 resolver eval (Claude Haiku)** — 구조적 eval이 "의도 유사 skill 간 충돌"(qa vs qa-only)을 놓침. Journal 028의 명시적 ⚠️ 항목. 크기: M
 
 ### 🟡 Medium
 
-3. **콘텐츠 생성 재개** — 엔트리 165 → 175 (이번 스프린트 의식적 deprioritize, 이제 다시 집중)
-4. **github-actions 솔루션 N=5 promote** — 스킬 자동 생성 + 리뷰
-5. **ccusage 설치 + 베이스라인 수집** — 3 스프린트 연속 방치 방지. 먼저 `brew install ccusage` 여부 확인
-6. **정책 훅 self-test 체크리스트** — fail-closed 훅 자체 검증 스킬(`validate-hooks`) 또는 docs/solutions 가이드
+3. **github-actions 솔루션 N=5 promote** — 스킬 자동 생성 + 리뷰. 크기: M
+4. **ccusage 설치 + 베이스라인 수집** — 4 스프린트 연속 방치 방지. `brew install ccusage` 여부 먼저 확인. 크기: S
+5. **정책 훅 self-test 체크리스트** — fail-closed 훅 자체 검증 스킬(`validate-hooks`) 또는 docs/solutions. 크기: S
+6. **Journal 028 외부 공유용 카피** — 영어 요약 섹션 or 별도 엔트리. 크기: S
 
 ### 🟢 Low
 
-7. **LLM-기반 resolver eval** (Claude Haiku) — 구조적 eval 한계 보완
-8. **JIT 검색 성과 검증** (#69) — totalQueries 100 도달 시
+7. **JIT 검색 성과 검증** (#69) — totalQueries 100 도달 시
+8. **워커 resolver-eval 난이도 상향** — 지금은 '내 말투 편향' 11케이스. 다른 세션 transcript에서 어려운 케이스 유입. 크기: M
 
 ---
 
@@ -68,10 +71,10 @@
 
 | 지표 | baseline | target | direction | actual |
 |------|----------|--------|-----------|--------|
-| 워커 resolver-eval 이식 | 0개 | 3개 (주요 워커) | higher | ? |
-| 엔트리 수 | 165 | 175 | higher | ? |
-| resolver-eval accuracy | 100% | 90% (유지) | maintain | ? |
-| ccusage 베이스라인 | 미구축 | 구축 or blocker 확정 | achieve | ? |
+| 워커 resolver-eval 이식 | 0/6 | 3/6 | higher | **6/6** 초과달성 |
+| 엔트리 수 | 165 | 175 | higher | 166 (+1 Journal 028) |
+| resolver-eval accuracy | 100% | 90% | maintain | 100% 유지 |
+| ccusage 베이스라인 | 미구축 | 구축 or blocker | achieve | 미구축 (큐 #4) |
 
 ---
 
@@ -84,27 +87,26 @@
 
 ### Phase 3: Git 동기화 + 정합 확인 (5분)
 - [ ] `rtk git fetch`
-- [ ] `/projects-sync` (aidy 4 포함)
-- [ ] `npm run check:skills` (dark skill 방지)
-- [ ] `npm run eval:resolver` (회귀 감시)
+- [ ] `/projects-sync` (6 워커 이식 정합)
+- [ ] `npm run check:skills`
+- [ ] `npm run eval:resolver`
 
 ### Phase 4: 최근 박제 훑기 (3분)
 - [ ] `node scripts/graph-query.mjs suggest`
-- [ ] `node scripts/scan-promotions.mjs` (github-actions N=5 후보)
+- [ ] `node scripts/scan-promotions.mjs` (github-actions N=5)
 
 ### Phase 5: 작업 시작 (2분 내)
-- [ ] High #1 (워커 resolver-eval 이식) 또는 #2 (Journal 028) 먼저
+- [ ] High #1(콘텐츠 재개) 먼저, 또는 #2(LLM eval) 둘 중 택 1
 - [ ] `/compound` 후 NEXT.md 교체
 
 ---
 
 ## 📜 최근 갱신
 
-### 2026-04-24 (Session 21 — Skillify Step 5/7 + 100%)
-- **완료**: `scripts/extract-failure-moments.mjs` (Step 5 씨드) + vitest 6
-- **완료**: `scripts/resolver-eval.mjs` (Step 7 structural eval) + vitest 5
-- **완료**: Golden set 25 → 48 확장 + 100% 유지
-- **완료**: `weekly-resolver-eval.yml` (회귀 자동 감시)
-- **완료**: `no-company-names.sh` stdin 버그 + fail-closed 전환
-- **완료**: 역사적 사설 식별자 29건 전역 0건
-- **다음**: 워커 resolver-eval 이식 / Journal 028 / 콘텐츠 재개
+### 2026-04-24 (Session 22 — Journal 028 + 6 워커 100%)
+- **완료**: Harness Journal 028 — "52→100% 3-lever playbook" 박제 (166 엔트리)
+- **완료**: 6 워커 resolver-eval 이식 — 5 commits 전원 push 성공, weekly CI ON
+  - moneyflow 54.5→100, tarosaju 100, architect 81.8→100
+  - aidy-server 36.4→100, aidy-ios 27.3→100, aidy-android 27.3→100
+- **완료**: aidy-architect 라우팅 수정 — compound/autoceo 충돌 해소 + wt-branch 누락 보강
+- **다음**: 콘텐츠 재개 / LLM eval (Haiku) / ccusage 베이스라인
