@@ -193,23 +193,23 @@ When the user's request matches an available skill, ALWAYS invoke it using the S
 tool as your FIRST action. Do NOT answer directly, do NOT use other tools first.
 
 Key routing rules:
-- Product ideas, "is this worth building", brainstorming, 아이디어 브레인스토밍 빌드 가치 고민 → invoke office-hours
-- Bugs, errors, "why is this broken", 500 errors, 버그 에러 문제 원인 크래시 디버깅 → invoke investigate
+- Product ideas, "is this worth building", brainstorming, 아이디어 브레인스토밍 프로덕트 가치 고민 → invoke office-hours
+- Bugs, errors, "why is this broken", 500 errors, 버그 에러 문제 원인 크래시 디버깅 빌드 깨짐 테스트 실패 드라이런 안됨 → invoke investigate
 - Ship, deploy, push, create PR, 배포 푸시 릴리스 진행 → invoke ship
 - QA, test the site, find bugs, QA 테스트 → invoke qa
 - Code review, check my diff, 코드 리뷰 PR 리뷰 diff 리뷰 검토 (2-Stage: Plan 있으면 Spec compliance + Code quality) → invoke review
-- Update docs after shipping, 릴리스 후 문서 업데이트 문서화 → invoke document-release
+- Update docs after shipping, 릴리스 후 문서 업데이트 문서화 머지 후 README 반영 → invoke document-release
 - Design system, brand, 디자인 시스템 브랜드 → invoke design-consultation
 - Visual audit, design polish, 비주얼 디자인 폴리싱 폴리쉬 → invoke design-review
 - Architecture review, 아키텍처 플랜 락 엔지니어링 → invoke plan-eng-review
 - 작업 완료, 스프린트 정리, 회고, 컴파운드 → invoke compound
 - 자동 스프린트, 풀 자동 개발 루프 → invoke autoceo
 - 외부 URL(유튜브/블로그/논문/스레드) 정리, 학습 엔트리로 가공 → invoke ingest
-- 새 작업 시작, 안전한 브랜치 분기 (squash merge 함정 회피) → invoke wt-branch
+- 새 작업 시작, 안전한 브랜치 분기, worktree 생성 (squash merge 함정 회피) → invoke wt-branch
 - 워커 프로젝트(moneyflow/tarosaju) 상태 확인, 다른 세션 작업 흔적 감지, 충돌 사전 탐지 → invoke projects-sync
 - 다른 Claude 세션(맥앱/웹/다른 터미널) PR/커밋 검증, 크로스 세션 리뷰 → invoke cross-session-review
 - 워커 프로젝트(moneyflow/tarosaju 등)가 `patterns:` prefix로 쏜 PR을 하네스로 박제 → invoke curate-inbound
-- MDX/Mermaid 콘텐츠 작성 후 커밋 전 문법 검증 → invoke validate-mdx
+- MDX/Mermaid 콘텐츠 작성 후 push 전 문법 검증 → invoke validate-mdx
 - AI 생성 콘텐츠(Gemini/Claude) 검증, 가짜 인용/YAML/slug → invoke validate-ai-output
 - solutions N=3+ 누적, 코드 게이트 승격 판단 → invoke promote-solution
 - 특정 도메인 전문가 자문, 법률/보안/마케팅/기술 전문 조언 → invoke consult
