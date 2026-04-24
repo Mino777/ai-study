@@ -1,0 +1,372 @@
+---
+title: "iOS Harness Journal 010 — AI 오케스트레이션 3연 스프린트: tmux 4-Pane + Worker Pool + 스킬 시스템 전면 전환"
+category: ios-ai
+series: ios-ai-journal
+date: "2026-04-23"
+tags: [ios-harness-journal, ios, claude-code, harness-engineering, tmux, multi-agent, worker-pool, orchestration, skill-system, tokenomics]
+confidence: 4
+last_verified: "2026-04-24"
+applicable_to: ["any"]
+connections: [ios-ai/ios-ai-journal-009-ai-probe-dual-pipeline, ios-ai/ios-ai-journal-008-first-full-harness-setup-retro, ios-ai/ios-ai-journal-005-ios-compound, harness-engineering/compound-loop-break, harness-engineering/ai-agent-start-here]
+status: complete
+type: entry
+description: "Journal 009가 AI가 '앱을 만지는' 탐침 도구를 구축한 기록이었다면, 이 글은 AI가 '서로 협업하는' 오케스트레이션 인프라를 3일(4/22~4/23)에 걸쳐 쌓아 올린 기록이다. tmux 단일 화면 4-pane 레이아웃 → git worktree 병렬 격리 → 양방향 통신 → Worker Pool(역할 고정→유연 풀 전환) → 스킬 시스템 전면 전환까지. 프로덕션 코드 변경 0줄, 전부 .claude/ 레이어. 토큰 절감 실측 ~50-70K/디스패치, CLAUDE.md 91줄 다이어트. 다음 스프린트(토스 SLASH23 이식)에서 이 인프라가 실전 검증의 무대에 오른다."
+quiz:
+  - question: "Worker Pool 아키텍처에서 orchestrator가 코드를 직접 읽지 않는 이유는?"
+    choices:
+      - "코드를 읽는 건 보안 위험이라서"
+      - "orchestrator의 컨텍스트 창 오염 방지 — 코드 탐색은 analysis-worker/ios-worker에 위임하고, orchestrator는 판단·디스패치만 담당"
+      - "코드가 TypeScript라 Swift 전문 모델이 아닌 orchestrator가 읽으면 오류가 나서"
+      - "orchestrator에게는 Read 권한이 없어서"
+    answer: 1
+    explanation: "orchestrator가 코드를 직접 읽으면 컨텍스트 창이 소스 코드로 빠르게 채워져 핵심 역할(WO 구조화, S/M/L 판단, 디스패치)의 품질이 떨어진다. analysis-worker(haiku 3개 병렬 탐색)와 ios-worker가 코드 조사를 전담하고, 결과를 Brief 파일로 요약해서 올리면 orchestrator는 요약만 보고 판단한다. '디스패처는 코드를 읽지 않는다'가 역할 경계 원칙."
+  - question: "Brief 전달 방식이 tmux 인라인에서 파일 기반으로 바뀐 이유는?"
+    choices:
+      - "tmux가 파일 전송을 지원하지 않아서"
+      - "tmux 메시지에 Brief 전체를 인라인 전송하면 메시지당 1~3K 토큰이 소비되고, 워커가 재요청할 때 똑같은 내용을 다시 보내야 했음. 파일 경로만 전달하면 토큰 0, 재읽기 자유"
+      - "인라인 Brief가 너무 길어 tmux 버퍼가 넘쳐서"
+      - "파일이 있어야 git에 커밋할 수 있어서"
+    answer: 1
+    explanation: "Brief를 `/tmp/wo-N-brief.md`에 저장하고 경로만 tmux로 보내면 (1) 전송 토큰 0, (2) 워커가 필요할 때 직접 Read — 재전달 불필요, (3) 여러 워커가 동시에 같은 Brief를 참조 가능. 인라인 전송의 '한 번 쓰고 버리는' 문제를 파일의 '쓰고 여러 번 읽기'로 해결한 패턴."
+  - question: "스킬 시스템에서 '이중 구조(스킬 + 커맨드 thin redirect)' 패턴이 필요한 이유는?"
+    choices:
+      - "백업을 위해 두 곳에 같은 코드를 저장하는 것"
+      - "사용자가 `/ios-triage` 슬래시로 호출하는 경로와, orchestrator가 `Skill({skill:'ios-triage'})`로 프로그래밍 호출하는 경로 두 가지 진입점을 동시에 지원해야 하므로"
+      - "Claude가 스킬을 두 번 실행해서 정확도를 높이려고"
+      - "테스트와 프로덕션 환경을 분리하기 위해"
+    answer: 1
+    explanation: "`.claude/skills/ios-triage/` 구조는 Skill tool이 인식하는 프로그래밍 진입점이고, `.claude/commands/ios-triage.md`는 사용자가 `/ios-triage`로 직접 호출하는 진입점이다. commands 쪽은 skills의 thin redirect(얇은 래퍼)로 구현해서 로직 중복 없이 양쪽 호출을 모두 지원한다."
+---
+
+## 한 줄 요약
+
+Journal 009가 **AI가 앱을 만지는 탐침 도구**를 구축한 기록이었다면, 이 글은 **AI가 서로 협업하는 오케스트레이션 인프라**를 3일(4/22~4/23)에 걸쳐 쌓아 올린 기록이다. tmux 4-pane 단일 화면, git worktree 병렬 격리, 양방향 통신, Worker Pool 전환, 스킬 시스템 전면 이관 — **프로덕션 코드 변경 0줄, 전부 `.claude/` 레이어**. 커밋 22건, `architect-cli.sh` ~400줄 순증가. 워커 디스패치당 **50~70K 토큰 절감**, CLAUDE.md **91줄 다이어트**.
+
+---
+
+## 이 글의 각도
+
+Journal 008은 `.claude/` 전면 이식의 **조감도**, Journal 009는 AI가 실행 중인 앱을 **관찰하는 경로**를 뚫은 기록이었다. 이 글은 그 위에서 **AI 에이전트 여러 개가 동시에 일하는 구조**를 설계하고 배선한 기록이다.
+
+혼자서 코드를 읽고, 수정하고, 리뷰하는 AI 에이전트는 이미 있었다. 문제는 **스케일**이다. 모듈 40개짜리 iOS 프로젝트에서 하나의 에이전트가 모든 걸 순차 처리하면 컨텍스트 창이 터지거나, 시간이 너무 오래 걸리거나, 둘 다. 해답은 **분업** — 하지만 AI 에이전트의 분업은 사람의 분업과 다르다. 공유 파일시스템에서 동시에 git을 건드리면 index가 오염되고, 프롬프트에 Brief를 인라인으로 싣으면 토큰이 폭발하고, 워커가 끝났는데 아키텍트가 모르면 전체가 멈춘다.
+
+이 3일의 스프린트는 그 **물리적 제약들을 하나씩 해결**하면서 "멀티 AI 에이전트가 하나의 iOS 프로젝트에서 병렬로 일할 수 있는 인프라"를 완성한 기록이다.
+
+---
+
+## 최종 설치물 조감도
+
+| 레이어 | 구성 요소 | 역할 |
+|---|---|---|
+| 레이아웃 | tmux 4-pane (architect 60% + worker 3분할) | 단일 화면에서 전체 파이프라인 가시성 |
+| 통신 | `notify_architect()` / `watch_inbox()` / `DONE` 시그널 | 워커 → 아키텍트 양방향 + 자문 요청 |
+| 격리 | `create_worker_worktree()` / `wo_merge()` | 워커별 git worktree로 index 오염 차단 |
+| 디스패치 | `architect-cli.sh` (12+ 서브커맨드) | WO 관리 + 워커 통제 + 상태 조회 |
+| 풀 | Worker Pool (ios-worker ×3 상시 대기) | S/M/L 크기별 유연 배치 |
+| 탐색 | `analysis-worker` + `ios-explorer`(haiku) ×3 | 코드 탐색 병렬화 → Brief 준비 |
+| 스킬 | 15개 프로젝트 스킬 + 8개 커맨드 thin redirect | 사용자 호출 + 프로그래밍 호출 양쪽 지원 |
+| 효율 | Brief 파일화 + CLAUDE.md 다이어트 | 디스패치당 50~70K 토큰 절감 |
+
+---
+
+## Phase 1: tmux 4-Pane — 아키텍트와 워커를 한 화면에
+
+### 왜 tmux인가
+
+멀티 에이전트의 첫 번째 물리적 제약은 **가시성**이다. 아키텍트 에이전트가 한 터미널에서 돌고, 워커가 다른 터미널에서 도는데, "지금 누가 뭘 하고 있는지"를 사람이 파악하려면 창을 계속 전환해야 한다. tmux 4-pane은 이 문제를 **단일 화면**으로 해결한다.
+
+```
+┌─────────────────────────┬──────────────┐
+│                         │  ios-worker  │
+│     architect (60%)     ├──────────────┤
+│                         │  ios-worker  │
+│                         ├──────────────┤
+│                         │  ios-worker  │
+└─────────────────────────┴──────────────┘
+```
+
+`tmux-setup-full` 스크립트가 이 레이아웃을 한 번에 설정한다. 마우스 클릭으로 pane 전환, `Ctrl+B` 불필요.
+
+### `resolve_pane()` — pane 식별의 3단 폴백
+
+tmux의 pane ID는 세션마다 달라지고, `pane-base-index`가 0인지 1인지도 환경마다 다르다. `resolve_pane()`은 3단 폴백으로 이 불안정성을 흡수:
+
+1. **pane-title** — `printf '\033]2;architect\033\\'`로 설정한 고유 타이틀
+2. **`.gma_pane_map`** — 세션 시작 시 생성하는 pane ID → 역할 매핑 파일
+3. **window-name** — 2-window 모드에서의 폴백 (4-pane이 안 되는 환경)
+
+### `notify_architect()` — 워커 → 아키텍트 단방향 푸시
+
+워커가 작업을 끝내거나 아키텍처 자문이 필요할 때 아키텍트 pane에 직접 메시지를 보낸다.
+
+```bash
+${ARCH_CLI} notify "[domain 완료] $(git log --oneline -1)"
+```
+
+이전에는 워커가 "끝났습니다" 출력만 하고, 사람이 아키텍트 pane을 눌러서 확인해야 했다. 이제 **아키텍트가 자동으로 알림을 받는다**. 완료 시그널 + 자문 요청 알림을 하나의 함수로 통합.
+
+### `watch_inbox()` — 비동기 자문 감시자
+
+워커가 아키텍처 판단이 필요하면 `inbox/wo-N-advise.md`에 질문을 쓴다. `watch_inbox()`가 5초마다 이 디렉토리를 poll하고, 새 파일이 감지되면 아키텍트 pane에 즉시 푸시.
+
+```bash
+# 백그라운드 감시
+watch_inbox &
+
+# 워커 측: 자문 요청
+echo "## Q: OnewayPresentation → Interface 추출 범위?" > inbox/wo-5-advise.md
+
+# 아키텍트 pane에 알림 자동 팝업
+# [ADVICE_REQUEST] wo-5-advise.md 도착
+```
+
+**poll 주기 5초는 의도적으로 느리다.** AI 에이전트 간 통신에 실시간성은 불필요 — 워커가 30초 이상 걸리는 작업 중이므로 5초 지연은 무시할 수 있다. 상태는 `.gma_watcher/`에 저장해서 중복 알림 방지.
+
+---
+
+## Phase 2: git worktree — 병렬 워커의 index 오염 차단
+
+### 문제
+
+3개 워커가 같은 repo에서 동시에 `git add` → `git commit`을 하면 **git index가 충돌**한다. 워커 A가 staging한 파일을 워커 B의 커밋이 삼키거나, merge conflict가 worktree 레벨에서 터진다.
+
+### 해결: `create_worker_worktree()`
+
+```bash
+create_worker_worktree() {
+  local wo_number=$1 role=$2
+  local branch="wo/${wo_number}-${role}"
+  local path="/tmp/${REPO_NAME}-wo-${wo_number}-${role}"
+  git worktree add -b "$branch" "$path" main
+  echo "$path"
+}
+```
+
+각 워커가 **독립된 디렉토리 + 독립된 브랜치**에서 작업. git index 공유 없음. 작업 끝나면 `wo_merge()`가 no-ff merge + worktree 정리.
+
+### 책임 분리: "생성 주체 = 사용 주체"
+
+초기 설계에서는 orchestrator가 worktree를 미리 만들어서 경로를 워커에게 전달했다. **실패 추적이 불가능했다.** worktree 생성이 실패했을 때 orchestrator는 에러를 보지만, 워커는 빈 경로를 받고 조용히 실패한다.
+
+수정: 각 워커가 직접 `/wt-branch`를 실행해서 자기 worktree를 만든다. **생성 주체가 사용 주체와 같으면 에러가 발생 즉시 해당 워커가 직접 대응**할 수 있다.
+
+---
+
+## Phase 3: Worker Pool — 역할 고정에서 유연 풀로
+
+### 이전 구조의 문제
+
+Journal 008~009 시점의 에이전트 구조:
+
+```
+architect → domain-worker (Domain/Repository 전담)
+          → ui-worker (Presentation/UI 전담)
+          → review-worker (리뷰 전담)
+```
+
+문제: **M형 WO에서 domain-worker가 1시간 작업하는 동안 ui-worker는 놀고 있다.** 역할이 고정되어 있어서 "빈 슬롯에 다른 일"을 줄 수 없다. 3명이지만 동시에 일하는 건 1~2명뿐.
+
+### 새 구조: 상시 대기 Worker Pool
+
+```
+architect → analysis-worker (haiku ×3 병렬 탐색)
+          → ios-worker ×3 (역할 무관, 유연 배치)
+```
+
+**S/M/L 크기 판단 전략**:
+
+| 크기 | 판단 기준 | 워커 배치 |
+|---|---|---|
+| S | 단일 모듈, 파일 5개 이하 | ios-worker 1개 단독 |
+| M | 2~3 모듈, 레이어 횡단 | analysis-worker → ios-worker 2개 핸드오프 |
+| L | 4+ 모듈, 대규모 리팩토링 | analysis-worker 3개 병렬 분석 → Brief merge → ios-worker 3개 병렬 구현 |
+
+### `analysis-worker` — haiku 3개 병렬 탐색
+
+코드 탐색만 전담하는 경량 에이전트. haiku 모델이라 비용이 낮고, 3개를 동시에 스폰해서 **계층별 병렬 탐색**:
+
+- 탐색기 1: Domain + Repository 레이어
+- 탐색기 2: Presentation + UI 레이어
+- 탐색기 3: 인프라(Network, Util, Analytics) 레이어
+
+출력은 규격화된 포맷으로 Brief에 합산. 순차 탐색 대비 Brief 준비 시간 약 1/3.
+
+### L형 Brief Merge 프로토콜
+
+3개 analysis-worker가 각각 `BRIEF_READY` 시그널을 보내면 orchestrator가 3개 Brief를 merge해서 하나의 통합 Brief를 만든다. 이걸 3개 ios-worker에 동시 디스패치.
+
+```
+analysis-worker ×3 ──BRIEF_READY──→ orchestrator (merge)
+                                           │
+                                    ┌──────┼──────┐
+                                    ▼      ▼      ▼
+                              worker-1  worker-2  worker-3
+                              (모듈A)   (모듈B)   (모듈C)
+```
+
+---
+
+## Phase 4: 토큰 절감 3종
+
+### 1. Brief 파일화 — 디스패치당 1~3K 절감
+
+**이전**: tmux 메시지에 Brief 전체를 인라인 전송.
+
+```bash
+# 이전 — Brief 본문이 tmux 메시지에 직접 삽입
+tmux send-keys -t worker-1 "## WO-005 Brief\n\n### 목표\n..." Enter
+```
+
+**이후**: `/tmp/wo-N-brief.md`에 저장 + 경로만 전달.
+
+```bash
+# 이후 — 파일 저장 + 경로만 전달
+echo "$BRIEF" > /tmp/wo-5-brief.md
+tmux send-keys -t worker-1 "Read /tmp/wo-5-brief.md" Enter
+```
+
+**효과**: 전송 토큰 0, 워커 재요청 시 재전달 불필요, 여러 워커가 같은 Brief 동시 참조 가능.
+
+### 2. CLAUDE.md 91줄 다이어트
+
+중복·사문화된 SwiftUI 섹션 압축, WO 섹션 제거, Agent Teams 토큰 비용 경고 추가. 프롬프트 캐시 TTL 활용 효율 개선 — 캐시 미스 시 ~91줄 토큰 절감.
+
+### 3. 워커 프롬프트 구조화 + 로드 제거
+
+**이전**: 워커에게 `PROJECT_GUIDE.md` + `DEVELOPMENT_PROCESS.md` 전체를 로드시킴 (~50~70K 토큰).
+
+**이후**: 필요한 Swift 패턴만 인라인 포함 (~300 토큰) + `CLAUDE.md` + WO 파일만 로드.
+
+**합산 절감**: 워커 디스패치당 추정 **50~70K 토큰**.
+
+---
+
+## Phase 5: 스킬 시스템 전면 전환 (4/23)
+
+### 커맨드 7개 → 스킬 구조 전환
+
+기존 `.claude/commands/` 단일 파일 구조에서 `.claude/skills/` 디렉토리 구조로 전면 전환:
+
+```
+.claude/skills/
+├── compound/          # Compound Engineering
+├── gate-1/            # 빌드·린트·테스트 게이트
+├── ios-triage/        # 티켓 분류
+├── ios-review/        # 코드 리뷰
+├── ios-bugfix/        # 버그 수정 워크플로우
+├── ios-feature/       # 피쳐 개발
+├── ios-investigate/   # 버그 조사
+├── ios-arch/          # 아키텍처 결정
+├── ios-testing/       # 테스트 패턴
+├── layer-locate/      # RIBs 레이어 위치 탐색
+├── worker-commit/     # 워커 자동 커밋
+└── test-scaffold/     # 테스트 스캐폴드
+```
+
+### 이중 구조 패턴
+
+```
+# .claude/skills/ios-triage/ (실제 로직)
+# .claude/commands/ios-triage.md (thin redirect)
+→ "Skill({skill:'ios-triage'})"와 "/ios-triage" 양쪽 진입점 지원
+```
+
+### 스킵 가드 표준화
+
+모든 스킬 상단에 4각도 스킵 판단 섹션 박제:
+
+1. **정보 충족**: 이미 답을 알고 있으면 스킵
+2. **부적합**: 현재 WO 유형과 스킬 목적이 안 맞으면 스킵
+3. **중복**: 같은 세션에서 이미 실행했으면 스킵
+4. **overkill**: S형 WO에 L형 스킬은 스킵
+
+**목적**: orchestrator 자동 라우팅에서 스킬 진입 즉시 조기 차단 → 토큰 낭비 방지.
+
+### 워커-3 역할 재정의
+
+기존 Domain/Repo/UseCase 구현 전담 → **검증 전담**으로 재설계:
+
+```
+ios-worker-1: 분석 (Brief 작성)
+ios-worker-2: 구현 (코드 작성)
+ios-worker-3: 검증 (테스트 + swift-reviewer + gate-1)
+```
+
+S형 WO에서도 3명 모두 가동하는 "**분석 → 구현 → 검증**" 3단계 파이프라인. 유휴 워커가 사라졌다.
+
+---
+
+## 함정 박제
+
+### 1. tmux Enter 누락 — Silent Failure의 대표 사례
+
+디스패치 명령을 `tmux send-keys`로 보낸 뒤 **Enter 키가 실제로 입력됐는지 확인하지 않았다.** 워커가 프롬프트 대기 상태에서 멈춰있는데, orchestrator는 "디스패치 완료"로 인식하고 다음 워커를 기다림.
+
+**대응**: `is_pane_crashed()` 함수가 워커 pane의 출력에서 완료 시그널 키워드를 명시적으로 체크. "응답 도착 여부를 확인하지 않는 자동화 단계"는 반드시 detection을 붙인다.
+
+### 2. bash 3.2 복합 치환 비호환
+
+```bash
+# macOS 기본 bash 3.2에서 에러
+${$(basename "$f")%-advise.md}
+
+# 수정: 중간 변수 분리
+local fname=$(basename "$f")
+local wo_id="${fname%-advise.md}"
+```
+
+macOS의 `/bin/bash`는 3.2다. Homebrew bash 5.x가 설치되어 있어도 스크립트 shebang이 `/bin/bash`면 3.2가 실행된다. **복합 치환은 중간 변수로 분리하는 게 macOS 안전 패턴.**
+
+### 3. `create_worker_worktree` 출력 오염
+
+상태 메시지("worktree 생성 중...")와 최종 경로가 같은 stdout에 섞여서, 호출부가 경로를 파싱할 수 없었다.
+
+**수정**: 호출부에서 `| tail -1`로 마지막 줄(경로)만 추출. 또는 상태 메시지를 stderr로 분리.
+
+### 4. Skill tool 세션 캐시
+
+새로 만든 스킬을 같은 세션에서 `Skill({skill:"gate-1"})`로 호출하면 `Unknown` 에러. **Skill tool은 세션 시작 시점에 `.claude/skills/` 목록을 캐시**한다. 신규 스킬 동작 검증은 반드시 새 세션에서.
+
+---
+
+## 회고 복리 체크 — 이전 회고 인계
+
+Journal 009 회고에서 **0/5 인계 실패**를 기록했다. 이번 3개 세션에서의 인계 상태:
+
+| 이전(009) 미완 항목 | 이번 상태 |
+|---|---|
+| 훅 wiring 자동 검증 (`verify-hooks.sh`) | ❌ 이월 — 오케스트레이션이 우선순위를 밀어냄 |
+| CLAUDE.md 200줄 다이어트 | ✅ **91줄 삭제 완료** |
+| SwiftUI iOS 17+ 전환 경로 문서화 | ❌ 이월 |
+| 메모리 인덱스 정책 | ❌ 이월 |
+| `detect-context.sh --full` 실전 검증 | ❌ 이월 |
+
+**1/5 해결.** 009의 0/5보다 나아졌지만, 복리 루프 단절은 여전히 진행 중. 주제(탐침 → 오케스트레이션)가 또 바뀌었기 때문. 다만 CLAUDE.md 다이어트는 오케스트레이션 토큰 절감 과정에서 자연스럽게 해결된 **교차 수확**이다 — 의도하지 않았지만 같은 방향의 작업이 이전 부채를 해소하는 패턴.
+
+---
+
+## 교훈
+
+1. **"디스패처는 코드를 읽지 않는다."** orchestrator가 소스 코드를 직접 열면 컨텍스트 창이 오염되어 핵심 역할(판단·디스패치)의 품질이 떨어진다. 코드 접근은 analysis-worker/ios-worker에 위임하고, orchestrator는 요약된 Brief만 본다. 이 경계를 지킬수록 전체 파이프라인의 효율이 올라간다.
+
+2. **"생성 주체 = 사용 주체" 원칙이 디버깅 비용을 낮춘다.** orchestrator가 worktree를 대신 만들어주면 실패 추적이 끊긴다. 자원 생성은 그 자원을 사용할 주체가 직접 해야 에러 발생 즉시 대응 가능.
+
+3. **자동화 파이프라인에서 "확인 없이 넘어가는 단계"는 Silent Failure의 온상이다.** tmux Enter 누락이 대표 사례. 모든 디스패치 후에 응답 도착 여부를 명시적으로 체크하는 프로토콜이 필요하다.
+
+4. **토큰 절감은 아키텍처 설계의 부산물이다.** Brief 파일화, CLAUDE.md 다이어트, 프로젝트 가이드 로드 제거 — 전부 "역할 분리"와 "불필요한 정보 차단"의 결과. 토큰을 줄이려고 노력한 게 아니라, 올바른 분업을 설계하니 자연스럽게 줄었다.
+
+5. **역할 고정 < 유연 풀.** domain-worker/ui-worker로 나누면 한쪽이 놀 때 다른 쪽이 못 도와준다. 범용 ios-worker 풀 + S/M/L 크기 판단 전략이 동시 활용률을 높인다.
+
+6. **macOS bash 3.2는 아직 살아있다.** 복합 치환, 연관 배열, `mapfile` — 전부 bash 4+ 전용. 자동화 스크립트의 shebang이 `/bin/bash`면 3.2가 실행된다는 걸 잊지 말 것.
+
+7. **스킬의 스킵 가드가 토큰 보호의 첫 번째 방어선이다.** orchestrator가 자동 라우팅할 때 부적합한 스킬에 진입하면 그 자체로 수천 토큰이 낭비된다. 4각도 스킵 판단(정보 충족 / 부적합 / 중복 / overkill)을 상단에 박제해서 조기 차단.
+
+---
+
+## 연결
+
+- **[Journal 009 — AI 앱 탐침 이중 파이프라인](/wiki/ios-ai/ios-ai-journal-009-ai-probe-dual-pipeline)**: 이 글의 직전 기록. AI가 앱을 관찰하는 도구를 만들었고, 이번에는 AI가 서로 협업하는 인프라를 만들었다. 탐침 → 오케스트레이션으로 주제 전환이 복리 루프 단절을 낳은 사례.
+- **[Journal 008 — 하네스 첫 풀셋업 후기](/wiki/ios-ai/ios-ai-journal-008-first-full-harness-setup-retro)**: 4 에이전트 + 5 스킬 + 8 커맨드의 초기 설치. 이번 스프린트가 그 구조를 Worker Pool + 스킬 시스템으로 전면 재설계한 셈.
+- **[Journal 005 — /compound](/wiki/ios-ai/ios-ai-journal-005-ios-compound)**: Compound Engineering이 이번 3연 스프린트에서도 회고 → CHANGELOG → 메모리 루프를 돌렸다. 복리 루프 1/5 복구의 근거.
+- **[복리 루프 단절 현상](/wiki/harness-engineering/compound-loop-break)**: 009에서 0/5, 이번에 1/5. 주제 전환이 인계를 단절시키는 구조적 현상의 연속 관찰.
+- **[AI Agent Start Here](/wiki/harness-engineering/ai-agent-start-here)**: "멀티 에이전트 오케스트레이션"이 iOS 프로젝트에서 어떻게 구현되는가의 실전 사례.

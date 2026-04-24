@@ -1,0 +1,353 @@
+---
+title: "iOS Harness Journal 011 — 토스 SLASH23 전면 이식: Microfeatures Interface 분리 + Tuist 46모듈 전환 + 빌드 체인 자동 복구"
+category: ios-ai
+series: ios-ai-journal
+date: "2026-04-24"
+tags: [ios-harness-journal, ios, tuist, microfeatures, toss, interface-module, spm-migration, dependency-graph, build-automation, ribs]
+confidence: 4
+last_verified: "2026-04-24"
+applicable_to: ["gma-ios"]
+connections: [ios-ai/ios-ai-journal-010-ai-orchestration-tmux-worker-pool, ios-ai/ios-ai-journal-006-spm-cycle-break, ios-ai/ios-ai-journal-005-ios-compound, ios-ai/ios-ai-journal-003-claudeignore-spm, harness-engineering/ai-agent-start-here]
+status: complete
+type: entry
+description: "Journal 010이 AI가 서로 협업하는 오케스트레이션 인프라를 쌓은 기록이었다면, 이 글은 그 인프라가 실전에서 처음 쓰이는 무대 — 토스 SLASH23 iOS 아키텍처를 46모듈 프로젝트에 전면 이식한 기록이다. Microfeatures Interface 분리(WO-005), SPM→Tuist 4.185 전환(WO-006, 46개 모듈), Example 앱 scaffold(WO-007), scan-imports 자동화 스캐너로 28개 모듈 transitive dependency 일괄 해소, Routing 프로토콜 Interface 추출(WO-008)까지. 2세션 연속, 183파일 변경, +4,098줄. 빌드 체인 Network→Repository→Domain→BusinessWebView→Account→Menu 순차 통과. 6개 함정 박제."
+quiz:
+  - question: "Tuist의 `productTypes`로 외부 SPM을 전부 dynamic framework로 강제하면 Kakao/Firebase 같은 SDK에서 링크 실패가 나는 이유는?"
+    choices:
+      - "dynamic framework가 iOS 14를 지원하지 않아서"
+      - "productTypes 지정이 패키지 단위인데, 복합 SDK 내부의 여러 sub-target이 서로 statically linked로 가정해 설계됐기 때문. 각 sub-target을 별개 framework로 쪼개면 상호 참조 심볼 해결이 실패"
+      - "Kakao SDK가 Tuist를 공식 지원하지 않아서"
+      - "dynamic framework는 시뮬레이터에서만 동작하기 때문"
+    answer: 1
+    explanation: "productTypes의 granularity는 '패키지 단위'이지만 실제 문제는 '타겟 단위'에서 발생한다. KakaoSDK 패키지를 .framework로 지정하면 내부 KakaoSDKCommon/Auth/User 각각이 별개 dynamic framework가 되는데, 이들은 SPM 내부에서 static linking을 전제로 설계됐다. 해결: 단일 타겟 라이브러리만 framework 지정, 복합 SDK는 static 유지하는 '선택적 적용'."
+  - question: "scan-imports.py가 28개 모듈의 누락 dependency를 자동으로 잡았지만, Domain 레이어 7개 모듈은 수동 보강이 필요했다. 스캐너가 못 잡은 이유는?"
+    choices:
+      - "Domain 레이어가 너무 크기 때문"
+      - "스캐너가 Domain 디렉토리를 제외했기 때문"
+      - "Swift의 implicit extension 패턴 — `import CoreUtil` 없이 `Date.toyyyyMMddHHmmHypen` 같은 CoreUtil extension을 사용하는 코드는 소스에 import 문이 없어서 스캐너가 감지 불가. 빌드 undefined symbol로만 발견"
+      - "Domain 모듈이 Tuist가 아니라 SPM으로만 빌드되기 때문"
+    answer: 2
+    explanation: "scan-imports.py는 소스 코드의 `import X` 구문과 Project.swift의 declared dependencies를 비교해서 차집합을 계산한다. 그런데 Swift에서는 extension이 다른 모듈에서 정의되더라도 해당 모듈을 import하지 않아도 '보이는' 경우가 있다(SPM transitive). Tuist 전환 후 이 transitive 전파가 끊기면서 undefined symbol이 발생하지만, 소스에 import가 없으니 스캐너가 잡을 수 없다."
+  - question: "WO-005에서 Interface 추출을 Buildable/Listener만 이전하고 Routing 프로토콜은 남겨둔 게 나중에 문제가 된 이유는?"
+    choices:
+      - "Routing 프로토콜이 deprecated 되어서"
+      - "Buildable이 Routing에 의존하기 때문"
+      - "Transaction/Smartkey/OdaLocationConfirmPresentation 등 외부 모듈이 `OnewayReturnLocationRouting` 타입을 참조하는데, Tuist 전환으로 transitive 전파가 끊겨 컴파일 실패. Routing도 Interface에 있어야 순환 없이 참조 가능"
+      - "Apple이 Routing 패턴 사용을 금지했기 때문"
+    answer: 2
+    explanation: "SPM 시절에는 transitive 전파로 다른 모듈의 public API가 자동으로 보였지만, Tuist 전환 후 explicit dependency만 인정된다. Transaction이 OnewayReturnLocationRouting을 쓰려면 OnewayPresentation을 직접 import해야 하는데, 이러면 순환 의존이 발생. Interface 추출 기준을 '외부 참조되는 모든 public protocol'로 강화해야 했다."
+---
+
+## 한 줄 요약
+
+Journal 010이 **AI 에이전트 간 협업 인프라**를 쌓은 기록이었다면, 이 글은 그 인프라 위에서 **토스 SLASH23 iOS 아키텍처를 46모듈 프로젝트에 전면 이식**한 기록이다. 2세션 연속, 183파일 변경, +4,098줄. WO 4개(005~008) 동시 랜딩. 빌드 체인 Network → Repository → Domain → BusinessWebView → Account → Menu 순차 통과. **6개 함정 박제**.
+
+---
+
+## 이 글의 각도
+
+Journal 003은 `.build/` 130GB를 `.claudeignore`로 차단하는 "컨텍스트 위생"이었고, Journal 006은 SPM 의존성 순환을 끊는 "그래프 수술"이었다. 이 글은 그 연장선의 끝 — **빌드 시스템 자체를 SPM에서 Tuist로 전환**하고, 그 위에 토스의 Microfeatures 5계층 패턴을 얹는 작업이다.
+
+왜 토스인가? 토스 SLASH23 발표의 핵심은 "Feature 간 직접 참조를 끊고 Interface 경유로만 소통시키면, 모듈 그래프가 깨끗해지고 빌드 시간이 줄고 Example 앱으로 격리 개발이 가능해진다"는 것. 40+ 모듈이 뒤엉킨 프로젝트에서 정확히 필요한 처방이었다.
+
+하지만 발표 슬라이드와 실제 이식 사이에는 **물리적 장벽**이 6개 있다. Tuist 버전 함정, productTypes granularity 불일치, Swift framework transitive extension, implicit import, Interface 추출 범위 오판, SPM/Tuist Package.swift 충돌. 이 글은 그 6개를 전부 박제해서, 다음에 같은 마이그레이션을 할 사람(= 팀원)이 같은 삽질을 안 하게 만드는 게 본 목표다.
+
+---
+
+## 최종 설치물 조감도
+
+| WO | 범위 | 산출물 | 상태 |
+|---|---|---|---|
+| WO-005 | Interface 모듈 분리 | `OnewayPresentationInterface` 패키지, Buildable/Listener/ReturnZoneType 이전 | ✅ |
+| WO-006 | SPM → Tuist 전환 | 46개 모듈 Project.swift, Workspace.swift, ProjectDescriptionHelpers | ✅ |
+| WO-007 | Example 앱 scaffold | Templates/feature + Templates/example, 3개 파일럿 | ✅ |
+| WO-008 | Routing Interface 추출 | `OnewayReturnLocationRouting` + `OnewayReturnSearchRouting` 이전 | ✅ |
+| 자동화 | scan-imports + patch-deps | `scan-imports.py` (228줄) + `patch-project-deps.py` (148줄) | ✅ |
+| 문서 | 팀 핸드오프 | `tuist-migration-guide.md` + 솔루션 3편 | ✅ |
+
+### 세션 구분
+
+| 세션 | 커밋 | 파일 | 줄 | 핵심 |
+|---|---|---|---|---|
+| 1차 (WO-005/006/007) | 10 | 127 | +3,044 | Tuist 전환 + Interface 분리 + Example |
+| 2차 (빌드 체인 복구 + WO-008) | 7 | 56 | +1,054 / -41 | 스캐너 자동화 + 28모듈 패치 + Routing 추출 |
+
+---
+
+## WO-005: Interface 모듈 분리 — 의존성 방향 뒤집기
+
+### 문제
+
+`OdaPresentation`이 `OnewayPresentation`을 직접 import해서 `OnewayReturnSearchBuilder`를 받아쓴다. 한 Feature가 다른 Feature의 **구현 전체**를 링크해야 타입 계약(Buildable/Listener) 하나를 얻는 구조.
+
+```
+OdaPresentation ──import──→ OnewayPresentation (구현 전체)
+                             ↑ 필요한 건 프로토콜 2개뿐
+```
+
+이게 왜 위험한가:
+1. 한 Feature 수정이 무관한 Feature 재빌드를 유발
+2. 모듈 그래프가 조금만 복잡해지면 순환 의존 발생
+3. Tuist 전환 시 transitive 전파가 끊기면서 컴파일 에러 폭탄
+
+### 해결: UIKit-free Interface 패키지
+
+```
+OnewayPresentationInterface/
+├── Sources/
+│   ├── ReturnZoneType.swift          # pure enum, no UIKit
+│   ├── OnewayReturnSearchInterface.swift   # Buildable + Listener
+│   └── OnewayReturnLocationInterface.swift # Buildable + Listener
+└── Project.swift
+```
+
+**핵심 규칙**: Interface는 **프로토콜 + 값 타입만**. UIKit extension은 원본 모듈에 남긴다.
+
+```swift
+// OdaDependency.swift — 구체 Builder가 아니라 Interface 프로토콜을 요구
+import OnewayPresentationInterface
+
+public protocol OdaDependency: Dependency {
+  var onewayReturnSearchBuildable: any OnewayReturnSearchBuildable { get }
+  var onewayReturnLocationBuildable: any OnewayReturnLocationBuildable { get }
+}
+```
+
+OdaPresentation에서 OnewayPresentation/OnewayRepository 직접 참조 6개를 제거하고, Buildable 2개 DI로 교체. Transport/BridgeComponent가 concrete builder를 주입.
+
+---
+
+## WO-006: SPM → Tuist 4.185 전환 — 46개 모듈
+
+### Wave 전략
+
+46개 모듈을 한 번에 전환하면 어디서 깨졌는지 모른다. **리프(의존성 0)부터 올라가는 Wave 전략**:
+
+| Wave | 모듈 | 특성 |
+|---|---|---|
+| 1 | Tuist 워크스페이스 기반 | `Tuist.swift`, `Workspace.swift`, `Package.swift` |
+| 2 | Persistent, Scaffold 템플릿 | 외부 의존 없는 리프 |
+| 3 | Util/*, FeatureSupport | CoreUtil, Log, RIBsUtil 등 |
+| 4-5 | Analytics, Location, Network | 유틸 위 인프라 |
+| 6-7 | Domain, Repository | 비즈니스 레이어 |
+| 8-9 | Presentation, 메인 앱 | 최상위 |
+
+각 Wave 끝에 `tuist generate --no-open` (10초)으로 manifest 오류 smoke test 통과 후 커밋. **Wave 단위 배치 커밋이 토큰 예산도 관리**해준다 — 한 Wave가 하나의 컨텍스트 청크.
+
+### Tuist 4.27 → 4.185 업그레이드
+
+처음에 Tuist 4.27로 시도했다가 `targets[3].settings[0].name missing` 에러로 **1시간+ 삽질**. `brew info tuist`로 확인하니 4.185.1이 최신. 업그레이드 후 에러 소실.
+
+**교훈**: `brew info <tool> && <tool> version` — 마이그레이션 시작 전 첫 번째 명령어로 고정.
+
+### `productTypes` — 전부 framework는 틀렸다
+
+```swift
+// ❌ 이렇게 하면 Kakao/Firebase/Braze가 깨진다
+productTypes: [
+  "KakaoSDK": .framework,  // sub-target 간 상호의존 → symbol 누락
+]
+
+// ✅ 선택적 적용: 단일 target만 framework
+productTypes: [
+  "RIBs": .framework,
+  "RxSwift": .framework,
+  "SnapKit": .framework,
+  // KakaoSDK, Firebase, Braze → static 유지 (주석으로 이유 명시)
+]
+```
+
+**근본 원인**: `productTypes`의 granularity가 패키지 단위인데, 복합 SDK의 문제는 타겟 단위에서 발생. KakaoSDKCommon/Auth/User가 각각 별개 framework로 쪼개지면서 상호 참조 심볼이 누락.
+
+**결정 트리**:
+1. 단일 target이고 sub-product 없음 → `.framework` 추가
+2. 내부 다중 target SDK → static 유지 + 소비자에서 `.external(name:)` 명시
+3. 애매하면 static으로 두고 빌드 확인 후 승격
+
+### Package.swift 충돌 회피
+
+Tuist와 SPM이 같은 디렉토리의 `Package.swift`를 각자 해석하려 해서 워크스페이스 충돌. 기존 SPM `Package.swift`를 **`.bak`으로 rename** — 롤백이 필요하면 `.bak` → `Package.swift`로 복원.
+
+---
+
+## WO-007: Example 앱 scaffold
+
+토스 Microfeatures의 마지막 조각 — Feature별 독립 실행 미니앱.
+
+```bash
+tuist scaffold feature --name Oda      # 5-타겟 모듈 생성
+tuist scaffold example --feature Oda   # Example 앱 생성
+```
+
+`Tuist/Templates/feature/`가 Interface/Feature/Testing/Tests 4타겟을, `Tuist/Templates/example/`이 AppDelegate/SceneDelegate/Info.plist를 한 번에 생성.
+
+**3개 파일럿**: OdaExample, OnewayExample, HomeTabExample. Mock Builder 주입은 TODO — Feature별 dependency 복잡도로 독립 작업화 필요.
+
+---
+
+## 빌드 체인 복구 — scan-imports 자동화
+
+### 문제: Transitive Dependency 폭탄
+
+SPM 시절에는 의존성이 transitive로 전파됐다. 모듈 A가 모듈 B를 import하면, B의 의존성 C도 자동으로 보였다. **Tuist 전환 후 이 자동 전파가 끊겼다.** 결과: Presentation 레이어 ~20개 모듈에서 `extension method link 실패` 에러 폭탄.
+
+```
+// 예: Common.SomeRepository.fetch()가
+// (extension in RxUtil):ObservableType.debugRx를 찾지 못함
+```
+
+### 해결: 2단계 자동화
+
+**1단계: `scan-imports.py`** (228줄) — Swift 소스의 `import` 구문과 `Project.swift`의 declared dependencies를 비교해서 **차집합 계산**.
+
+```bash
+python3 scripts/scan-imports.py --all --report
+# 출력: 모듈별 누락 dependency + .project()/.external() 라인 제안
+```
+
+내부 인덱스는 `Package.swift.bak`의 `.library` + `Project.swift`의 `ModuleTarget.framework name`. 외부 인덱스는 `Tuist/Package.swift`의 `productTypes` 키 + `.product(name:)`.
+
+**2단계: `patch-project-deps.py`** (148줄) — 스캐너 리포트를 받아서 각 모듈의 `Project.swift` `dependencies` 배열 끝에 라인 자동 삽입. `UNRESOLVED`는 주석으로 보존.
+
+```bash
+python3 scripts/scan-imports.py --report | python3 scripts/patch-project-deps.py
+# 28개 모듈 일괄 패치 — 수동이었으면 모듈당 5분, 총 1.5시간+
+```
+
+### 한계: implicit extension은 못 잡는다
+
+```swift
+// AccountDomain/Sources/SomeEntity.swift
+let formatted = Date().toyyyyMMddHHmmHypen  // CoreUtil extension
+// ↑ import CoreUtil 문이 없다! 스캐너 감지 불가
+```
+
+SPM transitive로 "보이던" extension이 Tuist 전환 후 끊기면서 `undefined symbol`. 소스에 import가 없으니 스캐너가 잡을 수 없다. **7개 Domain 모듈에 CoreUtil을 수동 보강** — 빌드 에러를 보고 하나씩.
+
+### Build Chain Status
+
+스캐너 + 수동 보강으로 달성한 빌드 체인:
+
+```
+Network → Repository → Domain → BusinessWebView → Account → Menu ✅
+                                                                  │
+                                              OnewayPresentation ──┘ ❌ (Routing 미이전)
+```
+
+---
+
+## WO-008: Routing 프로토콜 Interface 추출
+
+### 빌드 체인의 마지막 벽
+
+WO-005에서 Buildable/Listener만 Interface로 이전했다. **Routing 프로토콜은 OnewayPresentation 내부에 남겨뒀다.** 이게 문제가 됐다.
+
+```swift
+// Transaction/Sources/.../UsageHistoryDetailRouter.swift
+private var onewayReturnLocationRouting: OnewayReturnLocationRouting?
+// error: cannot find type 'OnewayReturnLocationRouting' in scope
+```
+
+Transaction이 `OnewayReturnLocationRouting`을 쓰려면 OnewayPresentation을 직접 import해야 하는데, 그러면 **순환 의존**. SPM 시절에는 transitive로 보였지만 Tuist가 그 환상을 깨뜨렸다.
+
+### 해결: Routing도 Interface로
+
+```swift
+// Before: OnewayPresentation 내부
+public protocol OnewayReturnLocationRouting: ViewableRouting { ... }
+
+// After: OnewayPresentationInterface로 이전
+// OnewayPresentation은 extension으로 conform
+extension OnewayReturnLocationRouter: OnewayReturnLocationRouting { ... }
+```
+
+Transaction/Smartkey/OdaLocationConfirmPresentation이 `.project(target: "OnewayPresentationInterface")`만 의존하면 순환 없이 Routing 타입 참조 가능.
+
+**판별 기준 — 어떤 Routing을 이전하나?**
+
+```bash
+grep -rn "OnewayReturn.*Routing" --include="*.swift" \
+    Transaction/ Smartkey/ OdaLocationConfirmPresentation/ OdaPresentation/
+```
+
+외부 참조가 있으면 → Interface 이전 대상. 이번에 `OnewayReturnLocationRouting` + `OnewayReturnSearchRouting` 2개 이전 완료.
+
+---
+
+## 함정 6종 박제
+
+### 1. Tuist 버전 체크 지연
+
+4.27로 시작 → `targets[3].settings[0].name missing` 에러로 1시간 삽질. `brew info tuist`로 4.185.1이 최신인 걸 확인하고 업그레이드하니 해소.
+
+**규칙**: 마이그레이션 첫 명령어는 `brew info <tool> && <tool> version`.
+
+### 2. productTypes 전역 적용 불가
+
+위에서 상세 기술. 복합 SDK(Kakao/Firebase/Braze)의 sub-target 간 상호의존 때문에 전역 `.framework`는 불가. **선택적 적용 + 제외 이유 주석** 패턴.
+
+### 3. Swift Framework Transitive Extension
+
+SPM에서 Tuist로 전환하면 transitive extension 전파가 끊긴다. `import` 없이 쓰던 extension이 갑자기 `undefined symbol`. 스캐너로 잡히지 않아 빌드 에러 기반 수동 보강 필요.
+
+### 4. Interface 추출 범위 오판
+
+Buildable/Listener만 이전하고 Routing은 남겨뒀다가 빌드 체인이 멈춤. **Interface 추출 기준은 "외부 참조되는 모든 public protocol"**이어야 한다. grep으로 외부 참조 전수조사 후 한 번에 이전.
+
+### 5. SPM/Tuist Package.swift 충돌
+
+같은 디렉토리에 `Package.swift`가 있으면 Tuist generate와 SPM resolve가 동시에 동작해서 워크스페이스가 꼬인다. `.bak` rename으로 회피.
+
+### 6. 자동 패처 멀티타겟 skip
+
+`patch-project-deps.py`가 멀티타겟 모듈(Network, OCR, AddressSearch 등 10개)에서 서브타겟 경계를 추론 못해 skip. 이 10개는 수동 패치 — 멀티타겟일수록 서브타겟별 dependency가 달라 자동화 혜택이 없었다.
+
+---
+
+## 회고 복리 체크
+
+### Journal 010의 인프라가 실전에 쓰였나?
+
+이번 스프린트는 AI 오케스트레이션 **없이** 단일 세션으로 진행했다. Worker Pool, tmux 4-pane — Journal 010에서 쌓은 인프라는 이번에 직접 사용되지 않았다. WO-005~008의 특성이 "하나의 기술 결정이 46개 모듈에 반복 적용"이라 **L형 분산보다 단일 세션의 Wave 전략이 더 효율적**이었기 때문.
+
+오케스트레이션 인프라의 진짜 무대는 **피쳐 개발**(다중 레이어 동시 작업)이지, 인프라 마이그레이션(동일 작업 반복)이 아니다. 인프라와 적합한 작업 유형을 구분하는 것도 메타 교훈.
+
+### 이전 회고 인계
+
+| Journal 010 미완 항목 | 이번 상태 |
+|---|---|
+| Worker Pool 실전 검증 (M형 WO) | ❌ 이번은 단일 세션 — 다음 피쳐 개발에서 |
+| L형 Brief Merge 실전 테스트 | ❌ 이월 |
+| ios-explorer(haiku) 탐색 품질 측정 | ❌ 이월 |
+| `/compact` 게이트 실효성 확인 | ❌ 이월 |
+| tmux Enter 누락 감지 프로토콜 | ❌ 이월 |
+
+**0/5 인계.** 이번도 주제가 완전히 바뀌었다(오케스트레이션 → 빌드 시스템 마이그레이션). 복리 루프 단절 3연속. 하지만 Journal 006(SPM cycle break)에서 축적한 "의존성 그래프 사고방식"이 이번 Interface 분리에 직접 쓰였다 — 주제가 달라도 **지식 복리**는 작동한다.
+
+---
+
+## 교훈
+
+1. **마이그레이션 첫 명령어는 버전 확인이다.** `brew info <tool> && <tool> version` — 구버전으로 삽질하는 시간은 순수 낭비. Tuist 4.27 → 4.185에서 1시간을 태웠다.
+
+2. **productTypes는 패키지 단위지만 문제는 타겟 단위다.** 복합 SDK의 sub-target 간 상호의존은 dynamic framework 전환으로 깨진다. 선택적 적용 + 제외 이유 주석이 유지보수 가능한 패턴.
+
+3. **Interface 추출 기준은 "외부 참조되는 모든 public protocol"이다.** Buildable/Listener만 이전하고 Routing을 남기면 빌드 체인이 멈춘다. grep으로 외부 참조를 전수조사한 뒤 한 번에 이전.
+
+4. **자동화 스캐너의 한계를 정직하게 박제한다.** scan-imports.py는 explicit import만 잡는다. implicit extension은 빌드 에러로만 발견된다. "100% 자동화"가 아니라 "80% 자동화 + 20% 수동"이 현실적 기대치.
+
+5. **리프-업 빌드 검증 순서가 진도 가시성을 만든다.** 46개 모듈을 무작위로 빌드하면 어디서 막혔는지 모른다. 의존성 0인 리프부터 위로 올라가면 "한 모듈 고치면 체인이 한 단계 전진"하는 리듬이 생긴다.
+
+6. **인프라 마이그레이션은 멀티 에이전트보다 단일 세션이 맞다.** "동일 작업 46회 반복"은 분산의 오버헤드가 이득보다 크다. Worker Pool의 진짜 무대는 다중 레이어 동시 작업(피쳐 개발)이다.
+
+7. **발표 슬라이드와 이식 사이에는 물리적 장벽이 있다.** 토스의 Microfeatures 패턴은 설계로는 깔끔하지만, 40+ 모듈 레거시에 이식할 때 transitive extension, productTypes granularity, Package.swift 충돌 같은 빌드 시스템 레벨의 장벽이 있다. 이 장벽을 박제하는 게 실전 가치.
+
+---
+
+## 연결
+
+- **[Journal 010 — AI 오케스트레이션 tmux + Worker Pool](/wiki/ios-ai/ios-ai-journal-010-ai-orchestration-tmux-worker-pool)**: 직전 기록. 이번에 쌓은 인프라는 사용되지 않았지만, "인프라와 적합한 작업 유형을 구분한다"는 메타 교훈을 남겼다.
+- **[Journal 006 — SPM Cycle Break](/wiki/ios-ai/ios-ai-journal-006-spm-cycle-break)**: SPM 의존성 순환 해체 경험이 이번 Interface 분리의 직접 기반. "의존성 그래프 사고방식" 복리.
+- **[Journal 003 — .claudeignore + SPM](/wiki/ios-ai/ios-ai-journal-003-claudeignore-spm)**: `.build/` 130GB 차단. SPM 컨텍스트 위생 → Tuist 전환의 전제 조건.
+- **[Journal 005 — /compound](/wiki/ios-ai/ios-ai-journal-005-ios-compound)**: 2세션 연속의 compound가 CHANGELOG + retro + solution 3편을 생성. 복리 루프 작동의 근거.
+- **[AI Agent Start Here](/wiki/harness-engineering/ai-agent-start-here)**: 빌드 시스템 마이그레이션이라는 상황에서 AI 에이전트의 역할 — 스캐너 자동화 + 반복 패치에 최적.
