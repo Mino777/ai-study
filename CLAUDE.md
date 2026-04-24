@@ -193,16 +193,16 @@ When the user's request matches an available skill, ALWAYS invoke it using the S
 tool as your FIRST action. Do NOT answer directly, do NOT use other tools first.
 
 Key routing rules:
-- Product ideas, "is this worth building", brainstorming → invoke office-hours
-- Bugs, errors, "why is this broken", 500 errors → invoke investigate
-- Ship, deploy, push, create PR → invoke ship
-- QA, test the site, find bugs → invoke qa
-- Code review, check my diff → invoke review (2-Stage: Plan 있으면 Spec compliance + Code quality)
-- Update docs after shipping → invoke document-release
-- Design system, brand → invoke design-consultation
-- Visual audit, design polish → invoke design-review
-- Architecture review → invoke plan-eng-review
-- 작업 완료, 스프린트 정리, 회고 → invoke compound
+- Product ideas, "is this worth building", brainstorming, 아이디어 브레인스토밍 빌드 가치 고민 → invoke office-hours
+- Bugs, errors, "why is this broken", 500 errors, 버그 에러 문제 원인 크래시 디버깅 → invoke investigate
+- Ship, deploy, push, create PR, 배포 푸시 릴리스 진행 → invoke ship
+- QA, test the site, find bugs, QA 테스트 → invoke qa
+- Code review, check my diff, 코드 리뷰 PR 리뷰 diff 리뷰 검토 (2-Stage: Plan 있으면 Spec compliance + Code quality) → invoke review
+- Update docs after shipping, 릴리스 후 문서 업데이트 문서화 → invoke document-release
+- Design system, brand, 디자인 시스템 브랜드 → invoke design-consultation
+- Visual audit, design polish, 비주얼 디자인 폴리싱 폴리쉬 → invoke design-review
+- Architecture review, 아키텍처 플랜 락 엔지니어링 → invoke plan-eng-review
+- 작업 완료, 스프린트 정리, 회고, 컴파운드 → invoke compound
 - 자동 스프린트, 풀 자동 개발 루프 → invoke autoceo
 - 외부 URL(유튜브/블로그/논문/스레드) 정리, 학습 엔트리로 가공 → invoke ingest
 - 새 작업 시작, 안전한 브랜치 분기 (squash merge 함정 회피) → invoke wt-branch

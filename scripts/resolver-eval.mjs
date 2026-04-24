@@ -96,13 +96,15 @@ const casesData = JSON.parse(readFileSync(casesPath, "utf8"));
 const cases = casesData.cases || [];
 
 // ── 토큰화 + 점수 ─────────────────────────────────────────────────────
-// 단순 접근: 공백/한글-영문 경계 분리 → 각 트리거 설명과 intent의 키워드 중첩
-// 한국어는 공백 기반으로 충분한 해상도 (조사 영향 minor).
+// 한국어 조사·어미를 제거해 어휘 매칭률을 올린다. 완전 형태소 분석은 과잉.
+// slash 목록("법률/보안/마케팅")도 쪼개서 각 토큰 매칭되도록.
+const KOREAN_SUFFIX = /(?:으로|로|은|는|이|가|을|를|의|에게|한테|에서|부터|까지|에|와|과|야|다|자|해줘|해주|해|하자|하기|한테|라서|면|다면)$/;
 function tokenize(text) {
   return text
     .toLowerCase()
-    .replace(/[,.!?():·"'`]/g, " ")
+    .replace(/[,.!?():·"'`\/\\]/g, " ")
     .split(/\s+/)
+    .map((w) => w.replace(KOREAN_SUFFIX, ""))
     .filter((t) => t.length > 1);
 }
 
