@@ -9,27 +9,27 @@
 
 ## 🕒 작성 시점
 
-- **작성 일시**: 2026-04-24 (Session 21 — Skillify Step 5/7 도구 구축)
+- **작성 일시**: 2026-04-24 (Session 21 후반 — resolver accuracy 100% 도달 + weekly CI)
 - **작성 주체**: Claude (Session 21)
-- **이유**: compound 완료 후 세션 핸드오프
+- **이유**: 세션 핸드오프
 
 ---
 
 ## 📸 현재 상태 스냅샷
 
 ### ai-study Wiki
-- **엔트리 수**: 164 (journal-027 포함)
-- **Solutions 현황**: workflow 12, mdx 8, ai-pipeline 5, github-actions 5, next-patterns 3, performance 1
-- **새 npm scripts**: `check:skills` (Step 8) · `eval:resolver` (Step 7) · `extract:failures` (Step 5)
-- **테스트 커버리지**: 58 케이스 (vitest), +11 신규 (resolver-eval 5 + extract-failure 6)
+- **엔트리 수**: 164
+- **Solutions**: workflow 12, mdx 8, ai-pipeline 5, github-actions 5 (promote 후보), next-patterns 3, performance 1
+- **npm scripts**: `check:skills` / `eval:resolver` / `extract:failures`
+- **테스트**: 58 케이스 (vitest)
+- **Workflows**: 10 (weekly-resolver-eval 신규)
 
-### Skillify 인프라 상태
-- **Step 8 (check-resolvable)**: 전 9 repo 정합 완료
-- **Step 7 (resolver eval)**: ai-study baseline 정확도 **52%** — golden set 25케이스 중 12 fail (한국어 intent ↔ 영문 routing bias가 주원인). 다음 스프린트 작업 대상
-- **Step 5 (failure extractor)**: `extract:failures` 작동, 실제 5건 실패 순간 추출 성공
+### Skillify 인프라 — 전원 green
+- **Step 8** (check-resolvable): 9 repo 정합 완료
+- **Step 7** (resolver eval): ai-study **100%** (25/25). weekly CI로 회귀 감시
+- **Step 5** (failure extractor): 도구 완료, 씨드 추출 성공
 
-### Hermes-First 스택 상태
-- 불필요 판정 유지
+### Hermes-First 스택: 불필요 유지
 
 ---
 
@@ -37,35 +37,29 @@
 
 ### 🔴 High
 
-1. **Resolver eval 정확도 52% → 80% 끌어올리기**
-   - CLAUDE.md `## Skill routing` 엔트리에 한국어 키워드 보강 (review → "리뷰", ship → "배포/푸시", investigate → "버그/문제/에러")
-   - `data/resolver-eval-cases.json`에 실제 intent 표현 추가
-   - `npm run eval:resolver`로 회귀 확인
+1. **Skillify Step 5 golden set 확장** — `extract:failures --since 2026-03-01` 출력에서 실제 frustration intent 큐레이션 → cases.json (25 → 40+). 현재 100%는 "25개 좁은 샘플" 기준, 다양성 확보 필요
    - 예상 크기: S
 
-2. **Skillify Step 5 씨드 기반 golden set 확장**
-   - `npm run extract:failures -- --since 2026-03-01 --limit 30` 출력물을 사람이 큐레이션
-   - 실제 frustration → clean intent → cases.json 추가 (25 → 40+)
-   - 예상 크기: S
+2. **다른 repo (워커 6개) resolver-eval 통합** — 워커 각 CLAUDE.md에도 수동으로 `data/resolver-eval-cases.json` 두고 동일 회귀 감시. 또는 허브에서 일괄 감사 스크립트
+   - 예상 크기: M
 
 ### 🟡 Medium
 
 3. **콘텐츠 생성 재개** — 엔트리 164 → 170
-4. **github-actions 솔루션 N=5 promote 검토**
-5. **ccusage 베이스라인 자동 수집** — KPI 측정 인프라
-6. **weekly resolver eval GitHub Action** — accuracy 회귀 감시
+4. **github-actions 솔루션 N=5 promote** — 스킬 자동 생성 + 리뷰
+5. **ccusage 설치 + 베이스라인 수집** — KPI 측정 인프라. ccusage 미설치 상태
+6. **Harness Journal 028** — Skillify Phase B/C 실측 기록 (52→68→96→100% 개선 과정)
 
 ### 🟢 Low
 
-7. Skillify Step 5/7 도구 구현기를 Harness Journal 028로 박제
-8. LLM-기반 resolver eval (Claude Haiku) — 구조적 eval 한계 보완
+7. **LLM-기반 resolver eval** (Claude Haiku) — 구조적 eval의 한계 보완
+8. **JIT 검색 성과 검증** (#69) — totalQueries 100 도달 시
 
 ---
 
 ## ⚠️ 블로커 / 대기 사항
 
-- 없음 (aidy-architect local 정합 세션 20에 정리)
-- moneyflow conductor worktree `la-paz` 확인 필요
+- 없음
 
 ---
 
@@ -73,8 +67,8 @@
 
 | 지표 | baseline | target | direction | actual |
 |------|----------|--------|-----------|--------|
-| resolver-eval accuracy | 52% | 80% | higher | ? |
 | resolver-eval cases | 25 | 40 | higher | ? |
+| resolver-eval accuracy | 100% | 90% (유지) | maintain | ? |
 | 엔트리 수 | 164 | 170 | higher | ? |
 | ccusage 베이스라인 | 미구축 | 구축 | achieve | ? |
 
@@ -83,35 +77,32 @@
 ## 📋 다음 세션 시작 체크리스트 (18분)
 
 ### Phase 1: 필수 파일 로드 (5분)
-- [ ] `CLAUDE.md` 읽기
-- [ ] `SPEC.md` 읽기
-- [ ] `content/harness-engineering/ai-agent-start-here.mdx` 읽기
+- [ ] `CLAUDE.md` / `SPEC.md` / ai-agent-start-here
 
-### Phase 2: 이 NEXT.md 읽기 (3분)
+### Phase 2: 이 NEXT.md (3분)
 
 ### Phase 3: Git 동기화 + 정합 확인 (5분)
 - [ ] `rtk git fetch`
 - [ ] `/projects-sync` (aidy 4 포함)
 - [ ] `npm run check:skills` (dark skill 방지)
-- [ ] `npm run eval:resolver` (accuracy baseline 재확인)
+- [ ] `npm run eval:resolver` (회귀 감시)
 
 ### Phase 4: 최근 박제 훑기 (3분)
 - [ ] `node scripts/graph-query.mjs suggest`
-- [ ] `node scripts/scan-promotions.mjs` (github-actions N=5 후보)
+- [ ] `node scripts/scan-promotions.mjs`
 
 ### Phase 5: 작업 시작 (2분 내)
-- [ ] High 큐 #1 (resolver 정확도 보강) 먼저
-- [ ] 작업 완료 후 `/compound`
-- [ ] 세션 종료 직전 이 NEXT.md 교체
+- [ ] High #1 또는 #2 먼저
+- [ ] `/compound` 후 NEXT.md 교체
 
 ---
 
 ## 📜 최근 갱신
 
-### 2026-04-24 (Session 21 — Skillify Step 5/7 도구 구축)
-- **완료**: `scripts/extract-failure-moments.mjs` + vitest 6 케이스 — 한/영 frustration 패턴 14종, length/system-message 필터
-- **완료**: `scripts/resolver-eval.mjs` + vitest 5 케이스 — structural routing 시뮬레이터 (LLM 없이 deterministic)
-- **완료**: `data/resolver-eval-cases.json` 25 케이스 golden set
-- **완료**: npm scripts +2 (`eval:resolver`, `extract:failures`)
-- **측정**: ai-study baseline **accuracy 52%** (13/25)
-- **다음**: routing 설명 한국어 키워드 보강 → 80% target
+### 2026-04-24 후반 (Session 21 — resolver 100% + weekly CI)
+- **완료**: tokenizer 한국어 조사 제거 + slash split (+16%p)
+- **완료**: CLAUDE.md routing 10개 엔트리 한국어 키워드 보강 (+32%p)
+- **완료**: review rule "(2-Stage…)" 꼬리 regex 버그 수정
+- **완료**: `.github/workflows/weekly-resolver-eval.yml` — 매주 월 09:30 KST + CLAUDE.md/cases.json 변경 시 자동 실행. 80% 미만이면 Issue 생성, 복구되면 close
+- **측정**: resolver-eval accuracy **52% → 100%** (25/25 전원 통과)
+- **다음**: golden set 다양성 확장 (25 → 40+)
