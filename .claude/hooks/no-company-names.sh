@@ -35,10 +35,14 @@ else
   [ -z "$INPUT_JSON" ] && INPUT_JSON="${CLAUDE_TOOL_INPUT:-}"
 fi
 
-# 입력이 완전히 비어있으면 차단 불가 → 보수적으로 block (fail-closed)
+# 입력이 완전히 비어있으면 차단 불가 → 보수적으로 block (fail-closed).
+# 단, 이 훅은 settings.json matcher에서 Edit|Write로 한정 등록된다고 가정.
+# 다른 matcher(예: Bash)로 오등록되면 여기서 false positive 차단이 날 수
+# 있음 — 의도된 동작(설정 오류 빨리 드러나도록).
 if [ -z "$INPUT_JSON" ]; then
   echo "🚫 NO_COMPANY_NAMES: 훅 입력이 비어있음 (하네스 스키마 불일치 가능성) — 보수적 차단" >&2
   echo "이 메시지가 계속 나오면 훅 스크립트의 stdin 수집 경로 점검 필요." >&2
+  echo "settings.json의 matcher가 Edit|Write로 한정돼 있는지 확인." >&2
   exit 1
 fi
 
