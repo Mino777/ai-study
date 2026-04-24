@@ -6,7 +6,7 @@ date: "2026-04-24"
 tags: [ios-harness-journal, ios, tuist, microfeatures, toss, interface-module, spm-migration, dependency-graph, build-automation, ribs]
 confidence: 4
 last_verified: "2026-04-24"
-applicable_to: ["gma-ios"]
+applicable_to: ["ios-study"]
 connections: [ios-ai/ios-ai-journal-010-ai-orchestration-tmux-worker-pool, ios-ai/ios-ai-journal-006-spm-cycle-break, ios-ai/ios-ai-journal-005-ios-compound, ios-ai/ios-ai-journal-003-claudeignore-spm, harness-engineering/ai-agent-start-here]
 status: complete
 type: entry
@@ -329,7 +329,7 @@ implicit extension 누락 문제를 **예방 인프라**로 해결:
 
 `tuist scaffold feature --name X`로 새 모듈을 만들면 **CoreUtil/Log/Persistent가 처음부터 포함**. Domain 레이어에서 `Date.toyyyyMMddHHmmHypen` 같은 CoreUtil extension을 import 없이 쓰다가 빌드 에러 나는 문제를 원천 차단.
 
-`greencarModule()` settings도 자동 적용되어 4-config (Debug/QA/Release/Release_Debug) 통일.
+`projectModule()` settings도 자동 적용되어 4-config (Debug/QA/Release/Release_Debug) 통일.
 
 ---
 
