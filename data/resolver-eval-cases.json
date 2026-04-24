@@ -1,0 +1,133 @@
+{
+  "$schema": "inline",
+  "description": "Skillify Step 7 — Resolver routing eval golden set. 각 케이스는 사용자 intent 문장과 라우팅되어야 할 skill을 쌍으로 묶는다. Step 5 extract-failure-moments 출력물을 사람이 다듬어 만든다.",
+  "version": "0.1",
+  "updated": "2026-04-24",
+  "cases": [
+    {
+      "intent": "코드 PR 리뷰해줘",
+      "expectedSkill": "review",
+      "notes": "일반 리뷰 요청 — gstack review로 라우팅"
+    },
+    {
+      "intent": "이거 배포 진행해줘",
+      "expectedSkill": "ship",
+      "notes": "배포/push/PR 생성 컨텍스트"
+    },
+    {
+      "intent": "버그 같은데 뭐가 문제지?",
+      "expectedSkill": "investigate",
+      "notes": "원인 조사"
+    },
+    {
+      "intent": "500 에러 난다 봐줘",
+      "expectedSkill": "investigate",
+      "notes": "에러/500 키워드 → investigate"
+    },
+    {
+      "intent": "이거 QA 테스트해보자",
+      "expectedSkill": "qa",
+      "notes": "QA 트리거"
+    },
+    {
+      "intent": "이 아이디어 빌드할 가치 있을까?",
+      "expectedSkill": "office-hours",
+      "notes": "아이디어 타당성 — office-hours 브레인스토밍"
+    },
+    {
+      "intent": "외부 트위터 글을 위키에 정리해줘",
+      "expectedSkill": "ingest",
+      "notes": "외부 URL → 학습 엔트리 가공"
+    },
+    {
+      "intent": "이 유튜브 영상 핵심만 위키로",
+      "expectedSkill": "ingest",
+      "notes": "외부 영상도 동일"
+    },
+    {
+      "intent": "스프린트 정리하자 회고 쓰자",
+      "expectedSkill": "compound",
+      "notes": "복리형 지식 축적"
+    },
+    {
+      "intent": "컴파운드 돌려줘",
+      "expectedSkill": "compound",
+      "notes": "직접 slash command 명칭"
+    },
+    {
+      "intent": "새 작업 들어가자 브랜치 깨끗이 만들어줘",
+      "expectedSkill": "wt-branch",
+      "notes": "작업 시작 + 브랜치 분기"
+    },
+    {
+      "intent": "다른 세션 결과물 한번 크로스체크해봐",
+      "expectedSkill": "cross-session-review",
+      "notes": "다중 세션 검증"
+    },
+    {
+      "intent": "워커 프로젝트들 상태 한 번 싱크",
+      "expectedSkill": "projects-sync",
+      "notes": "projects-sync 발동"
+    },
+    {
+      "intent": "워커가 쏜 PR 하네스로 박아줘",
+      "expectedSkill": "curate-inbound",
+      "notes": "patterns: prefix PR 큐레이션"
+    },
+    {
+      "intent": "이 MDX 커밋 전 문법 검증하자",
+      "expectedSkill": "validate-mdx",
+      "notes": "MDX/Mermaid 사전 검증"
+    },
+    {
+      "intent": "Gemini가 뽑아낸 내용 좀 검증해줘",
+      "expectedSkill": "validate-ai-output",
+      "notes": "AI 생성 콘텐츠 검증"
+    },
+    {
+      "intent": "이 솔루션 3번째 나왔는데 코드 게이트로 올리자",
+      "expectedSkill": "promote-solution",
+      "notes": "N=3+ 승격"
+    },
+    {
+      "intent": "법률 관련 질문 전문가한테 물어보자",
+      "expectedSkill": "consult",
+      "notes": "온디맨드 consultant"
+    },
+    {
+      "intent": "워커한테 메시지 하나 보내줘",
+      "expectedSkill": "message",
+      "notes": "허브↔워커 큐"
+    },
+    {
+      "intent": "릴리스 후 문서 업데이트",
+      "expectedSkill": "document-release",
+      "notes": "post-ship docs"
+    },
+    {
+      "intent": "자동 스프린트 한 바퀴 돌리자",
+      "expectedSkill": "autoceo",
+      "notes": "풀 자동 루프"
+    },
+    {
+      "intent": "디자인 시스템부터 잡자",
+      "expectedSkill": "design-consultation",
+      "notes": "DESIGN.md 생성"
+    },
+    {
+      "intent": "이 사이트 visual 폴리싱 봐줘",
+      "expectedSkill": "design-review",
+      "notes": "live site 디자인 감사"
+    },
+    {
+      "intent": "아키텍처 플랜 락 먼저 하자",
+      "expectedSkill": "plan-eng-review",
+      "notes": "엔지니어링 플랜 리뷰"
+    },
+    {
+      "intent": "Skillify Step 8 감사 돌려줘",
+      "expectedSkill": null,
+      "notes": "음성-틱: 'npm run check:skills' 커맨드 직접 실행이 맞음. skill 라우팅 필요 없음 — null 케이스 (over-routing 방지 체크)"
+    }
+  ]
+}

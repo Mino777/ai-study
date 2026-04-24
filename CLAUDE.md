@@ -102,6 +102,8 @@ public/            → search-index.json (gitignored, SearchDialog lazy fetch용
 - `node scripts/scan-promotions.mjs` — 솔루션 승격 스캐너 (N=3+ 자동 감지 → 승격 제안, --json CI 연동)
 - `node scripts/backfill-frontmatter.mjs [--apply]` — MDX frontmatter 백필 (last_verified + applicable_to, dry-run 기본)
 - `npm run check:skills` — Skillify Step 8: `.claude/commands/*.md` ↔ CLAUDE.md `## Skill routing` 정합성 감사 (unreachable + orphan 감지, `--project <path>` 으로 타 프로젝트 감사, `--json` CI 연동)
+- `npm run eval:resolver` — Skillify Step 7: `data/resolver-eval-cases.json` golden set 기반 라우팅 정확도 측정 (structural, LLM 없음). exit 0/1로 CI 연동
+- `npm run extract:failures [-- --limit N --since YYYY-MM-DD]` — Skillify Step 5 씨드: `~/.claude/projects/*/` transcript에서 frustration 순간 추출 (한/영 curse·재시도 패턴). resolver eval golden set 씨드 공급원
 
 ## Content System
 - All content in `content/` as MDX files with frontmatter

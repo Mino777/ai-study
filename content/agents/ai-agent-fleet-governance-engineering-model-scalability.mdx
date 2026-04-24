@@ -189,15 +189,15 @@ def execute_intent_routing(user_input: str):
 ```mermaid
 graph TD
     subgraph id_git ["Git Repository (Prompt-as-Code)"]
-        A[1. PR 생성: 프롬프트 수정] --> B{2. 자동화된 Evals 실행};
+        A["1. PR 생성: 프롬프트 수정"] --> B{2. 자동화된 Evals 실행};
     end
 
     B --> C{3. Evals 통과?};
     C -- Yes --> D[4. Staging 배포];
-    C -- No --> E[Evals 실패: PR 수정 필요];
+    C -- No --> E["Evals 실패: PR 수정 필요"];
 
     D --> F{5. Canary/A/B 테스트 시작};
-    F -- 성능 우위 확인 --> G[6. Active로 승격 (100% 트래픽)];
+    F -- 성능 우위 확인 --> G["6. Active로 승격 (100% 트래픽)"];
     F -- 성능 저하 확인 --> H[7. 자동 롤백];
 
     G --> I[8. 이전 버전 Deprecated 처리];

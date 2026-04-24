@@ -15,7 +15,9 @@
     "test:watch": "vitest",
     "embed-content": "node scripts/embed-content.mjs",
     "search": "node scripts/search.mjs",
-    "check:skills": "node scripts/check-skills-reachable.mjs"
+    "check:skills": "node scripts/check-skills-reachable.mjs",
+    "eval:resolver": "node scripts/resolver-eval.mjs",
+    "extract:failures": "node scripts/extract-failure-moments.mjs"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
