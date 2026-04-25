@@ -1,0 +1,232 @@
+---
+title: "DESIGN.md — AI 코딩 도구와 디자인 시스템의 소통 언어 표준화"
+category: harness-engineering
+date: "2026-04-25"
+tags: [design-system, ai-coding-assistant, standardization, json-schema, figma, harness-engineering, harness-engineering]
+confidence: 1
+connections: [harness-engineering/ai-agent-start-here, harness-engineering/ai-api-cost-tracking-pattern, harness-engineering/ai-call-patterns-circuit-breaker-fallback]
+status: draft
+description: "AI가 UI 컴포넌트를 정확하게 이해하고 생성하도록, 디자인 시스템을 단일 파일 포맷으로 명세화하여 AI와 개발자 간의 인터페이스를 정의하는 전략을 다룹니다."
+type: entry
+generated_by: gemini
+quiz:
+  - question: 본문에서 언급된 AI 코딩 도구의 'UI 환각(Hallucination)' 현상이 발생하는 근본적인 원인은 무엇인가요?
+    choices:
+      - AI 모델의 기본적인 코드 생성 능력이 부족하기 때문에
+      - 개발자가 AI에게 충분히 상세한 프롬프트를 제공하지 않았기 때문에
+      - AI가 현재 작업 중인 프로젝트의 고유한 디자인 시스템 명세를 알지 못하기 때문에
+      - 프로젝트에 디자인 토큰(색상, 타이포그래피 등)이 정의되어 있지 않기 때문에
+    answer: 2
+    explanation: 정답은 3번입니다. 본문에서는 AI가 `<ShopButton variant="primary">`와 같은 프로젝트의 실제 컴포넌트 사용법을 모르고, 일반적인 코드(`class="btn-primary"`)나 존재하지 않는 컴포넌트(`<PrimaryButton>`)를 생성하는 것을 'UI 환각'의 예시로 들고 있습니다. 이는 AI가 프로젝트의 컨텍스트, 즉 디자인 시스템의 'API 명세'를 모르기 때문에 발생하는 문제라고 명확히 설명합니다. AI의 일반적인 능력 부족(1번)이나 프롬프트의 상세함(2번) 보다는 특정 프로젝트에 대한 컨텍스트 부재가 핵심 원인입니다.
+  - question: "`DESIGN.md` 파일이 AI 코딩 도구에 통합되어 작동하는 방식을 가장 잘 설명한 것은 무엇인가요? (본문에서 RAG 패턴의 일종으로 설명된 흐름을 바탕으로)"
+    choices:
+      - AI 에이전트가 사용자의 프롬프트를 받으면, `DESIGN.md`에서 관련된 컴포넌트 정보를 찾아 프롬프트에 추가하여 LLM에 전달한다.
+      - "`DESIGN.md` 파일을 기반으로 AI 모델을 미세조정(fine-tuning)하여, 해당 디자인 시스템을 영구적으로 학습시킨다."
+      - AI가 코드를 생성한 후, `DESIGN.md`를 린터(linter) 규칙처럼 사용하여 디자인 시스템에 맞지 않는 부분을 자동으로 수정한다.
+      - Figma API와 연동하여 디자인 변경 사항을 `DESIGN.md`에 실시간으로 반영하고, 이를 즉시 코드베이스에 적용한다.
+    answer: 0
+    explanation: 정답은 1번입니다. 본문은 AI 에이전트가 `DESIGN.md` 파일을 검색(Retrieval)하고, 관련 정보를 추출(Extraction)하여 원래 프롬프트에 주입(Injection)한 뒤 LLM에 보내 코드를 생성(Generation)하는 RAG(Retrieval-Augmented Generation) 흐름을 다이어그램과 함께 설명하고 있습니다. 1번 선택지가 이 과정을 가장 정확하게 요약합니다. 2번(미세조정)과 3번(린터/수정)은 본문에서 설명한 방식이 아니며, 4번은 미래의 전망으로 언급되었을 뿐 현재의 핵심 작동 방식이 아닙니다.
+  - question: "`DESIGN.md`의 컴포넌트 스키마 중에서, AI가 정확한 코드를 생성하기 위해 가장 중요하게 학습하고 참조하는 필드들은 무엇인가요?"
+    choices:
+      - "`schemaVersion`과 `metadata`"
+      - "`description`과 `usage` (do/dont)"
+      - "`name`, `props`, `examples`"
+      - "`tokens` (색상, 타이포그래피 등)"
+    answer: 2
+    explanation: 정답은 3번입니다. 본문은 컴포넌트 상세 스키마를 설명한 후 "이 구조에서 `name`, `props`, `examples` 필드는 AI에게 가장 중요합니다. AI는 이를 통해 컴포넌트의 이름, 사용 가능한 속성, 그리고 실제 코드에서 어떻게 사용되는지를 학습하여 정확한 코드를 생성할 수 있습니다."라고 명시적으로 강조하고 있습니다. 다른 필드들도 유용하지만, AI가 실제 코드 구문을 만드는 데 직접적으로 필요한 핵심 정보는 이 세 가지입니다.
+
+---
+
+## 왜 DESIGN.md가 필요한가?
+
+GitHub Copilot, Cursor, 혹은 자체 제작한 AI 코딩 에이전트를 사용할 때 우리는 종종 사소하지만 반복적인 수정 작업에 시간을 쏟게 됩니다. AI는 프로젝트의 디자인 시스템을 완벽히 이해하지 못하기 때문입니다. 예를 들어, "장바구니에 담기 버튼을 만들어줘"라고 요청하면, AI는 `class="btn-primary"` 같은 일반적인 코드를 생성하거나 존재하지 않는 `<PrimaryButton>` 컴포넌트를 상상해냅니다. 우리 프로젝트의 실제 버튼 컴포넌트가 `<ShopButton variant="primary" isLoading={false}>` 형태라는 사실을 알지 못합니다.
+
+이러한 'UI 환각(Hallucination)' 현상은 AI가 프로젝트의 컨텍스트, 특히 시각적 컴포넌트의 'API 명세'를 모르기 때문에 발생합니다. 개발자는 AI가 생성한 코드를 일일이 디자인 시스템에 맞게 수정해야 하며, 이는 생산성을 저해하는 주요 요인입니다.
+
+`DESIGN.md`는 이 문제를 해결하기 위한 제안입니다. 이는 디자인 시스템의 모든 컴포넌트, 토큰, 사용법을 기계가 읽을 수 있는(machine-readable) 단일 파일 포맷으로 표준화하는 전략입니다. 마치 백엔드 개발자가 OpenAPI/Swagger 명세로 API 계약을 정의하듯, 프론트엔드 개발자는 `DESIGN.md`를 통해 AI에게 UI 컴포넌트의 계약을 명확히 전달할 수 있습니다. AI는 이 명세를 "읽고" 우리 프로젝트의 규칙에 맞는 정확한 코드를 생성하게 됩니다.
+
+## DESIGN.md의 핵심 구조
+
+`DESIGN.md`는 마크다운 파일 형식을 제안하지만, 그 내용은 구조화된 데이터(JSON, YAML 등)를 포함하는 형태가 이상적입니다. 핵심은 AI가 파싱하기 쉬운 일관된 스키마를 갖는 것입니다.
+
+다음은 JSON 기반 `DESIGN.md` 스키마의 예시입니다.
+
+| 키 | 타입 | 설명 |
+|---|---|---|
+| `schemaVersion` | String | 명세의 버전. 향후 변경 사항 추적에 용이. |
+| `metadata` | Object | 프로젝트 이름, 마지막 업데이트 날짜 등 메타 정보. |
+| `tokens` | Object | 색상, 타이포그래피, 간격 등 디자인 토큰 정의. |
+| `components` | Array | 디자인 시스템의 모든 컴포넌트 목록. |
+
+### 컴포넌트 상세 스키마
+
+`components` 배열의 각 요소는 다음과 같은 상세 구조를 가집니다.
+
+```json
+{
+  "name": "ShopButton",
+  "description": "사용자 액션을 유도하기 위한 주요 버튼 컴포넌트. 장바구니 담기, 구매하기 등에 사용됩니다.",
+  "usage": {
+    "do": "핵심적인 긍정적 액션에 사용하세요.",
+    "dont": "취소나 보조적인 액션에는 'ghost'나 'secondary' variant를 사용하세요."
+  },
+  "props": [
+    {
+      "name": "variant",
+      "type": "'primary' | 'secondary' | 'ghost'",
+      "required": false,
+      "defaultValue": "'primary'",
+      "description": "버튼의 시각적 스타일을 결정합니다."
+    },
+    {
+      "name": "isLoading",
+      "type": "boolean",
+      "required": false,
+      "defaultValue": "false",
+      "description": "로딩 상태를 표시하며, 클릭을 비활성화합니다."
+    },
+    {
+      "name": "children",
+      "type": "React.ReactNode",
+      "required": true,
+      "description": "버튼 내부에 표시될 텍스트나 아이콘입니다."
+    }
+  ],
+  "examples": [
+    {
+      "description": "기본적인 primary 버튼 사용 예시",
+      "code": "<ShopButton variant='primary'>구매하기</ShopButton>"
+    },
+    {
+      "description": "로딩 상태의 secondary 버튼",
+      "code": "<ShopButton variant='secondary' isLoading={true}>처리 중...</ShopButton>"
+    }
+  ]
+}
+```
+
+이 구조에서 `name`, `props`, `examples` 필드는 AI에게 가장 중요합니다. AI는 이를 통해 컴포넌트의 이름, 사용 가능한 속성, 그리고 실제 코드에서 어떻게 사용되는지를 학습하여 정확한 코드를 생성할 수 있습니다.
+
+## AI 코딩 도구와의 연동 흐름
+
+`DESIGN.md` 파일이 프로젝트에 존재할 때, AI 코딩 도구는 다음과 같은 흐름으로 동작합니다. 이는 RAG(Retrieval-Augmented Generation) 패턴의 일종으로 볼 수 있습니다.
+
+```mermaid
+graph TD
+    A[사용자 프롬프트 입력<br/>"결제 페이지에 로딩 버튼 추가"] --> B{AI Agent};
+    B --> C["1. DESIGN.md 파일 검색 및 파싱"];
+    C --> D["2. 프롬프트와 관련된<br/>'ShopButton' 컴포넌트 정보 추출"];
+    subgraph Injected Context
+        D -- "isLoading, variant props, examples" --> E[컨텍스트 보강];
+    end
+    A -- "원본 프롬프트" --> E;
+    E --> F[LLM API 호출];
+    F --> G["`// 결제 처리 중...`<br/><ShopButton variant='primary' isLoading={true}>결제하기</ShopButton>"];
+    G --> H[코드 생성 및 제안];
+```
+
+1.  **컨텍스트 검색(Retrieval)**: AI 에이전트는 사용자 프롬프트를 받으면 먼저 프로젝트 루트의 `DESIGN.md` 파일을 찾습니다.
+2.  **정보 추출(Extraction)**: 파일 내용을 파싱하고, 사용자 요청과 관련된 컴포넌트(`ShopButton`)의 명세를 추출합니다.
+3.  **컨텍스트 주입(Injection)**: 추출된 컴포넌트 명세(특히 `props`와 `examples`)를 원래 프롬프트와 함께 LLM의 컨텍스트 윈도우에 주입합니다.
+4.  **코드 생성(Generation)**: 보강된 컨텍스트를 기반으로 LLM은 디자인 시스템에 100% 부합하는 코드를 생성합니다.
+
+## 실전 예제: TypeScript와 AI 에이전트 연동
+
+실제 AI 에이전트의 일부가 될 수 있는 TypeScript 함수 예제입니다. 이 함수는 `DESIGN.md`를 읽고 시스템 프롬프트를 구성합니다.
+
+```typescript
+import * as fs from 'fs/promises';
+import path from 'path';
+
+// DESIGN.md 파일의 타입을 정의 (실제로는 더 복잡할 것)
+interface DesignSystemSpec {
+  components: Array<{
+    name: string;
+    description: string;
+    props: Array<{ name: string; type: string; description: string }>;
+    examples: Array<{ description: string; code: string }>;
+  }>;
+}
+
+// AI 에이전트가 LLM 호출 전 컨텍스트를 보강하는 함수
+async function buildPromptWithDesignSystemContext(
+  userPrompt: string,
+  projectRoot: string
+): Promise<string> {
+  const designSpecPath = path.join(projectRoot, 'DESIGN.md');
+  let designSpec: DesignSystemSpec;
+
+  try {
+    const specContent = await fs.readFile(designSpecPath, 'utf-8');
+    // 실제 구현에서는 마크다운에서 JSON 블록을 파싱하는 로직이 필요
+    designSpec = JSON.parse(specContent); 
+  } catch (error) {
+    console.warn('DESIGN.md not found or failed to parse. Proceeding without design context.');
+    return userPrompt;
+  }
+  
+  // 간단한 키워드 매칭으로 관련 컴포넌트 찾기 (실제로는 embedding 기반 검색이 더 효과적)
+  const relevantComponents = designSpec.components.filter(c =>
+    userPrompt.toLowerCase().includes(c.name.toLowerCase())
+  );
+
+  if (relevantComponents.length === 0) {
+    return userPrompt;
+  }
+
+  const contextHeader = `
+You are a frontend developer working on a project with a specific design system.
+Adhere to the following component specifications. Do NOT invent props or component names.
+
+--- DESIGN SYSTEM CONTEXT ---
+`;
+
+  const contextBody = relevantComponents.map(c => `
+Component: <${c.name}>
+Description: ${c.description}
+Props:
+${c.props.map(p => `- ${p.name} (${p.type}): ${p.description}`).join('\n')}
+Examples:
+${c.examples.map(e => `// ${e.description}\n${e.code}`).join('\n')}
+`).join('\n---\n');
+
+  const finalPrompt = `
+${contextHeader}
+${contextBody}
+--- END OF CONTEXT ---
+
+User Request: "${userPrompt}"
+
+Generate the code now.
+`;
+
+  return finalPrompt;
+}
+
+// 사용 예시
+async function main() {
+    const userPrompt = "Add a loading button for the checkout page.";
+    const finalPromptForLLM = await buildPromptWithDesignSystemContext(userPrompt, process.cwd());
+    console.log(finalPromptForLLM);
+    // 이 finalPromptForLLM을 OpenAI, Anthropic 등의 API로 전송
+}
+
+main();
+```
+
+## 2026년 이후의 전망: 멀티모달과 자동 동기화
+
+`DESIGN.md`는 현재의 LLM 기술을 위한 훌륭한 인터페이스지만, 기술이 발전함에 따라 그 형태도 진화할 것입니다.
+
+*   **Figma와의 자동 동기화**: 현재는 `DESIGN.md`를 수동으로 관리해야 할 수 있지만, 앞으로는 Figma의 Dev Mode나 API를 활용해 디자인 시스템이 변경될 때마다 `DESIGN.md` 파일을 자동으로 업데이트하는 CI/CD 파이프라인이 보편화될 것입니다. 디자인 변경이 코드 생성 컨텍스트에 실시간으로 반영되는 것입니다.
+*   **멀티모달 LLM의 직접 참조**: GPT-4o와 같은 멀티모달 모델은 텍스트 명세뿐만 아니라 시각적 정보를 직접 이해할 수 있습니다. 미래의 AI 코딩 도구는 `DESIGN.md`를 참조하는 대신, Figma 링크나 UI 스크린샷을 직접 "보고" 컴포넌트의 형태와 사용법을 파악할 수 있게 될 것입니다. 이때 `DESIGN.md`는 AI가 시각적으로 파악한 내용을 검증하는 보조적인 'Ground Truth' 역할을 하게 될 수 있습니다.
+
+결국 `DESIGN.md`의 핵심 철학은 "AI에게 명확한 계약(contract)을 제공한다"는 것입니다. 그 형태가 텍스트 기반 JSON이든, Figma API 응답이든, AI가 우리의 의도대로 정확하게 작동하도록 제어하는 'Harness'의 중요한 일부로 남을 것입니다.
+
+## 자기 점검
+
+1.  `DESIGN.md`가 해결하려는 핵심 문제는 무엇이며, 이를 "UI 환각"과 어떻게 연결할 수 있습니까?
+2.  `DESIGN.md`의 컴포넌트 스키마에서, AI의 코드 생성 품질에 가장 큰 영향을 미치는 두 가지 필드는 무엇이며 그 이유는 무엇입니까?
+3.  Figma 같은 디자인 도구와 `DESIGN.md`를 자동으로 동기화할 때 얻을 수 있는 가장 큰 이점은 무엇일까요?
+4.  이 `DESIGN.md` 개념을 디자이너 동료에게 어떻게 설명하여 협업을 이끌어낼 수 있을까요? (예: "이 파일은 디자이너의 의도가 코드에 정확히 반영되도록 돕는 번역기와 같아요.")
+5.  **실습 과제**: 현재 참여 중인 프로젝트의 핵심 컴포넌트 2개(예: `Modal`, `TextInput`)에 대한 `DESIGN.md`의 `components` 배열에 들어갈 JSON 객체 초안을 작성해보세요. 각 컴포넌트의 주요 `props`와 `usage` 설명을 반드시 포함해야 합니다.
