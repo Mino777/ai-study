@@ -113,15 +113,15 @@ GitHub Copilot, Cursor, 혹은 자체 제작한 AI 코딩 에이전트를 사용
 
 ```mermaid
 graph TD
-    A[사용자 프롬프트 입력<br/>"결제 페이지에 로딩 버튼 추가"] --> B{AI Agent};
+    A[사용자 프롬프트 입력 · "결제 페이지에 로딩 버튼 추가"] --> B{AI Agent};
     B --> C["1. DESIGN.md 파일 검색 및 파싱"];
-    C --> D["2. 프롬프트와 관련된<br/>'ShopButton' 컴포넌트 정보 추출"];
+    C --> D["2. 프롬프트와 관련된 · 'ShopButton' 컴포넌트 정보 추출"];
     subgraph Injected Context
         D -- "isLoading, variant props, examples" --> E[컨텍스트 보강];
     end
     A -- "원본 프롬프트" --> E;
     E --> F[LLM API 호출];
-    F --> G["`// 결제 처리 중...`<br/><ShopButton variant='primary' isLoading={true}>결제하기</ShopButton>"];
+    F --> G["`// 결제 처리 중...` · <ShopButton variant='primary' isLoading={true}>결제하기</ShopButton>"];
     G --> H[코드 생성 및 제안];
 ```
 
