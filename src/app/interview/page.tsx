@@ -34,8 +34,8 @@ interface Phase {
 /*  CONSTANTS                                                  */
 /* ═══════════════════════════════════════════════════════════ */
 
-const START_DATE = new Date("2026-04-25");
-const END_DATE = new Date("2026-08-03");
+const START_DATE = new Date("2026-04-27");
+const END_DATE = new Date("2026-08-05");
 const TOTAL_DAYS = 100;
 
 const STORAGE_KEY = "interview-prep-progress";
@@ -215,6 +215,84 @@ const CATEGORY_META: Record<string, { label: string; color: string }> = {
 };
 
 /* ═══════════════════════════════════════════════════════════ */
+/*  ALGORITHM PATTERNS (Grokking 14 Patterns)                  */
+/* ═══════════════════════════════════════════════════════════ */
+
+interface AlgoPattern {
+  id: string;
+  name: string;
+  nameKo: string;
+  phase: number; // 1-4: which phase to focus on
+  problems: number; // recommended problems to master
+}
+
+const ALGO_PATTERNS: AlgoPattern[] = [
+  { id: "sliding-window", name: "Sliding Window", nameKo: "슬라이딩 윈도우", phase: 2, problems: 8 },
+  { id: "two-pointers", name: "Two Pointers", nameKo: "투 포인터", phase: 2, problems: 8 },
+  { id: "fast-slow", name: "Fast & Slow Pointers", nameKo: "빠른/느린 포인터", phase: 1, problems: 5 },
+  { id: "merge-intervals", name: "Merge Intervals", nameKo: "구간 병합", phase: 2, problems: 5 },
+  { id: "cyclic-sort", name: "Cyclic Sort", nameKo: "순환 정렬", phase: 1, problems: 4 },
+  { id: "linked-list", name: "In-place Linked List", nameKo: "연결리스트 조작", phase: 1, problems: 5 },
+  { id: "bfs", name: "BFS", nameKo: "너비 우선 탐색", phase: 1, problems: 8 },
+  { id: "dfs", name: "DFS", nameKo: "깊이 우선 탐색", phase: 1, problems: 8 },
+  { id: "two-heaps", name: "Two Heaps", nameKo: "투 힙", phase: 2, problems: 4 },
+  { id: "binary-search", name: "Binary Search", nameKo: "이분 탐색", phase: 1, problems: 8 },
+  { id: "top-k", name: "Top K Elements", nameKo: "상위 K개", phase: 2, problems: 5 },
+  { id: "dp", name: "Dynamic Programming", nameKo: "동적 계획법", phase: 2, problems: 12 },
+  { id: "backtracking", name: "Backtracking", nameKo: "백트래킹", phase: 2, problems: 6 },
+  { id: "graph", name: "Graph (Topological)", nameKo: "위상 정렬/그래프", phase: 2, problems: 6 },
+];
+
+const PATTERN_STORAGE_KEY = "interview-pattern-progress";
+
+/* ═══════════════════════════════════════════════════════════ */
+/*  TIMEBOX RULES (Research-backed)                            */
+/* ═══════════════════════════════════════════════════════════ */
+
+const TIMEBOX_RULES = [
+  { level: "Easy", time: "15분", give_up: "20분 초과 시 풀이 확인", color: "#10b981" },
+  { level: "Medium", time: "30-45분", give_up: "50분 초과 시 풀이 확인 → 다음 날 재풀이", color: "#f59e0b" },
+  { level: "Hard", time: "60-70분", give_up: "75분 초과 시 풀이 확인 → 3일 후 재풀이", color: "#ef4444" },
+];
+
+/* ═══════════════════════════════════════════════════════════ */
+/*  LEVEL-UP CRITERIA (ZPD-based)                              */
+/* ═══════════════════════════════════════════════════════════ */
+
+const LEVEL_CRITERIA = [
+  { from: "Lv.1", to: "Lv.2", criteria: "정답률 85% + 패턴 2개 마스터", dayTarget: "Day 15" },
+  { from: "Lv.2", to: "Lv.3", criteria: "정답률 80% + 30분 내 풀이 + 패턴 6개", dayTarget: "Day 45" },
+  { from: "Lv.3", to: "기출", criteria: "정답률 70% + 45분 내 풀이 + 패턴 10개", dayTarget: "Day 65" },
+];
+
+/* ═══════════════════════════════════════════════════════════ */
+/*  SCIENCE-BACKED MENTOR TIPS (by Phase)                      */
+/* ═══════════════════════════════════════════════════════════ */
+
+const PHASE_MENTOR_TIPS: Record<number, { principle: string; tip: string; source: string }[]> = {
+  1: [
+    { principle: "Tiny Habits", tip: "커피 한 잔 마신 후 → 문제 1개. 이것만 지키면 습관이 된다.", source: "BJ Fogg, Stanford" },
+    { principle: "분산 학습", tip: "한 번에 3시간 몰아치기보다 **아침 1h + 저녁 2h** 분산이 기억 정착률 2배.", source: "Ebbinghaus" },
+    { principle: "Active Recall", tip: "노트를 다시 읽지 마라. **빈 종이에 직접 써봐라**. 인출 연습이 재독보다 50% 효과적.", source: "Karpicke, 2008" },
+  ],
+  2: [
+    { principle: "의도적 연습", tip: "이미 풀 수 있는 문제를 반복하지 마라. **약간 어려운 수준**에서 고통스럽게 풀어야 실력이 는다.", source: "Anders Ericsson" },
+    { principle: "70/20/10 법칙", tip: "매일 시간 배분: **새 문제 70%** + 틀린 문제 복습 20% + 쉬운 워밍업 10%.", source: "Deliberate Practice" },
+    { principle: "Interleaving", tip: "같은 유형 10개 연속 대신 **다른 유형 섞어서** 풀어라. 단기 점수는 떨어져도 장기 기억은 올라간다.", source: "Rohrer & Taylor, 2007" },
+  ],
+  3: [
+    { principle: "Think-Aloud", tip: "모의 면접 시 **침묵 10초 이상 금지**. 막히면 '지금 X 접근을 시도하고 있는데...'라고 말해라.", source: "Ericsson Protocol" },
+    { principle: "Testing Effect", tip: "면접 질문을 다시 읽지 말고 **자기 자신에게 질문 후 답변**해라. 시험이 학습이다.", source: "Roediger, 2006" },
+    { principle: "Elaborative Interrogation", tip: "답변 후 반드시 '**왜?**'를 한 번 더 물어라. 깊이가 면접관을 설득한다.", source: "Dunlosky, 2013" },
+  ],
+  4: [
+    { principle: "Sleep & Memory", tip: "면접 전날은 **7시간 이상 수면 필수**. 수면 중 기억이 장기 저장소로 이동한다.", source: "Walker, 2017" },
+    { principle: "Desirable Difficulty", tip: "최종 모의고사는 실제보다 **20% 더 어렵게** 설정해라. 실전이 쉽게 느껴진다.", source: "Bjork, 1994" },
+    { principle: "Pre-performance Routine", tip: "면접 당일 아침: 쉬운 문제 1개 → 스트레칭 → 프로젝트 핵심 3줄 복습. **루틴이 긴장을 이긴다**.", source: "Sport Psychology" },
+  ],
+};
+
+/* ═══════════════════════════════════════════════════════════ */
 /*  WEEKLY FOCUS TOPICS                                        */
 /* ═══════════════════════════════════════════════════════════ */
 
@@ -335,6 +413,32 @@ export default function InterviewPage() {
     return all.filter((t) => t.track === "shared" || t.track === track);
   }, [selectedDay, track]);
 
+  // Pattern mastery progress
+  const [patternProgress, setPatternProgress] = useState<Record<string, number>>({});
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(PATTERN_STORAGE_KEY);
+      if (saved) setPatternProgress(JSON.parse(saved));
+    } catch { /* noop */ }
+  }, []);
+  useEffect(() => {
+    if (!mounted) return;
+    try { localStorage.setItem(PATTERN_STORAGE_KEY, JSON.stringify(patternProgress)); } catch { /* noop */ }
+  }, [patternProgress, mounted]);
+
+  // Streak calculation
+  const streak = useMemo(() => {
+    let count = 0;
+    for (let d = today; d >= 1; d--) {
+      const dayTasks = getDailyTasks(d).filter((t) => t.track === "shared" || t.track === track);
+      const allDone = dayTasks.length > 0 && dayTasks.every((t) => checkedTasks[t.id]);
+      if (d === today && !allDone) continue; // today incomplete is ok
+      if (allDone) count++;
+      else break;
+    }
+    return count;
+  }, [checkedTasks, today, track]);
+
   // Progress stats
   const totalChecked = useMemo(() => Object.values(checkedTasks).filter(Boolean).length, [checkedTasks]);
   const todayTasks = useMemo(() => getDailyTasks(today).filter((t) => t.track === "shared" || t.track === track), [today, track]);
@@ -342,6 +446,8 @@ export default function InterviewPage() {
 
   const weeklyTopics = track === "ios" ? IOS_WEEKLY_TOPICS : FDE_WEEKLY_TOPICS;
   const currentWeek = Math.ceil(selectedDay / 7);
+  const isDeloadWeek = currentWeek % 4 === 0;
+  const isRestDay = selectedDay % 7 === 0;
 
   const toggleTask = (id: string) => {
     setCheckedTasks((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -378,26 +484,52 @@ export default function InterviewPage() {
         </header>
 
         {/* ═══════════ D-DAY COUNTER ═══════════ */}
-        <div className="grid grid-cols-3 gap-4 mb-10">
-          <div className="rounded-2xl border border-border/40 bg-surface/40 p-6 text-center">
-            <p className="text-4xl font-display font-black" style={{ color: currentPhase.color }}>
+        <div className="grid grid-cols-4 gap-3 mb-10">
+          <div className="rounded-2xl border border-border/40 bg-surface/40 p-5 text-center">
+            <p className="text-3xl font-display font-black" style={{ color: currentPhase.color }}>
               D-{daysRemaining}
             </p>
-            <p className="text-sm text-text/40 mt-1">남은 일수</p>
+            <p className="text-xs text-text/40 mt-1">남은 일수</p>
           </div>
-          <div className="rounded-2xl border border-border/40 bg-surface/40 p-6 text-center">
-            <p className="text-4xl font-display font-black text-text/80">
-              {today}<span className="text-lg text-text/30">/{TOTAL_DAYS}</span>
+          <div className="rounded-2xl border border-border/40 bg-surface/40 p-5 text-center">
+            <p className="text-3xl font-display font-black text-text/80">
+              {today}<span className="text-base text-text/30">/{TOTAL_DAYS}</span>
             </p>
-            <p className="text-sm text-text/40 mt-1">현재 Day</p>
+            <p className="text-xs text-text/40 mt-1">현재 Day</p>
           </div>
-          <div className="rounded-2xl border border-border/40 bg-surface/40 p-6 text-center">
-            <p className="text-4xl font-display font-black text-accent">
-              {todayChecked}<span className="text-lg text-text/30">/{todayTasks.length}</span>
+          <div className="rounded-2xl border border-border/40 bg-surface/40 p-5 text-center">
+            <p className="text-3xl font-display font-black text-accent">
+              {todayChecked}<span className="text-base text-text/30">/{todayTasks.length}</span>
             </p>
-            <p className="text-sm text-text/40 mt-1">오늘 완료</p>
+            <p className="text-xs text-text/40 mt-1">오늘 완료</p>
+          </div>
+          <div className={`rounded-2xl border p-5 text-center ${streak >= 7 ? "border-orange-500/40 bg-orange-500/5" : "border-border/40 bg-surface/40"}`}>
+            <p className={`text-3xl font-display font-black ${streak >= 7 ? "text-orange-400" : "text-text/50"}`}>
+              {streak}
+            </p>
+            <p className="text-xs text-text/40 mt-1">연속 일수</p>
           </div>
         </div>
+
+        {/* Deload / Rest day alert */}
+        {isDeloadWeek && (
+          <div className="mb-6 rounded-xl border border-amber-500/30 bg-amber-500/5 px-5 py-3 flex items-center gap-3">
+            <span className="text-amber-400 text-lg">&#9888;</span>
+            <div>
+              <p className="text-sm font-semibold text-amber-300/90">Deload Week (Week {currentWeek})</p>
+              <p className="text-xs text-text/40">4주마다 강도 50% 감소. 번아웃 방지를 위한 능동적 회복 주간. 쉬운 문제 위주 + 복습 중심.</p>
+            </div>
+          </div>
+        )}
+        {isRestDay && (
+          <div className="mb-6 rounded-xl border border-green-500/30 bg-green-500/5 px-5 py-3 flex items-center gap-3">
+            <span className="text-green-400 text-lg">&#9775;</span>
+            <div>
+              <p className="text-sm font-semibold text-green-300/90">Rest Day (Day {selectedDay})</p>
+              <p className="text-xs text-text/40">7일마다 쉬는 날. 가벼운 복습만 하거나 완전히 쉬어라. 뇌가 정리할 시간이 필요하다.</p>
+            </div>
+          </div>
+        )}
 
         {/* Progress bar */}
         <div className="mb-10">
@@ -733,16 +865,146 @@ export default function InterviewPage() {
           </div>
         </section>
 
-        {/* ═══════════ MENTOR NOTE ═══════════ */}
+        {/* ═══════════ ALGORITHM PATTERNS ═══════════ */}
+        <section className="mb-12">
+          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">
+            14 Algorithm Patterns
+            <span className="ml-2 text-text/25 normal-case tracking-normal font-normal">— Grokking 기반 패턴 마스터리</span>
+          </h2>
+          <div className="grid grid-cols-2 md:grid-cols-7 gap-2">
+            {ALGO_PATTERNS.map((p) => {
+              const solved = patternProgress[p.id] ?? 0;
+              const pct = Math.min(100, Math.round((solved / p.problems) * 100));
+              const mastered = solved >= p.problems;
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => {
+                    const next = ((patternProgress[p.id] ?? 0) + 1) % (p.problems + 1);
+                    setPatternProgress((prev) => ({ ...prev, [p.id]: next }));
+                  }}
+                  className={`rounded-xl border p-3 text-center transition-all cursor-pointer ${
+                    mastered
+                      ? "border-green-500/40 bg-green-500/10"
+                      : solved > 0
+                        ? "border-accent/30 bg-surface/40"
+                        : "border-border/30 bg-surface/20"
+                  }`}
+                  title={`${p.name}: ${solved}/${p.problems} (클릭하여 +1)`}
+                >
+                  <p className={`text-xs font-bold mb-1 ${mastered ? "text-green-400" : solved > 0 ? "text-accent/80" : "text-text/40"}`}>
+                    {p.nameKo}
+                  </p>
+                  <div className="h-1 rounded-full bg-surface/60 overflow-hidden mb-1">
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{ width: `${pct}%`, background: mastered ? "#10b981" : "#3b82f6" }}
+                    />
+                  </div>
+                  <p className="text-[10px] font-code text-text/30">{solved}/{p.problems}</p>
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-[10px] text-text/25 mt-2">* 클릭하면 풀이 수 +1. 각 패턴별 목표 문제 수 달성 시 마스터.</p>
+        </section>
+
+        {/* ═══════════ TIMEBOX RULES ═══════════ */}
+        <section className="mb-12">
+          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">
+            Timebox Rules
+            <span className="ml-2 text-text/25 normal-case tracking-normal font-normal">— 난이도별 시간 제한</span>
+          </h2>
+          <div className="grid grid-cols-3 gap-3">
+            {TIMEBOX_RULES.map((r) => (
+              <div key={r.level} className="rounded-xl border border-border/30 bg-surface/20 p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ background: r.color }} />
+                  <span className="text-sm font-bold">{r.level}</span>
+                </div>
+                <p className="text-2xl font-display font-black mb-1" style={{ color: r.color }}>{r.time}</p>
+                <p className="text-[11px] text-text/40 leading-snug">{r.give_up}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ═══════════ LEVEL-UP CRITERIA ═══════════ */}
+        <section className="mb-12">
+          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">
+            Level-Up Criteria
+            <span className="ml-2 text-text/25 normal-case tracking-normal font-normal">— ZPD 기반 자동 레벨업</span>
+          </h2>
+          <div className="flex gap-3">
+            {LEVEL_CRITERIA.map((lc, i) => (
+              <div key={i} className="flex-1 rounded-xl border border-border/30 bg-surface/20 p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xs font-code px-2 py-0.5 rounded-full bg-accent/10 text-accent/70">{lc.from}</span>
+                  <span className="text-text/20">&rarr;</span>
+                  <span className="text-xs font-code px-2 py-0.5 rounded-full bg-green-500/10 text-green-400/70">{lc.to}</span>
+                </div>
+                <p className="text-xs text-text/60 leading-relaxed mb-1">{lc.criteria}</p>
+                <p className="text-[10px] text-text/30 font-code">목표: {lc.dayTarget}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ═══════════ 70/20/10 RULE ═══════════ */}
+        <section className="mb-12">
+          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">
+            Daily Time Split
+            <span className="ml-2 text-text/25 normal-case tracking-normal font-normal">— 70/20/10 법칙</span>
+          </h2>
+          <div className="rounded-xl border border-border/30 bg-surface/20 p-5">
+            <div className="flex h-4 rounded-full overflow-hidden mb-4">
+              <div className="bg-accent/70" style={{ width: "70%" }} />
+              <div className="bg-amber-400/70" style={{ width: "20%" }} />
+              <div className="bg-green-400/70" style={{ width: "10%" }} />
+            </div>
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div>
+                <p className="text-2xl font-display font-black text-accent/70">70%</p>
+                <p className="text-xs text-text/50 mt-0.5">신규 문제</p>
+                <p className="text-[10px] text-text/30">못 푸는 영역에 도전</p>
+              </div>
+              <div>
+                <p className="text-2xl font-display font-black text-amber-400/70">20%</p>
+                <p className="text-xs text-text/50 mt-0.5">틀린 문제 복습</p>
+                <p className="text-[10px] text-text/30">1일/3일/7일 간격 재풀이</p>
+              </div>
+              <div>
+                <p className="text-2xl font-display font-black text-green-400/70">10%</p>
+                <p className="text-xs text-text/50 mt-0.5">워밍업</p>
+                <p className="text-[10px] text-text/30">자신감 유지용 쉬운 문제</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ═══════════ MENTOR NOTE (Science-backed) ═══════════ */}
         <section>
           <div className="rounded-2xl border border-accent/20 bg-accent/5 p-6">
-            <h3 className="font-display text-sm font-bold mb-3 text-accent/80">Mentor&apos;s Note</h3>
-            <div className="space-y-2 text-sm text-text/60 leading-relaxed">
-              <p><B text="**하루 최소 3시간**, 주말은 5시간. 알고리즘은 매일 빠지지 않는다." /></p>
-              <p><B text="Day 30까지 프로그래머스 Lv.2를 **안정적으로** 푸는 게 최소 기준." /></p>
-              <p><B text="포트폴리오는 **ai-study + Aidy + MoneyFlow** 3개면 충분. 새로 만들지 말고 **기존 프로젝트를 깊게** 정리." /></p>
-              <p><B text="모의 면접은 **녹음 필수**. 자기 목소리를 들어야 고친다." /></p>
-              <p><B text="컨디션 관리도 훈련이다. 수면 7시간, 운동 30분은 **비협상**." /></p>
+            <h3 className="font-display text-sm font-bold mb-4 text-accent/80">
+              Mentor&apos;s Note — Phase {currentPhase.id}: {currentPhase.title}
+            </h3>
+            <div className="space-y-4">
+              {(PHASE_MENTOR_TIPS[currentPhase.id] ?? []).map((tip, i) => (
+                <div key={i} className="flex gap-3">
+                  <span className="shrink-0 w-6 h-6 rounded-lg bg-accent/10 text-accent/60 flex items-center justify-center text-xs font-bold mt-0.5">
+                    {i + 1}
+                  </span>
+                  <div>
+                    <p className="text-xs font-bold text-accent/60 mb-0.5">{tip.principle}</p>
+                    <p className="text-sm text-text/60 leading-relaxed"><B text={tip.tip} /></p>
+                    <p className="text-[10px] text-text/25 mt-1 font-code">{tip.source}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-5 pt-4 border-t border-accent/10 space-y-1.5 text-xs text-text/40">
+              <p><B text="**비협상 3조**: 하루 3시간 · 수면 7시간 · 운동 30분" /></p>
+              <p><B text="포트폴리오는 **ai-study + Aidy + MoneyFlow** 3개면 충분. 새로 만들지 말고 기존 프로젝트를 깊게." /></p>
             </div>
           </div>
         </section>
