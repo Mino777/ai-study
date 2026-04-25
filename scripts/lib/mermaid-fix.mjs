@@ -44,7 +44,31 @@ export function fixAndValidateMermaid(code, filename) {
   // &lt;br/&gt; (HTML 엔티티)는 의도적 텍스트 설명이므로 제외.
   fixed = fixed.replace(/<br\s*\/?>/g, ' · ');
 
-  // AUTO-FIX 3: 콜론 포함 라벨에 따옴표 강제 (6번째 재발 패턴)
+  // AUTO-FIX 3: subgraph 공백 포함 ID 자동 수정 (8번째 재발 패턴)
+  // AI 생성 콘텐츠에서 `subgraph Some Label` 형태가 반복 발생.
+  // Mermaid 파서는 공백 포함 ID를 허용하지 않으므로 `subgraph SomeLabel ["Some Label"]`로 변환.
+  // 이미 유효한 형식(id만, id ["label"], "name")은 건너뜀.
+  fixed = fixed.replace(
+    /^(\s*)subgraph\s+(.+)$/gm,
+    (match, indent, rest) => {
+      const trimmedRest = rest.trim();
+      // 이미 유효: id만 (공백 없음)
+      if (/^[\w-]+$/.test(trimmedRest)) return match;
+      // 이미 유효: id ["label"] 형식
+      if (/^\w+\s*\[".+"\]$/.test(trimmedRest)) return match;
+      // 이미 유효: "quoted name" 형식
+      if (/^".+"$/.test(trimmedRest)) return match;
+      // 공백 포함 → camelCase ID + ["original label"]
+      const id = trimmedRest
+        .replace(/[^a-zA-Z0-9\s]/g, '')
+        .split(/\s+/)
+        .map((w, i) => i === 0 ? w.toLowerCase() : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+        .join('');
+      return `${indent}subgraph ${id || 'sub'} ["${trimmedRest}"]`;
+    },
+  );
+
+  // AUTO-FIX 4: 콜론 포함 라벨에 따옴표 강제 (6번째 재발 패턴)
   // Mermaid 파서가 콜론을 특수 구문으로 해석 → 런타임 에러.
   // A[Phase 1: 분석] → A["Phase 1: 분석"]
   fixed = fixed.replace(

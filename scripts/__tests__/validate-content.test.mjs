@@ -312,3 +312,51 @@ describe("warnings — → 따옴표 누락 탐지", () => {
     expect(lastFixed).not.toContain("<br/>");
   });
 });
+
+describe("auto-fix: subgraph 공백 포함 ID 자동 변환", () => {
+  it("공백 포함 subgraph → id [\"label\"] 형식으로 auto-fix", () => {
+    const code = `flowchart TD\n  subgraph Injected Context\n    A --> B\n  end\n`;
+    const { fixed, autoFixed, errors } = fixAndValidateMermaid(code, "x");
+    expect(autoFixed).toBe(true);
+    expect(fixed).toContain('subgraph injectedContext ["Injected Context"]');
+    expect(errors.length).toBe(0);
+  });
+
+  it("이미 유효한 subgraph id는 건드리지 않음", () => {
+    const code = `flowchart TD\n  subgraph MyGroup\n    A --> B\n  end\n`;
+    const { fixed, autoFixed } = fixAndValidateMermaid(code, "x");
+    expect(fixed).toContain("subgraph MyGroup");
+    // autoFixed가 false이거나 내용이 동일
+    if (autoFixed) expect(fixed).toBe(code);
+  });
+
+  it("이미 유효한 subgraph id [\"label\"] 형식은 건드리지 않음", () => {
+    const code = `flowchart TD\n  subgraph VM ["ViewModel"]\n    A --> B\n  end\n`;
+    const { fixed } = fixAndValidateMermaid(code, "x");
+    expect(fixed).toContain('subgraph VM ["ViewModel"]');
+  });
+
+  it("이미 유효한 subgraph \"quoted name\" 형식은 건드리지 않음", () => {
+    const code = `flowchart TD\n  subgraph "My Group"\n    A --> B\n  end\n`;
+    const { fixed } = fixAndValidateMermaid(code, "x");
+    expect(fixed).toContain('subgraph "My Group"');
+  });
+
+  it("subgraph auto-fix idempotent — 3회 실행해도 결과 동일", () => {
+    const code = `flowchart TD\n  subgraph Build Phase\n    A --> B\n  end\n`;
+    let current = code;
+    for (let i = 0; i < 3; i++) {
+      const { fixed } = fixAndValidateMermaid(current, "x");
+      if (i === 0) current = fixed;
+      else expect(fixed).toBe(current);
+    }
+    expect(current).toContain('subgraph buildPhase ["Build Phase"]');
+  });
+
+  it("특수문자 포함 subgraph label도 처리", () => {
+    const code = `flowchart TD\n  subgraph Phase 1: Setup\n    A --> B\n  end\n`;
+    const { fixed, autoFixed } = fixAndValidateMermaid(code, "x");
+    expect(autoFixed).toBe(true);
+    expect(fixed).toContain('["Phase 1: Setup"]');
+  });
+});
