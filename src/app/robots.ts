@@ -7,7 +7,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: "/resume",
+      disallow: ["/resume", "/interview"],
     },
     sitemap: `${BASE_URL}/sitemap.xml`,
   };

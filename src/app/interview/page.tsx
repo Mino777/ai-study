@@ -1,0 +1,752 @@
+"use client";
+import { useEffect, useState, useCallback, useMemo } from "react";
+
+/* ═══════════════════════════════════════════════════════════ */
+/*  TYPES                                                      */
+/* ═══════════════════════════════════════════════════════════ */
+
+interface DailyTask {
+  id: string;
+  track: "shared" | "ios" | "fde";
+  label: string;
+  category: "algo" | "ios-tech" | "fde-tech" | "system-design" | "portfolio" | "behavioral" | "review";
+}
+
+interface WeekMilestone {
+  week: number;
+  dayRange: [number, number];
+  title: string;
+  description: string;
+  color: string;
+}
+
+interface Phase {
+  id: number;
+  title: string;
+  subtitle: string;
+  dayRange: [number, number];
+  color: string;
+  icon: string;
+  milestones: WeekMilestone[];
+}
+
+/* ═══════════════════════════════════════════════════════════ */
+/*  CONSTANTS                                                  */
+/* ═══════════════════════════════════════════════════════════ */
+
+const START_DATE = new Date("2026-04-25");
+const END_DATE = new Date("2026-08-03");
+const TOTAL_DAYS = 100;
+
+const STORAGE_KEY = "interview-prep-progress";
+
+type TrackKey = "ios" | "fde";
+
+const TRACKS = [
+  { key: "ios" as const, label: "iOS Engineer", emoji: "" },
+  { key: "fde" as const, label: "FDE", emoji: "" },
+] as const;
+
+/* ═══════════════════════════════════════════════════════════ */
+/*  TARGET COMPANIES                                           */
+/* ═══════════════════════════════════════════════════════════ */
+
+const TARGET_COMPANIES = {
+  ios: [
+    { name: "토스", note: "서류→과제→직무면접→컬쳐핏", color: "#3b82f6" },
+    { name: "당근", note: "면접→5일 과제→최종", color: "#ff6f00" },
+    { name: "카카오", note: "코딩테스트(프로그래머스)→기술면접", color: "#fee500" },
+    { name: "네이버", note: "코테→기술면접→인성→컬쳐핏", color: "#03c75a" },
+    { name: "쿠팡", note: "코테→시스템디자인→기술면접 3R", color: "#e4002b" },
+    { name: "라인", note: "코테→기술면접→인성", color: "#06c755" },
+  ],
+  fde: [
+    { name: "채널톡", note: "FDE — 고객 현장 솔루션 배포", color: "#3b82f6" },
+    { name: "마키나락스", note: "제조/국방 AI FDE 확대 채용", color: "#10b981" },
+    { name: "크래프톤", note: "AI FDE 집중 채용 중", color: "#f59e0b" },
+    { name: "팔란티어 코리아", note: "Forward Deployed 팀", color: "#1a1a2e" },
+    { name: "토스", note: "기술 컨설턴트 유사 역할", color: "#3b82f6" },
+  ],
+};
+
+/* ═══════════════════════════════════════════════════════════ */
+/*  100-DAY PHASES & MILESTONES                                */
+/* ═══════════════════════════════════════════════════════════ */
+
+const PHASES: Phase[] = [
+  {
+    id: 1,
+    title: "기초 다지기",
+    subtitle: "알고리즘 기초 + Swift/iOS 복습 + FDE 기초",
+    dayRange: [1, 30],
+    color: "#3b82f6",
+    icon: "01",
+    milestones: [
+      { week: 1, dayRange: [1, 7], title: "자료구조 기초", description: "배열, 연결리스트, 스택, 큐, 해시 — 백준 Bronze/Silver 매일 2-3문제", color: "#3b82f6" },
+      { week: 2, dayRange: [8, 14], title: "정렬 & 탐색", description: "버블/선택/삽입/퀵/병합 정렬 + 이분탐색 — 프로그래머스 Lv.1-2", color: "#3b82f6" },
+      { week: 3, dayRange: [15, 21], title: "BFS/DFS & 그래프 기초", description: "그래프 순회 + 최단경로 — 백준 Silver/Gold 진입", color: "#60a5fa" },
+      { week: 4, dayRange: [22, 30], title: "Swift 핵심 복습", description: "메모리 관리, 프로토콜, 클로저, 제네릭 — iOS 면접 질문 50개 정리", color: "#60a5fa" },
+    ],
+  },
+  {
+    id: 2,
+    title: "심화 학습",
+    subtitle: "알고리즘 심화 + iOS/FDE 기술 심화",
+    dayRange: [31, 60],
+    color: "#8b5cf6",
+    icon: "02",
+    milestones: [
+      { week: 5, dayRange: [31, 37], title: "DP & 탐욕법", description: "동적계획법 패턴 정리 + 탐욕법 증명 — 프로그래머스 Lv.2-3", color: "#8b5cf6" },
+      { week: 6, dayRange: [38, 44], title: "고급 알고리즘", description: "투포인터, 슬라이딩 윈도우, 유니온파인드 — 카카오/네이버 기출", color: "#8b5cf6" },
+      { week: 7, dayRange: [45, 51], title: "iOS 아키텍처 심화", description: "MVVM/Clean/RIBs 비교 + Combine/Concurrency 실습 프로젝트", color: "#a78bfa" },
+      { week: 8, dayRange: [52, 60], title: "iOS 기출 집중 + FDE 케이스", description: "카카오/토스 기출 20문제 + FDE 비즈니스 케이스 준비", color: "#a78bfa" },
+    ],
+  },
+  {
+    id: 3,
+    title: "실전 대비",
+    subtitle: "System Design + 포트폴리오 + 모의면접",
+    dayRange: [61, 85],
+    color: "#10b981",
+    icon: "03",
+    milestones: [
+      { week: 9, dayRange: [61, 67], title: "모바일 시스템 디자인", description: "소셜 피드, 메시징, 스트리밍 앱 설계 — 아키텍처 다이어그램 3개", color: "#10b981" },
+      { week: 10, dayRange: [68, 74], title: "포트폴리오 완성", description: "GitHub README 정비 + 기술블로그 3-5편 + 프로젝트 정리", color: "#10b981" },
+      { week: 11, dayRange: [75, 81], title: "모의 면접 집중", description: "기술면접 모의 3회 (녹음→피드백) + iOS 심화 질문 100개 완성", color: "#34d399" },
+      { week: 12, dayRange: [82, 85], title: "약점 보강", description: "틀린 문제 재풀이 + 자주 막히는 주제 집중 공략", color: "#34d399" },
+    ],
+  },
+  {
+    id: 4,
+    title: "최종 점검",
+    subtitle: "기업별 맞춤 + 실전 시뮬레이션",
+    dayRange: [86, 100],
+    color: "#f59e0b",
+    icon: "04",
+    milestones: [
+      { week: 13, dayRange: [86, 92], title: "기업별 맞춤 준비", description: "지원 기업 3-5개 기출 분석 + 기업 문화 리서치 + 자소서 작성", color: "#f59e0b" },
+      { week: 14, dayRange: [93, 100], title: "D-Day 카운트다운", description: "모의고사 2-3회 + 최종 모의면접 + 컨디션 관리", color: "#fbbf24" },
+    ],
+  },
+];
+
+/* ═══════════════════════════════════════════════════════════ */
+/*  DAILY TRAINING ITEMS                                       */
+/* ═══════════════════════════════════════════════════════════ */
+
+function getDailyTasks(day: number): DailyTask[] {
+  const tasks: DailyTask[] = [];
+
+  // Phase 1: Day 1-30
+  if (day <= 30) {
+    tasks.push({ id: `d${day}-algo`, track: "shared", label: day <= 14 ? "백준 2-3문제 (자료구조/정렬)" : "프로그래머스 Lv.1-2 2문제", category: "algo" });
+    if (day <= 14) {
+      tasks.push({ id: `d${day}-ds`, track: "shared", label: "자료구조 개념 정리 (노트 1장)", category: "algo" });
+    }
+    if (day >= 15) {
+      tasks.push({ id: `d${day}-graph`, track: "shared", label: "BFS/DFS 문제 1개 + 풀이 정리", category: "algo" });
+    }
+    if (day >= 22) {
+      tasks.push({ id: `d${day}-swift`, track: "ios", label: "Swift 핵심 개념 복습 + 면접 질문 5개 답변 작성", category: "ios-tech" });
+      tasks.push({ id: `d${day}-fde-basic`, track: "fde", label: "Python/SQL 기초 문제 풀이 + 데이터 모델링 개념", category: "fde-tech" });
+    }
+  }
+
+  // Phase 2: Day 31-60
+  if (day >= 31 && day <= 60) {
+    tasks.push({ id: `d${day}-algo`, track: "shared", label: day <= 44 ? "프로그래머스 Lv.2-3 (DP/탐욕) 1-2문제" : "카카오/네이버 기출 문제 1개", category: "algo" });
+    if (day >= 45 && day <= 51) {
+      tasks.push({ id: `d${day}-arch`, track: "ios", label: "iOS 아키텍처 패턴 비교 실습 (MVVM/Clean/RIBs)", category: "ios-tech" });
+      tasks.push({ id: `d${day}-fde-case`, track: "fde", label: "FDE 비즈니스 케이스 분석 1건 (문제→해결→임팩트)", category: "fde-tech" });
+    }
+    if (day >= 52) {
+      tasks.push({ id: `d${day}-combine`, track: "ios", label: "Combine/Swift Concurrency 실습 코드 작성", category: "ios-tech" });
+      tasks.push({ id: `d${day}-fde-proto`, track: "fde", label: "고객 시나리오 기반 프로토타입 설계 연습", category: "fde-tech" });
+    }
+    if (day % 7 === 0) {
+      tasks.push({ id: `d${day}-review`, track: "shared", label: "주간 복습: 이번 주 풀었던 문제 재풀이 + 오답 분석", category: "review" });
+    }
+  }
+
+  // Phase 3: Day 61-85
+  if (day >= 61 && day <= 85) {
+    if (day <= 67) {
+      tasks.push({ id: `d${day}-sd`, track: "shared", label: "모바일 시스템 디자인 케이스 스터디 (다이어그램 포함)", category: "system-design" });
+    }
+    if (day >= 68 && day <= 74) {
+      tasks.push({ id: `d${day}-port`, track: "shared", label: "포트폴리오/기술블로그 작성 (1일 1편 또는 README 정비)", category: "portfolio" });
+    }
+    if (day >= 75) {
+      tasks.push({ id: `d${day}-mock`, track: "shared", label: "모의 면접 질문 답변 연습 (녹음 + 셀프 피드백)", category: "behavioral" });
+      tasks.push({ id: `d${day}-ios-deep`, track: "ios", label: "iOS 심화 질문 10개 답변 작성 + 코드 예제", category: "ios-tech" });
+      tasks.push({ id: `d${day}-fde-pitch`, track: "fde", label: "FDE 프로젝트 피치 연습 (3분 프레젠테이션)", category: "fde-tech" });
+    }
+    tasks.push({ id: `d${day}-algo-review`, track: "shared", label: "알고리즘 유지: 프로그래머스 1문제 (감 유지)", category: "algo" });
+  }
+
+  // Phase 4: Day 86-100
+  if (day >= 86) {
+    tasks.push({ id: `d${day}-company`, track: "shared", label: "지원 기업 기출 분석 + 기업 문화 리서치", category: "behavioral" });
+    if (day >= 93) {
+      tasks.push({ id: `d${day}-final`, track: "shared", label: "풀 모의고사 (3시간 타이머, 실전처럼)", category: "algo" });
+      tasks.push({ id: `d${day}-mental`, track: "shared", label: "컨디션 관리: 수면/운동/식단 체크", category: "review" });
+    } else {
+      tasks.push({ id: `d${day}-resume`, track: "shared", label: "자소서/이력서 최종 점검 + 프로젝트 설명 1분 요약", category: "portfolio" });
+    }
+    tasks.push({ id: `d${day}-ios-final`, track: "ios", label: "iOS 면접 질문 랜덤 10개 답변 (타이머 30분)", category: "ios-tech" });
+    tasks.push({ id: `d${day}-fde-final`, track: "fde", label: "FDE 케이스 스터디 발표 연습 (피드백 반영)", category: "fde-tech" });
+  }
+
+  return tasks;
+}
+
+/* ═══════════════════════════════════════════════════════════ */
+/*  CATEGORY LABELS & COLORS                                   */
+/* ═══════════════════════════════════════════════════════════ */
+
+const CATEGORY_META: Record<string, { label: string; color: string }> = {
+  algo: { label: "Algorithm", color: "#3b82f6" },
+  "ios-tech": { label: "iOS", color: "#06b6d4" },
+  "fde-tech": { label: "FDE", color: "#8b5cf6" },
+  "system-design": { label: "System Design", color: "#10b981" },
+  portfolio: { label: "Portfolio", color: "#f59e0b" },
+  behavioral: { label: "Behavioral", color: "#ef4444" },
+  review: { label: "Review", color: "#6b7280" },
+};
+
+/* ═══════════════════════════════════════════════════════════ */
+/*  WEEKLY FOCUS TOPICS                                        */
+/* ═══════════════════════════════════════════════════════════ */
+
+const IOS_WEEKLY_TOPICS: Record<number, string[]> = {
+  1: ["Array vs ContiguousArray", "LinkedList 직접 구현", "Stack/Queue 프로토콜"],
+  2: ["시간복잡도 O(n log n) 증명", "Binary Search 변형 3가지"],
+  3: ["BFS 최단경로", "DFS 백트래킹", "인접리스트 vs 인접행렬"],
+  4: ["ARC & Retain Cycle", "[weak self] vs [unowned self]", "Closure Capture List"],
+  5: ["DP: Top-down vs Bottom-up", "Memoization 패턴"],
+  6: ["투포인터 패턴", "슬라이딩 윈도우", "카카오 2023 기출"],
+  7: ["MVVM vs Clean Architecture", "RIBs Router/Interactor/Builder", "Combine Publisher Chain"],
+  8: ["Swift Concurrency (async/await)", "Actor isolation", "Sendable 프로토콜"],
+  9: ["소셜 피드 시스템 설계", "이미지 캐싱 전략", "오프라인 대응"],
+  10: ["GitHub 프로젝트 README", "기술블로그 SEO", "트러블슈팅 문서화"],
+  11: ["메모리 관리 심화 Q&A", "동시성 심화 Q&A", "아키텍처 트레이드오프"],
+  12: ["약점 주제 집중 공략", "시간 단축 전략"],
+  13: ["기업별 기출 패턴", "자소서 STAR 기법"],
+  14: ["최종 모의고사", "면접 에티켓", "질문 리스트 준비"],
+};
+
+const FDE_WEEKLY_TOPICS: Record<number, string[]> = {
+  1: ["Python 자료구조 실습", "SQL JOIN/서브쿼리", "데이터 모델링 기초"],
+  2: ["ETL 파이프라인 이해", "데이터 정제 패턴"],
+  3: ["API 설계 원칙", "REST vs GraphQL"],
+  4: ["Palantir Ontology 개념", "고객 요구사항 수집 프레임워크"],
+  5: ["DP/탐욕법 + 실제 데이터 적용", "비용 최적화 문제"],
+  6: ["대시보드 설계 (React/TS)", "데이터 시각화 원칙"],
+  7: ["고객 미팅 시뮬레이션", "문제 정의→솔루션 매핑"],
+  8: ["AI/LLM 통합 아키텍처", "Harness 패턴 FDE 적용"],
+  9: ["E2E 솔루션 설계 (문제→배포)", "ROI 산정 방법"],
+  10: ["포트폴리오: 비즈니스 임팩트 중심", "케이스 스터디 3건"],
+  11: ["FDE 피치 연습", "이해관계자 커뮤니케이션"],
+  12: ["약점 보강 + 영어 인터뷰 준비"],
+  13: ["기업별 FDE 역할 차이 분석", "채널톡/마키나락스 리서치"],
+  14: ["최종 케이스 스터디 발표", "Q&A 대비"],
+};
+
+/* ═══════════════════════════════════════════════════════════ */
+/*  HELPERS                                                    */
+/* ═══════════════════════════════════════════════════════════ */
+
+function B({ text }: { text: string }) {
+  return (
+    <>
+      {text.split(/(\*\*[^*]+\*\*)/g).map((p, i) =>
+        p.startsWith("**") ? (
+          <span key={i} className="text-text font-semibold">{p.slice(2, -2)}</span>
+        ) : (
+          <span key={i}>{p}</span>
+        ),
+      )}
+    </>
+  );
+}
+
+function getToday(): number {
+  const now = new Date();
+  const diff = Math.floor((now.getTime() - START_DATE.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+  return Math.max(1, Math.min(diff, TOTAL_DAYS));
+}
+
+function getDaysRemaining(): number {
+  const now = new Date();
+  const diff = Math.ceil((END_DATE.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  return Math.max(0, diff);
+}
+
+function formatDate(day: number): string {
+  const d = new Date(START_DATE);
+  d.setDate(d.getDate() + day - 1);
+  return `${d.getMonth() + 1}/${d.getDate()}`;
+}
+
+/* ═══════════════════════════════════════════════════════════ */
+/*  PAGE                                                       */
+/* ═══════════════════════════════════════════════════════════ */
+
+export default function InterviewPage() {
+  const [track, setTrack] = useState<TrackKey>("ios");
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [checkedTasks, setCheckedTasks] = useState<Record<string, boolean>>({});
+  const [selectedDay, setSelectedDay] = useState<number>(getToday());
+  const [mounted, setMounted] = useState(false);
+
+  // Load from localStorage
+  useEffect(() => {
+    setMounted(true);
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) setCheckedTasks(JSON.parse(saved));
+    } catch { /* noop */ }
+  }, []);
+
+  // Save to localStorage
+  useEffect(() => {
+    if (!mounted) return;
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(checkedTasks));
+    } catch { /* noop */ }
+  }, [checkedTasks, mounted]);
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    setMousePos({ x: e.clientX, y: e.clientY });
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener("mousemove", handleMouseMove);
+    return () => window.removeEventListener("mousemove", handleMouseMove);
+  }, [handleMouseMove]);
+
+  const today = getToday();
+  const daysRemaining = getDaysRemaining();
+  const currentPhase = PHASES.find((p) => selectedDay >= p.dayRange[0] && selectedDay <= p.dayRange[1]) ?? PHASES[0];
+
+  // Daily tasks filtered by track
+  const dailyTasks = useMemo(() => {
+    const all = getDailyTasks(selectedDay);
+    return all.filter((t) => t.track === "shared" || t.track === track);
+  }, [selectedDay, track]);
+
+  // Progress stats
+  const totalChecked = useMemo(() => Object.values(checkedTasks).filter(Boolean).length, [checkedTasks]);
+  const todayTasks = useMemo(() => getDailyTasks(today).filter((t) => t.track === "shared" || t.track === track), [today, track]);
+  const todayChecked = useMemo(() => todayTasks.filter((t) => checkedTasks[t.id]).length, [todayTasks, checkedTasks]);
+
+  const weeklyTopics = track === "ios" ? IOS_WEEKLY_TOPICS : FDE_WEEKLY_TOPICS;
+  const currentWeek = Math.ceil(selectedDay / 7);
+
+  const toggleTask = (id: string) => {
+    setCheckedTasks((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  // Overall progress percentage
+  const progressPercent = Math.round(((today - 1) / TOTAL_DAYS) * 100);
+
+  if (!mounted) return null;
+
+  return (
+    <div className="relative min-h-screen bg-bg text-text">
+      {/* Mouse gradient */}
+      <div
+        className="pointer-events-none fixed inset-0 z-0 transition-opacity duration-300"
+        style={{
+          background: `radial-gradient(600px circle at ${mousePos.x}px ${mousePos.y}px, ${currentPhase.color}0a, transparent 40%)`,
+        }}
+      />
+
+      <main className="relative z-10 mx-auto max-w-[900px] px-6 pt-16 pb-32">
+        {/* ═══════════ HEADER ═══════════ */}
+        <header className="mb-12">
+          <div className="flex items-center gap-3 mb-2">
+            <span className="text-xs font-code tracking-widest text-text/30 uppercase">Hidden Menu</span>
+            <span className="h-px flex-1 bg-border/30" />
+          </div>
+          <h1 className="font-display text-4xl md:text-5xl font-black tracking-tight mb-3">
+            100-Day <span style={{ color: currentPhase.color }}>Boot Camp</span>
+          </h1>
+          <p className="text-lg text-text/60 leading-relaxed">
+            <B text={`**${formatDate(1)}** ~ **${formatDate(100)}** · 한국 빅테크 iOS / FDE 듀얼트랙 면접 준비`} />
+          </p>
+        </header>
+
+        {/* ═══════════ D-DAY COUNTER ═══════════ */}
+        <div className="grid grid-cols-3 gap-4 mb-10">
+          <div className="rounded-2xl border border-border/40 bg-surface/40 p-6 text-center">
+            <p className="text-4xl font-display font-black" style={{ color: currentPhase.color }}>
+              D-{daysRemaining}
+            </p>
+            <p className="text-sm text-text/40 mt-1">남은 일수</p>
+          </div>
+          <div className="rounded-2xl border border-border/40 bg-surface/40 p-6 text-center">
+            <p className="text-4xl font-display font-black text-text/80">
+              {today}<span className="text-lg text-text/30">/{TOTAL_DAYS}</span>
+            </p>
+            <p className="text-sm text-text/40 mt-1">현재 Day</p>
+          </div>
+          <div className="rounded-2xl border border-border/40 bg-surface/40 p-6 text-center">
+            <p className="text-4xl font-display font-black text-accent">
+              {todayChecked}<span className="text-lg text-text/30">/{todayTasks.length}</span>
+            </p>
+            <p className="text-sm text-text/40 mt-1">오늘 완료</p>
+          </div>
+        </div>
+
+        {/* Progress bar */}
+        <div className="mb-10">
+          <div className="flex items-center justify-between text-xs text-text/40 mb-2">
+            <span>전체 진행률</span>
+            <span>{progressPercent}%</span>
+          </div>
+          <div className="h-2 rounded-full bg-surface/60 overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all duration-500"
+              style={{ width: `${progressPercent}%`, background: `linear-gradient(90deg, ${PHASES[0].color}, ${currentPhase.color})` }}
+            />
+          </div>
+          <div className="flex justify-between mt-1">
+            {PHASES.map((p) => (
+              <span
+                key={p.id}
+                className="text-[10px] font-code"
+                style={{
+                  color: today >= p.dayRange[0] ? p.color : `${p.color}40`,
+                  width: `${((p.dayRange[1] - p.dayRange[0] + 1) / TOTAL_DAYS) * 100}%`,
+                }}
+              >
+                Phase {p.id}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* ═══════════ TRACK SWITCHER ═══════════ */}
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex rounded-full border border-border/50 bg-surface/30 p-1">
+            {TRACKS.map((t) => (
+              <button
+                key={t.key}
+                onClick={() => setTrack(t.key)}
+                className={`rounded-full px-5 py-2 text-sm font-medium transition-all cursor-pointer ${
+                  track === t.key
+                    ? "bg-accent text-white shadow-sm"
+                    : "text-text/50 hover:text-text/80"
+                }`}
+              >
+                {t.emoji} {t.label}
+              </button>
+            ))}
+          </div>
+          <span className="text-xs text-text/30 font-code">
+            Phase {currentPhase.id} · Week {currentWeek}
+          </span>
+        </div>
+
+        {/* ═══════════ TARGET COMPANIES ═══════════ */}
+        <section className="mb-12">
+          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">
+            Target Companies
+          </h2>
+          <div className="flex flex-wrap gap-2">
+            {TARGET_COMPANIES[track].map((c) => (
+              <div
+                key={c.name}
+                className="rounded-xl border border-border/40 bg-surface/30 px-4 py-2.5 flex items-center gap-3 hover:bg-surface/50 transition-colors"
+              >
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: c.color }} />
+                <div>
+                  <span className="text-sm font-semibold">{c.name}</span>
+                  <span className="text-xs text-text/40 ml-2">{c.note}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ═══════════ PHASE ROADMAP ═══════════ */}
+        <section className="mb-12">
+          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-6">
+            4-Phase Roadmap
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {PHASES.map((phase) => {
+              const isActive = today >= phase.dayRange[0] && today <= phase.dayRange[1];
+              const isDone = today > phase.dayRange[1];
+              return (
+                <div
+                  key={phase.id}
+                  className={`rounded-2xl border p-5 transition-all ${
+                    isActive
+                      ? "border-accent/40 bg-surface/60 shadow-lg shadow-accent/5"
+                      : isDone
+                        ? "border-border/30 bg-surface/20 opacity-70"
+                        : "border-border/20 bg-surface/10 opacity-50"
+                  }`}
+                >
+                  <div className="flex items-center gap-3 mb-3">
+                    <span
+                      className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black font-code"
+                      style={{ background: `${phase.color}20`, color: phase.color }}
+                    >
+                      {phase.icon}
+                    </span>
+                    <div>
+                      <h3 className="text-sm font-bold">{phase.title}</h3>
+                      <p className="text-xs text-text/40">
+                        Day {phase.dayRange[0]}-{phase.dayRange[1]} · {formatDate(phase.dayRange[0])} ~ {formatDate(phase.dayRange[1])}
+                      </p>
+                    </div>
+                    {isDone && <span className="ml-auto text-xs text-green-400/80 font-code">DONE</span>}
+                    {isActive && (
+                      <span className="ml-auto text-xs font-code animate-pulse" style={{ color: phase.color }}>
+                        NOW
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-text/50 mb-3">{phase.subtitle}</p>
+                  <div className="space-y-1.5">
+                    {phase.milestones.map((m) => {
+                      const mDone = today > m.dayRange[1];
+                      const mActive = today >= m.dayRange[0] && today <= m.dayRange[1];
+                      return (
+                        <div
+                          key={m.week}
+                          className={`flex items-center gap-2 text-xs ${mDone ? "text-text/30" : mActive ? "text-text/80" : "text-text/40"}`}
+                        >
+                          <span
+                            className="w-1.5 h-1.5 rounded-full shrink-0"
+                            style={{ background: mDone ? `${m.color}40` : mActive ? m.color : `${m.color}25` }}
+                          />
+                          <span className={mActive ? "font-semibold" : ""}>
+                            W{m.week}: {m.title}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* ═══════════ DAY SELECTOR ═══════════ */}
+        <section className="mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45">
+              Daily Training — Day {selectedDay}
+            </h2>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setSelectedDay(Math.max(1, selectedDay - 1))}
+                className="w-8 h-8 rounded-lg border border-border/40 bg-surface/30 text-text/50 hover:text-text hover:border-accent/40 transition-colors flex items-center justify-center cursor-pointer"
+              >
+                &larr;
+              </button>
+              <button
+                onClick={() => setSelectedDay(today)}
+                className="px-3 h-8 rounded-lg border border-border/40 bg-surface/30 text-xs text-text/50 hover:text-text hover:border-accent/40 transition-colors cursor-pointer"
+              >
+                Today
+              </button>
+              <button
+                onClick={() => setSelectedDay(Math.min(TOTAL_DAYS, selectedDay + 1))}
+                className="w-8 h-8 rounded-lg border border-border/40 bg-surface/30 text-text/50 hover:text-text hover:border-accent/40 transition-colors flex items-center justify-center cursor-pointer"
+              >
+                &rarr;
+              </button>
+            </div>
+          </div>
+
+          {/* Day grid */}
+          <div className="flex flex-wrap gap-1 mb-6">
+            {Array.from({ length: TOTAL_DAYS }, (_, i) => i + 1).map((day) => {
+              const phase = PHASES.find((p) => day >= p.dayRange[0] && day <= p.dayRange[1]);
+              const isToday = day === today;
+              const isSelected = day === selectedDay;
+              const isPast = day < today;
+              const dayTasks = getDailyTasks(day).filter((t) => t.track === "shared" || t.track === track);
+              const dayCompleted = dayTasks.every((t) => checkedTasks[t.id]);
+              return (
+                <button
+                  key={day}
+                  onClick={() => setSelectedDay(day)}
+                  style={{ width: "calc(10% - 3.6px)", height: 32, ...(isToday ? { color: phase?.color } : {}) }}
+                  className={`rounded-md text-[10px] font-code flex items-center justify-center transition-all cursor-pointer ${
+                    isSelected
+                      ? "ring-2 ring-accent ring-offset-1 ring-offset-bg"
+                      : ""
+                  } ${
+                    isToday
+                      ? "font-bold border border-accent/50"
+                      : isPast && dayCompleted
+                        ? "bg-green-500/15 text-green-400/70"
+                        : isPast
+                          ? "bg-surface/30 text-text/30"
+                          : "bg-surface/10 text-text/20 hover:bg-surface/30"
+                  }`}
+                  title={`Day ${day} (${formatDate(day)})`}
+                >
+                  {day}
+                </button>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* ═══════════ DAILY TASKS ═══════════ */}
+        <section className="mb-12">
+          <div className="rounded-2xl border border-border/40 bg-surface/30 overflow-hidden">
+            <div className="px-5 py-4 border-b border-border/30 flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-bold">
+                  Day {selectedDay} <span className="text-text/40 font-normal">({formatDate(selectedDay)})</span>
+                </h3>
+                <p className="text-xs text-text/40 mt-0.5">
+                  {currentPhase.title} · Week {currentWeek}
+                </p>
+              </div>
+              <span
+                className="text-xs font-code px-2.5 py-1 rounded-full"
+                style={{ color: currentPhase.color, background: `${currentPhase.color}15` }}
+              >
+                {dailyTasks.filter((t) => checkedTasks[t.id]).length}/{dailyTasks.length}
+              </span>
+            </div>
+            <div className="divide-y divide-border/20">
+              {dailyTasks.map((task) => {
+                const cat = CATEGORY_META[task.category];
+                return (
+                  <label
+                    key={task.id}
+                    className="flex items-start gap-3 px-5 py-3.5 hover:bg-surface/30 transition-colors cursor-pointer group"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={!!checkedTasks[task.id]}
+                      onChange={() => toggleTask(task.id)}
+                      className="mt-0.5 w-4 h-4 rounded border-border/50 accent-accent cursor-pointer"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm leading-relaxed ${checkedTasks[task.id] ? "line-through text-text/30" : "text-text/70"}`}>
+                        {task.label}
+                      </p>
+                    </div>
+                    <span
+                      className="shrink-0 text-[10px] font-code px-2 py-0.5 rounded-full mt-0.5"
+                      style={{ color: cat.color, background: `${cat.color}12` }}
+                    >
+                      {cat.label}
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        {/* ═══════════ WEEKLY FOCUS ═══════════ */}
+        <section className="mb-12">
+          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">
+            Week {currentWeek} Focus — {track === "ios" ? "iOS" : "FDE"} Track
+          </h2>
+          <div className="rounded-2xl border border-border/40 bg-surface/30 p-5">
+            <div className="space-y-2">
+              {(weeklyTopics[currentWeek] ?? []).map((topic, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: currentPhase.color }} />
+                  <span className="text-sm text-text/60">{topic}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ═══════════ PHASE DETAIL ═══════════ */}
+        <section className="mb-12">
+          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">
+            Current Phase Detail
+          </h2>
+          <div className="space-y-3">
+            {currentPhase.milestones.map((m) => {
+              const mActive = today >= m.dayRange[0] && today <= m.dayRange[1];
+              return (
+                <div
+                  key={m.week}
+                  className={`rounded-xl border p-4 transition-all ${
+                    mActive
+                      ? "border-accent/30 bg-surface/50"
+                      : "border-border/20 bg-surface/20"
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <h4 className="text-sm font-bold flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full" style={{ background: m.color }} />
+                      Week {m.week}: {m.title}
+                    </h4>
+                    <span className="text-xs text-text/30 font-code">
+                      Day {m.dayRange[0]}-{m.dayRange[1]}
+                    </span>
+                  </div>
+                  <p className="text-xs text-text/50 leading-relaxed">{m.description}</p>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* ═══════════ KEY RESOURCES ═══════════ */}
+        <section className="mb-12">
+          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">
+            Key Resources
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {[
+              { title: "Programmers", desc: "한국 코딩테스트 표준 플랫폼", url: "https://programmers.co.kr/", color: "#3b82f6" },
+              { title: "Baekjoon OJ", desc: "알고리즘 다양성 + 커뮤니티", url: "https://www.acmicpc.net/", color: "#0d6efd" },
+              { title: "LeetCode", desc: "글로벌 표준 + 시스템 디자인", url: "https://leetcode.com/", color: "#f59e0b" },
+              { title: "iOS 면접 질문 100+", desc: "GitHub — JeaSungLEE", url: "https://github.com/JeaSungLEE/iOSInterviewquestions", color: "#06b6d4" },
+              { title: "Mobile System Design", desc: "모바일 시스템 설계 프레임워크", url: "https://github.com/weeeBox/mobile-system-design", color: "#10b981" },
+              { title: "Tech Interview for Dev", desc: "CS 기초 면접 정리", url: "https://github.com/gyoogle/tech-interview-for-developer", color: "#8b5cf6" },
+            ].map((r) => (
+              <a
+                key={r.title}
+                href={r.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-xl border border-border/30 bg-surface/20 p-4 hover:bg-surface/40 hover:border-accent/30 transition-all group"
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="w-2 h-2 rounded-full" style={{ background: r.color }} />
+                  <span className="text-sm font-semibold group-hover:text-accent transition-colors">{r.title}</span>
+                </div>
+                <p className="text-xs text-text/40">{r.desc}</p>
+              </a>
+            ))}
+          </div>
+        </section>
+
+        {/* ═══════════ MENTOR NOTE ═══════════ */}
+        <section>
+          <div className="rounded-2xl border border-accent/20 bg-accent/5 p-6">
+            <h3 className="font-display text-sm font-bold mb-3 text-accent/80">Mentor&apos;s Note</h3>
+            <div className="space-y-2 text-sm text-text/60 leading-relaxed">
+              <p><B text="**하루 최소 3시간**, 주말은 5시간. 알고리즘은 매일 빠지지 않는다." /></p>
+              <p><B text="Day 30까지 프로그래머스 Lv.2를 **안정적으로** 푸는 게 최소 기준." /></p>
+              <p><B text="포트폴리오는 **ai-study + Aidy + MoneyFlow** 3개면 충분. 새로 만들지 말고 **기존 프로젝트를 깊게** 정리." /></p>
+              <p><B text="모의 면접은 **녹음 필수**. 자기 목소리를 들어야 고친다." /></p>
+              <p><B text="컨디션 관리도 훈련이다. 수면 7시간, 운동 30분은 **비협상**." /></p>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  );
+}
