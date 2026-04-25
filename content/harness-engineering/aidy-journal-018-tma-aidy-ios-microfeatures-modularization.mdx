@@ -1,0 +1,284 @@
+---
+title: "Aidy Journal 018 — aidy-ios TMA 전면 이식: 모놀리스 → 26모듈 Microfeatures 4시간 스프린트"
+category: harness-engineering
+series: aidy-journal
+date: "2026-04-25"
+tags:
+  - aidy-journal
+  - toss-microfeatures
+  - tuist
+  - tca
+  - modularization
+  - interface-module
+  - aidy-ios
+  - dependency-injection
+confidence: 4
+last_verified: "2026-04-25"
+applicable_to: ["aidy", "any"]
+connections:
+  - harness-engineering/aidy-journal-017-dispatch-consolidation-s34-3feature-parallel
+  - ios-ai/ios-ai-journal-011-toss-slash23-tuist-microfeatures
+  - harness-engineering/aidy-journal-006-ios-ci-self-hosted-runner-migration
+status: complete
+description: >-
+  ios-study(RIBs, 58모듈)에서 검증한 토스 Microfeatures 패턴을 aidy-ios(TCA, SwiftUI)에 전면 이식.
+  모놀리스 단일 타겟 → 26모듈(Core 12 + Feature 14) 5-타겟 구조. Module.swift 헬퍼로 .interface()/.module()
+  의존성 규칙 강제. 268파일 +7,276줄 4시간 스프린트. 모듈 이름 충돌 해법 + ClassifiableError 순환 해체 박제.
+type: entry
+quiz:
+  - question: "ios-study(RIBs)와 aidy-ios(TCA)에서 Interface 모듈의 역할이 같은가?"
+    choices:
+      - "완전히 같다 — 둘 다 프로토콜만 담는다"
+      - "원칙은 같지만 담는 것이 다르다. RIBs는 Buildable/Listener 프로토콜, TCA는 DependencyClient 계약 + 공유 UI 컴포넌트"
+      - "TCA에서는 Interface가 필요 없다"
+      - "RIBs에서만 Interface가 의미가 있다"
+    answer: 1
+    explanation: >-
+      핵심 원칙(Feature 간 직접 참조 금지, Interface 경유만 허용)은 동일하다. 하지만 RIBs는
+      Buildable/Listener 프로토콜 + 순수 enum을 담고, TCA는 @DependencyClient 계약 +
+      AvatarView/ShimmerModifier 같은 공유 UI 컴포넌트도 Interface에 노출한다.
+  - question: "Swift에서 모듈 이름이 내부 타입 이름과 충돌할 때 @Reducer 매크로가 실패하는 근본 원인은?"
+    choices:
+      - "Swift 컴파일러 버그"
+      - "모듈 이름과 타입 이름이 같으면 `Anniversary.Anniversary`처럼 모듈 스코프와 타입 스코프가 충돌해 매크로가 생성하는 코드의 타입 해석이 모호해짐"
+      - "@Reducer 매크로가 모듈 이름을 사용하기 때문"
+      - "Tuist가 잘못 생성하기 때문"
+    answer: 1
+    explanation: >-
+      Swift에서 `import Anniversary`한 상태에서 `Anniversary` 타입을 참조하면 모듈인지 타입인지 모호하다.
+      @Reducer 매크로가 생성하는 보일러플레이트 코드에서 이 모호성이 컴파일 에러로 터진다.
+      해법: 모듈 이름을 복수형(Anniversaries)으로 바꾸거나 qualified typealias로 우회.
+  - question: "ErrorLog와 Networking 간 순환 의존을 ClassifiableError 프로토콜로 해결한 패턴의 핵심은?"
+    choices:
+      - "ErrorLog가 Networking을 import하는 것"
+      - "Networking이 ErrorLog를 import하는 것"
+      - "ErrorLog가 ClassifiableError 프로토콜을 정의하고, Networking의 APIError가 이를 conform. ErrorLog는 Networking을 모르고, 어떤 Error든 받아서 분류"
+      - "둘 다 서로를 import하는 것"
+    answer: 2
+    explanation: >-
+      ErrorLog가 ClassifiableError 프로토콜(errorCode, errorMessage)을 정의한다.
+      Networking의 APIError가 이를 conform하지만, ErrorLog는 Networking을 import하지 않는다.
+      ErrorLog.log(error:)는 any Error를 받고, ClassifiableError로 다운캐스트해서 분류.
+      프로토콜 추상화로 의존 방향이 단방향(Networking → ErrorLog)이 된다.
+---
+
+## ios-study에서 aidy-ios로 — 같은 패턴, 다른 스택
+
+[iOS Journal 011](/wiki/ios-ai/ios-ai-journal-011-toss-slash23-tuist-microfeatures)에서 ios-study(RIBs, 58모듈)에 토스 Microfeatures를 이식하며 **7개 함정을 박제**했다. 그 경험을 aidy-ios(TCA, SwiftUI)에 적용한 기록이다.
+
+| 축 | ios-study (Journal 011) | aidy-ios (이 글) |
+|---|---|---|
+| **아키텍처** | RIBs + ReactorKit + UIKit | TCA + SwiftUI |
+| **기존 상태** | 58개 SPM 패키지 (이미 모듈화) | 모놀리스 단일 타겟 (~200 파일) |
+| **작업 성격** | SPM→Tuist 전환 + Interface 분리 | 모놀리스→26모듈 **처음부터** 구조 설계 |
+| **DI 패턴** | RIBs Builder (Buildable 프로토콜) | TCA @DependencyClient |
+| **Interface 내용물** | Buildable/Listener + 순수 enum | DependencyClient 계약 + 공유 UI 컴포넌트 |
+| **고유 함정** | productTypes, transitive extension, Package.swift 충돌 | 모듈 이름↔타입 이름 충돌, @Reducer 매크로 모호성 |
+| **규모** | 44커밋 198파일 3세션 | 4커밋 268파일 4시간 연속 |
+
+---
+
+## Before — 모놀리스 단일 타겟
+
+```
+Projects/App/Sources/
+├── Core/
+│   ├── Network/        ← APIClient 50+ 엔드포인트 + 모델 전부 한 타겟
+│   └── Model/          ← Anniversary, ChatMessage, Person... 12개 모델
+└── Feature/
+    ├── Auth/           ← AuthFeature + View
+    ├── Chat/           ← ChatFeature + Export + Bookmarks + Topics (9파일)
+    ├── Memory/         ← MemoryFeature + Archive + Highlights + Tags
+    ├── People/         ← PeopleFeature + Detail + Groups + Health
+    └── ... (13개 Feature 디렉토리, ~200파일 전부 하나의 빌드 타겟)
+```
+
+**문제**:
+- 모든 Feature가 모든 다른 Feature를 import 가능 (캡슐화 없음)
+- CoreNetwork과 CoreModel이 엉킴 (Networking 없이 Model을 못 씀)
+- 단일 타겟 = 느린 증분 빌드, Feature 격리 테스트 불가
+
+---
+
+## After — 26모듈 TMA 5-타겟 구조
+
+```
+Projects/Core/                          Projects/Feature/
+├── Model/       [Interface|Sources|Testing|Tests]    ├── Auth/          [Interface|Sources|Testing|Tests]
+├── Networking/  [Interface|Sources|Testing|Tests]    ├── Chat/          [Interface|Sources|Testing|Tests]
+├── Haptics/     [Sources|Tests]                      ├── Memory/        [Interface|Sources|Testing|Tests]
+├── L10n/        [Sources]                            ├── People/        [Interface|Sources|Testing|Tests]
+├── Metrics/     [Sources|Tests]                      ├── Search/        [Interface|Sources|Testing|Tests]
+├── ErrorLog/    [Sources|Tests]                      ├── Settings/      [Interface|Sources|Testing|Tests]
+├── AppInfo/     [Sources|Tests]                      ├── Anniversaries/ [Interface|Sources|Testing|Tests]
+├── Biometric/   [Sources|Tests]                      ├── Digest/        [Interface|Sources|Testing|Tests]
+├── Draft/       [Sources|Tests]                      ├── HomeDashboard/ [Interface|Sources|Testing|Tests]
+├── AppNotification/ [Sources|Tests]                  ├── InteractionLog/[Interface|Sources|Testing|Tests]
+├── Pasteboard/  [Sources|Tests]                      ├── Nudges/        [Interface|Sources|Testing|Tests]
+└── SearchHistory/ [Sources|Tests]                    ├── Onboarding/    [Interface|Sources|Testing|Tests]
+                                                      ├── Relations/     [Interface|Sources|Testing|Tests]
+                                                      └── SmartNotifications/ [Interface|Sources|Testing|Tests]
+```
+
+---
+
+## 스프린트 타임라인 — 3 Phase, 4시간
+
+### Phase 1: Module.swift 헬퍼 + Core 12모듈 (709845d → 3b0d015)
+
+Tuist `ProjectDescriptionHelpers/Module.swift`로 5-타겟 생성 자동화:
+
+```swift
+let chatModule = Module(
+    name: "Chat",
+    layer: .feature,
+    dependencies: featureCoreDeps + [
+        .module("Haptics"),        // Core 구현체 접근 OK
+        .module("Draft"),
+        .interface("Settings"),    // Feature는 Interface만! ←── TMA 핵심 규칙
+        .interface("Memory"),
+    ]
+)
+```
+
+**의존성 규칙 (Module.swift가 구조적으로 강제)**:
+- Feature → Feature: `.interface()` only — 구현체 직접 참조 차단
+- Feature → Core: `.module()` 허용 (구현체 접근)
+- Core → Core: `.module()` or `.interface()`
+
+Core 12모듈 분리. `Network→Networking`, `Notification→AppNotification` rename (Foundation 충돌 회피).
+
+### Phase 2: Feature 14모듈 분리 (c8f7f93)
+
+14개 Feature 각각에 Interface/Sources/Testing/Tests 생성. Cross-Feature Interface:
+
+| Interface | 노출 항목 | 사용처 |
+|---|---|---|
+| `MemoryInterface` | FlowLayout, ShimmerModifier, ColorHex | Chat, People, Settings |
+| `PeopleInterface` | AvatarView | Memory, Chat, Search |
+| `SettingsInterface` | ShareSheet, DashboardCard | Chat, HomeDashboard |
+
+RIBs의 Interface가 Buildable/Listener 프로토콜만 담았다면, TCA의 Interface는 **공유 UI 컴포넌트도 포함**. SwiftUI의 합성 가능한 View 특성상 자연스러운 확장.
+
+### Phase 3: 모듈 이름 충돌 해결 (28ac2cf)
+
+**문제**: Swift에서 모듈 이름과 내부 타입 이름이 같으면 `@Reducer` 매크로가 생성하는 코드에서 스코프 충돌.
+
+```swift
+// 모듈 "Anniversary"에서 타입 "Anniversary"를 참조하면
+// Anniversary.Anniversary — 모듈인지 타입인지 모호
+```
+
+**해법 2가지**:
+
+| 전략 | 적용 모듈 | 예시 |
+|------|----------|------|
+| **모듈 이름 복수형** | SmartNotification→SmartNotifications, Anniversary→Anniversaries, Nudge→Nudges, RelationshipMap→Relations | 타입과 모듈 이름이 완전히 달라짐 |
+| **Qualified typealias** | Digest, InteractionLog, Onboarding | `typealias DigestReminder = NetworkingInterface.DigestReminder` |
+
+빌드 상태: `xcodebuild build-for-testing` ✅
+
+---
+
+## ios-study 함정 7종 vs aidy-ios — 무엇이 재발하고 무엇이 회피됐나
+
+| ios-study 함정 (Journal 011) | aidy-ios 상태 | 이유 |
+|---|---|---|
+| 1. Tuist 버전 체크 지연 | ✅ 회피 | 011에서 박제한 "첫 명령어는 버전 확인" 규칙 적용 |
+| 2. productTypes 전역 적용 불가 | ✅ 회피 | TCA 단일 외부 의존성 → 선택적 .framework 5개만 지정 |
+| 3. Transitive extension 끊김 | ✅ 해당 없음 | 모놀리스에서 시작 → 기존 transitive 전파 없음 |
+| 4. Interface 추출 범위 오판 | ✅ 회피 | 처음부터 "외부 참조 모든 public 타입" 기준으로 Interface 설계 |
+| 5. Package.swift 충돌 | ✅ 해당 없음 | Tuist 전용 프로젝트 (기존 SPM 없음) |
+| 6. 자동 패처 멀티타겟 skip | ✅ 해당 없음 | 처음부터 TMA 구조로 생성 (마이그레이션 아닌 신규 설계) |
+| 7. 그림자 의존성 | ✅ 해당 없음 | Package.resolved 유산 없음 |
+| **신규: 모듈↔타입 이름 충돌** | ⚠️ 발생 | @Reducer 매크로 특유의 스코프 모호성. 복수형/typealias로 해결 |
+
+**핵심 관찰**: ios-study의 함정 7종 중 6종은 **"기존 SPM 레거시 → Tuist 전환"** 과정에서만 발생. aidy-ios는 모놀리스에서 Tuist로 **처음부터** 설계했기 때문에 대부분 해당 없음. 유일한 신규 함정은 TCA `@Reducer` 매크로의 모듈/타입 이름 충돌.
+
+---
+
+## 고유 패턴: ClassifiableError 순환 의존 해체
+
+ErrorLog와 Networking 사이 순환 의존을 **프로토콜 추상화**로 해체:
+
+```swift
+// ErrorLog (Core) — Networking을 모른다
+public protocol ClassifiableError: Error {
+    var errorCode: String? { get }
+    var errorMessage: String { get }
+}
+
+@DependencyClient
+public struct ErrorLogClient {
+    public var log: @Sendable (_ error: Error, _ context: [String: String]) -> Void
+}
+```
+
+```swift
+// Networking (Core) — ErrorLog를 import
+extension APIError: ClassifiableError {
+    public var errorCode: String? { ... }
+    public var errorMessage: String { ... }
+}
+```
+
+의존 방향: `Networking → ErrorLog` (단방향). ErrorLog는 `any Error`를 받고 `ClassifiableError` 다운캐스트로 분류. RIBs의 Interface 패턴과 **같은 원칙**(프로토콜로 의존 역전)이 TCA에서 DependencyClient + 프로토콜로 구현된 형태.
+
+---
+
+## 숫자로 보는 변화
+
+| 지표 | Before | After |
+|------|--------|-------|
+| **빌드 타겟** | 1 (모놀리스) | 26모듈 × 최대 5타겟 |
+| **파일 변경** | — | 268파일, +7,276줄 / -3,492줄 |
+| **Feature 캡슐화** | 없음 (전부 import 가능) | Interface 경유만 허용 |
+| **테스트** | 단일 테스트 타겟 (46 baseline) | 모듈별 독립 TestStore (577+) |
+| **소요 시간** | — | 4시간 연속 (23:07 → 01:36) |
+| **순환 의존** | 잠재적 | 구조적 불가능 (Module.swift 강제) |
+
+---
+
+## 교훈 — 하네스 엔지니어링 관점
+
+### 1. 선행 프로젝트의 함정 박제가 후행 프로젝트의 속도를 만든다
+
+ios-study에서 3세션 44커밋이 걸린 작업을, aidy-ios에서는 4시간 4커밋으로 완주. 핵심 차이: ios-study의 7개 함정 중 6개가 "SPM→Tuist 전환"에서만 발생하는 것임을 **이미 알고 있었기** 때문에, aidy-ios는 모놀리스에서 바로 Tuist로 설계하는 전략을 선택.
+
+### 2. 같은 패턴이 다른 스택에서 다른 형태로 구현된다
+
+| TMA 원칙 | RIBs (ios-study) | TCA (aidy-ios) |
+|---|---|---|
+| Interface 계약 | Buildable/Listener 프로토콜 | @DependencyClient 구조체 |
+| DI 방식 | Component/Builder 트리 주입 | TCA @Dependency 매크로 |
+| 순환 해체 | ViewableRouting 프로토콜 추상화 | ClassifiableError 프로토콜 추상화 |
+| 공유 UI | Interface에 넣지 않음 (UIKit 의존 차단) | Interface에 SwiftUI View 포함 (합성 가능) |
+
+원칙(Feature 간 직접 참조 금지)은 스택에 무관하게 동일. **구현체만 스택에 맞게 변환**.
+
+### 3. 모놀리스→모듈화가 SPM→Tuist 전환보다 오히려 빠르다
+
+ios-study는 "이미 모듈화된 58개 SPM 패키지"를 Tuist로 전환하면서 transitive dependency, Package.swift 충돌 등 **레거시 유산과 싸웠다**. aidy-ios는 "모놀리스에서 처음부터 올바른 구조로" 설계했기 때문에 레거시 함정이 없었다. **백지 설계가 마이그레이션보다 빠른 역설**.
+
+### 4. @Reducer 매크로의 모듈/타입 이름 충돌은 TCA 고유 함정
+
+이건 ios-study(RIBs)에서는 발생하지 않는다. TCA의 `@Reducer` 매크로가 타입 이름을 기반으로 보일러플레이트를 생성하는데, 모듈 이름과 같으면 Swift 컴파일러가 스코프를 혼동. **TCA + Tuist 조합의 고유 함정으로 박제**.
+
+---
+
+## 미해결 항목
+
+| 항목 | 우선순위 | 비고 |
+|------|---------|------|
+| Example 앱 타겟 추가 | 중 | Module.swift에 `hasExample` 플래그 있으나 미사용 |
+| Testing 타겟 실질 활용 | 중 | 구조만 생성됨, Mock 데이터 채움 필요 |
+| tuist graph 의존성 시각화 | 낮 | 26모듈 그래프 정기 리뷰 |
+| CI xcodebuild 통합 | 중 | `tuist test` 대신 xcodebuild 직접 실행 (UITest 크래시 회피) |
+
+---
+
+## 자기 점검
+
+1. RIBs의 Buildable과 TCA의 @DependencyClient가 Interface 모듈에서 하는 역할의 공통점과 차이점은?
+2. 모놀리스→모듈화가 SPM→Tuist 전환보다 빠른 이유는 무엇인가?
+3. @Reducer 매크로의 모듈/타입 이름 충돌을 복수형 rename 외에 어떤 방법으로 해결할 수 있는가?
