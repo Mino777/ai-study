@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { IOS_QUESTIONS, FDE_QUESTIONS, CULTURE_QUESTIONS, PHASE_PROBLEMS, COMPANY_STRATEGIES, HIRING_INSIGHTS, PROCESS_STAGES, ASSIGNMENT_CHECKLIST, ALGO_GUIDES, BIG_O_GUIDE, BIG_O_COMPARISON, SYSTEM_DESIGN_CASES, FDE_DESIGN_CASES, SD_FRAMEWORK_STEPS, SD_CLARIFYING_QUESTIONS, SD_API_COMPARISON, ASSIGNMENT_DAILY_TIPS, FDE_ASSIGNMENT_DAILY_TIPS, CULTURE_DAILY_TIPS, TECH_DAILY_TOPICS, FDE_TECH_DAILY_TOPICS, CS_TOPICS, CS_DAILY_TOPICS, FDE_CS_DAILY_TOPICS, FDE_ALGO_TEMPLATES, CAREER_PAGES, TIMER_PRESETS, QUIZ_BANK, type InterviewQuestion } from "./constants";
+import { IOS_QUESTIONS, FDE_QUESTIONS, CULTURE_QUESTIONS, PHASE_PROBLEMS, COMPANY_STRATEGIES, HIRING_INSIGHTS, PROCESS_STAGES, ASSIGNMENT_CHECKLIST, ALGO_GUIDES, BIG_O_GUIDE, BIG_O_COMPARISON, SYSTEM_DESIGN_CASES, FDE_DESIGN_CASES, SD_FRAMEWORK_STEPS, SD_CLARIFYING_QUESTIONS, SD_API_COMPARISON, ASSIGNMENT_DAILY_TIPS, FDE_ASSIGNMENT_DAILY_TIPS, CULTURE_DAILY_TIPS, TECH_DAILY_TOPICS, FDE_TECH_DAILY_TOPICS, CS_TOPICS, CS_DAILY_TOPICS, FDE_CS_DAILY_TOPICS, FDE_ALGO_TEMPLATES, CAREER_PAGES, TIMER_PRESETS, QUIZ_BANK, INTERVIEW_DAY_PLAYBOOK, SALARY_TIPS, RED_FLAGS, ONBOARDING_PLAYBOOK, MOCK_FEEDBACK_CRITERIA, type InterviewQuestion } from "./constants";
 
 /* ═══════════════════════════════════════════════════════════ */
 /*  TYPES                                                      */
@@ -2028,6 +2028,107 @@ export default function InterviewPage() {
               <p><B text="포트폴리오는 **ai-study + Aidy + MoneyFlow** 3개면 충분. 새로 만들지 말고 기존 프로젝트를 깊게." /></p>
             </div>
           </div>
+        </section>
+
+        {/* ═══════════ INTERVIEW DAY PLAYBOOK ═══════════ */}
+        <section className="mb-12">
+          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">
+            Interview Day Playbook
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {[INTERVIEW_DAY_PLAYBOOK.dMinus1, INTERVIEW_DAY_PLAYBOOK.dDay, INTERVIEW_DAY_PLAYBOOK.before].map((phase) => (
+              <div key={phase.title} className="rounded-xl border border-border/30 bg-surface/20 p-4">
+                <h3 className="text-xs font-bold text-accent/70 mb-3 uppercase">{phase.title}</h3>
+                <div className="space-y-1.5">
+                  {phase.items.map((item, i) => (
+                    <div key={i} className="flex items-start gap-2">
+                      <span className="text-green-400/50 text-xs mt-0.5 shrink-0">&#10003;</span>
+                      <p className="text-xs text-text/55 leading-relaxed">{item}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ═══════════ SALARY + RED FLAGS ═══════════ */}
+        <section className="mb-12">
+          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">
+            연봉 협상 + Red Flags
+          </h2>
+          <div className="space-y-3">
+            <div className="rounded-xl border border-border/30 bg-surface/20 p-5">
+              <h3 className="text-xs font-bold text-green-400/70 mb-3 uppercase tracking-wider">Salary Negotiation</h3>
+              <div className="space-y-2">
+                {SALARY_TIPS.map((t, i) => (
+                  <div key={i} className="flex gap-3">
+                    <span className="shrink-0 w-5 h-5 rounded bg-green-500/10 text-green-400/60 flex items-center justify-center text-[10px] font-bold mt-0.5">{i + 1}</span>
+                    <div>
+                      <p className="text-sm font-semibold text-text/70">{t.rule}</p>
+                      <p className="text-xs text-text/40 leading-relaxed mt-0.5">{t.detail}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="rounded-xl border border-red-500/20 bg-red-500/3 p-5">
+              <h3 className="text-xs font-bold text-red-400/70 mb-3 uppercase tracking-wider">Company Red Flags</h3>
+              <div className="space-y-1.5">
+                {RED_FLAGS.map((f, i) => (
+                  <div key={i} className="flex items-start gap-2">
+                    <span className="text-red-400/40 text-xs mt-0.5">&#9888;</span>
+                    <p className="text-xs text-text/50 leading-relaxed">{f}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ═══════════ ONBOARDING 30-60-90 ═══════════ */}
+        <section className="mb-12">
+          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">
+            Onboarding 30-60-90
+            <span className="ml-2 text-text/25 normal-case tracking-normal font-normal">— 입사 후 첫 90일 생존 가이드</span>
+          </h2>
+          <div className="space-y-3">
+            {ONBOARDING_PLAYBOOK.map((phase) => (
+              <details key={phase.phase} className="rounded-xl border border-border/30 bg-surface/20 overflow-hidden">
+                <summary className="px-5 py-3.5 cursor-pointer hover:bg-surface/40 transition-colors flex items-center gap-3">
+                  <span className="w-3 h-3 rounded-full shrink-0" style={{ background: phase.color }} />
+                  <span className="text-sm font-bold">{phase.phase}</span>
+                </summary>
+                <div className="px-5 pb-4 border-t border-border/20 pt-3 space-y-3">
+                  <div>
+                    <p className="text-[10px] font-code text-text/30 mb-1.5 uppercase">Goals</p>
+                    {phase.goals.map((g, i) => <p key={i} className="text-xs text-text/60 leading-relaxed">&#10003; {g}</p>)}
+                  </div>
+                  <div className="rounded-lg bg-accent/5 border border-accent/15 px-3 py-2">
+                    <p className="text-[10px] font-code text-accent/50 mb-1 uppercase">Tips</p>
+                    {phase.tips.map((t, i) => <p key={i} className="text-xs text-text/55 leading-relaxed">&#8226; {t}</p>)}
+                  </div>
+                </div>
+              </details>
+            ))}
+          </div>
+        </section>
+
+        {/* ═══════════ MOCK FEEDBACK ═══════════ */}
+        <section className="mb-12">
+          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">
+            Mock Interview Feedback
+            <span className="ml-2 text-text/25 normal-case tracking-normal font-normal">— 모의면접 후 셀프 체크</span>
+          </h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+            {MOCK_FEEDBACK_CRITERIA.map((c) => (
+              <div key={c.id} className="rounded-xl border border-border/30 bg-surface/20 p-4">
+                <p className="text-xs font-bold text-text/60 mb-1">{c.label}</p>
+                <p className="text-[10px] text-text/35 leading-relaxed">{c.description}</p>
+              </div>
+            ))}
+          </div>
+          <p className="text-[10px] text-text/20 mt-2">* 모의면접 녹음 후 각 항목 1-10점 셀프 채점. 주간 추이를 관찰하면 성장이 보인다.</p>
         </section>
         </>)}
 

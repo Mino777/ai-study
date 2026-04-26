@@ -2443,4 +2443,106 @@ export const QUIZ_BANK: QuizItem[] = [
   { id: "q74", category: "cs", question: "멀티스레딩에서 Race Condition이란?", choices: ["스레드가 빠르게 실행되는 상태", "여러 스레드가 공유 자원에 동시 접근하여 결과가 예측 불가한 상태", "스레드 간 통신 프로토콜", "단일 스레드 실행 모드"], answer: 1, explanation: "공유 자원(변수, 파일 등)에 여러 스레드가 동시에 읽기/쓰기 → 실행 순서에 따라 결과가 달라짐. 해결: Mutex/Lock, Serial Queue, Actor, Atomic 변수. Thread Sanitizer로 감지." },
   { id: "q75", category: "cs", question: "Big Endian과 Little Endian의 차이는?", choices: ["부동소수점 표현 방식", "바이트 저장 순서 (최상위/최하위 바이트 먼저)", "문자 인코딩 방식", "메모리 할당 전략"], answer: 1, explanation: "Big Endian: 최상위 바이트가 낮은 주소. 네트워크 바이트 순서(Network Byte Order). Little Endian: 최하위 바이트가 낮은 주소. Intel/ARM CPU. 네트워크 프로토콜 개발 시 변환 필요(htons/ntohs)." },
   { id: "q76", category: "cs", question: "메모리 단편화(Fragmentation)의 두 가지 종류는?", choices: ["내부 + 외부 단편화", "수직 + 수평 단편화", "정적 + 동적 단편화", "물리 + 가상 단편화"], answer: 0, explanation: "내부 단편화: 할당된 블록 내부의 사용되지 않는 공간. 외부 단편화: 사용 가능한 메모리가 흩어져서 큰 블록 할당 불가. iOS에서 메모리 풀/슬래브 할당으로 완화." },
+
+  // ── Swift 6 + 2026 트렌드 ──
+  { id: "q77", category: "swift", question: "Swift 6의 Strict Concurrency에서 @MainActor의 변화는?", choices: ["@MainActor가 제거됨", "모든 UI 타입에 @MainActor가 기본 적용", "비동기 함수에서만 사용 가능", "@MainActor가 선택적으로 변경됨"], answer: 1, explanation: "Swift 6: Strict Concurrency. UIViewController, UIView 등 UI 타입에 @MainActor 기본 적용. 백그라운드 작업은 명시적으로 Task.detached 또는 nonisolated 필요. 기존 코드 마이그레이션 주의." },
+  { id: "q78", category: "swift", question: "Swift의 Sendable 프로토콜 역할은?", choices: ["네트워크 전송 가능 타입 표시", "스레드 간 안전하게 전달 가능한 타입 보장", "직렬화 가능 타입 표시", "UI 업데이트 가능 타입 표시"], answer: 1, explanation: "Sendable: 값이 동시성 경계를 넘어 안전하게 전달 가능함을 컴파일러에 보장. 값 타입은 자동 Sendable. class는 @unchecked Sendable 또는 모든 프로퍼티가 let + Sendable일 때. Swift 6에서 강제." },
+  { id: "q79", category: "ios", question: "CoreML로 온디바이스 ML을 사용하는 장점이 아닌 것은?", choices: ["네트워크 불필요", "사용자 프라이버시 보호", "무한한 모델 크기 사용 가능", "빠른 추론 속도"], answer: 2, explanation: "온디바이스 ML: 네트워크 불필요(오프라인 동작), 데이터가 기기에서만 처리(프라이버시), Neural Engine으로 빠른 추론. 단점: 모델 크기 제한(앱 크기 영향), 학습은 불가(추론만)." },
+  { id: "q80", category: "ios", question: "Swift Testing 프레임워크(@Test)와 XCTest의 차이는?", choices: ["Swift Testing이 더 느리다", "@Test 매크로로 더 간결한 테스트, 파라미터화 테스트 지원", "XCTest가 Swift 전용이다", "Swift Testing은 UI 테스트만 가능"], answer: 1, explanation: "Swift Testing(Swift 5.9+): @Test 매크로, #expect 대신 XCTAssert, 파라미터화 테스트(@Test(arguments:)), 태그 기반 필터링. XCTest보다 간결하고 표현력 높음. Xcode 16+ 기본 지원." },
+  { id: "q81", category: "ios", question: "AI Pair Programming 면접에서 가장 중요한 것은?", choices: ["AI에게 모든 코드를 생성시키기", "AI 제안을 비판적으로 검토하고 수정하는 능력", "AI 없이 모든 것을 직접 구현", "가장 최신 AI 모델 사용"], answer: 1, explanation: "2026년 Meta 등에서 도입한 AI Pair Programming 면접: AI가 코드를 제안하면 개발자가 검토·수정·개선. 핵심 평가: Critical thinking + AI 출력 검증 능력 + 아키텍처 판단. AI에 의존 X, AI와 협력 O." },
+  { id: "q82", category: "fde", question: "고객사에 솔루션을 제안할 때 MVP를 강조하는 이유는?", choices: ["비용을 줄이기 위해", "빠른 검증으로 리스크를 줄이고, 피드백 기반 개선이 가능해서", "완성도가 낮아도 되므로", "개발자가 편하므로"], answer: 1, explanation: "MVP(Minimum Viable Product): 핵심 가설을 최소 기능으로 검증. 6개월 전체 개발 → 실패 vs 2주 MVP → 피드백 → 방향 수정. FDE의 핵심 역량: '뭘 만들지'보다 '뭘 먼저 검증할지' 판단." },
+];
+
+/* ═══════════════════════════════════════════════════════════ */
+/*  INTERVIEW DAY PLAYBOOK                                     */
+/* ═══════════════════════════════════════════════════════════ */
+
+export const INTERVIEW_DAY_PLAYBOOK = {
+  dMinus1: {
+    title: "D-1 저녁",
+    items: [
+      "이력서 모든 항목 1문장 설명 최종 리허설",
+      "역질문 3개 최종 확인 (기술 문화 / 팀 과제 / 성장 경로)",
+      "지참물: 신분증, 노트북(과제 시연용), 물, 필기구",
+      "면접 장소 교통편 확인 (30분 여유)",
+      "10시 이전 취침 — 수면이 기억력의 50%를 결정",
+    ],
+  },
+  dDay: {
+    title: "D-Day 아침",
+    items: [
+      "기상 후 가벼운 스트레칭 5분",
+      "쉬운 코딩 문제 1개만 풀기 (워밍업, 자신감)",
+      "프로젝트 핵심 3줄 복습: Harness/Context/Compound",
+      "식사: 단백질 위주 (혈당 급등 방지)",
+      "커피는 평소 양만 (과다 섭취 → 불안 증가)",
+    ],
+  },
+  before: {
+    title: "면접 30분 전",
+    items: [
+      "Box Breathing: 4초 들이쉬고 → 4초 멈추고 → 4초 내쉬고 → 4초 멈추기 × 3회",
+      "Power Pose: 2분간 양팔 벌려 자신감 자세 (Amy Cuddy 연구)",
+      "Affirmation: '나는 3년 7개월간 608건을 해결한 사람이다'",
+      "스마트폰 무음 + 알림 끄기",
+      "면접관 이름 확인 (LinkedIn/회사 페이지)",
+    ],
+  },
+};
+
+/* ═══════════════════════════════════════════════════════════ */
+/*  SALARY NEGOTIATION + RED FLAGS                             */
+/* ═══════════════════════════════════════════════════════════ */
+
+export const SALARY_TIPS = [
+  { rule: "첫 제시는 최대치가 아니다", detail: "대부분의 오퍼는 10-20% 협상 여지가 있다. '감사합니다. 며칠 고려하겠습니다'로 시간 벌기." },
+  { rule: "먼저 숫자를 말하지 마라", detail: "'현재 연봉이 얼마인가요?' → '포지션의 예산 범위를 먼저 알려주시면 맞춰서 논의하겠습니다.' 먼저 말하면 앵커링 당함." },
+  { rule: "시장 데이터로 말해라", detail: "'블라인드/잡플래닛 기준으로 이 포지션은 X~Y 범위입니다. 제 경력(3년 7개월)과 성과를 고려하면 Y에 가깝다고 생각합니다.'" },
+  { rule: "연봉 외 요소도 협상", detail: "RSU/스톡옵션, 사이닝 보너스, 재택근무, 교육비, 연차 등. 연봉이 안 되면 다른 항목에서 보상." },
+  { rule: "한국 대기업 특수성", detail: "직급/호봉제는 협상 여지 적음. 수시 채용(토스/당근 등)이 협상 유연. 공채는 일괄 연봉인 경우 많음." },
+];
+
+export const RED_FLAGS = [
+  "면접관마다 팀/역할 설명이 다르다 → 조직 정리 안 됨",
+  "'야근은 거의 없어요' 뒤에 '...프로젝트 때는 좀' → 상시 야근 가능성",
+  "기술 스택을 물어봤는데 명확한 답이 없다 → 기술 부채 심각 가능성",
+  "면접관이 질문에 방어적이거나 불편해한다 → 팀 분위기 문제",
+  "연봉 협상을 즉시 차단한다 → 경직된 문화",
+  "수습 기간이 6개월 이상이다 → 신중히 판단 (업계 표준: 3개월)",
+  "입사 후 업무 범위가 '유동적'이라고만 한다 → 역할 불명확",
+];
+
+/* ═══════════════════════════════════════════════════════════ */
+/*  ONBOARDING 30-60-90 PLAYBOOK                               */
+/* ═══════════════════════════════════════════════════════════ */
+
+export const ONBOARDING_PLAYBOOK = [
+  {
+    phase: "30일 — 적응기", color: "#3b82f6",
+    goals: ["코드베이스 이해: 주요 모듈 5개 파악", "첫 PR 머지 (작은 버그 픽스 OK)", "팀 스탠드업/회고에 적극 참여", "멘토/버디와 주 2회 1:1"],
+    tips: ["질문을 많이 해라 — 30일 안에는 '모르겠다'가 당연", "README/Confluence 등 문서를 먼저 읽고 질문하면 더 좋은 인상", "점심 같이 먹기 제안 (비공식 네트워크 구축)"],
+  },
+  {
+    phase: "60일 — 기여기", color: "#8b5cf6",
+    goals: ["중간 크기 태스크 독립 수행", "코드 리뷰 참여 (받기 + 주기 시작)", "팀 프로세스 개선 제안 1건", "온콜/장애 대응 프로세스 숙지"],
+    tips: ["'저도 리뷰해도 될까요?' → 팀 기여 신호", "작은 개선(린트 규칙, 테스트 추가)도 PR로 → 가시적 기여", "60일 자체 회고: 잘한 것 3개, 개선할 것 3개 정리"],
+  },
+  {
+    phase: "90일 — 자립기", color: "#10b981",
+    goals: ["중요 피처 리드 경험 1건", "수습 평가 준비: 성과 정리 문서 작성", "팀 내 기술 공유 1회 (짧은 발표 OK)", "향후 6개월 성장 목표 설정"],
+    tips: ["수습 평가 전: 입사 시 받은 기대치와 현재 성과를 대조하여 정리", "'제가 이렇게 기여했고, 다음은 이걸 하고 싶습니다' 프레임", "30%의 신입이 90일 내 퇴사 — 여기까지 왔으면 이미 상위 70%"],
+  },
+];
+
+/* ═══════════════════════════════════════════════════════════ */
+/*  MOCK INTERVIEW FEEDBACK TEMPLATE                           */
+/* ═══════════════════════════════════════════════════════════ */
+
+export const MOCK_FEEDBACK_CRITERIA = [
+  { id: "clarity", label: "Communication Clarity", description: "답변이 명확하고 구조적인가? STAR 프레임 사용했나?" },
+  { id: "depth", label: "Technical Depth", description: "표면적 답변이 아닌 '왜'까지 설명했나?" },
+  { id: "metrics", label: "Specific Metrics", description: "정량적 수치(608건, 8건 차단 등)를 사용했나?" },
+  { id: "pace", label: "Pace & Filler Words", description: "적절한 속도? '음...', '그...' 3회 이하?" },
+  { id: "confidence", label: "Confidence Level", description: "목소리 톤, 아이컨택, 자세가 자신감 있었나?" },
+  { id: "question", label: "Reverse Questions", description: "면접 마지막 역질문이 구체적이고 인상적이었나?" },
 ];
