@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { IOS_QUESTIONS, FDE_QUESTIONS, CULTURE_QUESTIONS, PHASE_PROBLEMS, COMPANY_STRATEGIES, HIRING_INSIGHTS, PROCESS_STAGES, ASSIGNMENT_CHECKLIST, ALGO_GUIDES, BIG_O_GUIDE, BIG_O_COMPARISON, SYSTEM_DESIGN_CASES, FDE_DESIGN_CASES, SD_FRAMEWORK_STEPS, SD_CLARIFYING_QUESTIONS, SD_API_COMPARISON, ASSIGNMENT_DAILY_TIPS, FDE_ASSIGNMENT_DAILY_TIPS, CULTURE_DAILY_TIPS, TECH_DAILY_TOPICS, FDE_TECH_DAILY_TOPICS, CS_TOPICS, CS_DAILY_TOPICS, FDE_CS_DAILY_TOPICS, FDE_ALGO_TEMPLATES, CAREER_PAGES, TIMER_PRESETS, type InterviewQuestion } from "./constants";
+import { IOS_QUESTIONS, FDE_QUESTIONS, CULTURE_QUESTIONS, PHASE_PROBLEMS, COMPANY_STRATEGIES, HIRING_INSIGHTS, PROCESS_STAGES, ASSIGNMENT_CHECKLIST, ALGO_GUIDES, BIG_O_GUIDE, BIG_O_COMPARISON, SYSTEM_DESIGN_CASES, FDE_DESIGN_CASES, SD_FRAMEWORK_STEPS, SD_CLARIFYING_QUESTIONS, SD_API_COMPARISON, ASSIGNMENT_DAILY_TIPS, FDE_ASSIGNMENT_DAILY_TIPS, CULTURE_DAILY_TIPS, TECH_DAILY_TOPICS, FDE_TECH_DAILY_TOPICS, CS_TOPICS, CS_DAILY_TOPICS, FDE_CS_DAILY_TOPICS, FDE_ALGO_TEMPLATES, CAREER_PAGES, TIMER_PRESETS, QUIZ_BANK, type InterviewQuestion } from "./constants";
 
 /* ═══════════════════════════════════════════════════════════ */
 /*  TYPES                                                      */
@@ -385,6 +385,8 @@ export default function InterviewPage() {
   const [timerActive, setTimerActive] = useState(false);
   const [timerSeconds, setTimerSeconds] = useState(0);
   const [timerLabel, setTimerLabel] = useState("");
+  const [quizHistory, setQuizHistory] = useState<Record<string, { answer: number; correct: boolean; date: string }>>({});
+  const [quizSelection, setQuizSelection] = useState<Record<string, number | null>>({});
 
   // Load from localStorage
   useEffect(() => {
@@ -400,6 +402,8 @@ export default function InterviewPage() {
       if (hard) setHardCards(JSON.parse(hard));
       const ddays = localStorage.getItem("interview-company-ddays");
       if (ddays) setCompanyDdays(JSON.parse(ddays));
+      const quiz = localStorage.getItem("interview-quiz-history");
+      if (quiz) setQuizHistory(JSON.parse(quiz));
     } catch { /* noop */ }
   }, []);
 
@@ -412,8 +416,9 @@ export default function InterviewPage() {
       localStorage.setItem("interview-problems", JSON.stringify(solvedProblems));
       localStorage.setItem("interview-hard-cards", JSON.stringify(hardCards));
       localStorage.setItem("interview-company-ddays", JSON.stringify(companyDdays));
+      localStorage.setItem("interview-quiz-history", JSON.stringify(quizHistory));
     } catch { /* noop */ }
-  }, [checkedTasks, revealedCards, solvedProblems, hardCards, companyDdays, mounted]);
+  }, [checkedTasks, revealedCards, solvedProblems, hardCards, companyDdays, quizHistory, mounted]);
 
   // Timer countdown
   useEffect(() => {
@@ -860,6 +865,89 @@ export default function InterviewPage() {
               <p className="text-[10px] text-text/30 mt-0.5">연속 일수</p>
             </div>
           </div>
+        </section>
+
+        {/* ═══════════ DAILY QUIZ ═══════════ */}
+        <section className="mb-8">
+          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-3">
+            Daily Quiz — Day {today}
+            <span className="ml-2 text-text/25 normal-case tracking-normal font-normal">
+              누적 {Object.values(quizHistory).filter((h) => h.correct).length}/{Object.keys(quizHistory).length} 정답
+            </span>
+          </h2>
+          {(() => {
+            // 매일 3문제 선택 (track 기반 필터 + day 기반 순환)
+            const trackQs = QUIZ_BANK.filter((q) =>
+              track === "fde" ? q.category !== "ios" && q.category !== "swift" : q.category !== "fde",
+            );
+            const dailyQuizzes = Array.from({ length: 3 }, (_, i) => {
+              const idx = ((today - 1) * 3 + i) % trackQs.length;
+              return trackQs[idx];
+            });
+
+            return (
+              <div className="space-y-3">
+                {dailyQuizzes.map((q) => {
+                  const history = quizHistory[q.id];
+                  const selection = quizSelection[q.id];
+                  const submitted = !!history;
+                  return (
+                    <div key={q.id} className={`rounded-xl border overflow-hidden ${submitted ? (history.correct ? "border-green-500/30 bg-green-500/5" : "border-red-500/30 bg-red-500/5") : "border-border/40 bg-surface/30"}`}>
+                      <div className="px-5 py-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-[10px] font-code px-2 py-0.5 rounded-full bg-accent/10 text-accent/60">{q.category}</span>
+                          {submitted && <span className={`text-[10px] font-code ${history.correct ? "text-green-400" : "text-red-400"}`}>{history.correct ? "correct" : "wrong"}</span>}
+                        </div>
+                        <p className="text-sm text-text/80 font-medium mb-3">{q.question}</p>
+                        <div className="space-y-1.5">
+                          {q.choices.map((choice, ci) => {
+                            const isSelected = selection === ci || (submitted && history.answer === ci);
+                            const isCorrect = ci === q.answer;
+                            let style = "border-border/30 bg-surface/20 text-text/60";
+                            if (submitted) {
+                              if (isCorrect) style = "border-green-500/40 bg-green-500/10 text-green-400/80";
+                              else if (isSelected && !isCorrect) style = "border-red-500/40 bg-red-500/10 text-red-400/80 line-through";
+                            } else if (isSelected) {
+                              style = "border-accent/40 bg-accent/10 text-accent";
+                            }
+                            return (
+                              <button
+                                key={ci}
+                                onClick={() => { if (!submitted) setQuizSelection((prev) => ({ ...prev, [q.id]: ci })); }}
+                                className={`w-full text-left px-4 py-2.5 rounded-lg border text-xs transition-colors ${style} ${!submitted ? "cursor-pointer hover:border-accent/30" : ""}`}
+                                disabled={submitted}
+                              >
+                                {choice}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        {!submitted && selection !== undefined && selection !== null && (
+                          <button
+                            onClick={() => {
+                              const correct = selection === q.answer;
+                              setQuizHistory((prev) => ({
+                                ...prev,
+                                [q.id]: { answer: selection, correct, date: new Date().toISOString().slice(0, 10) },
+                              }));
+                            }}
+                            className="mt-3 px-4 py-2 rounded-lg bg-accent text-white text-xs font-medium cursor-pointer hover:bg-accent/80 transition-colors"
+                          >
+                            제출
+                          </button>
+                        )}
+                        {submitted && (
+                          <div className="mt-3 rounded-lg bg-surface/40 px-4 py-3">
+                            <p className="text-xs text-text/50 leading-relaxed">{q.explanation}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
         </section>
 
         {/* ═══════════ PHASE ROADMAP ═══════════ */}

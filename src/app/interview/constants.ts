@@ -2321,3 +2321,52 @@ export const TIMER_PRESETS = [
   { label: "1분 자기소개", seconds: 60, color: "#ec4899", icon: "mic" },
   { label: "STAR 답변 (2분)", seconds: 120, color: "#06b6d4", icon: "mic" },
 ];
+
+/* ═══════════════════════════════════════════════════════════ */
+/*  DAILY QUIZ BANK                                            */
+/* ═══════════════════════════════════════════════════════════ */
+
+export interface QuizItem {
+  id: string;
+  category: "swift" | "ios" | "cs" | "algo" | "system-design" | "fde";
+  question: string;
+  choices: string[];
+  answer: number; // 0-based index
+  explanation: string;
+}
+
+export const QUIZ_BANK: QuizItem[] = [
+  // ── Swift / iOS ──
+  { id: "q1", category: "swift", question: "Swift에서 struct와 class의 가장 핵심적인 차이는?", choices: ["struct는 상속이 가능하다", "class는 값 타입이다", "struct는 값 타입, class는 참조 타입", "둘 다 힙에 할당된다"], answer: 2, explanation: "struct는 값 타입(복사), class는 참조 타입(공유). struct는 스택, class는 힙 할당. Swift 표준 라이브러리(String, Array)는 대부분 struct." },
+  { id: "q2", category: "swift", question: "[weak self]를 사용해야 하는 상황은?", choices: ["struct 메서드 내부", "동기 함수 호출 시", "클로저가 self를 캡처하여 순환 참조 가능성이 있을 때", "모든 클로저에서 항상"], answer: 2, explanation: "클로저가 self를 strong 캡처하면 순환 참조(Retain Cycle) 발생. delegate, 네트워크 콜백 등 @escaping 클로저에서 [weak self] 사용. 비탈출 클로저에서는 불필요." },
+  { id: "q3", category: "ios", question: "iOS 앱이 Background 상태에서 할 수 없는 것은?", choices: ["파일 다운로드", "위치 업데이트", "UI 업데이트", "네트워크 요청"], answer: 2, explanation: "Background 상태에서는 UI 업데이트 불가. UIKit은 메인 스레드에서만 업데이트 가능. Background Fetch, 위치, 오디오 등은 별도 권한으로 가능." },
+  { id: "q4", category: "ios", question: "ARC에서 retain count가 0이 되면?", choices: ["GC가 수집한다", "즉시 메모리에서 해제된다", "다음 런루프에서 해제된다", "개발자가 수동으로 해제해야 한다"], answer: 1, explanation: "ARC는 GC가 아님. retain count가 0이 되는 즉시(동기적으로) deinit 호출 + 메모리 해제. 비결정적 시점에 수집하는 GC와 다름." },
+  { id: "q5", category: "swift", question: "Copy-on-Write가 동작하는 시점은?", choices: ["변수 할당 시 즉시 복사", "변수를 읽을 때", "변수를 수정(mutation)할 때", "함수에 인자로 넘길 때"], answer: 2, explanation: "CoW는 실제 수정이 발생하는 시점에만 복사. 읽기만 하면 같은 메모리 공유. isKnownUniquelyReferenced로 유일 소유인지 확인 후 복사 여부 결정." },
+  { id: "q6", category: "ios", question: "DispatchQueue.main.sync를 메인 스레드에서 호출하면?", choices: ["정상 실행된다", "비동기로 전환된다", "데드락이 발생한다", "크래시가 발생한다"], answer: 2, explanation: "메인 스레드가 자기 자신의 큐에 sync를 걸면, 블록이 끝나길 기다리는데 자기가 실행해야 하므로 영원히 대기 → 데드락. async를 사용해야 함." },
+  { id: "q7", category: "ios", question: "UITableView에서 dequeueReusableCell을 사용하는 이유는?", choices: ["코드가 간결해지므로", "메모리 효율을 위해 셀을 재사용", "자동으로 셀 높이를 계산하기 위해", "셀 애니메이션을 위해"], answer: 1, explanation: "화면에 보이지 않는 셀을 풀에 반환하고 재사용하여 메모리 절약. 1000개 데이터도 화면에 보이는 10개 셀만 생성. prepareForReuse()에서 초기화 필수." },
+  { id: "q8", category: "swift", question: "protocol의 extension에서 기본 구현을 제공하면?", choices: ["채택한 타입이 반드시 재정의해야 한다", "채택한 타입이 재정의하지 않으면 기본 구현이 사용된다", "컴파일 에러가 발생한다", "런타임에 선택된다"], answer: 1, explanation: "Protocol Extension의 기본 구현은 채택한 타입이 직접 구현하지 않으면 자동으로 사용됨. POP(Protocol-Oriented Programming)의 핵심. 다중 상속 대안." },
+
+  // ── CS ──
+  { id: "q9", category: "cs", question: "TCP와 UDP 중 동영상 스트리밍에 적합한 것은?", choices: ["TCP (신뢰성 필요)", "UDP (속도 중요, 약간의 손실 허용)", "둘 다 동일", "HTTP만 사용"], answer: 1, explanation: "동영상 스트리밍은 약간의 패킷 손실보다 실시간성이 중요. UDP 기반 프로토콜(RTP)로 전송. 단, HLS는 TCP 기반이지만 세그먼트 단위 전송이라 다름." },
+  { id: "q10", category: "cs", question: "해시테이블의 평균 조회 시간복잡도는?", choices: ["O(n)", "O(log n)", "O(1)", "O(n log n)"], answer: 2, explanation: "해시 함수로 key를 인덱스로 변환 → 직접 접근. 충돌이 많으면 O(n)까지 나빠질 수 있지만 평균은 O(1). Swift Dictionary/Set이 해시테이블 기반." },
+  { id: "q11", category: "cs", question: "데드락 발생의 4가지 필요조건이 아닌 것은?", choices: ["상호 배제 (Mutual Exclusion)", "점유 대기 (Hold and Wait)", "선점 (Preemption)", "순환 대기 (Circular Wait)"], answer: 2, explanation: "4가지 조건: 상호 배제, 점유 대기, 비선점(No Preemption), 순환 대기. '선점'이 아니라 '비선점'이 조건. 리소스를 강제로 뺏을 수 없어야 데드락 가능." },
+  { id: "q12", category: "cs", question: "B-Tree 인덱스가 Full Scan보다 빠른 이유는?", choices: ["모든 데이터를 메모리에 올리기 때문", "정렬된 트리 구조로 O(log n) 탐색", "병렬 처리를 사용하기 때문", "압축된 데이터를 사용하기 때문"], answer: 1, explanation: "B-Tree는 정렬된 트리. 루트에서 리프까지 O(log n)으로 도달. Full Scan은 모든 행을 순회(O(n)). 100만 행도 ~20번 비교로 찾음." },
+  { id: "q13", category: "cs", question: "HTTPS에서 실제 데이터 암호화에 사용되는 것은?", choices: ["RSA (비대칭키)", "AES (대칭키)", "SHA-256 (해싱)", "MD5 (해싱)"], answer: 1, explanation: "TLS Handshake에서 RSA로 세션키(대칭키) 교환 → 이후 실제 데이터는 AES(대칭키)로 암호화. 비대칭키는 느려서 키 교환에만 사용, 실제 통신은 빠른 대칭키." },
+  { id: "q14", category: "cs", question: "정적 디스패치와 동적 디스패치 중 빠른 것은?", choices: ["동적 디스패치 (유연하므로)", "정적 디스패치 (컴파일 타임 결정)", "둘 다 동일", "상황에 따라 다름"], answer: 1, explanation: "정적: 컴파일 타임에 호출 함수 결정 → 직접 점프. 동적: 런타임에 vtable 조회 후 점프 → 간접 참조 비용. struct, final class = 정적. 일반 class = 동적." },
+
+  // ── Algorithm ──
+  { id: "q15", category: "algo", question: "이분 탐색의 전제 조건은?", choices: ["배열이 연결리스트여야 함", "배열이 정렬되어 있어야 함", "배열의 크기가 2의 거듭제곱이어야 함", "배열에 중복이 없어야 함"], answer: 1, explanation: "이분 탐색은 정렬된 배열에서만 동작. 중간값과 비교하여 절반을 버리는 원리. 정렬 안 된 배열에서는 먼저 정렬(O(n log n)) 후 탐색." },
+  { id: "q16", category: "algo", question: "BFS와 DFS 중 최단 경로를 보장하는 것은?", choices: ["DFS (깊이 우선)", "BFS (너비 우선)", "둘 다 보장", "둘 다 보장하지 않음"], answer: 1, explanation: "BFS는 가까운 노드부터 탐색 → 처음 도달한 경로가 최단. DFS는 한 길로 끝까지 가므로 최단 보장 안 됨. 단, 가중치 있는 그래프에서는 다익스트라 필요." },
+  { id: "q17", category: "algo", question: "DP(동적 계획법)의 핵심 조건 2가지는?", choices: ["정렬 + 이분탐색", "최적 부분 구조 + 중복 하위 문제", "분할 정복 + 병합", "탐욕 선택 + 검증"], answer: 1, explanation: "최적 부분 구조: 큰 문제의 최적해가 작은 문제의 최적해로 구성. 중복 하위 문제: 같은 하위 문제가 반복 계산됨 → 저장(메모이제이션)으로 해결." },
+  { id: "q18", category: "algo", question: "O(n²) 알고리즘이 O(n log n)보다 빠를 수 있는 경우는?", choices: ["절대 없다", "n이 매우 작을 때 (상수 계수 차이)", "n이 매우 클 때", "메모리가 부족할 때"], answer: 1, explanation: "Big-O는 n이 충분히 클 때의 경향. n이 작으면(~100) 상수 계수가 작은 O(n²)이 오히려 빠를 수 있음. 예: 삽입 정렬이 작은 배열에서 퀵소트보다 빠른 이유." },
+
+  // ── System Design ──
+  { id: "q19", category: "system-design", question: "모바일에서 페이지네이션 시 커서 기반이 오프셋보다 나은 이유는?", choices: ["구현이 더 쉬워서", "새 데이터 삽입 시 중복/누락이 없어서", "서버 부하가 적어서", "클라이언트 메모리를 적게 써서"], answer: 1, explanation: "오프셋: 중간에 새 글이 삽입되면 이미 본 글이 다시 나오거나 누락. 커서: 마지막으로 본 항목의 ID 기준이라 삽입/삭제에 영향 없음. 실시간 피드에서 필수." },
+  { id: "q20", category: "system-design", question: "이미지 로딩 시 3단계 캐시 순서는?", choices: ["디스크 → 네트워크 → 메모리", "네트워크 → 메모리 → 디스크", "메모리 → 디스크 → 네트워크", "메모리 → 네트워크 → 디스크"], answer: 2, explanation: "가장 빠른 곳부터 확인: 메모리 캐시(NSCache, 즉시) → 디스크 캐시(FileManager, 빠름) → 네트워크(느림). Cache-Aside 패턴. Kingfisher/SDWebImage 모두 이 순서." },
+
+  // ── FDE ──
+  { id: "q21", category: "fde", question: "고객이 '시스템이 느리다'고 할 때 FDE가 가장 먼저 해야 할 것은?", choices: ["서버를 증설한다", "'느리다'를 정량화한다 (현재 응답 시간 측정)", "코드를 최적화한다", "캐시를 도입한다"], answer: 1, explanation: "문제 해결의 첫 단계는 측정. '느리다'를 '현재 응답 시간 3초, 목표 0.5초'로 정량화해야 올바른 해결책을 찾을 수 있음. APM(Application Performance Monitoring) 도구 활용." },
+  { id: "q22", category: "fde", question: "CAP 정리에서 네트워크 파티션 발생 시 선택해야 하는 것은?", choices: ["Consistency + Availability", "Consistency 또는 Availability 중 하나", "Partition Tolerance를 포기", "세 가지 모두 유지 가능"], answer: 1, explanation: "네트워크 파티션(P)은 분산 시스템에서 불가피 → P는 포기 불가. 따라서 C(일관성) 또는 A(가용성) 중 선택. 은행 = CP(일관성 우선), SNS = AP(가용성 우선)." },
+  { id: "q23", category: "fde", question: "ETL에서 Idempotency가 중요한 이유는?", choices: ["처리 속도가 빨라져서", "같은 작업을 재실행해도 결과가 동일해야 하므로", "메모리를 절약하므로", "보안을 강화하므로"], answer: 1, explanation: "파이프라인 실패 시 재실행하면 데이터 중복 삽입 위험. Idempotent하면 재실행해도 결과 동일(UPSERT). Dead Letter Queue + 재시도 전략의 전제 조건." },
+  { id: "q24", category: "fde", question: "LLM 환각(Hallucination) 대응으로 가장 효과적인 것은?", choices: ["Temperature를 0으로 설정", "RAG(Retrieval-Augmented Generation) 도입", "더 큰 모델 사용", "프롬프트를 길게 작성"], answer: 1, explanation: "RAG: 외부 데이터 소스에서 관련 정보를 검색 → LLM에 컨텍스트로 제공. 근거 기반 생성으로 환각 대폭 감소. Temperature 조정만으로는 한계. Harness 패턴의 입출력 검증과 병행." },
+];
