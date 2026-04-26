@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback, useMemo } from "react";
+import { IOS_QUESTIONS, FDE_QUESTIONS, PHASE_PROBLEMS, type InterviewQuestion } from "./constants";
 
 /* ═══════════════════════════════════════════════════════════ */
 /*  TYPES                                                      */
@@ -376,6 +377,8 @@ export default function InterviewPage() {
   const [checkedTasks, setCheckedTasks] = useState<Record<string, boolean>>({});
   const [selectedDay, setSelectedDay] = useState<number>(getToday());
   const [mounted, setMounted] = useState(false);
+  const [revealedCards, setRevealedCards] = useState<Record<string, boolean>>({});
+  const [solvedProblems, setSolvedProblems] = useState<Record<string, boolean>>({});
 
   // Load from localStorage
   useEffect(() => {
@@ -383,6 +386,10 @@ export default function InterviewPage() {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) setCheckedTasks(JSON.parse(saved));
+      const cards = localStorage.getItem("interview-flashcards");
+      if (cards) setRevealedCards(JSON.parse(cards));
+      const probs = localStorage.getItem("interview-problems");
+      if (probs) setSolvedProblems(JSON.parse(probs));
     } catch { /* noop */ }
   }, []);
 
@@ -391,8 +398,10 @@ export default function InterviewPage() {
     if (!mounted) return;
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(checkedTasks));
+      localStorage.setItem("interview-flashcards", JSON.stringify(revealedCards));
+      localStorage.setItem("interview-problems", JSON.stringify(solvedProblems));
     } catch { /* noop */ }
-  }, [checkedTasks, mounted]);
+  }, [checkedTasks, revealedCards, solvedProblems, mounted]);
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
     setMousePos({ x: e.clientX, y: e.clientY });
@@ -451,6 +460,42 @@ export default function InterviewPage() {
 
   const toggleTask = (id: string) => {
     setCheckedTasks((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  // Flash card data for current track & phase
+  const flashCards = useMemo(() => {
+    const qs = track === "ios" ? IOS_QUESTIONS : FDE_QUESTIONS;
+    return qs.filter((q) => q.phase <= currentPhase.id);
+  }, [track, currentPhase.id]);
+
+  const todayCards = useMemo(() => {
+    const qs = track === "ios" ? IOS_QUESTIONS : FDE_QUESTIONS;
+    const phaseQs = qs.filter((q) => q.phase === currentPhase.id);
+    // 5 cards per day, cycling through phase questions
+    const startIdx = ((selectedDay - 1) * 5) % Math.max(1, phaseQs.length);
+    return phaseQs.slice(startIdx, startIdx + 5).concat(
+      startIdx + 5 > phaseQs.length ? phaseQs.slice(0, Math.max(0, (startIdx + 5) - phaseQs.length)) : [],
+    ).slice(0, 5);
+  }, [track, currentPhase.id, selectedDay]);
+
+  const todayProblems = useMemo(() => {
+    const problems = PHASE_PROBLEMS[currentPhase.id] ?? [];
+    const startIdx = ((selectedDay - 1) * 2) % Math.max(1, problems.length);
+    return problems.slice(startIdx, startIdx + 2).concat(
+      startIdx + 2 > problems.length ? problems.slice(0, Math.max(0, (startIdx + 2) - problems.length)) : [],
+    ).slice(0, 2);
+  }, [currentPhase.id, selectedDay]);
+
+  // Flash card stats
+  const totalReviewed = useMemo(() => flashCards.filter((q) => revealedCards[q.id]).length, [flashCards, revealedCards]);
+  const todayReviewed = todayCards.filter((q) => revealedCards[q.id]).length;
+
+  const toggleReveal = (id: string) => {
+    setRevealedCards((prev) => ({ ...prev, [id]: true }));
+  };
+
+  const toggleProblem = (title: string) => {
+    setSolvedProblems((prev) => ({ ...prev, [title]: !prev[title] }));
   };
 
   // Overall progress percentage
@@ -781,6 +826,106 @@ export default function InterviewPage() {
                 );
               })}
             </div>
+          </div>
+        </section>
+
+        {/* ═══════════ TODAY'S FLASH CARDS ═══════════ */}
+        <section className="mb-12">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45">
+              Flash Cards — {track === "ios" ? "iOS" : "FDE"}
+              <span className="ml-2 text-text/25 normal-case tracking-normal font-normal">
+                {todayReviewed}/{todayCards.length} reviewed
+              </span>
+            </h2>
+            <span className="text-xs font-code text-text/30">
+              전체 {totalReviewed}/{flashCards.length}
+            </span>
+          </div>
+          <div className="space-y-3">
+            {todayCards.map((q) => {
+              const isRevealed = !!revealedCards[q.id];
+              return (
+                <div key={q.id} className="rounded-xl border border-border/40 bg-surface/30 overflow-hidden">
+                  <button
+                    onClick={() => toggleReveal(q.id)}
+                    className="w-full px-5 py-4 text-left cursor-pointer hover:bg-surface/50 transition-colors"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1">
+                        <span className="text-[10px] font-code px-2 py-0.5 rounded-full bg-accent/10 text-accent/60 mr-2">{q.topic}</span>
+                        <p className="text-sm text-text/80 mt-2 leading-relaxed font-medium">{q.question}</p>
+                      </div>
+                      <span className={`shrink-0 text-xs mt-1 ${isRevealed ? "text-green-400" : "text-text/25"}`}>
+                        {isRevealed ? "reviewed" : "tap to reveal"}
+                      </span>
+                    </div>
+                  </button>
+                  {isRevealed && (
+                    <div className="px-5 py-4 border-t border-border/20 bg-accent/3">
+                      <p className="text-sm text-text/60 leading-[1.8]">{q.answer}</p>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          {todayReviewed === todayCards.length && todayCards.length > 0 && (
+            <p className="text-xs text-green-400/70 mt-3 font-code text-center">
+              All cards reviewed for today!
+            </p>
+          )}
+        </section>
+
+        {/* ═══════════ TODAY'S CODING PROBLEMS ═══════════ */}
+        <section className="mb-12">
+          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">
+            Today&apos;s Problems
+            <span className="ml-2 text-text/25 normal-case tracking-normal font-normal">— Phase {currentPhase.id} 추천 문제</span>
+          </h2>
+          <div className="space-y-2">
+            {todayProblems.map((p) => (
+              <div
+                key={p.title}
+                className={`rounded-xl border p-4 flex items-center gap-4 transition-all ${
+                  solvedProblems[p.title]
+                    ? "border-green-500/30 bg-green-500/5"
+                    : "border-border/40 bg-surface/30"
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={!!solvedProblems[p.title]}
+                  onChange={() => toggleProblem(p.title)}
+                  className="w-4 h-4 rounded accent-green-500 cursor-pointer shrink-0"
+                />
+                <div className="flex-1 min-w-0">
+                  <a
+                    href={p.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`text-sm font-medium hover:text-accent transition-colors ${
+                      solvedProblems[p.title] ? "line-through text-text/30" : "text-text/80"
+                    }`}
+                  >
+                    {p.title}
+                  </a>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-[10px] font-code text-text/30">{p.platform}</span>
+                    <span className="text-[10px] font-code text-accent/50">{p.difficulty}</span>
+                    <span className="text-[10px] font-code text-text/20">{p.topic}</span>
+                  </div>
+                </div>
+                <a
+                  href={p.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="shrink-0 text-xs text-accent/50 hover:text-accent transition-colors"
+                >
+                  풀러가기 &rarr;
+                </a>
+              </div>
+            ))}
           </div>
         </section>
 
