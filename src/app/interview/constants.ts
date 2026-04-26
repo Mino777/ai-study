@@ -1775,7 +1775,7 @@ class MockNetworkService: NetworkServiceProtocol {
   },
   {
     id: "cs-observer", category: "패턴", categoryColor: "#ef4444",
-    title: "옵저버 패턴 + iOS 구현",
+    title: "옵저버 패턴 + Combine",
     question: "옵저버 패턴을 iOS에서 어떻게 사용하나요?",
     visual: `  Subject (발행자)          Observer (구독자)
   ┌─────────────┐         ┌──────────┐
@@ -1808,6 +1808,255 @@ class ViewController: UIViewController {
     }
 }`,
   },
+  // ── 경력직 심화: 메모리 ──
+  {
+    id: "cs-cow", category: "메모리 심화", categoryColor: "#ec4899",
+    title: "Copy-on-Write (CoW)",
+    question: "Swift의 Copy-on-Write 메커니즘을 설명해주세요.",
+    visual: `  var a = [1, 2, 3]
+  var b = a           ← 이 시점에는 복사 안 함! (같은 메모리)
+
+  ┌─────────┐
+  │ [1,2,3] │ ← a, b 둘 다 같은 곳을 가리킴
+  └─────────┘
+
+  b.append(4)         ← 이 시점에 비로소 복사!
+
+  ┌─────────┐    ┌───────────┐
+  │ [1,2,3] │    │ [1,2,3,4] │
+  └─────────┘    └───────────┘
+      a               b`,
+    answer: "값 타입(Array, Dictionary, String 등)을 복사할 때 즉시 메모리를 복제하지 않고, 수정이 발생하는 시점에만 복사. isKnownUniquelyReferenced로 참조 카운트가 1인지 확인 → 1이면 복사 불필요(유일 소유). 커스텀 CoW 구현 시 이 함수 활용.",
+    realWorld: "Swift Array/Dictionary/String 모두 CoW. 함수 인자로 큰 배열을 넘겨도 수정 안 하면 복사 비용 0. 성능 면접에서 '값 타입인데 왜 느리지 않나?'에 대한 핵심 답변.",
+    code: `// CoW 확인 실험
+var a = [1, 2, 3]
+var b = a
+
+// 메모리 주소 비교 (같은 버퍼)
+print(a.withUnsafeBufferPointer { $0.baseAddress! })
+print(b.withUnsafeBufferPointer { $0.baseAddress! })
+// → 같은 주소!
+
+b.append(4)  // 이 시점에 복사 발생
+
+print(a.withUnsafeBufferPointer { $0.baseAddress! })
+print(b.withUnsafeBufferPointer { $0.baseAddress! })
+// → 다른 주소!
+
+// 커스텀 CoW 구현
+final class Ref<T> { var value: T; init(_ v: T) { value = v } }
+
+struct CoWWrapper<T> {
+    private var ref: Ref<T>
+    init(_ value: T) { ref = Ref(value) }
+
+    var value: T {
+        get { ref.value }
+        set {
+            if !isKnownUniquelyReferenced(&ref) {
+                ref = Ref(newValue)  // 복사!
+            } else {
+                ref.value = newValue  // 수정만
+            }
+        }
+    }
+}`,
+  },
+  // ── 경력직 심화: 동시성 ──
+  {
+    id: "cs-mutex-semaphore", category: "동시성 심화", categoryColor: "#f97316",
+    title: "Mutex vs Semaphore",
+    question: "Mutex와 Semaphore의 차이를 설명하고 iOS에서 어떻게 사용하나요?",
+    visual: `  Mutex (화장실 열쇠 1개)       Semaphore (주차장 N칸)
+  ┌──────────────────┐      ┌──────────────────┐
+  │ Thread A: Lock ✓  │      │ Thread A: wait ✓ │
+  │ Thread B: 대기... │      │ Thread B: wait ✓ │  N=3
+  │ Thread C: 대기... │      │ Thread C: wait ✓ │
+  │                  │      │ Thread D: 대기... │  ← 꽉 참!
+  │ A: Unlock → B 진입│      │ A: signal → D 진입│
+  └──────────────────┘      └──────────────────┘
+  1개만 진입               N개 동시 진입`,
+    answer: "Mutex: 1개 스레드만 임계 영역 진입. 소유권 있음 (Lock한 스레드만 Unlock 가능). Semaphore: N개 스레드 동시 진입. 소유권 없음 (누구나 signal 가능). Binary Semaphore(N=1) ≈ Mutex. iOS: os_unfair_lock(가장 빠른 Mutex), DispatchSemaphore(Semaphore).",
+    realWorld: "네트워크 동시 요청 제한: DispatchSemaphore(value: 5) → 최대 5개 동시. DB 접근 직렬화: Serial DispatchQueue (사실상 Mutex). Actor = Swift의 현대적 Mutex.",
+    code: `// Mutex 대용: os_unfair_lock (가장 빠름)
+import os
+var lock = os_unfair_lock()
+os_unfair_lock_lock(&lock)
+// critical section
+os_unfair_lock_unlock(&lock)
+
+// Semaphore: 동시 요청 3개 제한
+let semaphore = DispatchSemaphore(value: 3)
+
+for url in urls {
+    DispatchQueue.global().async {
+        semaphore.wait()    // 카운터 -1 (0이면 대기)
+        fetchData(url) {
+            semaphore.signal()  // 카운터 +1
+        }
+    }
+}
+
+// Actor: Swift의 현대적 동시성 보호
+actor BankAccount {
+    private var balance: Int = 0
+    func deposit(_ amount: Int) { balance += amount }
+    func getBalance() -> Int { balance }
+}
+// await account.deposit(100)  ← 자동 직렬화`,
+  },
+  {
+    id: "cs-priority-inversion", category: "동시성 심화", categoryColor: "#f97316",
+    title: "Priority Inversion (우선순위 역전)",
+    question: "Priority Inversion이 뭔가요? iOS에서 어떻게 대응하나요?",
+    visual: `  High ────→ [Lock 대기...] ──→ 실행
+                  ↑
+  Mid  ────→ [실행 중] ──→ 끝  ← 이놈이 끼어듦!
+                  ↓
+  Low  ────→ [Lock 보유 중...] ──→ 해제
+
+  High가 Low를 기다리는데, Mid가 Low보다 먼저 실행
+  → High가 Mid보다 늦게 실행됨 = 우선순위 역전!`,
+    answer: "높은 우선순위 작업이 낮은 우선순위 작업의 리소스(Lock)를 기다리는 중, 중간 우선순위 작업이 낮은 우선순위를 선점하여 결과적으로 높은 우선순위 작업이 밀리는 현상. GCD는 자동으로 Lock 보유 스레드의 QoS를 일시 상향(Priority Inheritance)하여 해결.",
+    realWorld: "iOS에서 .userInteractive 큐에서 .utility 큐의 자원을 기다리면 발생. 예방: 공유 자원은 같은 QoS 큐에서 접근. Actor 사용 시 자동 해결. 실무에서 스크롤 버벅임의 숨은 원인일 수 있음.",
+  },
+  // ── 경력직 심화: 네트워크 ──
+  {
+    id: "cs-http2-http3", category: "네트워크 심화", categoryColor: "#06b6d4",
+    title: "HTTP/2 vs HTTP/3 + QUIC",
+    question: "HTTP/2와 HTTP/3의 차이, 모바일에서 HTTP/3이 중요한 이유?",
+    visual: `  HTTP/1.1          HTTP/2              HTTP/3
+  ┌────────┐      ┌────────┐         ┌────────┐
+  │ 요청1   │      │ 요청1 ─┐│         │ 요청1   │
+  │ 응답1   │      │ 요청2  ││ 멀티    │ 요청2   │ UDP
+  │ 요청2   │      │ 요청3  ││ 플렉싱  │ 요청3   │ (QUIC)
+  │ 응답2   │      │ 응답들 ─┘│         │ 각각독립│
+  └────────┘      └────────┘         └────────┘
+  순차적           1연결 N스트림      스트림 독립
+  (느림)          (TCP HoL 문제)     (패킷손실 격리)`,
+    answer: "HTTP/2: TCP 위에서 멀티플렉싱(1연결 N스트림). 하지만 TCP 수준 Head-of-Line Blocking 여전. HTTP/3: UDP 기반 QUIC 프로토콜. 스트림 독립 처리 → 패킷 손실 시 다른 스트림에 영향 없음. 0-RTT 연결 재개. WiFi→LTE 전환 시 연결 유지(Connection Migration).",
+    realWorld: "iOS 15+에서 URLSession이 HTTP/3 자동 지원. 모바일에서 중요한 이유: ①네트워크 전환(WiFi↔셀룰러) 시 연결 끊김 없음 ②약한 네트워크에서 패킷 손실 격리 ③앱 시작 시 0-RTT로 빠른 연결.",
+  },
+  // ── 경력직 심화: 보안 ──
+  {
+    id: "cs-encryption", category: "보안", categoryColor: "#dc2626",
+    title: "대칭키 vs 비대칭키 + 해싱",
+    question: "암호화의 종류와 iOS에서 각각 어떻게 사용하나요?",
+    visual: `  대칭키 (AES)              비대칭키 (RSA)
+  ┌──────────────────┐    ┌──────────────────┐
+  │ 같은 키로           │    │ 공개키로 암호화     │
+  │ 암호화 + 복호화     │    │ 개인키로 복호화     │
+  │ 빠름! 키 배포 어려움 │    │ 느림! 키 배포 쉬움  │
+  └──────────────────┘    └──────────────────┘
+
+  해싱 (SHA-256)           단방향! 복호화 불가
+  "password" → "5e884898da..."
+  같은 입력 → 항상 같은 출력 (검증용)`,
+    answer: "대칭키(AES-256): 암복호화 같은 키. 빠름. 키 배포 어려움 → TLS에서 세션키로 사용. 비대칭키(RSA/ECDSA): 공개키+개인키 쌍. 느림. TLS Handshake에서 세션키 교환에 사용. 해싱(SHA-256, bcrypt): 단방향. 비밀번호 저장, 무결성 검증. bcrypt는 의도적으로 느림(brute force 방지).",
+    realWorld: "iOS Keychain = AES-256 암호화. TLS = 비대칭키로 세션키 교환 → 대칭키로 통신. 비밀번호 저장: 서버에서 bcrypt 해싱 (앱에서 평문 전송 → HTTPS가 보호). API 토큰: Keychain 저장 (UserDefaults 절대 금지).",
+  },
+  // ── 경력직 심화: 컴파일러/런타임 ──
+  {
+    id: "cs-dispatch", category: "런타임", categoryColor: "#a855f7",
+    title: "정적 디스패치 vs 동적 디스패치",
+    question: "Swift에서 정적/동적 디스패치의 차이와 성능 영향?",
+    visual: `  정적 디스패치 (struct, final class)
+  컴파일 타임에 호출할 함수 결정
+  → 직접 점프 (빠름!)
+
+  동적 디스패치 (class)
+  런타임에 vtable에서 함수 포인터 찾기
+  ┌──────────┐
+  │ vtable   │
+  │ func1 → ──→ 실제 함수 위치
+  │ func2 → ──→ 실제 함수 위치
+  └──────────┘
+  → 간접 점프 (약 2배 느림)`,
+    answer: "정적: 컴파일 타임에 호출 함수 결정. struct, enum, final class, private 메서드. 인라이닝 최적화 가능. 동적: 런타임에 vtable/witness table 조회. class의 일반 메서드. 오버라이드 가능하려면 동적이어야. final/private 키워드로 동적→정적 전환 가능 → 성능 개선.",
+    realWorld: "성능 민감한 코드(Collection 순회, 이미지 처리)는 struct + protocol 조합으로 정적 디스패치. class에 final 붙이면 동적→정적. Whole Module Optimization(-WMO)이 자동으로 final 추론해줌.",
+    code: `// 동적 디스패치 (class)
+class Animal {
+    func speak() { print("...") }  // vtable 조회
+}
+class Dog: Animal {
+    override func speak() { print("Woof") }
+}
+
+// 정적 디스패치로 바꾸기
+final class Cat {  // final → 정적!
+    func speak() { print("Meow") }
+}
+
+// struct = 항상 정적
+struct Bird {
+    func speak() { print("Tweet") }  // 직접 호출
+}
+
+// protocol + generic = 정적 (specialization)
+func makeSound<T: Animal>(_ animal: T) {
+    animal.speak()  // 컴파일러가 타입 알면 정적 디스패치
+}`,
+  },
+  {
+    id: "cs-compile", category: "런타임", categoryColor: "#a855f7",
+    title: "Swift 컴파일 과정",
+    question: "Swift 소스코드가 실행파일이 되기까지의 과정?",
+    visual: `  .swift 파일
+      ↓ Parsing
+    AST (추상 구문 트리)
+      ↓ Semantic Analysis (타입 체크)
+    Type-checked AST
+      ↓ SIL Generation
+    SIL (Swift Intermediate Language)
+      ↓ SIL Optimization (ARC 최적화 등)
+    Optimized SIL
+      ↓ LLVM IR Generation
+    LLVM IR
+      ↓ LLVM Backend
+    Machine Code (.o)
+      ↓ Linker
+    실행파일 / .app`,
+    answer: "1단계: Parsing → AST. 2단계: Type Checking (여기서 대부분 컴파일 에러). 3단계: SIL 생성 (ARC retain/release 삽입, 제네릭 특수화). 4단계: SIL 최적화 (불필요 retain/release 제거). 5단계: LLVM IR → Machine Code. SIL이 핵심 — Swift만의 중간 표현으로 ARC/제네릭 최적화.",
+    realWorld: "빌드 속도 개선: Incremental Compilation(변경 파일만), Whole Module Optimization(릴리즈 시). dSYM: 크래시 로그 심볼리케이션에 필수. Bitcode: Apple이 디바이스별 재최적화 (App Thinning).",
+  },
+  // ── 경력직 심화: 함수형 ──
+  {
+    id: "cs-pure-function", category: "함수형", categoryColor: "#14b8a6",
+    title: "순수함수 + flatMap vs map",
+    question: "순수함수란? flatMap과 map의 차이를 Optional과 Array 관점에서?",
+    visual: `  map:     [1, 2, 3].map { [$0, $0*10] }
+           → [[1,10], [2,20], [3,30]]  ← 중첩!
+
+  flatMap: [1, 2, 3].flatMap { [$0, $0*10] }
+           → [1, 10, 2, 20, 3, 30]     ← 평탄화!
+
+  Optional:
+  let x: String? = "123"
+  x.map { Int($0) }     → Optional(Optional(123))  ← 이중!
+  x.flatMap { Int($0) } → Optional(123)             ← 평탄!`,
+    answer: "순수함수: 같은 입력 → 항상 같은 출력 + 부작용(Side Effect) 없음. 테스트/추론 용이. map: 변환 함수 적용, 구조 유지. T→U. flatMap: 변환 + 평탄화. T→Container<U>를 Container<U>로. Optional에서 flatMap = 이중 Optional 방지. compactMap = nil 제거.",
+    realWorld: "SwiftUI: @State 변경이 순수함수적으로 View body를 재계산. Combine: Publisher 체인이 map/flatMap으로 구성. 실무 규칙: ViewModel 로직은 순수함수로, Side Effect(네트워크/DB)는 Repository에 격리.",
+    code: `// 순수함수 vs 비순수함수
+// ✅ 순수: 같은 입력 → 같은 출력
+func double(_ x: Int) -> Int { x * 2 }
+
+// ❌ 비순수: 외부 상태 변경
+var total = 0
+func addToTotal(_ x: Int) { total += x }
+
+// map vs flatMap (Array)
+let nested = [[1,2], [3,4], [5,6]]
+nested.map { $0 }      // [[1,2], [3,4], [5,6]]
+nested.flatMap { $0 }   // [1, 2, 3, 4, 5, 6]
+
+// map vs flatMap (Optional)
+let str: String? = "42"
+str.map { Int($0) }     // Optional(Optional(42)) 🤔
+str.flatMap { Int($0) }  // Optional(42) ✅
+
+// compactMap = nil 제거
+["1", "two", "3"].compactMap { Int($0) }  // [1, 3]`,
+  },
 ];
 
 /** CS 탭: Day별 학습 주제 */
@@ -1819,4 +2068,11 @@ export const CS_DAILY_TOPICS: DailyTip[] = [
   { day: 5, title: "데이터베이스 인덱스 + ACID", content: "B-Tree 인덱스가 왜 빠른지. CoreData에서 indexed 속성 사용 경험. 트랜잭션 ACID 4가지를 은행 이체로 설명." },
   { day: 6, title: "디자인 패턴: 싱글톤 + 옵저버", content: "싱글톤의 장단점. URLSession.shared가 싱글톤인 이유. Combine @Published가 옵저버 패턴인 이유. 테스트 가능한 싱글톤 만드는 법." },
   { day: 7, title: "가상 메모리 + iOS 메모리 관리", content: "iOS에 Swap이 없는 이유(플래시 수명). Jetsam이 앱을 죽이는 기준. didReceiveMemoryWarning 대응. Instruments Allocations 사용법." },
+  { day: 8, title: "Copy-on-Write 심화", content: "Swift Array/String이 값 타입인데 느리지 않은 이유. isKnownUniquelyReferenced 동작 원리. 커스텀 CoW 구현 코드를 즉석에서 쓸 수 있는가?" },
+  { day: 9, title: "Mutex vs Semaphore 실전", content: "os_unfair_lock vs DispatchSemaphore 차이. 네트워크 동시 요청 5개 제한 코드. Actor가 Mutex를 대체하는 이유." },
+  { day: 10, title: "Priority Inversion 이해", content: "High→Low 기다리는 중 Mid가 끼어드는 시나리오. GCD Priority Inheritance 자동 해결 원리. 실무에서 스크롤 버벅임의 숨은 원인." },
+  { day: 11, title: "HTTP/2 vs HTTP/3 + QUIC", content: "멀티플렉싱이란? TCP HoL Blocking이 뭔지. QUIC이 UDP 기반인 이유. iOS 15+에서 HTTP/3 자동 지원. WiFi↔LTE 전환 시 연결 유지." },
+  { day: 12, title: "암호화 종류 + iOS 보안", content: "대칭키(AES) vs 비대칭키(RSA) 선택 기준. TLS에서 둘 다 쓰는 이유. bcrypt가 의도적으로 느린 이유. Keychain vs UserDefaults 보안 차이." },
+  { day: 13, title: "정적 vs 동적 디스패치 + 컴파일", content: "struct=정적(빠름), class=동적(vtable). final/private으로 정적 전환. Swift 컴파일 6단계(AST→SIL→LLVM→Machine Code). WMO 최적화." },
+  { day: 14, title: "순수함수 + map/flatMap 완벽 이해", content: "순수함수의 정의와 테스트 이점. map vs flatMap vs compactMap 차이를 Optional/Array 각각에서. SwiftUI가 함수형인 이유." },
 ];
