@@ -1217,3 +1217,273 @@ export const BIG_O_COMPARISON = [
   { notation: "O(n²)", ops: 10000, bar: 50 },
   { notation: "O(2ⁿ)", ops: 1267650600228229401496703205376, bar: 100 },
 ];
+
+/* ═══════════════════════════════════════════════════════════ */
+/*  MOBILE SYSTEM DESIGN GUIDES                                */
+/*  (Based on weeeBox/mobile-system-design framework)          */
+/* ═══════════════════════════════════════════════════════════ */
+
+export interface SystemDesignCase {
+  id: string;
+  title: string;
+  difficulty: "medium" | "hard";
+  timeLimit: string;
+  phase: number;
+  functional: string[];
+  nonFunctional: string[];
+  architecture: string[];
+  deepDive: string[];
+  tradeoffs: string[];
+  template: string;
+}
+
+export const SYSTEM_DESIGN_CASES: SystemDesignCase[] = [
+  {
+    id: "sd-feed", title: "소셜 피드 (Twitter/Instagram)", difficulty: "medium", timeLimit: "45분", phase: 3,
+    functional: ["무한 스크롤 피드", "좋아요/댓글", "이미지/동영상 표시", "Pull-to-refresh"],
+    nonFunctional: ["오프라인 지원 (캐시된 피드 표시)", "이미지 최적화 (저해상도 → 고해상도)", "배터리 효율 (백그라운드 fetch 최소화)", "페이지네이션 (커서 기반)"],
+    architecture: [
+      "Client: MVVM + Repository Pattern",
+      "API Layer → Repository → ViewModel → View",
+      "Repository: Remote(API) + Local(CoreData/Realm) 조합",
+      "이미지: 메모리 캐시(NSCache) → 디스크 캐시 → CDN",
+      "페이지네이션: Cursor-based (offset보다 안정적)",
+    ],
+    deepDive: [
+      "셀 높이 캐싱으로 스크롤 성능 확보",
+      "Prefetching: 현재 화면 +2페이지 미리 로드",
+      "이미지 다운샘플링 (UIGraphicsImageRenderer로 화면 크기에 맞게)",
+      "오프라인 → 온라인 전환 시 diff 기반 업데이트",
+    ],
+    tradeoffs: [
+      "REST vs GraphQL: 피드는 필드가 많아 GraphQL이 유리하나 캐싱이 복잡",
+      "커서 vs 오프셋 페이지네이션: 커서가 새 글 삽입에 안전",
+      "로컬 DB vs 메모리 캐시: 오프라인 필요하면 DB, 아니면 메모리만으로 충분",
+    ],
+    template: `// 45분 시스템 디자인 템플릿
+
+1. 요구사항 정리 (5분)
+   - 기능적: 피드 표시, 좋아요, 댓글
+   - 비기능적: 오프라인, 성능, 배터리
+   - 범위 밖: 로그인, 글 작성, 검색
+
+2. 아키텍처 다이어그램 (10분)
+   [Server/CDN] → [API Service] → [Repository]
+                                    ↓        ↓
+                              [Remote DB] [Local DB]
+                                    ↓
+                              [ViewModel] → [View]
+
+3. 핵심 컴포넌트 (20분)
+   - FeedRepository: fetchFeed(cursor) → [Post]
+   - ImageLoader: load(url) → UIImage (3단계 캐시)
+   - PaginationManager: 다음 페이지 자동 로드
+
+4. 트레이드오프 (5분)
+   - REST vs GraphQL 선택 이유
+   - 캐싱 전략 선택 이유`,
+  },
+  {
+    id: "sd-chat", title: "채팅 앱 (카카오톡/Slack)", difficulty: "hard", timeLimit: "45분", phase: 3,
+    functional: ["1:1 / 그룹 채팅", "텍스트 + 이미지 메시지", "읽음 표시", "실시간 수신"],
+    nonFunctional: ["오프라인 메시지 큐잉", "실시간 전송 (< 500ms)", "메시지 순서 보장", "미디어 백그라운드 업로드"],
+    architecture: [
+      "실시간: WebSocket (양방향, 저지연)",
+      "폴백: Long Polling (WebSocket 불가 시)",
+      "로컬 저장: CoreData/Realm (채팅 히스토리)",
+      "동기화: 마지막 읽은 messageId 기반",
+      "미디어: 백그라운드 URLSession + 프로그레스",
+    ],
+    deepDive: [
+      "메시지 상태: pending → sent → delivered → read",
+      "충돌 해결: 타임스탬프 + 서버 순서 번호 (server sequence)",
+      "푸시: APNs + Silent Push로 앱 꺼져있을 때 동기화",
+      "재연결: Exponential Backoff로 네트워크 복구 시 자동 재연결",
+    ],
+    tradeoffs: [
+      "WebSocket vs SSE: 채팅은 양방향이라 WebSocket 필수",
+      "CoreData vs Realm: CoreData는 Apple 네이티브, Realm은 쿼리 편함",
+      "메시지 암호화: E2E 암호화 시 서버 검색 불가 → 트레이드오프",
+    ],
+    template: `1. 요구사항 (5분)
+   - 기능적: 1:1/그룹, 텍스트/이미지, 읽음 표시
+   - 비기능적: 실시간(<500ms), 오프라인, 순서 보장
+
+2. 아키텍처 (10분)
+   [WebSocket Server] ←→ [WebSocket Client]
+                              ↓
+   [REST API] → [ChatRepository] → [Local DB]
+                      ↓
+                [ViewModel] → [ChatView]
+
+3. 핵심: 메시지 라이프사이클
+   작성 → [pending] → 서버 전송 → [sent]
+   → 상대방 수신 → [delivered] → 읽음 → [read]
+
+4. 오프라인 큐:
+   네트워크 끊김 → 로컬 DB 저장 (pending)
+   → 재연결 시 자동 전송 + 서버 동기화`,
+  },
+  {
+    id: "sd-image", title: "이미지 로딩 라이브러리 (Kingfisher/SDWebImage)", difficulty: "medium", timeLimit: "45분", phase: 3,
+    functional: ["URL → UIImage 비동기 로딩", "다단계 캐시 (메모리/디스크)", "이미지 다운샘플링", "로딩 중 placeholder"],
+    nonFunctional: ["스레드 안전성", "메모리 압박 시 자동 퇴거", "동일 URL 중복 요청 방지", "취소 가능 (셀 재사용 시)"],
+    architecture: [
+      "ImageLoader (퍼사드): load(url, into: imageView)",
+      "MemoryCache: NSCache (자동 퇴거, 스레드 안전)",
+      "DiskCache: FileManager + URL 해시 키",
+      "Downloader: URLSession + 중복 요청 병합",
+      "Processor: 다운샘플링 + 포맷 변환",
+    ],
+    deepDive: [
+      "조회 순서: 메모리 → 디스크 → 네트워크 (cache-aside 패턴)",
+      "URL 해싱: SHA256으로 파일명 생성 (충돌 방지)",
+      "셀 재사용 대응: 로딩 시작 시 UUID 발급 → 완료 시 비교",
+      "디코딩: CGImage로 백그라운드에서 미리 디코딩 (메인 스레드 블로킹 방지)",
+    ],
+    tradeoffs: [
+      "NSCache vs 딕셔너리: NSCache는 자동 퇴거 + 스레드 안전, 딕셔너리는 직접 관리",
+      "WebP vs JPEG: WebP가 30% 작지만 iOS 14+ 필요",
+      "메모리 캐시 크기: 너무 크면 OOM, 너무 작으면 반복 로딩",
+    ],
+    template: `1. API 설계 (5분)
+   ImageLoader.shared.load(
+       url: URL,
+       placeholder: UIImage?,
+       into: UIImageView,
+       completion: ((UIImage?) -> Void)?
+   )
+
+2. 캐시 계층 (10분)
+   요청 → [MemoryCache] hit? → 반환
+               miss ↓
+          [DiskCache] hit? → 메모리 저장 → 반환
+               miss ↓
+          [Downloader] → 디코딩 → 양쪽 캐시 저장 → 반환
+
+3. 스레드 안전 (10분)
+   - MemoryCache: NSCache (스레드 안전 내장)
+   - DiskCache: DispatchQueue (serial)
+   - Downloader: URLSession (스레드 안전 내장)
+
+4. 셀 재사용 대응 (5분)
+   prepareForReuse() → 현재 로딩 취소
+   → 새 URL로 재로딩 시작`,
+  },
+  {
+    id: "sd-offline", title: "오프라인 우선 앱 (지도/메모)", difficulty: "hard", timeLimit: "45분", phase: 4,
+    functional: ["오프라인 데이터 읽기/쓰기", "온라인 복귀 시 자동 동기화", "충돌 해결", "데이터 압축/차등 동기화"],
+    nonFunctional: ["일관성 보장 (Eventually Consistent)", "배터리 효율", "저장 공간 관리", "네트워크 상태 감지"],
+    architecture: [
+      "Offline-First: 로컬 DB가 Single Source of Truth",
+      "Sync Engine: 변경사항 큐잉 → 온라인 시 배치 전송",
+      "Conflict Resolution: Last-Write-Wins 또는 CRDT",
+      "Network Monitor: NWPathMonitor로 상태 감지",
+      "Diff Sync: 전체 데이터가 아닌 변경분만 전송",
+    ],
+    deepDive: [
+      "CRDT(Conflict-free Replicated Data Types): 멀티 디바이스 동기화",
+      "Operation Log: 변경 작업을 로그로 기록 → 서버에 replay",
+      "Tombstone: 삭제 표시 (실제 삭제 대신) → 동기화 시 전파",
+      "버전 벡터: 각 디바이스의 마지막 동기화 버전 추적",
+    ],
+    tradeoffs: [
+      "Strong vs Eventual Consistency: 오프라인 앱은 Eventual이 현실적",
+      "Last-Write-Wins vs 사용자 선택: LWW가 간단하지만 데이터 손실 가능",
+      "전체 동기화 vs 차등 동기화: 차등이 효율적이나 구현 복잡",
+    ],
+    template: `1. 핵심 원칙 (5분)
+   "로컬 DB = 진실의 원천"
+   읽기: 항상 로컬 DB에서
+   쓰기: 로컬 DB → 변경 큐 → 온라인 시 서버
+
+2. 동기화 흐름 (15분)
+   [로컬 쓰기] → [Change Queue]
+                     ↓ (온라인 감지)
+              [Sync Engine] → [Server]
+                     ↓
+              [Conflict?] → 해결 전략 적용
+                     ↓
+              [로컬 DB 업데이트]
+
+3. 충돌 해결 (10분)
+   - 텍스트: Last-Write-Wins (타임스탬프)
+   - 목록: CRDT (Set 기반)
+   - 중요 데이터: 사용자에게 선택 요청
+
+4. 네트워크 감지
+   NWPathMonitor → 상태 변경 시 Sync 트리거`,
+  },
+];
+
+/* ═══════════════════════════════════════════════════════════ */
+/*  SYSTEM DESIGN FRAMEWORK (면접 접근법)                       */
+/* ═══════════════════════════════════════════════════════════ */
+
+export const SD_FRAMEWORK_STEPS = [
+  { step: 1, title: "요구사항 정리", time: "5분", description: "기능적(3-5개) / 비기능적 / 범위 밖 분류. 면접관에게 확인 질문.", color: "#3b82f6" },
+  { step: 2, title: "아키텍처 다이어그램", time: "10분", description: "Server → API Layer → Repository → ViewModel → View. 각 레이어의 책임 명시.", color: "#8b5cf6" },
+  { step: 3, title: "핵심 컴포넌트 상세", time: "20분", description: "가장 중요한 2-3개 컴포넌트를 깊이 있게. API 설계, 데이터 모델, 캐싱 전략.", color: "#10b981" },
+  { step: 4, title: "트레이드오프 논의", time: "5분", description: "내가 선택한 것 vs 대안. 장단점을 명확히 비교. 면접관 질문 대응.", color: "#f59e0b" },
+];
+
+export const SD_CLARIFYING_QUESTIONS = [
+  "신흥 시장 지원? → 앱 크기 최적화, 약한 네트워크 대응",
+  "예상 사용자 수? → 백엔드 부하, Rate Limiting",
+  "팀 규모? → 모듈화 수준 결정 (소규모: 모놀리식 OK)",
+  "타겟 OS 버전? → iOS 15+ 라면 async/await 사용 가능",
+  "성능 기준? → 피드 로딩 2초 내, 이미지 로딩 1초 내",
+  "데이터 일관성? → 채팅은 Strong, 피드는 Eventual",
+  "업데이트 빈도? → 실시간(WebSocket) vs 폴링 결정",
+  "미디어 종류? → 이미지만? 동영상? → CDN + 트랜스코딩",
+];
+
+export const SD_API_COMPARISON = [
+  { name: "REST", pros: "단순, 캐싱 쉬움, 상태 없음", cons: "Over-fetching, 여러 요청 필요", bestFor: "CRUD 앱, 간단한 피드" },
+  { name: "GraphQL", pros: "필요한 필드만 조회, 1번 요청", cons: "캐싱 복잡, 서버 부하", bestFor: "복잡한 데이터 관계, 피드" },
+  { name: "gRPC", pros: "바이너리(빠름), 스트리밍", cons: "디버깅 어려움, iOS 지원 제한", bestFor: "마이크로서비스 간 통신" },
+  { name: "WebSocket", pros: "양방향, 실시간", cons: "상태 유지 필요, 확장 어려움", bestFor: "채팅, 실시간 협업" },
+];
+
+/* ═══════════════════════════════════════════════════════════ */
+/*  DAILY CONTENT PER TAB (각 탭 일별 업데이트)                 */
+/* ═══════════════════════════════════════════════════════════ */
+
+export interface DailyTip {
+  day: number;
+  title: string;
+  content: string;
+}
+
+/** 사전과제 탭: Day별 실전 팁 */
+export const ASSIGNMENT_DAILY_TIPS: DailyTip[] = [
+  { day: 1, title: "프로젝트 셋업 체크리스트", content: "Xcode 프로젝트 생성 → Git init → .gitignore → 폴더 구조(Feature별) → 첫 커밋. SPM으로 의존성 추가 전에 '왜 이 라이브러리인지' 메모." },
+  { day: 2, title: "아키텍처 결정 기록", content: "MVVM vs MVC 왜 선택했는지 README에 1줄. 면접에서 100% 물어본다. '간단한 과제라 MVC로 충분하지만 확장성을 위해 MVVM 선택' 같은 판단 근거." },
+  { day: 3, title: "커밋 전략", content: "feat/fix/refactor 접두어 + 기능 단위 원자적 커밋. '한 커밋에 한 가지 변경'. 면접관이 커밋 히스토리로 사고 과정을 읽는다." },
+  { day: 4, title: "에러 핸들링 패턴", content: "네트워크 에러 → 로딩 상태 → 에러 뷰 → 재시도 버튼. Result<Success, Error> 타입으로 명시적 처리. try-catch보다 패턴 매칭이 Swift답다." },
+  { day: 5, title: "테스트 전략", content: "ViewModel 로직 Unit Test 3-5개만으로 충분. Mock 프로토콜 만들어서 의존성 주입. 'UserServiceProtocol'을 만들어 실제/Mock 교체 가능하게." },
+  { day: 6, title: "README 작성의 기술", content: "'구현하지 못한 부분'을 쓰는 게 합격의 열쇠. 아쉬운 점 + 시간이 있었다면 어떻게 했을지. 면접관은 '자기 한계를 아는 개발자'를 원한다." },
+  { day: 7, title: "제출 전 최종 체크", content: "① git clone → 빌드 확인 ② README 설치법 따라하기 ③ 스크린샷/GIF 최신화 ④ 불필요한 print/TODO 제거 ⑤ 마지막 커밋: 'chore: cleanup for submission'." },
+];
+
+/** 인성면접 탭: Day별 연습 포인트 */
+export const CULTURE_DAILY_TIPS: DailyTip[] = [
+  { day: 1, title: "1분 자기소개 완성", content: "역할(iOS 3년 7개월) → 핵심 성과 1개(608건 티켓) → 최근 관심사(AI 오케스트레이션) → 지원 동기. 30초~1분. 키워드 3개만 기억하고 자연스럽게." },
+  { day: 2, title: "STAR 프레임 연습", content: "Situation(상황) → Task(과제) → Action(행동) → Result(결과). 오늘 경험 1개를 STAR로 정리. '마케팅 CSV 자동화' 사례가 가장 강력." },
+  { day: 3, title: "왜 이 회사인가?", content: "4단계: 알게 된 계기 → 직무 매력 → 나의 경험 연결 → 입사 후 기여. 회사 기술블로그 1편 읽고 공감 포인트 찾기. '안정적이라서'는 자동 탈락." },
+  { day: 4, title: "실패 경험 준비", content: "진짜 실패를 말해라. '프롬프트 가드만 믿었다가 Mermaid 에러 반복 → 후처리 sanitizer 추가 → 에러 0건'. 핵심: 실패 → 원인 분석 → 행동 변화 → 결과." },
+  { day: 5, title: "갈등 해결 스토리", content: "기술 결정 갈등이 가장 안전. '내가 이겼다'가 아니라 '팀이 더 나은 결정을 했다' 프레임. 데이터 기반 논의 → 합의점 도출 과정을 보여줘라." },
+  { day: 6, title: "역질문 3개 준비", content: "① '이 팀의 현재 가장 큰 기술 과제는?' ② '코드 리뷰 문화는?' ③ '이 포지션의 첫 90일 목표는?'. 연봉/휴가 질문은 면접 중엔 하지 마라." },
+  { day: 7, title: "모의 인성면접 (녹음)", content: "6개 질문 셀프 답변 녹음 → 재생 → 피드백. 침묵 10초+ 구간, '음...' 반복, 답변이 1-2문장으로 끝나는 구간 체크. 부자연스러운 부분 재연습." },
+];
+
+/** 기술면접 탭: Day별 Deep Dive 주제 */
+export const TECH_DAILY_TOPICS: DailyTip[] = [
+  { day: 1, title: "ARC 완전 정복", content: "Strong/Weak/Unowned 차이를 화이트보드에 그릴 수 있는가? retain cycle 예시 3개(delegate, closure, timer)를 즉석에서 설명할 수 있는가?" },
+  { day: 2, title: "GCD vs async/await", content: "DispatchQueue.main.async vs @MainActor 차이. Task, TaskGroup, AsyncSequence 실전 사용법. Actor로 data race 방지하는 코드를 즉석에서 쓸 수 있는가?" },
+  { day: 3, title: "앱 라이프사이클 완벽 이해", content: "Not Running → Inactive → Active → Background → Suspended. SceneDelegate vs AppDelegate. didFinishLaunchingWithOptions에서 하면 안 되는 것." },
+  { day: 4, title: "UIKit 성능 최적화", content: "TableView/CollectionView 셀 재사용. Prefetching API. 셀 높이 캐싱. 이미지 다운샘플링. Instruments Time Profiler 사용법." },
+  { day: 5, title: "네트워킹 Deep Dive", content: "URLSession 구조. URLSessionConfiguration 3종류. Codable 커스터마이징. 인증서 핀닝. 캐시 정책(304 Not Modified)." },
+  { day: 6, title: "아키텍처 트레이드오프", content: "MVVM vs Clean Architecture vs RIBs. 각각의 장단점을 프로젝트 규모별로 설명. 'Aidy에서 RIBs를 선택한 이유'를 30초로." },
+  { day: 7, title: "시스템 디자인 실전", content: "소셜 피드 or 채팅 or 이미지 로더 중 1개를 45분 내 설계. 요구사항→아키텍처→핵심 컴포넌트→트레이드오프 4단계로." },
+];

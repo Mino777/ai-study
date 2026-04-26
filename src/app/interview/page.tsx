@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { IOS_QUESTIONS, FDE_QUESTIONS, CULTURE_QUESTIONS, PHASE_PROBLEMS, COMPANY_STRATEGIES, HIRING_INSIGHTS, PROCESS_STAGES, ASSIGNMENT_CHECKLIST, ALGO_GUIDES, BIG_O_GUIDE, BIG_O_COMPARISON, type InterviewQuestion } from "./constants";
+import { IOS_QUESTIONS, FDE_QUESTIONS, CULTURE_QUESTIONS, PHASE_PROBLEMS, COMPANY_STRATEGIES, HIRING_INSIGHTS, PROCESS_STAGES, ASSIGNMENT_CHECKLIST, ALGO_GUIDES, BIG_O_GUIDE, BIG_O_COMPARISON, SYSTEM_DESIGN_CASES, SD_FRAMEWORK_STEPS, SD_CLARIFYING_QUESTIONS, SD_API_COMPARISON, ASSIGNMENT_DAILY_TIPS, CULTURE_DAILY_TIPS, TECH_DAILY_TOPICS, type InterviewQuestion } from "./constants";
 
 /* ═══════════════════════════════════════════════════════════ */
 /*  TYPES                                                      */
@@ -1270,6 +1270,21 @@ export default function InterviewPage() {
             </div>
           </div>
         </section>
+        {/* Today's Assignment Tip */}
+        <section className="mb-12">
+          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">
+            Today&apos;s Tip — Day {selectedDay}
+          </h2>
+          {(() => {
+            const tip = ASSIGNMENT_DAILY_TIPS[(selectedDay - 1) % ASSIGNMENT_DAILY_TIPS.length];
+            return (
+              <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 p-5">
+                <h3 className="text-sm font-bold text-purple-400/80 mb-2">{tip.title}</h3>
+                <p className="text-sm text-text/60 leading-relaxed">{tip.content}</p>
+              </div>
+            );
+          })()}
+        </section>
         </>)}
 
         {/* ═══════════ TAB: TECH INTERVIEW ═══════════ */}
@@ -1339,10 +1354,131 @@ export default function InterviewPage() {
             ))}
           </div>
         </section>
+
+        {/* Today's Deep Dive */}
+        <section className="mb-12">
+          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">
+            Today&apos;s Deep Dive
+            <span className="ml-2 text-text/25 normal-case tracking-normal font-normal">— Day {selectedDay}</span>
+          </h2>
+          {(() => {
+            const tip = TECH_DAILY_TOPICS[(selectedDay - 1) % TECH_DAILY_TOPICS.length];
+            return (
+              <div className="rounded-xl border border-accent/20 bg-accent/5 p-5">
+                <h3 className="text-sm font-bold text-accent/80 mb-2">{tip.title}</h3>
+                <p className="text-sm text-text/60 leading-relaxed">{tip.content}</p>
+              </div>
+            );
+          })()}
+        </section>
+
+        {/* System Design Cases */}
+        <section className="mb-12">
+          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">
+            Mobile System Design
+            <span className="ml-2 text-text/25 normal-case tracking-normal font-normal">— weeeBox 프레임워크 기반</span>
+          </h2>
+          {/* Framework Steps */}
+          <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
+            {SD_FRAMEWORK_STEPS.map((s) => (
+              <div key={s.step} className="shrink-0 rounded-lg border border-border/30 bg-surface/20 px-3 py-2 min-w-[180px]">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="w-5 h-5 rounded flex items-center justify-center text-[10px] font-black" style={{ background: `${s.color}20`, color: s.color }}>{s.step}</span>
+                  <span className="text-xs font-bold">{s.title}</span>
+                  <span className="text-[10px] text-text/25 font-code ml-auto">{s.time}</span>
+                </div>
+                <p className="text-[10px] text-text/40 leading-relaxed">{s.description}</p>
+              </div>
+            ))}
+          </div>
+          {/* Clarifying Questions */}
+          <details className="rounded-xl border border-border/30 bg-surface/20 overflow-hidden mb-3">
+            <summary className="px-5 py-3 cursor-pointer hover:bg-surface/40 transition-colors text-sm font-bold text-text/60">
+              면접 시작 시 물어볼 질문 {SD_CLARIFYING_QUESTIONS.length}가지
+            </summary>
+            <div className="px-5 pb-4 border-t border-border/20 pt-3 space-y-1.5">
+              {SD_CLARIFYING_QUESTIONS.map((q, i) => <p key={i} className="text-xs text-text/50 leading-relaxed">&#8226; {q}</p>)}
+            </div>
+          </details>
+          {/* API Comparison */}
+          <details className="rounded-xl border border-border/30 bg-surface/20 overflow-hidden mb-4">
+            <summary className="px-5 py-3 cursor-pointer hover:bg-surface/40 transition-colors text-sm font-bold text-text/60">
+              API 프로토콜 비교 (REST vs GraphQL vs gRPC vs WebSocket)
+            </summary>
+            <div className="px-5 pb-4 border-t border-border/20 pt-3">
+              <div className="grid grid-cols-4 gap-2">
+                {SD_API_COMPARISON.map((api) => (
+                  <div key={api.name} className="rounded-lg bg-surface/40 p-3">
+                    <p className="text-xs font-bold mb-1">{api.name}</p>
+                    <p className="text-[10px] text-green-400/60 mb-0.5">+ {api.pros}</p>
+                    <p className="text-[10px] text-red-400/50 mb-0.5">- {api.cons}</p>
+                    <p className="text-[10px] text-accent/50">Best: {api.bestFor}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </details>
+          {/* Design Cases */}
+          <div className="space-y-2">
+            {SYSTEM_DESIGN_CASES.map((c) => (
+              <details key={c.id} className="rounded-xl border border-border/30 bg-surface/20 overflow-hidden">
+                <summary className="px-5 py-3.5 cursor-pointer hover:bg-surface/40 transition-colors flex items-center gap-3">
+                  <span className="text-sm font-bold flex-1">{c.title}</span>
+                  <span className={`text-[10px] font-code px-2 py-0.5 rounded-full ${c.difficulty === "hard" ? "bg-red-500/10 text-red-400/70" : "bg-amber-500/10 text-amber-400/70"}`}>{c.difficulty}</span>
+                  <span className="text-[10px] font-code text-text/25">{c.timeLimit}</span>
+                </summary>
+                <div className="px-5 pb-5 border-t border-border/20 pt-4 space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-[10px] font-code text-green-400/50 mb-1 uppercase">Functional</p>
+                      {c.functional.map((f, i) => <p key={i} className="text-xs text-text/50">&#10003; {f}</p>)}
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-code text-blue-400/50 mb-1 uppercase">Non-Functional</p>
+                      {c.nonFunctional.map((f, i) => <p key={i} className="text-xs text-text/50">&#10003; {f}</p>)}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-code text-text/30 mb-1 uppercase">Architecture</p>
+                    {c.architecture.map((a, i) => <p key={i} className="text-xs text-text/50 leading-relaxed">&#8226; {a}</p>)}
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-code text-text/30 mb-1 uppercase">Deep Dive Points</p>
+                    {c.deepDive.map((d, i) => <p key={i} className="text-xs text-text/50 leading-relaxed">&#8226; {d}</p>)}
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-code text-amber-400/50 mb-1 uppercase">Tradeoffs (면접관이 여기서 물어본다)</p>
+                    {c.tradeoffs.map((t, i) => <p key={i} className="text-xs text-text/50 leading-relaxed">&#8226; {t}</p>)}
+                  </div>
+                  <div className="rounded-lg bg-bg/80 border border-border/30 overflow-hidden">
+                    <div className="px-3 py-1.5 border-b border-border/20"><span className="text-[10px] font-code text-text/30">45분 답변 템플릿</span></div>
+                    <pre className="p-4 text-xs font-code text-text/50 leading-relaxed overflow-x-auto whitespace-pre">{c.template}</pre>
+                  </div>
+                </div>
+              </details>
+            ))}
+          </div>
+        </section>
         </>)}
 
         {/* ═══════════ TAB: CULTURE FIT ═══════════ */}
         {activeTab === "culture" && (<>
+
+        {/* Today's Culture Tip */}
+        <section className="mb-12">
+          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">
+            Today&apos;s Practice — Day {selectedDay}
+          </h2>
+          {(() => {
+            const tip = CULTURE_DAILY_TIPS[(selectedDay - 1) % CULTURE_DAILY_TIPS.length];
+            return (
+              <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-5">
+                <h3 className="text-sm font-bold text-red-400/80 mb-2">{tip.title}</h3>
+                <p className="text-sm text-text/60 leading-relaxed">{tip.content}</p>
+              </div>
+            );
+          })()}
+        </section>
 
         {/* ═══════════ HIRING STRATEGY ═══════════ */}
         <section className="mb-12">
