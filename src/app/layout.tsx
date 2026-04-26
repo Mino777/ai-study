@@ -5,6 +5,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import { MobileNav } from "@/components/mobile-nav";
 import { MagneticMode } from "@/components/magnetic-mode";
 import { SearchDialog } from "@/components/search-dialog";
+import { EasterEggNav } from "@/components/easter-egg-nav";
 import { GraphSearchProvider } from "@/contexts/graph-search-context";
 import "./globals.css";
 
@@ -68,6 +69,7 @@ export default function RootLayout({
             <MobileNav />
             <MagneticMode />
             <SearchDialog />
+            <EasterEggNav />
           </GraphSearchProvider>
         </ThemeProvider>
         <Analytics />
