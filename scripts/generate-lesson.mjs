@@ -3,6 +3,7 @@ import path from "path";
 import yaml from "js-yaml";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { computeGraphSignals } from "./lib/graph-signals.mjs";
+import { fixAndValidateMermaid } from "./lib/mermaid-fix.mjs";
 
 const CONTENT_DIR = path.join(process.cwd(), "content");
 const MANIFEST_PATH = path.join(process.cwd(), "src", "generated", "content-manifest.json");
@@ -429,6 +430,33 @@ function writeMDX(topic, mdxContent) {
   if (fs.existsSync(filePath)) {
     console.log(`⚠️  File already exists: ${filePath}. Skipping.`);
     process.exit(0);
+  }
+
+  // ── Post-process: MDX void tags + Mermaid auto-fix ──
+  // 1) HTML void 태그 self-closing 변환
+  mdxContent = mdxContent
+    .replace(/<br\s*(?!\/)>/gi, "<br />")
+    .replace(/<hr\s*(?!\/)>/gi, "<hr />")
+    .replace(/<img\s+([^>]*?)(?<!\/)>/gi, "<img $1 />");
+
+  // 2) Mermaid 블록 자동 수정 (mermaid-fix.mjs)
+  const mermaidRegex = /```mermaid\n([\s\S]*?)```/g;
+  let mermaidMatch;
+  let mermaidFixCount = 0;
+  while ((mermaidMatch = mermaidRegex.exec(mdxContent)) !== null) {
+    const original = mermaidMatch[1];
+    const { fixed, autoFixed, errors } = fixAndValidateMermaid(original, filePath);
+    if (autoFixed) {
+      mdxContent = mdxContent.replace(original, fixed);
+      mermaidFixCount++;
+    }
+    if (errors.length > 0) {
+      console.warn(`⚠️  Mermaid errors in generated content:`);
+      errors.forEach((e) => console.warn(`   L${e.line}: ${e.message}`));
+    }
+  }
+  if (mermaidFixCount > 0) {
+    console.log(`🔧 Mermaid auto-fixed: ${mermaidFixCount} block(s)`);
   }
 
   fs.writeFileSync(filePath, mdxContent);

@@ -61,15 +61,15 @@ A2A는 에이전트들이 중앙 관제탑 없이 서로 직접 메시지를 주
 
 ```mermaid
 graph TD
-    subgraph A2A_Pattern ["A2A Pattern (Event-Driven)"]
-        UserRequest[User Request: "이 사진 설명해줘"] --> IngestionAgent[API Gateway / Ingestion Agent]
-        IngestionAgent -- "Publishes to 'image_analysis_needed' topic" --> PubSub(Google Cloud Pub/Sub)
-        PubSub -- "Message Delivered" --> VisionAgent[VisionAnalysisAgent]
-        VisionAgent -- "Analyzes Image & Publishes to 'text_generation_needed' topic" --> PubSub
-        PubSub -- "Message Delivered" --> TextAgent[TextGenerationAgent]
-        TextAgent -- "Generates Description & Publishes to 'final_result' topic" --> PubSub
-        PubSub -- "Result for User" --> ResultHandler[Result Handler]
-        ResultHandler --> UserResponse[Final Response to User]
+    subgraph A2A_Pattern ["A2A Pattern · Event-Driven"]
+        UserRequest["User Request · 이 사진 설명해줘"] --> IngestionAgent["API Gateway / Ingestion Agent"]
+        IngestionAgent -- "image_analysis_needed 토픽 발행" --> PubSub["Google Cloud Pub/Sub"]
+        PubSub -- "Message Delivered" --> VisionAgent["VisionAnalysisAgent"]
+        VisionAgent -- "text_generation_needed 토픽 발행" --> PubSub
+        PubSub -- "Message Delivered" --> TextAgent["TextGenerationAgent"]
+        TextAgent -- "final_result 토픽 발행" --> PubSub
+        PubSub -- "Result for User" --> ResultHandler["Result Handler"]
+        ResultHandler --> UserResponse["Final Response to User"]
     end
 ```
 
@@ -142,15 +142,15 @@ MCP는 이름 그대로 중앙 관제 프로그램이 전체 작업 흐름을 �
 
 ```mermaid
 graph TD
-    subgraph MCP_Pattern ["MCP Pattern (Orchestrated)"]
-        UserRequest[User Request] --> MCP(Cloud Workflows<br/>Orchestrator)
-        MCP -- "Step 1: Call Flight Agent" --> FlightAgent[FlightSearchAgent]
+    subgraph MCP_Pattern ["MCP Pattern · Orchestrated"]
+        UserRequest["User Request"] --> MCP["Cloud Workflows · Orchestrator"]
+        MCP -- "Step 1" --> FlightAgent["FlightSearchAgent"]
         FlightAgent -- "Flight Data" --> MCP
-        MCP -- "Step 2: Call Hotel Agent" --> HotelAgent[HotelSearchAgent]
+        MCP -- "Step 2" --> HotelAgent["HotelSearchAgent"]
         HotelAgent -- "Hotel Data" --> MCP
-        MCP -- "Step 3: Synthesize Plan" --> SynthesizerAgent[ItinerarySynthesizer]
+        MCP -- "Step 3" --> SynthesizerAgent["ItinerarySynthesizer"]
         SynthesizerAgent -- "Final Itinerary" --> MCP
-        MCP --> UserResponse[Final Response to User]
+        MCP --> UserResponse["Final Response to User"]
     end
 ```
 
