@@ -1,57 +1,181 @@
 ---
-title: "딜라이트룸(알라미) iOS 팀의 Claude Code 워크플로우 — 10x 생산성의 실체"
+title: "딜라이트룸(알라미) iOS 팀의 Claude Code 42주 워크플로우 — 10x의 실체"
 category: harness-engineering
 date: "2026-04-26"
-tags: [claude-code, ios, workflow, harness-engineering, case-study, agents]
+tags: [claude-code, ios, workflow, harness-engineering, case-study, agents, mcp, xcode, skills]
 confidence: 2
 connections: [harness-engineering/ai-agent-start-here, harness-engineering/context-loading-strategy]
-description: "글로벌 1위 알람 앱 알라미의 iOS 팀이 Claude Code를 실전에 도입하며 발견한 워크플로우 패턴과 10x 생산성 주장의 근거를 분석한다."
+description: "글로벌 1위 알람 앱 알라미(400만 DAU)의 iOS 팀이 Claude Code를 42주간 실전 도입한 전체 워크플로우. CLAUDE.md 설계, 스킬 체인, agent-device, MCP 통합, CI/CD 자동화까지의 구체적 사례."
 type: entry
-last_verified: "2026-04-26"
+last_verified: "2026-04-27"
 applicable_to: ["any"]
 ---
 
-글로벌 1위 알람 앱 알라미(Alarmy)를 만드는 딜라이트룸의 iOS 팀이 Claude Code를 장기간 실전 프로젝트에 도입한 사례다. Cursor 대비 iOS/SwiftUI 개발에서 유의미한 차이를 보였다고 보고한다.
+글로벌 1위 알람 앱 알라미(Alarmy)를 만드는 딜라이트룸의 iOS 팀이 Claude Code를 **42주간** 실전 프로젝트에 도입한 사례다. 매일 400만명 이상이 사용하는 앱을, SwiftUI + TCA 기반 + SPM 모듈화 + 40개 이상 언어 지원 프로젝트에서 Claude Code가 어떻게 동작하는지를 보여준다.
 
-## 핵심 워크플로우 패턴
+## 프로젝트 규모
 
-### 1. CLAUDE.md 기반 컨텍스트 로딩
+- **DAU**: 400만+
+- **아키텍처**: TCA, MVVM, Clean Architecture 하이브리드
+- **UI**: SwiftUI
+- **모듈화**: SPM
+- **언어**: 40개+ 지원
+- **도구**: Figma, Notion, Linear, Firebase
 
-프로젝트 루트의 `CLAUDE.md`에 개발 규칙, 테스트 방법, 코딩 컨벤션을 박제한다. Claude Code가 매 실행마다 이 파일을 자동으로 컨텍스트에 포함하므로, 반복 지시 없이도 팀 규칙을 따르는 코드를 생성한다.
+## 왜 Claude Code인가? — Cursor에서의 전환
 
-이것은 Context Engineering의 핵심 패턴 중 하나다. AI에게 "무엇을 보여줄지"를 설계하는 것이 품질을 결정한다.
+2024년 10월부터 Cursor를 도입했으나, Claude Code가 나오면서 **Agentic Coding**이 시작됐다. Cursor는 진화된 자동완성 도구였지만, Claude Code는 로컬 파일 시스템 + Unix 커맨드를 조합해서 테스트 실행, 빌드, 린트, 스크립트 실행 등을 코딩 에이전트가 직접 돌릴 수 있게 됐다.
 
-### 2. 스크린샷 기반 지시
+최초 Claude 언급 커밋:
+```
+- 최초 Claude 언급: cd569c422 (PR #4617 첫 커밋, 스쿼시 전)
+- 작성 시각: 2025-06-26 10:58:30 KST
+- 메시지: refactor: AppDelegate didFinishLaunchingWithOptions 메서드 가독성 개선
+- main 병합: 같은 날 14:54 (스쿼시 커밋 1558281b7)
+```
 
-유튜브 UI의 스크린샷과 "음량이 0일 때 사운드 레이블 비활성화"라는 한 줄 지시만으로 정확한 SwiftUI 구현을 얻었다. Cursor는 같은 작업에서 실패했다고 보고한다. 시각적 컨텍스트를 이해하는 능력이 iOS 개발에서 큰 차이를 만든다.
+## CLAUDE.md — 단순 설명서가 아닌 팀 워크플로우의 진입점
 
-### 3. 자율 에이전트 모드
+CLAUDE.md는 팀에서 가장 중요하게 생각하는 **코드**다. 단순한 프로젝트 설명서가 아니라, Claude Code를 위한 팀 전체의 워크플로우를 자동화하는 진입점이다.
 
-"목적지만 정하면 자율주행이 경로를 찾는다"는 비유로 워크플로우를 설명한다.
+### 구조: 트리거 → 워크플로우 → 검증 3계층
 
-- **개발자의 역할**: 문제 정의 + 결과 검증
-- **AI의 역할**: 경로 탐색 + 구현
-- **핵심**: "선택적 위임"으로 인지 부하를 대폭 줄임
+```
+CLAUDE.md — Alarmy iOS Development Assistant v2.0
+├── Mandatory Triggers (트리거 조건)
+│   ├── ABTest     — 실험, experiment, A/B test
+│   ├── PR Creation — PR, 풀리퀘, 작업 완료, merge
+│   ├── Firebase    — Firebase 배포, 파이어베이스
+│   ├── TestFlight  — TestFlight 배포, 테스트플라이트
+│   ├── Figma       — Figma, 피그마, mcp__figma
+│   ├── Linear      — 리니어, 티켓, issue
+│   ├── Version Bump — 버전 업데이트, version bump
+│   └── Baseline    — baseline, 실험정리, cleanup
+│
+├── Workflows Pipeline
+│   ├── ① Prerequisites (반드시 먼저 읽기)
+│   │   ├── architecture.md
+│   │   ├── development.md
+│   │   └── team-configuration.md
+│   ├── ② Execute Workflow (단계별 실행)
+│   │   ├── create-pr.md
+│   │   ├── deploy-firebase.md / deploy-testflight.md
+│   │   ├── create-abtest.md
+│   │   ├── create-linear-issue.md
+│   │   ├── create-bump-version-pr.md
+│   │   └── baseline.md
+│   └── ③ Validate (체크리스트 검증)
+│       ├── ■ REQUIRED — 필수, 스킵 불가
+│       ├── □ OPTIONAL — 선택, 해당 시만
+│       └── ◇ CONDITIONAL — 조건부
+│
+└── Document Hierarchy (.claude/)
+    ├── workflows/     — 실행 가이드 (7개)
+    ├── checklists/    — 검증 체크리스트 (3개)
+    │   ├── feature-checklist.md
+    │   ├── deployment-checklist.md
+    │   └── pr-checklist.md
+    └── references/    — 설정/참조 문서 (5개)
+        ├── architecture.md
+        ├── development.md
+        ├── dependencies.md
+        ├── team-configuration.md
+        └── linear-quick-reference.md
+```
 
-## 10x 주장의 근거
+**핵심**: CLAUDE.md는 모든 문서를 포함하지 않는다. 대신 특정 키워드를 감지하면 해당 워크플로우 문서를 읽도록 설계. "PR 만들어줘"라고 한국어로 말해도, "pull request"라고 영어로 말해도 동일한 워크플로우가 실행된다.
 
-| 영역 | Before (수동) | After (Claude Code) |
-|------|-------------|-------------------|
-| SwiftUI 구현 | 직접 코딩 | 스크린샷 + 한 줄 지시 |
-| 코드베이스 온보딩 | 코드 리딩 수시간 | 코드 로직 즉석 설명 |
-| 반복 작업 | 수동 복사 + 수정 | 패턴 인식 + 자동 적용 |
-| 디버깅 | 로그 분석 → 가설 → 수정 | 에러 컨텍스트 → 해결 제안 |
+## 클로드 코드 스킬 — 50개 규모의 스킬 생태계
 
-## Harness Engineering 관점
+### 팀 공유 스킬 (필수)
 
-딜라이트룸의 접근은 세 가지 Harness 패턴을 암묵적으로 적용하고 있다.
+- **baseline**: AB 테스트 베이스라인 스킬. 오류 감지 및 엣지케이스 처리
+- **figma-to-swiftui**: 팀에서 공유하는 디자인에 최적화된 스킬. Figma MCP 도구(`mcp__figma__*`)를 호출하면 자동 활성화되어, 하나의 AlarmyUI 디자인 토큰으로만 코드가 생성
+- **slack**: API를 이용하도록 커스텀 스킬로 사용
+- **swiftui-tca-skill**: TCA 사용을 위한 스킬
 
-1. **Context Engineering**: CLAUDE.md로 AI가 볼 정보를 설계
-2. **Harness**: "선택적 위임"은 AI 출력을 개발자가 검증하는 구조
-3. **Compound**: 프로젝트 규칙이 CLAUDE.md에 누적되면서 세션마다 품질 상승
+팀에서는 자주 사용되는 스킬만 레포지토리에 커밋하고 공유. 개인마다 사용하는 스킬들이 다양하고 자주 바뀌는 내용이기 때문에 항상 공유가 필요한 스킬만 추가. 팀원들은 **codex, swift-concurrency, commit, learn, ios-design** 등 50개 정도의 스킬을 사용 중. superpowers 같은 스킬도 사용.
+
+**핵심 인사이트**: 많은 스킬을 사용하는 것은 중요하지 않았다. 적절한 스킬을 Claude Code가 잘 선택하는 것이 훨씬 중요. 한번 만들어진 스킬을 개선해 나가고 스킬 체인을 구성해 프로세스 자체를 자동화하는 것이 생산성 향상에 도움.
+
+### /learn — 자기 학습 스킬
+
+특정 개념이나 기술에 대해 상세한 자료를 조사한 후에 **/skill-creator** 플러그인을 이용해 스킬을 생성하는 체인을 구성. `/learn TCA architecture` 같이 호출하면 Claude Code가 웹 검색 → 공식 문서 스크래핑 → 스킬 파일 자동 생성.
+
+### agent-device — 실제 기기 자동화
+
+자동화를 위해 가장 많이 사용되는 스킬이 `callstackincubator/agent-device`. Android와 iOS UI 자동화를 위한 CLI 도구. 앱을 세션 단위로 열고 접근성 트리(Accessibility Tree)를 압축된 스냅샷 형태로 읽어 에이전트가 현재 화면 상태를 토큰 효율적으로 파악. 일회성 자동화가 아니라 결정론적이고 재현 가능한 **E2E 테스트 툴로 활용**할 수 있는게 핵심.
+
+## MCP 통합
+
+프로젝트 루트에 `.mcp.json` 파일을 사용해 팀에서 공유:
+
+```json
+{
+  "mcpServers": {
+    "linear": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://mcp.linear.app/sse"]
+    },
+    "xcode": {
+      "command": "xcrun",
+      "args": ["mcpbridge"]
+    },
+    "XcodeBuildMCP": {
+      "command": "npx",
+      "args": ["-y", "xcodebuildmcp@latest", "mcp"]
+    },
+    "figma": {
+      "url": "https://mcp.figma.com/mcp",
+      "type": "http"
+    }
+  }
+}
+```
+
+스킬과 동일한 원칙으로 **최소한만** 사용. Xcode 26.4부터 공식 지원하기 시작한 MCP를 사용하면 `DocumentationSearch` 툴을 이용해 공식 도큐먼트 검색을 쉽게 할 수 있다. 검색 실패확률이 많이 줄어들었다. 현재 켜져있는 `xcode`를 조작하는 방식이어서 증분빌드로 빠른 피드백 루프를 가질 수 있다.
+
+## CI/CD 자동화 — 맥미니 Self-hosted GitHub Actions
+
+iOS 프로젝트의 CI/CD는 맥미니를 이용해 self hosted GitHub Actions로 구성. 반복으로 발생하는 브랜칭/배포프로세스 작업들에 대해서 GitHub Actions를 이용해 자동화. 예를 들면 `release/26.11.0`이 생성되면 `bump-up-version/26.12.0`이 생성되는 워크플로우 체인을 구성해, **Human-in-the-loop (HITL)를 최소화**.
+
+## Claude Code의 5단계 활용 레벨
+
+원문에서 인용한 @leadgenman의 프레임워크:
+
+| 레벨 | 이름 | 배수 | 설명 |
+|------|------|------|------|
+| 1 | Prompt | 2x | 일회성 작업. 질문하고 답 받기 |
+| 2 | Skill | 5x | 재사용 가능한 플레이북. 반복 출력, 질문 없음 |
+| 3 | Skill Chain | 10x | 3+ 스킬 체인. E2E 자동화 |
+| 4 | Agent | 20x | 백그라운드 워커. 대규모 데이터셋. 실패 시 재개 |
+| 5 | Agent Team | 50x | 4+ 에이전트 병렬 조율. 풀 파이프라인 운영 |
+
+알라미 팀은 **레벨 3 (Skill Chain)**을 주력으로 사용하고, 부분적으로 레벨 4 (Agent)를 적용 중.
+
+## 핵심 결론
+
+> "모든게 빠르게 변화하고 있습니다. 어제는 불가능했던 자동화가 오늘은 가능해지더군요. 특히 직접 복잡한 시스템을 만들어 자동화 하려는 노력보다 에이전트 모델의 발전을 기다리는것이 현명한 판단이었습니다. iOS 개발자로서 더 이상 Xcode로 직접 빌드를 돌리지 않습니다."
+
+요약:
+- Claude Code를 메인 에이전트로 사용
+- Agents/Skills/MCP는 최소한으로 팀과 공유
+- 반복되는 작업을 확인하면 워크플로우로 자동화
+- Xcode MCP를 이용한 작업 생산성 향상
+- 스프린트에서 더 이상 개발이 병목이 되지 않음
+
+## Harness Engineering 관점 분석
+
+이 사례는 세 가지 Harness 패턴을 구조적으로 적용하고 있다:
+
+1. **Context Engineering**: CLAUDE.md가 키워드 트리거로 필요한 워크플로우만 로딩. 모든 문서를 한꺼번에 넣지 않는다.
+2. **Harness**: Validate 단계의 REQUIRED/OPTIONAL/CONDITIONAL 체크리스트가 AI 출력의 품질 게이트.
+3. **Compound**: 스킬이 개선되어 나가고, 스킬 체인을 구성해 프로세스 자체를 자동화 — 복리 효과.
 
 ## 자기 점검
 
-1. 당신의 프로젝트에 CLAUDE.md가 있는가? 없다면 어떤 규칙을 박제할 것인가?
-2. 스크린샷 기반 지시가 효과적인 이유는 무엇인가? (힌트: 모달리티와 컨텍스트)
-3. "선택적 위임"에서 개발자가 반드시 직접 해야 하는 것과 AI에 맡길 수 있는 것의 경계는?
+1. 당신의 CLAUDE.md는 "설명서"인가, "워크플로우 진입점"인가?
+2. Figma → SwiftUI 자동 변환을 디자인 토큰 기반으로 구현한 점에서, 당신의 프로젝트에 적용할 수 있는 디자인 시스템 자동화는?
+3. Claude Code의 5단계 중 당신은 어느 레벨에 있는가? 다음 레벨로 올라가려면 무엇이 필요한가?
+4. agent-device를 활용한 E2E 테스트 자동화를 당신의 프로젝트에 적용한다면?
+5. "직접 복잡한 시스템을 만들어 자동화하려는 노력보다 에이전트 모델의 발전을 기다리는 것이 현명"이라는 판단에 동의하는가? 그 경계는?
