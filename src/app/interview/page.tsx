@@ -748,155 +748,171 @@ export default function InterviewPage() {
         {/* ═══════════ TAB: OVERVIEW ═══════════ */}
         {activeTab === "overview" && (<>
 
-        {/* ═══════════ TODAY'S SUMMARY ═══════════ */}
-        <section className="mb-8">
-          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-3">
-            Today&apos;s Mission — Day {today}
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-            <div className="rounded-lg border border-border/30 bg-surface/20 px-4 py-3 flex items-center gap-3">
-              <span className="text-accent text-xs">&#9654;</span>
-              <p className="text-xs text-text/60">코딩테스트: 오늘의 문제 {todayProblems.length}개 + 패턴 연습</p>
-            </div>
-            <div className="rounded-lg border border-border/30 bg-surface/20 px-4 py-3 flex items-center gap-3">
-              <span className="text-purple-400 text-xs">&#9654;</span>
-              <p className="text-xs text-text/60">기술면접: 플래시카드 {todayCards.length}장 리뷰 ({todayReviewed}/{todayCards.length})</p>
-            </div>
-            <div className="rounded-lg border border-border/30 bg-surface/20 px-4 py-3 flex items-center gap-3">
-              <span className="text-cyan-400 text-xs">&#9654;</span>
-              <p className="text-xs text-text/60">CS: {(track === "fde" ? FDE_CS_DAILY_TOPICS : CS_DAILY_TOPICS)[(today - 1) % (track === "fde" ? FDE_CS_DAILY_TOPICS.length : CS_DAILY_TOPICS.length)].title}</p>
-            </div>
-            <div className="rounded-lg border border-border/30 bg-surface/20 px-4 py-3 flex items-center gap-3">
-              <span className="text-red-400 text-xs">&#9654;</span>
-              <p className="text-xs text-text/60">인성면접: {CULTURE_DAILY_TIPS[(today - 1) % CULTURE_DAILY_TIPS.length].title}</p>
+        {/* ═══════════ HERO: TODAY'S CHALLENGE ═══════════ */}
+        <section className="mb-10">
+          <div className="rounded-2xl border-2 border-accent/30 bg-gradient-to-br from-accent/5 to-transparent p-8 text-center">
+            <p className="text-xs font-code text-text/30 mb-3">DAY {today} · {formatDate(today)}</p>
+            <h2 className="font-display text-2xl font-black text-text/90 mb-2">지금 시작하세요</h2>
+            <p className="text-sm text-text/40 mb-6">오늘의 퀴즈 + 플래시카드 + 코딩 문제가 준비되어 있습니다</p>
+            <div className="flex justify-center gap-3">
+              <button onClick={() => setActiveTab("quiz")} className="px-6 py-3 rounded-xl bg-accent text-white text-sm font-bold cursor-pointer hover:bg-accent/80 transition-colors">
+                퀴즈 풀기
+              </button>
+              <button onClick={() => setActiveTab("coding")} className="px-6 py-3 rounded-xl border border-border/40 bg-surface/30 text-sm text-text/60 font-medium cursor-pointer hover:text-text hover:border-accent/30 transition-colors">
+                코딩 문제
+              </button>
             </div>
           </div>
         </section>
 
-        {/* ═══════════ WEAKNESS ANALYSIS ═══════════ */}
-        {weakPatterns.length > 0 && (
+        {/* ═══════════ STREAK + STATS (compact) ═══════════ */}
         <section className="mb-8">
-          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-3">
-            Weakness — 집중 공략 패턴
-          </h2>
-          <div className="flex gap-2">
+          <div className="flex items-center justify-between rounded-xl border border-border/30 bg-surface/20 px-6 py-4">
+            <div className="flex items-center gap-6">
+              <div className="text-center">
+                <p className={`text-2xl font-display font-black ${streak >= 7 ? "text-orange-400" : "text-text/50"}`}>{streak}</p>
+                <p className="text-[10px] text-text/25">연속</p>
+              </div>
+              <div className="w-px h-8 bg-border/20" />
+              <div className="text-center">
+                <p className="text-2xl font-display font-black text-accent">{quizCorrectTotal}</p>
+                <p className="text-[10px] text-text/25">퀴즈 정답</p>
+              </div>
+              <div className="w-px h-8 bg-border/20" />
+              <div className="text-center">
+                <p className="text-2xl font-display font-black text-green-400">{Object.values(solvedProblems).filter(Boolean).length}</p>
+                <p className="text-[10px] text-text/25">문제 풀이</p>
+              </div>
+              <div className="w-px h-8 bg-border/20" />
+              <div className="text-center">
+                <p className="text-2xl font-display font-black text-text/60">{totalReviewed}</p>
+                <p className="text-[10px] text-text/25">카드 리뷰</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-text/30 font-code">Week {currentWeek}</p>
+              <p className="text-[10px] text-text/20">Phase {currentPhase.id} · {currentPhase.title}</p>
+            </div>
+          </div>
+        </section>
+
+        {/* ═══════════ TODAY'S MISSION (compact cards) ═══════════ */}
+        <section className="mb-8">
+          <h3 className="text-xs font-bold text-text/30 uppercase tracking-wider mb-3">오늘 할 일</h3>
+          <div className="grid grid-cols-2 gap-2">
+            <button onClick={() => setActiveTab("coding")} className="rounded-xl border border-border/25 bg-surface/15 px-4 py-3 text-left hover:bg-surface/30 transition-colors cursor-pointer group">
+              <p className="text-xs text-accent/60 group-hover:text-accent font-medium">코딩테스트</p>
+              <p className="text-[11px] text-text/35 mt-0.5">문제 {todayProblems.length}개 + 패턴 연습</p>
+            </button>
+            <button onClick={() => setActiveTab("tech")} className="rounded-xl border border-border/25 bg-surface/15 px-4 py-3 text-left hover:bg-surface/30 transition-colors cursor-pointer group">
+              <p className="text-xs text-purple-400/60 group-hover:text-purple-400 font-medium">기술면접</p>
+              <p className="text-[11px] text-text/35 mt-0.5">플래시카드 {todayCards.length}장 ({todayReviewed}/{todayCards.length})</p>
+            </button>
+            <button onClick={() => setActiveTab("cs")} className="rounded-xl border border-border/25 bg-surface/15 px-4 py-3 text-left hover:bg-surface/30 transition-colors cursor-pointer group">
+              <p className="text-xs text-cyan-400/60 group-hover:text-cyan-400 font-medium">CS 기초</p>
+              <p className="text-[11px] text-text/35 mt-0.5">{(track === "fde" ? FDE_CS_DAILY_TOPICS : CS_DAILY_TOPICS)[(today - 1) % (track === "fde" ? FDE_CS_DAILY_TOPICS.length : CS_DAILY_TOPICS.length)].title}</p>
+            </button>
+            <button onClick={() => setActiveTab("culture")} className="rounded-xl border border-border/25 bg-surface/15 px-4 py-3 text-left hover:bg-surface/30 transition-colors cursor-pointer group">
+              <p className="text-xs text-red-400/60 group-hover:text-red-400 font-medium">인성면접</p>
+              <p className="text-[11px] text-text/35 mt-0.5">{CULTURE_DAILY_TIPS[(today - 1) % CULTURE_DAILY_TIPS.length].title}</p>
+            </button>
+          </div>
+        </section>
+
+        {/* ═══════════ COLLAPSIBLE SECTIONS ═══════════ */}
+
+        {/* 약점 분석 (접혀있음) */}
+        {weakPatterns.length > 0 && (
+        <details className="mb-3 rounded-xl border border-border/25 bg-surface/15 overflow-hidden">
+          <summary className="px-5 py-3 cursor-pointer hover:bg-surface/30 transition-colors text-xs font-bold text-text/40 uppercase tracking-wider">
+            약점 패턴 {weakPatterns.length}개
+          </summary>
+          <div className="px-5 pb-4 flex gap-2">
             {weakPatterns.map((p) => (
-              <div key={p.id} className="flex-1 rounded-lg border border-amber-500/20 bg-amber-500/5 px-4 py-3">
-                <p className="text-xs font-bold text-amber-400/80">{p.nameKo}</p>
+              <div key={p.id} className="flex-1 rounded-lg bg-amber-500/5 px-3 py-2">
+                <p className="text-xs font-bold text-amber-400/70">{p.nameKo}</p>
                 <div className="flex items-center gap-2 mt-1">
-                  <div className="flex-1 h-1.5 rounded-full bg-surface/60 overflow-hidden">
-                    <div className="h-full rounded-full bg-amber-400/60" style={{ width: `${p.pct}%` }} />
-                  </div>
-                  <span className="text-[10px] font-code text-text/30">{p.solved}/{p.problems}</span>
+                  <div className="flex-1 h-1 rounded-full bg-surface/60 overflow-hidden"><div className="h-full rounded-full bg-amber-400/60" style={{ width: `${p.pct}%` }} /></div>
+                  <span className="text-[10px] font-code text-text/25">{p.solved}/{p.problems}</span>
                 </div>
               </div>
             ))}
           </div>
-        </section>
+        </details>
         )}
 
-        {/* ═══════════ REVIEW QUEUE (오답노트) ═══════════ */}
+        {/* 오답 노트 (접혀있음) */}
         {hardCardsList.length > 0 && (
-        <section className="mb-8">
-          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-3">
-            Review Queue — 어려운 카드 {hardCardsList.length}장
-          </h2>
-          <div className="space-y-2">
-            {hardCardsList.slice(0, 3).map((q) => (
-              <div key={q.id} className="rounded-lg border border-red-500/20 bg-red-500/5 px-4 py-3 flex items-center gap-3">
-                <span className="text-[10px] font-code px-2 py-0.5 rounded-full bg-red-500/10 text-red-400/60">{q.topic}</span>
-                <p className="text-xs text-text/60 flex-1 truncate">{q.question}</p>
-                <button onClick={() => toggleHard(q.id)} className="text-[10px] text-red-400/40 hover:text-red-400 cursor-pointer">제거</button>
+        <details className="mb-3 rounded-xl border border-border/25 bg-surface/15 overflow-hidden">
+          <summary className="px-5 py-3 cursor-pointer hover:bg-surface/30 transition-colors text-xs font-bold text-text/40 uppercase tracking-wider">
+            복습 큐 {hardCardsList.length}장
+          </summary>
+          <div className="px-5 pb-4 space-y-1.5">
+            {hardCardsList.slice(0, 5).map((q) => (
+              <div key={q.id} className="flex items-center gap-2 text-xs text-text/50">
+                <span className="text-red-400/40">&#9679;</span>
+                <span className="flex-1 truncate">{q.question}</span>
+                <button onClick={() => toggleHard(q.id)} className="text-[10px] text-text/20 hover:text-red-400 cursor-pointer">&#10005;</button>
               </div>
             ))}
-            {hardCardsList.length > 3 && <p className="text-[10px] text-text/25 text-center">+{hardCardsList.length - 3}장 더</p>}
           </div>
-        </section>
+        </details>
         )}
 
-        {/* ═══════════ COMPANY D-DAY ═══════════ */}
-        <section className="mb-8">
-          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-3">
+        {/* 기업 D-Day (접혀있음) */}
+        <details className="mb-3 rounded-xl border border-border/25 bg-surface/15 overflow-hidden">
+          <summary className="px-5 py-3 cursor-pointer hover:bg-surface/30 transition-colors text-xs font-bold text-text/40 uppercase tracking-wider">
             Company D-Day
-          </h2>
-          <div className="flex flex-wrap gap-2">
+          </summary>
+          <div className="px-5 pb-4 flex flex-wrap gap-2">
             {CAREER_PAGES.filter((c) => c.track === track || c.track === "both").slice(0, 6).map((c) => {
               const dday = companyDdays[c.company];
               const remaining = dday ? Math.ceil((new Date(dday).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) : null;
               return (
-                <div key={c.company} className="rounded-lg border border-border/30 bg-surface/20 px-3 py-2 flex items-center gap-2">
+                <div key={c.company} className="rounded-lg border border-border/20 bg-surface/10 px-3 py-2 flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full" style={{ background: c.color }} />
-                  <span className="text-xs font-semibold">{c.company}</span>
+                  <span className="text-xs font-semibold text-text/50">{c.company}</span>
                   {remaining !== null ? (
-                    <span className={`text-xs font-code ${remaining <= 7 ? "text-red-400" : "text-accent/60"}`}>D-{remaining}</span>
+                    <span className={`text-xs font-code ${remaining <= 7 ? "text-red-400" : "text-accent/50"}`}>D-{remaining}</span>
                   ) : (
-                    <input
-                      type="date"
-                      className="text-[10px] bg-transparent border-b border-border/30 text-text/40 w-24 cursor-pointer"
-                      onChange={(e) => setCompanyDdays((prev) => ({ ...prev, [c.company]: e.target.value }))}
-                      title="지원 마감일 설정"
-                    />
+                    <input type="date" className="text-[10px] bg-transparent border-b border-border/20 text-text/30 w-24 cursor-pointer" onChange={(e) => setCompanyDdays((prev) => ({ ...prev, [c.company]: e.target.value }))} />
                   )}
-                  <a href={c.url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-accent/40 hover:text-accent">채용</a>
+                  <a href={c.url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-accent/30 hover:text-accent">&#8599;</a>
                 </div>
               );
             })}
           </div>
-        </section>
+        </details>
 
-        {/* ═══════════ MOCK TIMER ═══════════ */}
-        <section className="mb-8">
-          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-3">
+        {/* 모의 타이머 (접혀있음) */}
+        <details className="mb-3 rounded-xl border border-border/25 bg-surface/15 overflow-hidden">
+          <summary className="px-5 py-3 cursor-pointer hover:bg-surface/30 transition-colors text-xs font-bold text-text/40 uppercase tracking-wider">
             Mock Timer
-          </h2>
-          {timerActive ? (
-            <div className="rounded-xl border border-accent/30 bg-accent/5 p-6 text-center">
-              <p className="text-xs text-text/40 mb-1">{timerLabel}</p>
-              <p className="text-5xl font-display font-black text-accent tabular-nums">{formatTimer(timerSeconds)}</p>
-              {timerSeconds === 0 && <p className="text-sm text-green-400 mt-2 animate-pulse">Time&apos;s up!</p>}
-              <button onClick={() => setTimerActive(false)} className="mt-3 text-xs text-text/30 hover:text-text/60 cursor-pointer">
-                {timerSeconds === 0 ? "닫기" : "중지"}
-              </button>
-            </div>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {TIMER_PRESETS.map((t) => (
-                <button
-                  key={t.label}
-                  onClick={() => startTimer(t.seconds, t.label)}
-                  className="rounded-lg border border-border/30 bg-surface/20 px-3 py-2 text-xs text-text/50 hover:text-text hover:border-accent/30 transition-colors cursor-pointer"
-                >
-                  {t.label}
-                </button>
-              ))}
-            </div>
-          )}
-        </section>
-
-        {/* ═══════════ WEEKLY REPORT ═══════════ */}
-        <section className="mb-8">
-          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-3">
-            Weekly Report — Week {currentWeek}
-          </h2>
-          <div className="grid grid-cols-4 gap-2">
-            <div className="rounded-lg border border-border/30 bg-surface/20 p-3 text-center">
-              <p className="text-2xl font-display font-black text-accent">{totalChecked}</p>
-              <p className="text-[10px] text-text/30 mt-0.5">총 체크</p>
-            </div>
-            <div className="rounded-lg border border-border/30 bg-surface/20 p-3 text-center">
-              <p className="text-2xl font-display font-black text-text/60">{totalReviewed}</p>
-              <p className="text-[10px] text-text/30 mt-0.5">카드 리뷰</p>
-            </div>
-            <div className="rounded-lg border border-border/30 bg-surface/20 p-3 text-center">
-              <p className="text-2xl font-display font-black text-green-400">{Object.values(solvedProblems).filter(Boolean).length}</p>
-              <p className="text-[10px] text-text/30 mt-0.5">문제 풀이</p>
-            </div>
-            <div className="rounded-lg border border-border/30 bg-surface/20 p-3 text-center">
-              <p className="text-2xl font-display font-black" style={{ color: streak >= 7 ? "#f97316" : undefined }}>{streak}</p>
-              <p className="text-[10px] text-text/30 mt-0.5">연속 일수</p>
-            </div>
+          </summary>
+          <div className="px-5 pb-4">
+            {timerActive ? (
+              <div className="text-center py-4">
+                <p className="text-xs text-text/30 mb-1">{timerLabel}</p>
+                <p className="text-4xl font-display font-black text-accent tabular-nums">{formatTimer(timerSeconds)}</p>
+                {timerSeconds === 0 && <p className="text-sm text-green-400 mt-2 animate-pulse">Time&apos;s up!</p>}
+                <button onClick={() => setTimerActive(false)} className="mt-2 text-xs text-text/25 hover:text-text/50 cursor-pointer">{timerSeconds === 0 ? "닫기" : "중지"}</button>
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
+                {TIMER_PRESETS.map((t) => (
+                  <button key={t.label} onClick={() => startTimer(t.seconds, t.label)} className="rounded-lg border border-border/20 bg-surface/10 px-2.5 py-1.5 text-[11px] text-text/40 hover:text-text hover:border-accent/30 transition-colors cursor-pointer">{t.label}</button>
+                ))}
+              </div>
+            )}
           </div>
-        </section>
+        </details>
+
+        {/* 로드맵 (접혀있음) */}
+        <details className="mb-8 rounded-xl border border-border/25 bg-surface/15 overflow-hidden">
+          <summary className="px-5 py-3 cursor-pointer hover:bg-surface/30 transition-colors text-xs font-bold text-text/40 uppercase tracking-wider">
+            4-Phase Roadmap
+          </summary>
+          <div className="px-5 pb-4 grid grid-cols-2 gap-2">
 
         {/* ═══════════ PHASE ROADMAP ═══════════ */}
         <section className="mb-12">
@@ -964,6 +980,15 @@ export default function InterviewPage() {
             })}
           </div>
         </section>
+          </div>
+        </details>
+
+        {/* ═══════════ DAY SELECTOR (접혀있음) ═══════════ */}
+        <details className="mb-3 rounded-xl border border-border/25 bg-surface/15 overflow-hidden">
+          <summary className="px-5 py-3 cursor-pointer hover:bg-surface/30 transition-colors text-xs font-bold text-text/40 uppercase tracking-wider">
+            100일 타임라인 + 데일리 체크리스트
+          </summary>
+          <div className="px-5 pb-4">
 
         {/* ═══════════ DAY SELECTOR ═══════════ */}
         <section className="mb-6">
@@ -1131,6 +1156,8 @@ export default function InterviewPage() {
             })}
           </div>
         </section>
+          </div>
+        </details>
 
         </>)}
 
