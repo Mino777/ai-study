@@ -1487,3 +1487,336 @@ export const TECH_DAILY_TOPICS: DailyTip[] = [
   { day: 6, title: "아키텍처 트레이드오프", content: "MVVM vs Clean Architecture vs RIBs. 각각의 장단점을 프로젝트 규모별로 설명. 'Aidy에서 RIBs를 선택한 이유'를 30초로." },
   { day: 7, title: "시스템 디자인 실전", content: "소셜 피드 or 채팅 or 이미지 로더 중 1개를 45분 내 설계. 요구사항→아키텍처→핵심 컴포넌트→트레이드오프 4단계로." },
 ];
+
+/* ═══════════════════════════════════════════════════════════ */
+/*  CS FUNDAMENTALS (면접 단골 CS + 실무 연결)                  */
+/* ═══════════════════════════════════════════════════════════ */
+
+export interface CSTopicGuide {
+  id: string;
+  category: string;
+  categoryColor: string;
+  title: string;
+  question: string;
+  visual: string;
+  answer: string;
+  realWorld: string;
+  code?: string;
+}
+
+export const CS_TOPICS: CSTopicGuide[] = [
+  // ── 운영체제 ──
+  {
+    id: "cs-process-thread", category: "OS", categoryColor: "#3b82f6",
+    title: "프로세스 vs 스레드",
+    question: "프로세스와 스레드의 차이를 설명해주세요.",
+    visual: `  프로세스 A              프로세스 B
+  ┌──────────────┐      ┌──────────────┐
+  │ Code         │      │ Code         │
+  │ Data         │      │ Data         │  ← 완전 독립!
+  │ Heap         │      │ Heap         │
+  │ ┌──────────┐ │      │ ┌──────────┐ │
+  │ │ Thread 1 │ │      │ │ Thread 1 │ │
+  │ │ (Stack)  │ │      │ │ (Stack)  │ │
+  │ ├──────────┤ │      │ └──────────┘ │
+  │ │ Thread 2 │ │      └──────────────┘
+  │ │ (Stack)  │ │
+  │ └──────────┘ │
+  └──────────────┘
+  스레드는 Code/Data/Heap을 공유, Stack만 독립`,
+    answer: "프로세스: 독립된 메모리 공간(Code, Data, Heap, Stack). OS가 자원을 할당하는 단위. 프로세스 간 통신(IPC)이 필요. 스레드: 프로세스 내에서 실행되는 흐름. Code/Data/Heap을 공유하고 Stack만 독립. 같은 메모리 공유 → 빠르지만 동기화 문제(Race Condition) 발생.",
+    realWorld: "iOS에서 Main Thread(UI) + Background Thread(네트워크/DB). GCD의 DispatchQueue가 스레드를 관리. 메인 스레드 블로킹 = 앱 프리징.",
+  },
+  {
+    id: "cs-deadlock", category: "OS", categoryColor: "#3b82f6",
+    title: "데드락 (Deadlock)",
+    question: "데드락이 뭔가요? 어떻게 방지하나요?",
+    visual: `  Thread A         Thread B
+     │                 │
+     ├─ Lock(리소스1) ✓   │
+     │                 ├─ Lock(리소스2) ✓
+     │                 │
+     ├─ Lock(리소스2) 대기... │
+     │                 ├─ Lock(리소스1) 대기...
+     │                 │
+     └─── 영원히 대기 ───┘  ← 데드락!`,
+    answer: "두 스레드가 서로가 가진 자원을 기다리며 영원히 멈추는 상태. 4가지 조건이 동시에 만족될 때 발생: ①상호 배제 ②점유 대기 ③비선점 ④순환 대기. 방지: 자원 획득 순서 고정, 타임아웃 설정, Lock 계층 구조.",
+    realWorld: "iOS에서 DispatchQueue.main.sync를 메인 스레드에서 호출하면 데드락. Serial Queue에서 자기 자신에게 sync 호출해도 데드락. 실무에서 가장 흔한 케이스.",
+    code: `// ❌ 데드락! 메인 스레드에서 메인 큐에 sync
+DispatchQueue.main.sync {
+    print("이 코드는 영원히 실행되지 않음")
+}
+
+// ✅ 해결: async 사용
+DispatchQueue.main.async {
+    print("안전하게 실행됨")
+}
+
+// ❌ 데드락! Serial Queue에서 자기 자신에 sync
+let queue = DispatchQueue(label: "my.queue")
+queue.async {
+    queue.sync { // 여기서 데드락!
+        print("실행 안 됨")
+    }
+}`,
+  },
+  {
+    id: "cs-virtual-memory", category: "OS", categoryColor: "#3b82f6",
+    title: "가상 메모리",
+    question: "가상 메모리가 뭔가요? iOS에서 어떻게 동작하나요?",
+    visual: `  가상 주소 공간          물리 메모리
+  ┌────────────┐       ┌────────────┐
+  │ Page 0     │ ──→   │ Frame 3    │
+  │ Page 1     │ ──→   │ Frame 7    │
+  │ Page 2     │ ──→   │ (디스크)    │ ← Page Fault!
+  │ Page 3     │ ──→   │ Frame 1    │
+  └────────────┘       └────────────┘
+  각 앱은 자기만의 가상 주소 공간을 가짐`,
+    answer: "물리 메모리보다 큰 주소 공간을 제공하는 기법. 각 프로세스는 독립된 가상 주소 공간을 가짐. 페이지 단위로 물리 메모리에 매핑. 사용하지 않는 페이지는 디스크에 저장(Swap). 접근 시 Page Fault → 디스크에서 로드.",
+    realWorld: "iOS는 Swap이 없다 (플래시 메모리 수명 보호). 대신 메모리 압박 시 앱을 강제 종료(Jetsam). 따라서 iOS 개발자는 메모리 관리가 더 중요. didReceiveMemoryWarning에서 캐시 해제 필수.",
+  },
+  // ── 네트워크 ──
+  {
+    id: "cs-tcp-udp", category: "Network", categoryColor: "#10b981",
+    title: "TCP vs UDP",
+    question: "TCP와 UDP의 차이를 설명해주세요.",
+    visual: `  TCP (전화 통화)              UDP (편지)
+  ┌─────────────────┐      ┌─────────────────┐
+  │ 1. 연결 (3-way)  │      │ 그냥 보낸다!      │
+  │ 2. 데이터 전송    │      │ 도착 확인 X       │
+  │ 3. 확인 응답(ACK) │      │ 순서 보장 X       │
+  │ 4. 재전송(손실 시) │      │ 빠름!            │
+  │ 5. 연결 해제      │      └─────────────────┘
+  └─────────────────┘
+  신뢰성 ↑ 속도 ↓          신뢰성 ↓ 속도 ↑`,
+    answer: "TCP: 연결 지향, 3-way handshake, 순서 보장, 재전송, 흐름/혼잡 제어. 신뢰성 높지만 느림. HTTP, HTTPS, WebSocket이 TCP 기반. UDP: 비연결, 순서/도착 보장 안 함. 빠르고 가벼움. DNS, 동영상 스트리밍, 게임에 적합.",
+    realWorld: "iOS 앱의 URLSession = TCP 기반. 실시간 동영상 = UDP(HLS는 TCP지만). WebSocket = TCP 위에서 양방향. 채팅 앱은 TCP(메시지 손실 불가), 화상 통화는 UDP(약간의 손실 OK).",
+  },
+  {
+    id: "cs-http-https", category: "Network", categoryColor: "#10b981",
+    title: "HTTP vs HTTPS + TLS",
+    question: "HTTPS는 어떻게 보안을 보장하나요?",
+    visual: `  HTTP                    HTTPS
+  Client → 평문 → Server   Client → 암호문 → Server
+  "password123"             "x8k#2mQ..."
+
+  TLS Handshake:
+  Client ──→ "Hello + 지원 암호화 목록"
+         ←── "인증서 + 공개키"
+  Client ──→ "이 공개키로 암호화한 세션키"
+         ←── "세션키로 암호화 통신 시작"`,
+    answer: "HTTPS = HTTP + TLS(Transport Layer Security). TLS Handshake로 세션키 교환: ①클라이언트 Hello ②서버 인증서+공개키 ③클라이언트가 세션키를 공개키로 암호화하여 전송 ④이후 세션키로 대칭 암호화 통신. 인증서로 서버 신원 확인.",
+    realWorld: "iOS ATS(App Transport Security)가 HTTPS 강제. 인증서 핀닝: 특정 인증서만 신뢰하여 MITM 공격 방지. URLSession의 serverTrust를 검증하는 패턴.",
+    code: `// iOS 인증서 핀닝 (URLSessionDelegate)
+func urlSession(_ session: URLSession,
+    didReceive challenge: URLAuthenticationChallenge,
+    completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
+
+    guard let serverTrust = challenge.protectionSpace.serverTrust,
+          let certificate = SecTrustGetCertificateAtIndex(serverTrust, 0) else {
+        completionHandler(.cancelAuthenticationChallenge, nil)
+        return
+    }
+
+    // 서버 인증서와 로컬 인증서 비교
+    let serverCertData = SecCertificateCopyData(certificate) as Data
+    let localCertData = pinnedCertificateData
+
+    if serverCertData == localCertData {
+        completionHandler(.useCredential,
+            URLCredential(trust: serverTrust))
+    } else {
+        completionHandler(.cancelAuthenticationChallenge, nil)
+    }
+}`,
+  },
+  {
+    id: "cs-rest-api", category: "Network", categoryColor: "#10b981",
+    title: "REST API 상태 코드",
+    question: "자주 쓰는 HTTP 상태 코드를 설명해주세요.",
+    visual: `  2xx 성공          3xx 리다이렉션
+  200 OK             301 영구 이동
+  201 Created        304 Not Modified (캐시 사용)
+  204 No Content
+
+  4xx 클라이언트 에러   5xx 서버 에러
+  400 Bad Request     500 Internal Server Error
+  401 Unauthorized    502 Bad Gateway
+  403 Forbidden       503 Service Unavailable
+  404 Not Found
+  429 Too Many Requests`,
+    answer: "2xx: 성공. 200(OK), 201(생성됨), 204(본문 없음). 3xx: 리다이렉션. 301(영구 이동), 304(캐시 유효). 4xx: 클라이언트 잘못. 400(잘못된 요청), 401(인증 필요), 403(권한 없음), 404(없음), 429(요청 과다). 5xx: 서버 잘못. 500(내부 에러), 503(과부하).",
+    realWorld: "iOS에서 401 → 토큰 갱신 후 재요청. 429 → Exponential Backoff로 재시도. 304 → URLCache 활용. 500 → 사용자에게 에러 표시 + 재시도 버튼.",
+  },
+  // ── 자료구조 ──
+  {
+    id: "cs-array-linkedlist", category: "자료구조", categoryColor: "#8b5cf6",
+    title: "배열 vs 연결리스트",
+    question: "배열과 연결리스트의 차이를 설명해주세요.",
+    visual: `  배열 (Array)                연결리스트 (LinkedList)
+  ┌───┬───┬───┬───┬───┐    ┌───┐   ┌───┐   ┌───┐
+  │ 1 │ 2 │ 3 │ 4 │ 5 │    │ 1 │→  │ 3 │→  │ 5 │→ nil
+  └───┴───┴───┴───┴───┘    └───┘   └───┘   └───┘
+  메모리 연속 할당            메모리 분산, 포인터로 연결
+
+  접근: O(1) vs O(n)
+  삽입: O(n) vs O(1) (노드 알 때)
+  검색: O(n) vs O(n)`,
+    answer: "배열: 연속된 메모리, 인덱스로 O(1) 접근, 삽입/삭제 시 O(n)(요소 이동). 크기 고정(동적 배열은 재할당). 연결리스트: 노드+포인터, 접근 O(n), 삽입/삭제 O(1)(노드를 알 때). 메모리 분산 할당.",
+    realWorld: "Swift Array는 동적 배열(내부적으로 연속 메모리). 대부분 Array로 충분. LinkedList는 UINavigationController의 뷰 스택, Undo 히스토리 같은 곳에 개념적으로 사용.",
+  },
+  {
+    id: "cs-hashtable", category: "자료구조", categoryColor: "#8b5cf6",
+    title: "해시테이블 + 충돌 해결",
+    question: "해시테이블의 원리와 충돌 해결법을 설명해주세요.",
+    visual: `  key "apple" → hash(apple) = 3
+  key "banana" → hash(banana) = 7
+  key "cherry" → hash(cherry) = 3  ← 충돌!
+
+  Chaining (체이닝):
+  [0] →
+  [1] →
+  [2] →
+  [3] → [apple:3] → [cherry:5]  ← 연결리스트
+  [7] → [banana:2]
+
+  Open Addressing (개방 주소법):
+  [3] = apple  →  cherry는 [4]에 저장 (다음 빈 칸)`,
+    answer: "해시 함수로 key를 인덱스로 변환 → O(1) 접근. 충돌 해결: ①Chaining: 같은 인덱스에 연결리스트로 저장 ②Open Addressing: 다음 빈 칸에 저장 (Linear Probing). Swift Dictionary는 Open Addressing + Robin Hood Hashing 사용.",
+    realWorld: "Swift Dictionary/Set = 해시테이블. Hashable 프로토콜 채택 필수. 커스텀 타입을 Dictionary key로 쓰려면 hash(into:) 구현. 좋은 해시 함수 = 균일 분포 = 충돌 최소화.",
+    code: `// Swift에서 커스텀 타입을 Dictionary key로
+struct User: Hashable {
+    let id: Int
+    let name: String
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)  // id만으로 해싱 (고유값)
+    }
+
+    static func == (lhs: User, rhs: User) -> Bool {
+        return lhs.id == rhs.id
+    }
+}
+
+var userScores: [User: Int] = [:]
+userScores[User(id: 1, name: "Mino")] = 100  // O(1)`,
+  },
+  // ── 데이터베이스 ──
+  {
+    id: "cs-index", category: "DB", categoryColor: "#f59e0b",
+    title: "데이터베이스 인덱스",
+    question: "DB 인덱스가 뭔가요? 왜 빨라지나요?",
+    visual: `  인덱스 없이:    모든 행을 순서대로 검색 (Full Scan)
+  ┌───────────────────────────┐
+  │ id=1, name=Kim    ← 확인  │
+  │ id=2, name=Lee    ← 확인  │
+  │ id=3, name=Park   ← 확인  │  O(n)
+  │ ...100만 행...     ← 확인  │
+  └───────────────────────────┘
+
+  인덱스 있으면: B-Tree로 바로 찾기
+  ┌─────────┐
+  │   Park   │  → 3번만에 찾음!  O(log n)
+  ├────┬────┤
+  │Kim │Lee │
+  └────┴────┘`,
+    answer: "인덱스 = 데이터의 목차. B-Tree(또는 B+Tree) 구조로 O(log n) 검색. 원리: 정렬된 별도 자료구조가 실제 데이터 위치를 가리킴. 장점: SELECT 빠름. 단점: INSERT/UPDATE 시 인덱스도 갱신 → 쓰기 느려짐. 저장 공간 추가 필요.",
+    realWorld: "iOS CoreData의 indexed 속성. SQLite(Realm 내부)의 CREATE INDEX. 자주 검색하는 컬럼에만 인덱스 생성. 모든 컬럼에 인덱스 = 오히려 느려짐 (쓰기 오버헤드).",
+  },
+  {
+    id: "cs-acid", category: "DB", categoryColor: "#f59e0b",
+    title: "트랜잭션 ACID",
+    question: "ACID가 뭔가요?",
+    visual: `  은행 이체: A계좌 → B계좌 100만원
+
+  Atomicity  (원자성)  : 출금+입금 둘 다 성공하거나 둘 다 실패
+  Consistency(일관성)  : 이체 전후 총액은 동일
+  Isolation  (격리성)  : 다른 이체가 끼어들지 못함
+  Durability (지속성)  : 완료된 이체는 서버가 꺼져도 유지`,
+    answer: "Atomicity(원자성): 전부 성공 또는 전부 실패 (all or nothing). Consistency(일관성): 트랜잭션 전후 데이터 무결성 유지. Isolation(격리성): 동시 트랜잭션이 서로 간섭 안 함. Durability(지속성): 커밋된 데이터는 영구 저장.",
+    realWorld: "CoreData의 performAndWait 블록 = 트랜잭션. Realm의 write 블록 = 원자적. 결제 처리: 재고 감소 + 주문 생성이 하나의 트랜잭션이어야 함.",
+  },
+  // ── 디자인 패턴 ──
+  {
+    id: "cs-singleton", category: "패턴", categoryColor: "#ef4444",
+    title: "싱글톤 패턴",
+    question: "싱글톤 패턴을 설명하고, 장단점을 말해주세요.",
+    visual: `  앱 전체에서 단 하나의 인스턴스만 존재
+
+  class APIClient {
+      static let shared = APIClient()  // 유일한 인스턴스
+      private init() {}                 // 외부 생성 차단
+  }
+
+  APIClient.shared  ← 어디서든 같은 인스턴스`,
+    answer: "앱 전체에서 인스턴스가 딱 1개. static let + private init으로 구현. 장점: 전역 접근, 자원 공유, 일관된 상태. 단점: 테스트 어려움 (Mock 교체 힘듦), 숨은 의존성, 멀티스레드 주의. 대안: 의존성 주입(DI)으로 교체 가능하게.",
+    realWorld: "iOS 표준: URLSession.shared, FileManager.default, UserDefaults.standard, NotificationCenter.default. 실무에서는 프로토콜로 추상화 → 테스트 시 Mock 주입 패턴이 더 좋음.",
+    code: `// 싱글톤 + 프로토콜 추상화 (테스트 가능하게)
+protocol NetworkServiceProtocol {
+    func fetch(url: URL) async throws -> Data
+}
+
+class NetworkService: NetworkServiceProtocol {
+    static let shared = NetworkService()
+    private init() {}
+
+    func fetch(url: URL) async throws -> Data {
+        let (data, _) = try await URLSession.shared.data(from: url)
+        return data
+    }
+}
+
+// 테스트에서 Mock 교체
+class MockNetworkService: NetworkServiceProtocol {
+    func fetch(url: URL) async throws -> Data {
+        return testData  // 네트워크 없이 테스트!
+    }
+}`,
+  },
+  {
+    id: "cs-observer", category: "패턴", categoryColor: "#ef4444",
+    title: "옵저버 패턴 + iOS 구현",
+    question: "옵저버 패턴을 iOS에서 어떻게 사용하나요?",
+    visual: `  Subject (발행자)          Observer (구독자)
+  ┌─────────────┐         ┌──────────┐
+  │ 상태 변경!    │ ──→     │ 업데이트! │
+  │             │ ──→     │ 업데이트! │
+  │             │ ──→     │ 업데이트! │
+  └─────────────┘         └──────────┘
+  1 대 N 관계: 하나가 변하면 여럿이 반응`,
+    answer: "한 객체(Subject)의 상태가 변하면 의존 객체들(Observer)에게 자동 통지. iOS 구현 4가지: ①NotificationCenter (1:N 브로드캐스트) ②KVO (프로퍼티 관찰) ③Combine Publisher/Subscriber ④Delegate (1:1). Combine이 가장 현대적.",
+    realWorld: "NotificationCenter: 키보드 높이 변화 감지. KVO: WKWebView 로딩 진행률. Combine: ViewModel → View 데이터 바인딩. @Published + sink 패턴이 SwiftUI의 기본.",
+    code: `// Combine으로 옵저버 패턴
+import Combine
+
+class ViewModel: ObservableObject {
+    @Published var items: [String] = []  // 발행자
+    @Published var isLoading = false
+}
+
+// View에서 구독
+class ViewController: UIViewController {
+    private var cancellables = Set<AnyCancellable>()
+
+    func bind(viewModel: ViewModel) {
+        viewModel.$items
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] items in
+                self?.tableView.reloadData()  // 자동 업데이트!
+            }
+            .store(in: &cancellables)
+    }
+}`,
+  },
+];
+
+/** CS 탭: Day별 학습 주제 */
+export const CS_DAILY_TOPICS: DailyTip[] = [
+  { day: 1, title: "프로세스 vs 스레드 완벽 정리", content: "프로세스는 독립 메모리 공간, 스레드는 공유. iOS에서 Main Thread 블로킹 = 앱 프리징. GCD로 스레드 관리하는 이유를 설명할 수 있는가?" },
+  { day: 2, title: "TCP/UDP + HTTP/HTTPS", content: "TCP는 전화(신뢰), UDP는 편지(빠름). HTTPS의 TLS Handshake 과정을 3줄로 설명할 수 있는가? iOS ATS가 HTTPS를 강제하는 이유." },
+  { day: 3, title: "해시테이블 + 충돌 해결", content: "Dictionary가 O(1)인 이유. Chaining vs Open Addressing. Swift Hashable 프로토콜을 직접 구현해본 경험? hash(into:) 왜 필요한가?" },
+  { day: 4, title: "데드락 + 동시성 문제", content: "DispatchQueue.main.sync 데드락 즉석 설명. Race Condition 해결 3가지: Serial Queue, Lock, Actor. 실무에서 겪은 동시성 버그 경험 1개 준비." },
+  { day: 5, title: "데이터베이스 인덱스 + ACID", content: "B-Tree 인덱스가 왜 빠른지. CoreData에서 indexed 속성 사용 경험. 트랜잭션 ACID 4가지를 은행 이체로 설명." },
+  { day: 6, title: "디자인 패턴: 싱글톤 + 옵저버", content: "싱글톤의 장단점. URLSession.shared가 싱글톤인 이유. Combine @Published가 옵저버 패턴인 이유. 테스트 가능한 싱글톤 만드는 법." },
+  { day: 7, title: "가상 메모리 + iOS 메모리 관리", content: "iOS에 Swap이 없는 이유(플래시 수명). Jetsam이 앱을 죽이는 기준. didReceiveMemoryWarning 대응. Instruments Allocations 사용법." },
+];

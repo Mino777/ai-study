@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { IOS_QUESTIONS, FDE_QUESTIONS, CULTURE_QUESTIONS, PHASE_PROBLEMS, COMPANY_STRATEGIES, HIRING_INSIGHTS, PROCESS_STAGES, ASSIGNMENT_CHECKLIST, ALGO_GUIDES, BIG_O_GUIDE, BIG_O_COMPARISON, SYSTEM_DESIGN_CASES, SD_FRAMEWORK_STEPS, SD_CLARIFYING_QUESTIONS, SD_API_COMPARISON, ASSIGNMENT_DAILY_TIPS, CULTURE_DAILY_TIPS, TECH_DAILY_TOPICS, type InterviewQuestion } from "./constants";
+import { IOS_QUESTIONS, FDE_QUESTIONS, CULTURE_QUESTIONS, PHASE_PROBLEMS, COMPANY_STRATEGIES, HIRING_INSIGHTS, PROCESS_STAGES, ASSIGNMENT_CHECKLIST, ALGO_GUIDES, BIG_O_GUIDE, BIG_O_COMPARISON, SYSTEM_DESIGN_CASES, SD_FRAMEWORK_STEPS, SD_CLARIFYING_QUESTIONS, SD_API_COMPARISON, ASSIGNMENT_DAILY_TIPS, CULTURE_DAILY_TIPS, TECH_DAILY_TOPICS, CS_TOPICS, CS_DAILY_TOPICS, type InterviewQuestion } from "./constants";
 
 /* ═══════════════════════════════════════════════════════════ */
 /*  TYPES                                                      */
@@ -373,7 +373,7 @@ function formatDate(day: number): string {
 
 export default function InterviewPage() {
   const [track, setTrack] = useState<TrackKey>("ios");
-  const [activeTab, setActiveTab] = useState<"overview" | "coding" | "assignment" | "tech" | "culture">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "coding" | "assignment" | "tech" | "cs" | "culture">("overview");
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [checkedTasks, setCheckedTasks] = useState<Record<string, boolean>>({});
   const [selectedDay, setSelectedDay] = useState<number>(getToday());
@@ -635,6 +635,7 @@ export default function InterviewPage() {
             { key: "overview" as const, label: "Overview" },
             { key: "coding" as const, label: "코딩테스트" },
             { key: "assignment" as const, label: "사전과제" },
+            { key: "cs" as const, label: "CS 기초" },
             { key: "tech" as const, label: "기술면접" },
             { key: "culture" as const, label: "인성면접" },
           ]).map((tab) => (
@@ -1284,6 +1285,78 @@ export default function InterviewPage() {
               </div>
             );
           })()}
+        </section>
+        </>)}
+
+        {/* ═══════════ TAB: CS FUNDAMENTALS ═══════════ */}
+        {activeTab === "cs" && (<>
+        {/* Today's CS Topic */}
+        <section className="mb-8">
+          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">
+            Today&apos;s CS — Day {selectedDay}
+          </h2>
+          {(() => {
+            const tip = CS_DAILY_TOPICS[(selectedDay - 1) % CS_DAILY_TOPICS.length];
+            return (
+              <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-5">
+                <h3 className="text-sm font-bold text-cyan-400/80 mb-2">{tip.title}</h3>
+                <p className="text-sm text-text/60 leading-relaxed">{tip.content}</p>
+              </div>
+            );
+          })()}
+        </section>
+
+        {/* CS Topics */}
+        <section className="mb-12">
+          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">
+            CS Fundamentals
+            <span className="ml-2 text-text/25 normal-case tracking-normal font-normal">— 면접 단골 CS + 실무 연결</span>
+          </h2>
+          <div className="space-y-2">
+            {CS_TOPICS.map((topic) => (
+              <details key={topic.id} className="rounded-xl border border-border/30 bg-surface/20 overflow-hidden">
+                <summary className="px-5 py-3.5 cursor-pointer hover:bg-surface/40 transition-colors flex items-center gap-3">
+                  <span className="text-[10px] font-code px-2 py-0.5 rounded-full shrink-0" style={{ color: topic.categoryColor, background: `${topic.categoryColor}15` }}>{topic.category}</span>
+                  <span className="text-sm font-bold flex-1">{topic.title}</span>
+                </summary>
+                <div className="px-5 pb-5 border-t border-border/20 pt-4 space-y-4">
+                  {/* 면접 질문 */}
+                  <div className="rounded-lg bg-accent/5 border border-accent/15 px-4 py-3">
+                    <p className="text-[10px] font-code text-accent/50 mb-1 uppercase">Interview Question</p>
+                    <p className="text-sm font-medium text-text/70">{topic.question}</p>
+                  </div>
+
+                  {/* 시각적 설명 */}
+                  <div className="rounded-lg bg-bg/80 border border-border/30 p-4 overflow-x-auto">
+                    <p className="text-[10px] font-code font-bold text-text/30 mb-2 uppercase tracking-wider">Visual</p>
+                    <pre className="text-xs font-code text-text/55 leading-relaxed whitespace-pre">{topic.visual}</pre>
+                  </div>
+
+                  {/* 답변 */}
+                  <div>
+                    <p className="text-[10px] font-code text-text/30 mb-1 uppercase">Answer</p>
+                    <p className="text-sm text-text/60 leading-[1.8]">{topic.answer}</p>
+                  </div>
+
+                  {/* 실무 연결 */}
+                  <div className="rounded-lg bg-green-500/5 border border-green-500/15 px-4 py-3">
+                    <p className="text-[10px] font-code text-green-400/50 mb-1 uppercase">iOS 실무에서는?</p>
+                    <p className="text-xs text-text/55 leading-relaxed">{topic.realWorld}</p>
+                  </div>
+
+                  {/* 코드 (있는 경우) */}
+                  {topic.code && (
+                    <div className="rounded-lg bg-bg/80 border border-border/30 overflow-hidden">
+                      <div className="px-3 py-1.5 border-b border-border/20">
+                        <span className="text-[10px] font-code text-text/30">swift · 실전 코드</span>
+                      </div>
+                      <pre className="p-4 text-xs font-code text-text/55 leading-relaxed overflow-x-auto whitespace-pre">{topic.code}</pre>
+                    </div>
+                  )}
+                </div>
+              </details>
+            ))}
+          </div>
         </section>
         </>)}
 
