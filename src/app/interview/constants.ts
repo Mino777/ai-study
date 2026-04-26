@@ -96,17 +96,110 @@ export interface DailyProblem {
 }
 
 /** Phase별 추천 문제 (각 Phase에서 순환 사용) */
+/* ═══════════════════════════════════════════════════════════ */
+/*  COMPANY-SPECIFIC STRATEGY                                  */
+/* ═══════════════════════════════════════════════════════════ */
+
+export interface CompanyStrategy {
+  name: string;
+  color: string;
+  process: string[];
+  codingTest: string;
+  keyTip: string;
+  failReason: string;
+}
+
+export const COMPANY_STRATEGIES: Record<string, CompanyStrategy[]> = {
+  ios: [
+    {
+      name: "토스", color: "#3b82f6",
+      process: ["서류", "과제전형", "기술면접 (과제 코드 리뷰)", "문화면접", "최종"],
+      codingTest: "코딩테스트 없음. 과제전형으로 대체. GitHub PR 형식 검토.",
+      keyTip: "과제 코드의 '왜 이렇게 했는지' 설명 준비가 핵심. 문화면접에서 깊이 있는 자기반성 필수.",
+      failReason: "문화면접 탈락이 가장 많음. 얕은 답변 = 자동 탈락.",
+    },
+    {
+      name: "당근", color: "#ff6f00",
+      process: ["5일 과제", "기술면접 (2:1)", "컬쳐핏"],
+      codingTest: "알고리즘 코딩테스트 없음. 실무 과제 5일 기한.",
+      keyTip: "과제 제출 후 '신경 쓴 부분/아쉬운 점' 정리 필수. 면접관이 힌트 주는 협력적 분위기.",
+      failReason: "과제 구현 부실 + 기술 선택 설명 못 함.",
+    },
+    {
+      name: "카카오", color: "#fee500",
+      process: ["코딩테스트 (5h 7문제)", "기술면접 2회", "인성면접"],
+      codingTest: "5시간 7문제. 4솔 이상이 안전. 효율성 테스트 포함. 문제별 배점 다름.",
+      keyTip: "5시간 체력 관리가 합격의 절반. 쉬운 문제부터 빠르게 확보 후 어려운 문제 도전.",
+      failReason: "3솔 이하 + 서류 부족 = 자동 탈락.",
+    },
+    {
+      name: "네이버", color: "#03c75a",
+      process: ["코딩테스트 (2h 3문제)", "기술면접", "인성면접", "컬쳐핏검사"],
+      codingTest: "2시간 3문제. 2/3 해결 이상. 난이도 높음 (Silver 상위~Gold).",
+      keyTip: "창의적 사고 + 복합 알고리즘 요구. 부분 점수 전략 유효.",
+      failReason: "1/3만 풀고 문화면접 진출해도 최종 탈락 확률 높음.",
+    },
+    {
+      name: "쿠팡", color: "#e4002b",
+      process: ["코딩테스트 (1h 3문제)", "기술면접 3회 (라이브 코딩)", "시스템디자인"],
+      codingTest: "1시간 3문제. 평이한 난이도. HackerRank 플랫폼.",
+      keyTip: "라이브 코딩 3회 반복 연습 필수. 면접 피드백 제공 (타사 대비 장점).",
+      failReason: "라이브 코딩에서 생각을 말로 설명 못 함.",
+    },
+  ],
+  fde: [
+    {
+      name: "채널톡", color: "#3b82f6",
+      process: ["서류", "과제/포트폴리오", "기술면접", "문화면접"],
+      codingTest: "코딩테스트 대신 과제전형. 고객 문제 해결 시나리오 중심.",
+      keyTip: "FDE 역할 이해 + 고객 커뮤니케이션 경험 강조. 비즈니스 임팩트 수치화.",
+      failReason: "기술만 강조하고 비즈니스 관점 부족.",
+    },
+    {
+      name: "마키나락스", color: "#10b981",
+      process: ["서류", "기술면접", "과제전형", "최종면접"],
+      codingTest: "Python/SQL 기반. 데이터 파이프라인 + AI 통합 역량 검증.",
+      keyTip: "제조/국방 도메인 이해 + AI 실장 경험. Harness Engineering 패턴 어필.",
+      failReason: "도메인 이해 없이 순수 기술만으로 접근.",
+    },
+  ],
+};
+
+/* ═══════════════════════════════════════════════════════════ */
+/*  HIRING INSIGHTS (합격 전략)                                */
+/* ═══════════════════════════════════════════════════════════ */
+
+export const HIRING_INSIGHTS = {
+  portfolio: [
+    { rule: "프로젝트 2-3개만, 깊게", detail: "다수의 얕은 프로젝트 < 2-3개 깊은 프로젝트. ai-study + Aidy + MoneyFlow면 충분." },
+    { rule: "정량적 임팩트 필수", detail: "'608건 티켓 처리', '크래시 8건 사전 차단', '컴파일 타임 100% 차단' — 숫자가 면접관의 질문을 만든다." },
+    { rule: "트러블슈팅 섹션이 합격을 가른다", detail: "문제 → 시도한 것들 → 최종 해결 → 배운 점. 이 섹션이 있으면 합격률 대폭 상승." },
+  ],
+  experienced: [
+    { rule: "기술 깊이 > 범위", detail: "3-4년차는 '많이 아는 것'이 아니라 '하나를 깊이 아는 것'이 차별화." },
+    { rule: "기술 의사결정 설명 능력", detail: "'왜 RIBs를 선택했나?' '왜 Clean Architecture인가?' 트레이드오프 설명 준비." },
+    { rule: "팀 영향력 정량화", detail: "코드 리뷰 문화 도입, CI/CD 구축, 온보딩 문서화 등 팀 레벨 기여." },
+  ],
+  commonFails: [
+    "포트폴리오에 '왜/어떻게/성과' 없이 기능 나열만",
+    "코딩테스트 커트라인 미달 (카카오 4솔, 네이버 2/3)",
+    "문화면접에서 깊이 없는 답변 (특히 토스)",
+    "과제전형 후 '기술 선택 이유' 설명 못 함 (당근, 토스)",
+    "라이브 코딩에서 침묵 10초+ (Think-Aloud 미연습)",
+  ],
+};
+
 export const PHASE_PROBLEMS: Record<number, DailyProblem[]> = {
   1: [
     { title: "두 수의 합", platform: "프로그래머스", url: "https://school.programmers.co.kr/learn/courses/30/lessons/120803", difficulty: "Lv.0", topic: "기초" },
-    { title: "스택 수열", platform: "백준", url: "https://www.acmicpc.net/problem/1874", difficulty: "Silver 2", topic: "스택" },
-    { title: "큐 2", platform: "백준", url: "https://www.acmicpc.net/problem/18258", difficulty: "Silver 4", topic: "큐" },
+    { title: "Valid Parentheses", platform: "LeetCode", url: "https://leetcode.com/problems/valid-parentheses/", difficulty: "Easy", topic: "스택" },
+    { title: "스택/큐 — 같은 숫자는 싫어", platform: "프로그래머스", url: "https://school.programmers.co.kr/learn/courses/30/lessons/12906", difficulty: "Lv.1", topic: "스택" },
     { title: "해시 — 완주하지 못한 선수", platform: "프로그래머스", url: "https://school.programmers.co.kr/learn/courses/30/lessons/42576", difficulty: "Lv.1", topic: "해시" },
     { title: "해시 — 전화번호 목록", platform: "프로그래머스", url: "https://school.programmers.co.kr/learn/courses/30/lessons/42577", difficulty: "Lv.2", topic: "해시" },
     { title: "정렬 — K번째수", platform: "프로그래머스", url: "https://school.programmers.co.kr/learn/courses/30/lessons/42748", difficulty: "Lv.1", topic: "정렬" },
     { title: "정렬 — 가장 큰 수", platform: "프로그래머스", url: "https://school.programmers.co.kr/learn/courses/30/lessons/42746", difficulty: "Lv.2", topic: "정렬" },
     { title: "DFS/BFS — 타겟 넘버", platform: "프로그래머스", url: "https://school.programmers.co.kr/learn/courses/30/lessons/43165", difficulty: "Lv.2", topic: "DFS" },
-    { title: "BFS — 미로 탐색", platform: "백준", url: "https://www.acmicpc.net/problem/2178", difficulty: "Silver 1", topic: "BFS" },
+    { title: "DFS/BFS — 게임 맵 최단거리", platform: "프로그래머스", url: "https://school.programmers.co.kr/learn/courses/30/lessons/1844", difficulty: "Lv.2", topic: "BFS" },
     { title: "이분탐색 — 입국심사", platform: "프로그래머스", url: "https://school.programmers.co.kr/learn/courses/30/lessons/43238", difficulty: "Lv.3", topic: "이분탐색" },
   ],
   2: [
@@ -115,8 +208,8 @@ export const PHASE_PROBLEMS: Record<number, DailyProblem[]> = {
     { title: "DP — 등굣길", platform: "프로그래머스", url: "https://school.programmers.co.kr/learn/courses/30/lessons/42898", difficulty: "Lv.3", topic: "DP" },
     { title: "탐욕법 — 구명보트", platform: "프로그래머스", url: "https://school.programmers.co.kr/learn/courses/30/lessons/42885", difficulty: "Lv.2", topic: "탐욕" },
     { title: "탐욕법 — 섬 연결하기", platform: "프로그래머스", url: "https://school.programmers.co.kr/learn/courses/30/lessons/42861", difficulty: "Lv.3", topic: "탐욕" },
-    { title: "투포인터 — 수들의 합", platform: "백준", url: "https://www.acmicpc.net/problem/2003", difficulty: "Silver 4", topic: "투포인터" },
-    { title: "슬라이딩 윈도우 — DNA 비밀번호", platform: "백준", url: "https://www.acmicpc.net/problem/12891", difficulty: "Silver 2", topic: "슬라이딩윈도우" },
+    { title: "투포인터 — Container With Most Water", platform: "LeetCode", url: "https://leetcode.com/problems/container-with-most-water/", difficulty: "Medium", topic: "투포인터" },
+    { title: "슬라이딩 윈도우 — Minimum Window Substring", platform: "LeetCode", url: "https://leetcode.com/problems/minimum-window-substring/", difficulty: "Hard", topic: "슬라이딩윈도우" },
     { title: "그래프 — 가장 먼 노드", platform: "프로그래머스", url: "https://school.programmers.co.kr/learn/courses/30/lessons/49189", difficulty: "Lv.3", topic: "그래프" },
     { title: "Two Sum", platform: "LeetCode", url: "https://leetcode.com/problems/two-sum/", difficulty: "Easy", topic: "해시" },
     { title: "LRU Cache", platform: "LeetCode", url: "https://leetcode.com/problems/lru-cache/", difficulty: "Medium", topic: "디자인" },

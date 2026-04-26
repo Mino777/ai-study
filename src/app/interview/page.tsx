@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { IOS_QUESTIONS, FDE_QUESTIONS, PHASE_PROBLEMS, type InterviewQuestion } from "./constants";
+import { IOS_QUESTIONS, FDE_QUESTIONS, PHASE_PROBLEMS, COMPANY_STRATEGIES, HIRING_INSIGHTS, type InterviewQuestion } from "./constants";
 
 /* ═══════════════════════════════════════════════════════════ */
 /*  TYPES                                                      */
@@ -626,23 +626,47 @@ export default function InterviewPage() {
           </span>
         </div>
 
-        {/* ═══════════ TARGET COMPANIES ═══════════ */}
+        {/* ═══════════ COMPANY STRATEGY ═══════════ */}
         <section className="mb-12">
           <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">
-            Target Companies
+            Company Strategy — {track === "ios" ? "iOS" : "FDE"}
+            <span className="ml-2 text-text/25 normal-case tracking-normal font-normal">회사별 맞춤 전략</span>
           </h2>
-          <div className="flex flex-wrap gap-2">
-            {TARGET_COMPANIES[track].map((c) => (
-              <div
-                key={c.name}
-                className="rounded-xl border border-border/40 bg-surface/30 px-4 py-2.5 flex items-center gap-3 hover:bg-surface/50 transition-colors"
-              >
-                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: c.color }} />
-                <div>
-                  <span className="text-sm font-semibold">{c.name}</span>
-                  <span className="text-xs text-text/40 ml-2">{c.note}</span>
+          <div className="space-y-3">
+            {(COMPANY_STRATEGIES[track] ?? []).map((c) => (
+              <details key={c.name} className="rounded-xl border border-border/40 bg-surface/30 overflow-hidden group">
+                <summary className="px-5 py-4 cursor-pointer hover:bg-surface/50 transition-colors flex items-center gap-3">
+                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: c.color }} />
+                  <span className="text-sm font-bold flex-1">{c.name}</span>
+                  <span className="text-xs text-text/30 font-code">{c.process.length}단계</span>
+                </summary>
+                <div className="px-5 pb-4 border-t border-border/20 pt-3 space-y-3">
+                  {/* 전형 프로세스 */}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {c.process.map((step, i) => (
+                      <span key={i} className="flex items-center gap-1.5">
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-surface/60 text-text/50">{step}</span>
+                        {i < c.process.length - 1 && <span className="text-text/20 text-xs">&rarr;</span>}
+                      </span>
+                    ))}
+                  </div>
+                  {/* 코딩테스트 */}
+                  <div>
+                    <p className="text-[10px] font-code text-text/30 mb-0.5">CODING TEST</p>
+                    <p className="text-xs text-text/60 leading-relaxed">{c.codingTest}</p>
+                  </div>
+                  {/* 핵심 팁 */}
+                  <div className="rounded-lg bg-accent/5 border border-accent/15 px-3 py-2">
+                    <p className="text-[10px] font-code text-accent/50 mb-0.5">KEY TIP</p>
+                    <p className="text-xs text-text/60 leading-relaxed">{c.keyTip}</p>
+                  </div>
+                  {/* 탈락 사유 */}
+                  <div className="rounded-lg bg-red-500/5 border border-red-500/15 px-3 py-2">
+                    <p className="text-[10px] font-code text-red-400/50 mb-0.5">FAIL REASON</p>
+                    <p className="text-xs text-text/50 leading-relaxed">{c.failReason}</p>
+                  </div>
                 </div>
-              </div>
+              </details>
             ))}
           </div>
         </section>
@@ -987,7 +1011,7 @@ export default function InterviewPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {[
               { title: "Programmers", desc: "한국 코딩테스트 표준 플랫폼", url: "https://programmers.co.kr/", color: "#3b82f6" },
-              { title: "Baekjoon OJ", desc: "알고리즘 다양성 + 커뮤니티", url: "https://www.acmicpc.net/", color: "#0d6efd" },
+              { title: "코드트리", desc: "커리큘럼 기반 + 삼성/현대 기출", url: "https://www.codetree.ai/", color: "#0d6efd" },
               { title: "LeetCode", desc: "글로벌 표준 + 시스템 디자인", url: "https://leetcode.com/", color: "#f59e0b" },
               { title: "iOS 면접 질문 100+", desc: "GitHub — JeaSungLEE", url: "https://github.com/JeaSungLEE/iOSInterviewquestions", color: "#06b6d4" },
               { title: "Mobile System Design", desc: "모바일 시스템 설계 프레임워크", url: "https://github.com/weeeBox/mobile-system-design", color: "#10b981" },
@@ -1122,6 +1146,58 @@ export default function InterviewPage() {
                 <p className="text-2xl font-display font-black text-green-400/70">10%</p>
                 <p className="text-xs text-text/50 mt-0.5">워밍업</p>
                 <p className="text-[10px] text-text/30">자신감 유지용 쉬운 문제</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ═══════════ HIRING STRATEGY ═══════════ */}
+        <section className="mb-12">
+          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">
+            Hiring Strategy
+            <span className="ml-2 text-text/25 normal-case tracking-normal font-normal">— 실제 합격자 데이터 기반</span>
+          </h2>
+          <div className="space-y-4">
+            {/* 포트폴리오 */}
+            <div className="rounded-xl border border-border/40 bg-surface/30 p-5">
+              <h3 className="text-xs font-bold text-accent/70 mb-3 uppercase tracking-wider">Portfolio Rules</h3>
+              <div className="space-y-2">
+                {HIRING_INSIGHTS.portfolio.map((r, i) => (
+                  <div key={i} className="flex gap-3">
+                    <span className="shrink-0 w-5 h-5 rounded bg-accent/10 text-accent/60 flex items-center justify-center text-[10px] font-bold mt-0.5">{i + 1}</span>
+                    <div>
+                      <p className="text-sm font-semibold text-text/70">{r.rule}</p>
+                      <p className="text-xs text-text/40 leading-relaxed mt-0.5">{r.detail}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            {/* 경력직 */}
+            <div className="rounded-xl border border-border/40 bg-surface/30 p-5">
+              <h3 className="text-xs font-bold text-green-400/70 mb-3 uppercase tracking-wider">3-4년차 경력직 차별화</h3>
+              <div className="space-y-2">
+                {HIRING_INSIGHTS.experienced.map((r, i) => (
+                  <div key={i} className="flex gap-3">
+                    <span className="shrink-0 w-5 h-5 rounded bg-green-500/10 text-green-400/60 flex items-center justify-center text-[10px] font-bold mt-0.5">{i + 1}</span>
+                    <div>
+                      <p className="text-sm font-semibold text-text/70">{r.rule}</p>
+                      <p className="text-xs text-text/40 leading-relaxed mt-0.5">{r.detail}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            {/* 탈락 사유 */}
+            <div className="rounded-xl border border-red-500/20 bg-red-500/3 p-5">
+              <h3 className="text-xs font-bold text-red-400/70 mb-3 uppercase tracking-wider">Common Fail Reasons</h3>
+              <div className="space-y-1.5">
+                {HIRING_INSIGHTS.commonFails.map((f, i) => (
+                  <div key={i} className="flex items-start gap-2">
+                    <span className="text-red-400/40 text-xs mt-0.5">&#10005;</span>
+                    <p className="text-xs text-text/50 leading-relaxed">{f}</p>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
