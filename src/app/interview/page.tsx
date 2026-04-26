@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { IOS_QUESTIONS, FDE_QUESTIONS, CULTURE_QUESTIONS, PHASE_PROBLEMS, COMPANY_STRATEGIES, HIRING_INSIGHTS, PROCESS_STAGES, ASSIGNMENT_CHECKLIST, ALGO_GUIDES, BIG_O_GUIDE, BIG_O_COMPARISON, SYSTEM_DESIGN_CASES, FDE_DESIGN_CASES, SD_FRAMEWORK_STEPS, SD_CLARIFYING_QUESTIONS, SD_API_COMPARISON, ASSIGNMENT_DAILY_TIPS, FDE_ASSIGNMENT_DAILY_TIPS, CULTURE_DAILY_TIPS, TECH_DAILY_TOPICS, FDE_TECH_DAILY_TOPICS, CS_TOPICS, CS_DAILY_TOPICS, FDE_CS_DAILY_TOPICS, FDE_ALGO_TEMPLATES, type InterviewQuestion } from "./constants";
+import { IOS_QUESTIONS, FDE_QUESTIONS, CULTURE_QUESTIONS, PHASE_PROBLEMS, COMPANY_STRATEGIES, HIRING_INSIGHTS, PROCESS_STAGES, ASSIGNMENT_CHECKLIST, ALGO_GUIDES, BIG_O_GUIDE, BIG_O_COMPARISON, SYSTEM_DESIGN_CASES, FDE_DESIGN_CASES, SD_FRAMEWORK_STEPS, SD_CLARIFYING_QUESTIONS, SD_API_COMPARISON, ASSIGNMENT_DAILY_TIPS, FDE_ASSIGNMENT_DAILY_TIPS, CULTURE_DAILY_TIPS, TECH_DAILY_TOPICS, FDE_TECH_DAILY_TOPICS, CS_TOPICS, CS_DAILY_TOPICS, FDE_CS_DAILY_TOPICS, FDE_ALGO_TEMPLATES, CAREER_PAGES, TIMER_PRESETS, type InterviewQuestion } from "./constants";
 
 /* ═══════════════════════════════════════════════════════════ */
 /*  TYPES                                                      */
@@ -380,6 +380,11 @@ export default function InterviewPage() {
   const [mounted, setMounted] = useState(false);
   const [revealedCards, setRevealedCards] = useState<Record<string, boolean>>({});
   const [solvedProblems, setSolvedProblems] = useState<Record<string, boolean>>({});
+  const [hardCards, setHardCards] = useState<Record<string, boolean>>({});
+  const [companyDdays, setCompanyDdays] = useState<Record<string, string>>({});
+  const [timerActive, setTimerActive] = useState(false);
+  const [timerSeconds, setTimerSeconds] = useState(0);
+  const [timerLabel, setTimerLabel] = useState("");
 
   // Load from localStorage
   useEffect(() => {
@@ -391,6 +396,10 @@ export default function InterviewPage() {
       if (cards) setRevealedCards(JSON.parse(cards));
       const probs = localStorage.getItem("interview-problems");
       if (probs) setSolvedProblems(JSON.parse(probs));
+      const hard = localStorage.getItem("interview-hard-cards");
+      if (hard) setHardCards(JSON.parse(hard));
+      const ddays = localStorage.getItem("interview-company-ddays");
+      if (ddays) setCompanyDdays(JSON.parse(ddays));
     } catch { /* noop */ }
   }, []);
 
@@ -401,8 +410,36 @@ export default function InterviewPage() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(checkedTasks));
       localStorage.setItem("interview-flashcards", JSON.stringify(revealedCards));
       localStorage.setItem("interview-problems", JSON.stringify(solvedProblems));
+      localStorage.setItem("interview-hard-cards", JSON.stringify(hardCards));
+      localStorage.setItem("interview-company-ddays", JSON.stringify(companyDdays));
     } catch { /* noop */ }
-  }, [checkedTasks, revealedCards, solvedProblems, mounted]);
+  }, [checkedTasks, revealedCards, solvedProblems, hardCards, companyDdays, mounted]);
+
+  // Timer countdown
+  useEffect(() => {
+    if (!timerActive || timerSeconds <= 0) return;
+    const interval = setInterval(() => {
+      setTimerSeconds((s) => {
+        if (s <= 1) { setTimerActive(false); return 0; }
+        return s - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [timerActive, timerSeconds]);
+
+  const startTimer = (seconds: number, label: string) => {
+    setTimerSeconds(seconds);
+    setTimerLabel(label);
+    setTimerActive(true);
+  };
+
+  const formatTimer = (s: number) => {
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+    return `${m}:${String(sec).padStart(2, "0")}`;
+  };
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
     setMousePos({ x: e.clientX, y: e.clientY });
@@ -500,6 +537,25 @@ export default function InterviewPage() {
   const toggleProblem = (title: string) => {
     setSolvedProblems((prev) => ({ ...prev, [title]: !prev[title] }));
   };
+
+  const toggleHard = (id: string) => {
+    setHardCards((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  // Hard cards (review queue)
+  const hardCardsList = useMemo(() => {
+    const allQs = [...(track === "ios" ? IOS_QUESTIONS : FDE_QUESTIONS), ...CULTURE_QUESTIONS];
+    return allQs.filter((q) => hardCards[q.id]);
+  }, [track, hardCards]);
+
+  // Weakness analysis: patterns with lowest progress
+  const weakPatterns = useMemo(() => {
+    return ALGO_PATTERNS
+      .map((p) => ({ ...p, solved: patternProgress[p.id] ?? 0, pct: Math.round(((patternProgress[p.id] ?? 0) / p.problems) * 100) }))
+      .filter((p) => p.pct < 100)
+      .sort((a, b) => a.pct - b.pct)
+      .slice(0, 3);
+  }, [patternProgress]);
 
   // Overall progress percentage
   const progressPercent = Math.round(((today - 1) / TOTAL_DAYS) * 100);
@@ -655,6 +711,156 @@ export default function InterviewPage() {
 
         {/* ═══════════ TAB: OVERVIEW ═══════════ */}
         {activeTab === "overview" && (<>
+
+        {/* ═══════════ TODAY'S SUMMARY ═══════════ */}
+        <section className="mb-8">
+          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-3">
+            Today&apos;s Mission — Day {today}
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <div className="rounded-lg border border-border/30 bg-surface/20 px-4 py-3 flex items-center gap-3">
+              <span className="text-accent text-xs">&#9654;</span>
+              <p className="text-xs text-text/60">코딩테스트: 오늘의 문제 {todayProblems.length}개 + 패턴 연습</p>
+            </div>
+            <div className="rounded-lg border border-border/30 bg-surface/20 px-4 py-3 flex items-center gap-3">
+              <span className="text-purple-400 text-xs">&#9654;</span>
+              <p className="text-xs text-text/60">기술면접: 플래시카드 {todayCards.length}장 리뷰 ({todayReviewed}/{todayCards.length})</p>
+            </div>
+            <div className="rounded-lg border border-border/30 bg-surface/20 px-4 py-3 flex items-center gap-3">
+              <span className="text-cyan-400 text-xs">&#9654;</span>
+              <p className="text-xs text-text/60">CS: {(track === "fde" ? FDE_CS_DAILY_TOPICS : CS_DAILY_TOPICS)[(today - 1) % (track === "fde" ? FDE_CS_DAILY_TOPICS.length : CS_DAILY_TOPICS.length)].title}</p>
+            </div>
+            <div className="rounded-lg border border-border/30 bg-surface/20 px-4 py-3 flex items-center gap-3">
+              <span className="text-red-400 text-xs">&#9654;</span>
+              <p className="text-xs text-text/60">인성면접: {CULTURE_DAILY_TIPS[(today - 1) % CULTURE_DAILY_TIPS.length].title}</p>
+            </div>
+          </div>
+        </section>
+
+        {/* ═══════════ WEAKNESS ANALYSIS ═══════════ */}
+        {weakPatterns.length > 0 && (
+        <section className="mb-8">
+          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-3">
+            Weakness — 집중 공략 패턴
+          </h2>
+          <div className="flex gap-2">
+            {weakPatterns.map((p) => (
+              <div key={p.id} className="flex-1 rounded-lg border border-amber-500/20 bg-amber-500/5 px-4 py-3">
+                <p className="text-xs font-bold text-amber-400/80">{p.nameKo}</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <div className="flex-1 h-1.5 rounded-full bg-surface/60 overflow-hidden">
+                    <div className="h-full rounded-full bg-amber-400/60" style={{ width: `${p.pct}%` }} />
+                  </div>
+                  <span className="text-[10px] font-code text-text/30">{p.solved}/{p.problems}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+        )}
+
+        {/* ═══════════ REVIEW QUEUE (오답노트) ═══════════ */}
+        {hardCardsList.length > 0 && (
+        <section className="mb-8">
+          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-3">
+            Review Queue — 어려운 카드 {hardCardsList.length}장
+          </h2>
+          <div className="space-y-2">
+            {hardCardsList.slice(0, 3).map((q) => (
+              <div key={q.id} className="rounded-lg border border-red-500/20 bg-red-500/5 px-4 py-3 flex items-center gap-3">
+                <span className="text-[10px] font-code px-2 py-0.5 rounded-full bg-red-500/10 text-red-400/60">{q.topic}</span>
+                <p className="text-xs text-text/60 flex-1 truncate">{q.question}</p>
+                <button onClick={() => toggleHard(q.id)} className="text-[10px] text-red-400/40 hover:text-red-400 cursor-pointer">제거</button>
+              </div>
+            ))}
+            {hardCardsList.length > 3 && <p className="text-[10px] text-text/25 text-center">+{hardCardsList.length - 3}장 더</p>}
+          </div>
+        </section>
+        )}
+
+        {/* ═══════════ COMPANY D-DAY ═══════════ */}
+        <section className="mb-8">
+          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-3">
+            Company D-Day
+          </h2>
+          <div className="flex flex-wrap gap-2">
+            {CAREER_PAGES.filter((c) => c.track === track || c.track === "both").slice(0, 6).map((c) => {
+              const dday = companyDdays[c.company];
+              const remaining = dday ? Math.ceil((new Date(dday).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) : null;
+              return (
+                <div key={c.company} className="rounded-lg border border-border/30 bg-surface/20 px-3 py-2 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full" style={{ background: c.color }} />
+                  <span className="text-xs font-semibold">{c.company}</span>
+                  {remaining !== null ? (
+                    <span className={`text-xs font-code ${remaining <= 7 ? "text-red-400" : "text-accent/60"}`}>D-{remaining}</span>
+                  ) : (
+                    <input
+                      type="date"
+                      className="text-[10px] bg-transparent border-b border-border/30 text-text/40 w-24 cursor-pointer"
+                      onChange={(e) => setCompanyDdays((prev) => ({ ...prev, [c.company]: e.target.value }))}
+                      title="지원 마감일 설정"
+                    />
+                  )}
+                  <a href={c.url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-accent/40 hover:text-accent">채용</a>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* ═══════════ MOCK TIMER ═══════════ */}
+        <section className="mb-8">
+          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-3">
+            Mock Timer
+          </h2>
+          {timerActive ? (
+            <div className="rounded-xl border border-accent/30 bg-accent/5 p-6 text-center">
+              <p className="text-xs text-text/40 mb-1">{timerLabel}</p>
+              <p className="text-5xl font-display font-black text-accent tabular-nums">{formatTimer(timerSeconds)}</p>
+              {timerSeconds === 0 && <p className="text-sm text-green-400 mt-2 animate-pulse">Time&apos;s up!</p>}
+              <button onClick={() => setTimerActive(false)} className="mt-3 text-xs text-text/30 hover:text-text/60 cursor-pointer">
+                {timerSeconds === 0 ? "닫기" : "중지"}
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {TIMER_PRESETS.map((t) => (
+                <button
+                  key={t.label}
+                  onClick={() => startTimer(t.seconds, t.label)}
+                  className="rounded-lg border border-border/30 bg-surface/20 px-3 py-2 text-xs text-text/50 hover:text-text hover:border-accent/30 transition-colors cursor-pointer"
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* ═══════════ WEEKLY REPORT ═══════════ */}
+        <section className="mb-8">
+          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-3">
+            Weekly Report — Week {currentWeek}
+          </h2>
+          <div className="grid grid-cols-4 gap-2">
+            <div className="rounded-lg border border-border/30 bg-surface/20 p-3 text-center">
+              <p className="text-2xl font-display font-black text-accent">{totalChecked}</p>
+              <p className="text-[10px] text-text/30 mt-0.5">총 체크</p>
+            </div>
+            <div className="rounded-lg border border-border/30 bg-surface/20 p-3 text-center">
+              <p className="text-2xl font-display font-black text-text/60">{totalReviewed}</p>
+              <p className="text-[10px] text-text/30 mt-0.5">카드 리뷰</p>
+            </div>
+            <div className="rounded-lg border border-border/30 bg-surface/20 p-3 text-center">
+              <p className="text-2xl font-display font-black text-green-400">{Object.values(solvedProblems).filter(Boolean).length}</p>
+              <p className="text-[10px] text-text/30 mt-0.5">문제 풀이</p>
+            </div>
+            <div className="rounded-lg border border-border/30 bg-surface/20 p-3 text-center">
+              <p className="text-2xl font-display font-black" style={{ color: streak >= 7 ? "#f97316" : undefined }}>{streak}</p>
+              <p className="text-[10px] text-text/30 mt-0.5">연속 일수</p>
+            </div>
+          </div>
+        </section>
 
         {/* ═══════════ PHASE ROADMAP ═══════════ */}
         <section className="mb-12">
@@ -1390,6 +1596,16 @@ export default function InterviewPage() {
                   {isRevealed && (
                     <div className="px-5 py-4 border-t border-border/20 bg-accent/3">
                       <p className="text-sm text-text/60 leading-[1.8]">{q.answer}</p>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); toggleHard(q.id); }}
+                        className={`mt-3 text-[10px] font-code px-2.5 py-1 rounded-full cursor-pointer transition-colors ${
+                          hardCards[q.id]
+                            ? "bg-red-500/15 text-red-400/70 hover:bg-red-500/25"
+                            : "bg-surface/40 text-text/30 hover:text-red-400/60"
+                        }`}
+                      >
+                        {hardCards[q.id] ? "어려움 ✓ (복습 큐)" : "어려움 마크"}
+                      </button>
                     </div>
                   )}
                 </div>

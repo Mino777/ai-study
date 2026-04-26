@@ -2281,3 +2281,43 @@ export const FDE_DESIGN_CASES: SystemDesignCase[] = [
    "수동 Excel 통합 3일 → 자동 파이프라인 30분"`,
   },
 ];
+
+/* ═══════════════════════════════════════════════════════════ */
+/*  CAREER PAGES (채용 페이지 직링크)                           */
+/* ═══════════════════════════════════════════════════════════ */
+
+export interface CareerPage {
+  company: string;
+  color: string;
+  url: string;
+  keyword: string;
+  track: "ios" | "fde" | "both";
+}
+
+export const CAREER_PAGES: CareerPage[] = [
+  { company: "토스", color: "#3b82f6", url: "https://toss.im/career/jobs", keyword: "iOS", track: "both" },
+  { company: "당근", color: "#ff6f00", url: "https://about.daangn.com/jobs/", keyword: "iOS Engineer", track: "ios" },
+  { company: "카카오", color: "#fee500", url: "https://careers.kakao.com/jobs", keyword: "iOS", track: "ios" },
+  { company: "네이버", color: "#03c75a", url: "https://recruit.navercorp.com/rcrt/list.do", keyword: "iOS", track: "ios" },
+  { company: "쿠팡", color: "#e4002b", url: "https://www.coupang.jobs/kr/jobs/", keyword: "iOS", track: "ios" },
+  { company: "라인", color: "#06c755", url: "https://careers.linecorp.com/jobs", keyword: "iOS", track: "ios" },
+  { company: "채널톡", color: "#3b82f6", url: "https://channel.io/ko/jobs", keyword: "FDE", track: "fde" },
+  { company: "마키나락스", color: "#10b981", url: "https://www.makinarocks.ai/careers", keyword: "FDE", track: "fde" },
+  { company: "크래프톤", color: "#f59e0b", url: "https://careers.krafton.com/", keyword: "AI", track: "fde" },
+  { company: "원티드", color: "#3b82f6", url: "https://www.wanted.co.kr/search?query=iOS+개발자&tab=position", keyword: "iOS 전체", track: "both" },
+];
+
+/* ═══════════════════════════════════════════════════════════ */
+/*  MOCK INTERVIEW TIMER PRESETS                               */
+/* ═══════════════════════════════════════════════════════════ */
+
+export const TIMER_PRESETS = [
+  { label: "플래시카드 (30초/장)", seconds: 30, color: "#3b82f6", icon: "card" },
+  { label: "코딩테스트 Easy (15분)", seconds: 15 * 60, color: "#10b981", icon: "code" },
+  { label: "코딩테스트 Medium (45분)", seconds: 45 * 60, color: "#f59e0b", icon: "code" },
+  { label: "코딩테스트 Hard (70분)", seconds: 70 * 60, color: "#ef4444", icon: "code" },
+  { label: "시스템 디자인 (45분)", seconds: 45 * 60, color: "#8b5cf6", icon: "design" },
+  { label: "카카오 코테 (5시간)", seconds: 5 * 60 * 60, color: "#fee500", icon: "marathon" },
+  { label: "1분 자기소개", seconds: 60, color: "#ec4899", icon: "mic" },
+  { label: "STAR 답변 (2분)", seconds: 120, color: "#06b6d4", icon: "mic" },
+];
