@@ -1,0 +1,116 @@
+---
+title: "Multi-Agent Quality Sprint — 기능 스프린트 사이에 품질 부채를 병렬로 청산하는 패턴"
+category: harness-engineering
+date: "2026-04-26"
+tags:
+  - quality-sprint
+  - multi-agent
+  - tech-debt
+  - testing
+  - harness-engineering
+  - parallel-dispatch
+confidence: 2
+last_verified: "2026-04-26"
+applicable_to: ["multi-agent", "architect-worker"]
+connections:
+  - spec-driven-development-for-ai-agents
+  - skillify-failure-to-skill-practice
+---
+
+## 문제: 기능 스프린트만 반복하면 품질 부채가 누적된다
+
+Aidy 프로젝트에서 autoceo로 175개 WO를 처리하며 기능을 빠르게 쌓았다.
+그런데 돌아보니:
+
+- Server: Repository 테스트 커버리지 **7%** (43개 중 3개만)
+- iOS: Force unwrap **250+개**, TMA 의존성 위반
+- Android: mutableStateOf **431개** 산발, ProGuard 규칙 없음
+
+기능 WO에는 "빌드 통과 + 해당 기능 테스트" 게이트만 있었고,
+**기존 코드의 품질 저하를 감지하는 게이트는 없었다.**
+
+## 해결: 3단계 품질 스프린트 패턴
+
+### Step 1: 병렬 품질 점검 (Explore subagent × 3)
+
+```
+Architect
+  ├── Explore (haiku) → Server 점검
+  ├── Explore (haiku) → iOS 점검
+  └── Explore (haiku) → Android 점검
+```
+
+각 subagent에게 동일한 체크리스트를 준다:
+1. 테스트 현황 (파일 수, 커버리지 갭)
+2. 코드 품질 (TODO/FIXME, force unwrap, deprecated API)
+3. 빌드/CI 상태
+4. 보안 (하드코딩, 취약 의존성)
+5. 아키텍처 위반
+6. 에러 처리 일관성
+
+**핵심**: haiku 모델로 탐색을 격리하면 architect 컨텍스트를 오염시키지 않으면서
+3개 프로젝트를 동시에 수 분 내에 스캔할 수 있다.
+
+### Step 2: P1/P2 분류 → WO 일괄 발행
+
+점검 결과를 심각도로 분류한다:
+- **P1**: 런타임 크래시 위험, 테스트 커버리지 심각 부족
+- **P2**: 코드 품질, 최적화, 보안 강화
+- **P3**: 접근성, 문서화 (이번 스프린트에서 제외)
+
+워커당 3WO씩 총 9WO를 한번에 작성하고 일괄 활성화.
+
+### Step 3: 3워커 동시 디스패치
+
+```bash
+./architect-cli.sh send server "WO-176/177/178 순서대로 작업해줘..."
+./architect-cli.sh send ios "WO-179/180/181 순서대로 작업해줘..."
+./architect-cli.sh send android "WO-182/183/184 순서대로 작업해줘..."
+```
+
+품질 WO는 워커 간 의존성이 없으므로 **완전 병렬 실행**이 가능하다.
+기능 WO(Server API → Client 구현)와 달리 순서 제약이 없다.
+
+## 실전 결과 (2026-04-26)
+
+| 워커 | WO | Before | After |
+|------|-----|--------|-------|
+| Server | 176: Repo 테스트 | 3/43 (7%) | 43/43 (100%) |
+| Server | 177: Service 테스트 | 43/51 (84%) | 51/51 (100%) |
+| Server | 178: 보안 스캔 | 없음 | OWASP 주 1회 자동 |
+| iOS | 179: Force unwrap | 250+ | 0 (Networking) |
+| iOS | 180: TMA 의존성 | Settings→Memory 위반 | Interface 경유로 수정 |
+| iOS | 181: 에러 처리 | do-catch 26개 산발 | toUserMessage() 중앙화 |
+| Android | 182: 안정 deps | biometric alpha | 1.1.0 안정 |
+| Android | 183: 상태 관리 | mutableStateOf 431 | 156 (-64%) |
+| Android | 184: ProGuard | 없음 | 35줄 규칙 + release 검증 |
+
+**총 소요**: ~1시간 (3워커 병렬)
+**Server 테스트**: 1,033 → 1,590 (+54%)
+
+## 교훈
+
+### 1. 품질 스프린트는 주기적으로 삽입해야 한다
+10 WO 단위, 또는 autoceo 5라운드마다 1회 품질 점검을 끼워넣는 것이 이상적.
+기능만 쌓으면 기술 부채가 기하급수적으로 증가한다.
+
+### 2. 리팩터링 WO에도 테스트 숫자 보고가 필수
+"tuist build 통과"만으로는 부족. 리팩터링이 기존 테스트를 깨뜨리지 않았는지
+**테스트 실행 숫자**를 완료기준에 포함해야 한다.
+
+### 3. Gate-1에서 완료기준 체크리스트를 라인별로 대조
+워커가 "완료"를 보고해도 WO의 체크리스트를 하나씩 검증해야 한다.
+이번에 WO-178의 "첫 스캔 결과 보고" 완료기준을 검증하지 않은 실수가 있었다.
+
+### 4. 품질 점검 자체를 자동화 스킬로 만들 수 있다
+Explore subagent 3병렬 → P1/P2 분류 → WO 생성까지
+`/quality-check` 같은 스킬로 원스톱 자동화하면 더 효율적.
+
+## For AI Agents
+
+이 패턴을 적용할 때:
+- 품질 점검은 반드시 **haiku subagent로 격리** (architect 컨텍스트 보호)
+- P1/P2 분류 기준: P1은 런타임 영향, P2는 개발자 경험/유지보수
+- 워커당 WO 3개가 적정 (1시간 내 완료 가능한 범위)
+- 품질 WO는 기능 WO와 달리 **워커 간 순서 의존성 없음** → 완전 병렬
+- 리팩터링 WO라도 테스트 숫자 보고 완료기준 필수 포함
