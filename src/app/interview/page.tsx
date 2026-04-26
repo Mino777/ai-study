@@ -686,7 +686,7 @@ export default function InterviewPage() {
             {PHASES.map((p) => (
               <span
                 key={p.id}
-                className="text-[10px] font-code"
+                className="text-xs font-code"
                 style={{
                   color: today >= p.dayRange[0] ? p.color : `${p.color}40`,
                   width: `${((p.dayRange[1] - p.dayRange[0] + 1) / TOTAL_DAYS) * 100}%`,
@@ -734,7 +734,7 @@ export default function InterviewPage() {
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
+              className={`shrink-0 px-4 py-2.5 rounded-lg text-base font-medium transition-all cursor-pointer ${
                 activeTab === tab.key
                   ? "bg-accent text-white shadow-sm"
                   : "bg-surface/30 text-text/40 hover:text-text/70 hover:bg-surface/50"
@@ -771,27 +771,27 @@ export default function InterviewPage() {
             <div className="flex items-center gap-6">
               <div className="text-center">
                 <p className={`text-2xl font-display font-black ${streak >= 7 ? "text-orange-400" : "text-text/50"}`}>{streak}</p>
-                <p className="text-[10px] text-text/25">연속</p>
+                <p className="text-xs text-text/25">연속</p>
               </div>
               <div className="w-px h-8 bg-border/20" />
               <div className="text-center">
                 <p className="text-2xl font-display font-black text-accent">{quizCorrectTotal}</p>
-                <p className="text-[10px] text-text/25">퀴즈 정답</p>
+                <p className="text-xs text-text/25">퀴즈 정답</p>
               </div>
               <div className="w-px h-8 bg-border/20" />
               <div className="text-center">
                 <p className="text-2xl font-display font-black text-green-400">{Object.values(solvedProblems).filter(Boolean).length}</p>
-                <p className="text-[10px] text-text/25">문제 풀이</p>
+                <p className="text-xs text-text/25">문제 풀이</p>
               </div>
               <div className="w-px h-8 bg-border/20" />
               <div className="text-center">
                 <p className="text-2xl font-display font-black text-text/60">{totalReviewed}</p>
-                <p className="text-[10px] text-text/25">카드 리뷰</p>
+                <p className="text-xs text-text/25">카드 리뷰</p>
               </div>
             </div>
             <div className="text-right">
               <p className="text-xs text-text/30 font-code">Week {currentWeek}</p>
-              <p className="text-[10px] text-text/20">Phase {currentPhase.id} · {currentPhase.title}</p>
+              <p className="text-xs text-text/20">Phase {currentPhase.id} · {currentPhase.title}</p>
             </div>
           </div>
         </section>
@@ -802,19 +802,19 @@ export default function InterviewPage() {
           <div className="grid grid-cols-2 gap-2">
             <button onClick={() => setActiveTab("coding")} className="rounded-xl border border-border/25 bg-surface/15 px-4 py-3 text-left hover:bg-surface/30 transition-colors cursor-pointer group">
               <p className="text-xs text-accent/60 group-hover:text-accent font-medium">코딩테스트</p>
-              <p className="text-[11px] text-text/35 mt-0.5">문제 {todayProblems.length}개 + 패턴 연습</p>
+              <p className="text-xs text-text/35 mt-0.5">문제 {todayProblems.length}개 + 패턴 연습</p>
             </button>
             <button onClick={() => setActiveTab("tech")} className="rounded-xl border border-border/25 bg-surface/15 px-4 py-3 text-left hover:bg-surface/30 transition-colors cursor-pointer group">
               <p className="text-xs text-purple-400/60 group-hover:text-purple-400 font-medium">기술면접</p>
-              <p className="text-[11px] text-text/35 mt-0.5">플래시카드 {todayCards.length}장 ({todayReviewed}/{todayCards.length})</p>
+              <p className="text-xs text-text/35 mt-0.5">플래시카드 {todayCards.length}장 ({todayReviewed}/{todayCards.length})</p>
             </button>
             <button onClick={() => setActiveTab("cs")} className="rounded-xl border border-border/25 bg-surface/15 px-4 py-3 text-left hover:bg-surface/30 transition-colors cursor-pointer group">
               <p className="text-xs text-cyan-400/60 group-hover:text-cyan-400 font-medium">CS 기초</p>
-              <p className="text-[11px] text-text/35 mt-0.5">{(track === "fde" ? FDE_CS_DAILY_TOPICS : CS_DAILY_TOPICS)[(today - 1) % (track === "fde" ? FDE_CS_DAILY_TOPICS.length : CS_DAILY_TOPICS.length)].title}</p>
+              <p className="text-xs text-text/35 mt-0.5">{(track === "fde" ? FDE_CS_DAILY_TOPICS : CS_DAILY_TOPICS)[(today - 1) % (track === "fde" ? FDE_CS_DAILY_TOPICS.length : CS_DAILY_TOPICS.length)].title}</p>
             </button>
             <button onClick={() => setActiveTab("culture")} className="rounded-xl border border-border/25 bg-surface/15 px-4 py-3 text-left hover:bg-surface/30 transition-colors cursor-pointer group">
               <p className="text-xs text-red-400/60 group-hover:text-red-400 font-medium">인성면접</p>
-              <p className="text-[11px] text-text/35 mt-0.5">{CULTURE_DAILY_TIPS[(today - 1) % CULTURE_DAILY_TIPS.length].title}</p>
+              <p className="text-xs text-text/35 mt-0.5">{CULTURE_DAILY_TIPS[(today - 1) % CULTURE_DAILY_TIPS.length].title}</p>
             </button>
           </div>
         </section>
@@ -833,7 +833,7 @@ export default function InterviewPage() {
                 <p className="text-xs font-bold text-amber-400/70">{p.nameKo}</p>
                 <div className="flex items-center gap-2 mt-1">
                   <div className="flex-1 h-1 rounded-full bg-surface/60 overflow-hidden"><div className="h-full rounded-full bg-amber-400/60" style={{ width: `${p.pct}%` }} /></div>
-                  <span className="text-[10px] font-code text-text/25">{p.solved}/{p.problems}</span>
+                  <span className="text-xs font-code text-text/25">{p.solved}/{p.problems}</span>
                 </div>
               </div>
             ))}
@@ -852,7 +852,7 @@ export default function InterviewPage() {
               <div key={q.id} className="flex items-center gap-2 text-xs text-text/50">
                 <span className="text-red-400/40">&#9679;</span>
                 <span className="flex-1 truncate">{q.question}</span>
-                <button onClick={() => toggleHard(q.id)} className="text-[10px] text-text/20 hover:text-red-400 cursor-pointer">&#10005;</button>
+                <button onClick={() => toggleHard(q.id)} className="text-xs text-text/20 hover:text-red-400 cursor-pointer">&#10005;</button>
               </div>
             ))}
           </div>
@@ -875,9 +875,9 @@ export default function InterviewPage() {
                   {remaining !== null ? (
                     <span className={`text-xs font-code ${remaining <= 7 ? "text-red-400" : "text-accent/50"}`}>D-{remaining}</span>
                   ) : (
-                    <input type="date" className="text-[10px] bg-transparent border-b border-border/20 text-text/30 w-24 cursor-pointer" onChange={(e) => setCompanyDdays((prev) => ({ ...prev, [c.company]: e.target.value }))} />
+                    <input type="date" className="text-xs bg-transparent border-b border-border/20 text-text/30 w-24 cursor-pointer" onChange={(e) => setCompanyDdays((prev) => ({ ...prev, [c.company]: e.target.value }))} />
                   )}
-                  <a href={c.url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-accent/30 hover:text-accent">&#8599;</a>
+                  <a href={c.url} target="_blank" rel="noopener noreferrer" className="text-xs text-accent/30 hover:text-accent">&#8599;</a>
                 </div>
               );
             })}
@@ -900,7 +900,7 @@ export default function InterviewPage() {
             ) : (
               <div className="flex flex-wrap gap-1.5">
                 {TIMER_PRESETS.map((t) => (
-                  <button key={t.label} onClick={() => startTimer(t.seconds, t.label)} className="rounded-lg border border-border/20 bg-surface/10 px-2.5 py-1.5 text-[11px] text-text/40 hover:text-text hover:border-accent/30 transition-colors cursor-pointer">{t.label}</button>
+                  <button key={t.label} onClick={() => startTimer(t.seconds, t.label)} className="rounded-lg border border-border/20 bg-surface/10 px-2.5 py-1.5 text-xs text-text/40 hover:text-text hover:border-accent/30 transition-colors cursor-pointer">{t.label}</button>
                 ))}
               </div>
             )}
@@ -916,7 +916,7 @@ export default function InterviewPage() {
 
         {/* ═══════════ PHASE ROADMAP ═══════════ */}
         <section className="mb-12">
-          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-6">
+          <h2 className="font-display text-base font-bold uppercase tracking-[0.15em] text-text/45 mb-6">
             4-Phase Roadmap
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -993,7 +993,7 @@ export default function InterviewPage() {
         {/* ═══════════ DAY SELECTOR ═══════════ */}
         <section className="mb-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45">
+            <h2 className="font-display text-base font-bold uppercase tracking-[0.15em] text-text/45">
               Daily Training — Day {selectedDay}
             </h2>
             <div className="flex items-center gap-2">
@@ -1032,7 +1032,7 @@ export default function InterviewPage() {
                   key={day}
                   onClick={() => setSelectedDay(day)}
                   style={{ width: "calc(10% - 3.6px)", height: 32, ...(isToday ? { color: phase?.color } : {}) }}
-                  className={`rounded-md text-[10px] font-code flex items-center justify-center transition-all cursor-pointer ${
+                  className={`rounded-md text-xs font-code flex items-center justify-center transition-all cursor-pointer ${
                     isSelected
                       ? "ring-2 ring-accent ring-offset-1 ring-offset-bg"
                       : ""
@@ -1093,7 +1093,7 @@ export default function InterviewPage() {
                       </p>
                     </div>
                     <span
-                      className="shrink-0 text-[10px] font-code px-2 py-0.5 rounded-full mt-0.5"
+                      className="shrink-0 text-xs font-code px-2 py-0.5 rounded-full mt-0.5"
                       style={{ color: cat.color, background: `${cat.color}12` }}
                     >
                       {cat.label}
@@ -1109,7 +1109,7 @@ export default function InterviewPage() {
 
         {/* ═══════════ WEEKLY FOCUS ═══════════ */}
         <section className="mb-12">
-          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">
+          <h2 className="font-display text-base font-bold uppercase tracking-[0.15em] text-text/45 mb-4">
             Week {currentWeek} Focus — {track === "ios" ? "iOS" : "FDE"} Track
           </h2>
           <div className="rounded-2xl border border-border/40 bg-surface/30 p-5">
@@ -1126,7 +1126,7 @@ export default function InterviewPage() {
 
         {/* ═══════════ PHASE DETAIL ═══════════ */}
         <section className="mb-12">
-          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">
+          <h2 className="font-display text-base font-bold uppercase tracking-[0.15em] text-text/45 mb-4">
             Current Phase Detail
           </h2>
           <div className="space-y-3">
@@ -1150,7 +1150,7 @@ export default function InterviewPage() {
                       Day {m.dayRange[0]}-{m.dayRange[1]}
                     </span>
                   </div>
-                  <p className="text-xs text-text/50 leading-relaxed">{m.description}</p>
+                  <p className="text-sm text-text/50 leading-relaxed">{m.description}</p>
                 </div>
               );
             })}
@@ -1166,7 +1166,7 @@ export default function InterviewPage() {
 
         {/* ═══════════ COMPANY CODING STYLES ═══════════ */}
         <section className="mb-12">
-          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">
+          <h2 className="font-display text-base font-bold uppercase tracking-[0.15em] text-text/45 mb-4">
             회사별 코딩테스트 스타일
           </h2>
           <div className="space-y-2">
@@ -1174,32 +1174,32 @@ export default function InterviewPage() {
               <details key={c.company} className="rounded-xl border border-border/30 bg-surface/20 overflow-hidden">
                 <summary className="px-5 py-3.5 cursor-pointer hover:bg-surface/40 transition-colors flex items-center gap-3">
                   <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: c.color }} />
-                  <span className="text-sm font-bold flex-1">{c.company}</span>
+                  <span className="text-base font-bold flex-1">{c.company}</span>
                   <span className="text-xs text-text/25 font-code hidden md:block">{c.format.split("·")[0]}</span>
                 </summary>
                 <div className="px-5 pb-5 border-t border-border/20 pt-4 space-y-3">
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <p className="text-[10px] font-code text-text/30 mb-1">형식</p>
+                      <p className="text-xs font-code text-text/30 mb-1">형식</p>
                       <p className="text-xs text-text/60">{c.format}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] font-code text-text/30 mb-1">난이도</p>
+                      <p className="text-xs font-code text-text/30 mb-1">난이도</p>
                       <p className="text-xs text-text/60">{c.difficulty}</p>
                     </div>
                   </div>
                   <div>
-                    <p className="text-[10px] font-code text-text/30 mb-1">출제 중점</p>
+                    <p className="text-xs font-code text-text/30 mb-1">출제 중점</p>
                     <div className="flex flex-wrap gap-1.5">
                       {c.focusAreas.map((a) => <span key={a} className="text-xs px-2.5 py-1 rounded-lg bg-surface/60 text-text/50 border border-border/30">{a}</span>)}
                     </div>
                   </div>
                   <div className="rounded-lg bg-accent/5 border border-accent/15 px-3 py-2">
-                    <p className="text-[10px] font-code text-accent/50 mb-1">합격 전략</p>
-                    {c.tips.map((t, i) => <p key={i} className="text-xs text-text/55 leading-relaxed">&#8226; {t}</p>)}
+                    <p className="text-xs font-code text-accent/50 mb-1">합격 전략</p>
+                    {c.tips.map((t, i) => <p key={i} className="text-sm text-text/55 leading-relaxed">&#8226; {t}</p>)}
                   </div>
                   <div>
-                    <p className="text-[10px] font-code text-text/30 mb-1">최근 기출 경향</p>
+                    <p className="text-xs font-code text-text/30 mb-1">최근 기출 경향</p>
                     {c.recentTopics.map((t, i) => <p key={i} className="text-xs text-text/40 leading-relaxed">{t}</p>)}
                   </div>
                 </div>
@@ -1210,7 +1210,7 @@ export default function InterviewPage() {
 
         {/* ═══════════ KEY RESOURCES ═══════════ */}
         <section className="mb-12">
-          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">
+          <h2 className="font-display text-base font-bold uppercase tracking-[0.15em] text-text/45 mb-4">
             Key Resources
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -1241,7 +1241,7 @@ export default function InterviewPage() {
 
         {/* ═══════════ ALGORITHM PATTERNS ═══════════ */}
         <section className="mb-12">
-          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">
+          <h2 className="font-display text-base font-bold uppercase tracking-[0.15em] text-text/45 mb-4">
             14 Algorithm Patterns
             <span className="ml-2 text-text/25 normal-case tracking-normal font-normal">— Grokking 기반 패턴 마스터리</span>
           </h2>
@@ -1275,17 +1275,17 @@ export default function InterviewPage() {
                       style={{ width: `${pct}%`, background: mastered ? "#10b981" : "#3b82f6" }}
                     />
                   </div>
-                  <p className="text-[10px] font-code text-text/30">{solved}/{p.problems}</p>
+                  <p className="text-xs font-code text-text/30">{solved}/{p.problems}</p>
                 </button>
               );
             })}
           </div>
-          <p className="text-[10px] text-text/25 mt-2">* 클릭하면 풀이 수 +1. 각 패턴별 목표 문제 수 달성 시 마스터.</p>
+          <p className="text-xs text-text/25 mt-2">* 클릭하면 풀이 수 +1. 각 패턴별 목표 문제 수 달성 시 마스터.</p>
         </section>
 
         {/* ═══════════ ALGORITHM GUIDES ═══════════ */}
         <section className="mb-12">
-          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">
+          <h2 className="font-display text-base font-bold uppercase tracking-[0.15em] text-text/45 mb-4">
             Algorithm Playbook
             <span className="ml-2 text-text/25 normal-case tracking-normal font-normal">— 유형별 완전 정복 가이드</span>
           </h2>
@@ -1306,7 +1306,7 @@ export default function InterviewPage() {
 
                   {/* 이 패턴을 쓸 때 */}
                   <div>
-                    <p className="text-[10px] font-code font-bold text-text/40 mb-1.5 uppercase tracking-wider">이런 문제가 나오면 이 패턴!</p>
+                    <p className="text-xs font-code font-bold text-text/40 mb-1.5 uppercase tracking-wider">이런 문제가 나오면 이 패턴!</p>
                     <div className="flex flex-wrap gap-1.5">
                       {guide.whenToUse.map((signal, i) => (
                         <span key={i} className="text-xs px-2.5 py-1 rounded-lg bg-surface/60 text-text/60 border border-border/30">{signal}</span>
@@ -1316,22 +1316,22 @@ export default function InterviewPage() {
 
                   {/* 시각적 설명 */}
                   <div className="rounded-lg bg-bg/80 border border-border/30 p-4 overflow-x-auto">
-                    <p className="text-[10px] font-code font-bold text-text/30 mb-2 uppercase tracking-wider">Visual</p>
+                    <p className="text-xs font-code font-bold text-text/30 mb-2 uppercase tracking-wider">Visual</p>
                     <pre className="text-xs font-code text-text/60 leading-relaxed whitespace-pre">{guide.visual}</pre>
                   </div>
 
                   {/* 풀이 순서 */}
                   <div>
-                    <p className="text-[10px] font-code font-bold text-text/40 mb-1.5 uppercase tracking-wider">풀이 순서</p>
+                    <p className="text-xs font-code font-bold text-text/40 mb-1.5 uppercase tracking-wider">풀이 순서</p>
                     <div className="space-y-1">
                       {guide.steps.map((step, i) => (
                         <div key={i} className="flex items-start gap-2">
                           {!step.startsWith("  ") ? (
-                            <span className="shrink-0 w-4 h-4 rounded bg-accent/10 text-accent/60 flex items-center justify-center text-[10px] font-bold mt-0.5">{i + 1}</span>
+                            <span className="shrink-0 w-4 h-4 rounded bg-accent/10 text-accent/60 flex items-center justify-center text-xs font-bold mt-0.5">{i + 1}</span>
                           ) : (
                             <span className="shrink-0 w-4" />
                           )}
-                          <p className="text-xs text-text/60 leading-relaxed">{step}</p>
+                          <p className="text-sm text-text/60 leading-relaxed">{step}</p>
                         </div>
                       ))}
                     </div>
@@ -1340,15 +1340,15 @@ export default function InterviewPage() {
                   {/* 템플릿 코드 */}
                   <div className="rounded-lg bg-bg/80 border border-border/30 overflow-hidden">
                     <div className="flex items-center justify-between px-3 py-1.5 border-b border-border/20">
-                      <span className="text-[10px] font-code text-text/30">{guide.templateLang} · 바로 쓸 수 있는 템플릿</span>
-                      <span className="text-[10px] font-code text-text/20">{guide.complexity}</span>
+                      <span className="text-xs font-code text-text/30">{guide.templateLang} · 바로 쓸 수 있는 템플릿</span>
+                      <span className="text-xs font-code text-text/20">{guide.complexity}</span>
                     </div>
                     <pre className="p-4 text-xs font-code text-text/60 leading-relaxed overflow-x-auto whitespace-pre">{guide.template}</pre>
                   </div>
 
                   {/* 대표 문제 */}
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-code text-text/30">대표 문제:</span>
+                    <span className="text-xs font-code text-text/30">대표 문제:</span>
                     <span className="text-xs text-text/50">{guide.representative}</span>
                   </div>
                 </div>
@@ -1359,7 +1359,7 @@ export default function InterviewPage() {
 
         {/* ═══════════ TIMEBOX RULES ═══════════ */}
         <section className="mb-12">
-          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">
+          <h2 className="font-display text-base font-bold uppercase tracking-[0.15em] text-text/45 mb-4">
             Timebox Rules
             <span className="ml-2 text-text/25 normal-case tracking-normal font-normal">— 난이도별 시간 제한</span>
           </h2>
@@ -1371,7 +1371,7 @@ export default function InterviewPage() {
                   <span className="text-sm font-bold">{r.level}</span>
                 </div>
                 <p className="text-2xl font-display font-black mb-1" style={{ color: r.color }}>{r.time}</p>
-                <p className="text-[11px] text-text/40 leading-snug">{r.give_up}</p>
+                <p className="text-xs text-text/40 leading-snug">{r.give_up}</p>
               </div>
             ))}
           </div>
@@ -1379,7 +1379,7 @@ export default function InterviewPage() {
 
         {/* ═══════════ LEVEL-UP CRITERIA ═══════════ */}
         <section className="mb-12">
-          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">
+          <h2 className="font-display text-base font-bold uppercase tracking-[0.15em] text-text/45 mb-4">
             Level-Up Criteria
             <span className="ml-2 text-text/25 normal-case tracking-normal font-normal">— ZPD 기반 자동 레벨업</span>
           </h2>
@@ -1391,8 +1391,8 @@ export default function InterviewPage() {
                   <span className="text-text/20">&rarr;</span>
                   <span className="text-xs font-code px-2 py-0.5 rounded-full bg-green-500/10 text-green-400/70">{lc.to}</span>
                 </div>
-                <p className="text-xs text-text/60 leading-relaxed mb-1">{lc.criteria}</p>
-                <p className="text-[10px] text-text/30 font-code">목표: {lc.dayTarget}</p>
+                <p className="text-sm text-text/60 leading-relaxed mb-1">{lc.criteria}</p>
+                <p className="text-xs text-text/30 font-code">목표: {lc.dayTarget}</p>
               </div>
             ))}
           </div>
@@ -1400,7 +1400,7 @@ export default function InterviewPage() {
 
         {/* ═══════════ 70/20/10 RULE ═══════════ */}
         <section className="mb-12">
-          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">
+          <h2 className="font-display text-base font-bold uppercase tracking-[0.15em] text-text/45 mb-4">
             Daily Time Split
             <span className="ml-2 text-text/25 normal-case tracking-normal font-normal">— 70/20/10 법칙</span>
           </h2>
@@ -1414,17 +1414,17 @@ export default function InterviewPage() {
               <div>
                 <p className="text-2xl font-display font-black text-accent/70">70%</p>
                 <p className="text-xs text-text/50 mt-0.5">신규 문제</p>
-                <p className="text-[10px] text-text/30">못 푸는 영역에 도전</p>
+                <p className="text-xs text-text/30">못 푸는 영역에 도전</p>
               </div>
               <div>
                 <p className="text-2xl font-display font-black text-amber-400/70">20%</p>
                 <p className="text-xs text-text/50 mt-0.5">틀린 문제 복습</p>
-                <p className="text-[10px] text-text/30">1일/3일/7일 간격 재풀이</p>
+                <p className="text-xs text-text/30">1일/3일/7일 간격 재풀이</p>
               </div>
               <div>
                 <p className="text-2xl font-display font-black text-green-400/70">10%</p>
                 <p className="text-xs text-text/50 mt-0.5">워밍업</p>
-                <p className="text-[10px] text-text/30">자신감 유지용 쉬운 문제</p>
+                <p className="text-xs text-text/30">자신감 유지용 쉬운 문제</p>
               </div>
             </div>
           </div>
@@ -1432,7 +1432,7 @@ export default function InterviewPage() {
 
         {/* Today's Problems */}
         <section className="mb-12">
-          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">
+          <h2 className="font-display text-base font-bold uppercase tracking-[0.15em] text-text/45 mb-4">
             Today&apos;s Problems
             <span className="ml-2 text-text/25 normal-case tracking-normal font-normal">— Phase {currentPhase.id} 추천 문제</span>
           </h2>
@@ -1443,9 +1443,9 @@ export default function InterviewPage() {
                 <div className="flex-1 min-w-0">
                   <a href={p.url} target="_blank" rel="noopener noreferrer" className={`text-sm font-medium hover:text-accent transition-colors ${solvedProblems[p.title] ? "line-through text-text/30" : "text-text/80"}`}>{p.title}</a>
                   <div className="flex items-center gap-2 mt-1">
-                    <span className="text-[10px] font-code text-text/30">{p.platform}</span>
-                    <span className="text-[10px] font-code text-accent/50">{p.difficulty}</span>
-                    <span className="text-[10px] font-code text-text/20">{p.topic}</span>
+                    <span className="text-xs font-code text-text/30">{p.platform}</span>
+                    <span className="text-xs font-code text-accent/50">{p.difficulty}</span>
+                    <span className="text-xs font-code text-text/20">{p.topic}</span>
                   </div>
                 </div>
                 <a href={p.url} target="_blank" rel="noopener noreferrer" className="shrink-0 text-xs text-accent/50 hover:text-accent transition-colors">풀러가기 &rarr;</a>
@@ -1456,13 +1456,13 @@ export default function InterviewPage() {
 
         {/* Big-O Notation Guide */}
         <section className="mb-12">
-          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">
+          <h2 className="font-display text-base font-bold uppercase tracking-[0.15em] text-text/45 mb-4">
             Big-O Notation
             <span className="ml-2 text-text/25 normal-case tracking-normal font-normal">— 시간복잡도 한눈에 이해하기</span>
           </h2>
           {/* 비교 바 */}
           <div className="rounded-xl border border-border/40 bg-surface/30 p-5 mb-4">
-            <p className="text-[10px] font-code text-text/30 mb-3">n=100 기준 연산 횟수 비교</p>
+            <p className="text-xs font-code text-text/30 mb-3">n=100 기준 연산 횟수 비교</p>
             <div className="space-y-2">
               {BIG_O_COMPARISON.map((item) => {
                 const entry = BIG_O_GUIDE.find((e) => e.notation === item.notation);
@@ -1472,7 +1472,7 @@ export default function InterviewPage() {
                     <div className="flex-1 h-3 rounded-full bg-surface/60 overflow-hidden">
                       <div className="h-full rounded-full transition-all" style={{ width: `${item.bar}%`, background: entry?.color }} />
                     </div>
-                    <span className="text-[10px] font-code text-text/25 w-16 text-right shrink-0">
+                    <span className="text-xs font-code text-text/25 w-16 text-right shrink-0">
                       {item.ops > 1e9 ? "∞" : item.ops.toLocaleString()}
                     </span>
                   </div>
@@ -1490,7 +1490,7 @@ export default function InterviewPage() {
                     <span className="text-sm font-semibold text-text/70">{entry.nameKo}</span>
                     <span className="text-xs text-text/30 ml-2">{entry.name}</span>
                   </div>
-                  <span className="text-[10px] font-code px-2 py-0.5 rounded-full shrink-0" style={{ color: entry.color, background: `${entry.color}15` }}>{entry.speed}</span>
+                  <span className="text-xs font-code px-2 py-0.5 rounded-full shrink-0" style={{ color: entry.color, background: `${entry.color}15` }}>{entry.speed}</span>
                 </summary>
                 <div className="px-5 pb-5 border-t border-border/20 pt-4 space-y-4">
                   {/* 비유 */}
@@ -1498,18 +1498,18 @@ export default function InterviewPage() {
 
                   {/* 성장 시각화 */}
                   <div className="rounded-lg bg-bg/80 border border-border/30 p-4">
-                    <p className="text-[10px] font-code font-bold text-text/30 mb-2 uppercase tracking-wider">n이 커지면?</p>
+                    <p className="text-xs font-code font-bold text-text/30 mb-2 uppercase tracking-wider">n이 커지면?</p>
                     <pre className="text-xs font-code text-text/50 leading-relaxed whitespace-pre">{entry.visual}</pre>
                   </div>
 
                   {/* 예시 + 한계 */}
                   <div className="flex gap-4">
                     <div className="flex-1">
-                      <p className="text-[10px] font-code text-text/30 mb-1">대표 예시</p>
+                      <p className="text-xs font-code text-text/30 mb-1">대표 예시</p>
                       <p className="text-xs text-text/50">{entry.example}</p>
                     </div>
                     <div className="shrink-0">
-                      <p className="text-[10px] font-code text-text/30 mb-1">실전 한계</p>
+                      <p className="text-xs font-code text-text/30 mb-1">실전 한계</p>
                       <p className="text-xs font-semibold" style={{ color: entry.color }}>{entry.limit}</p>
                     </div>
                   </div>
@@ -1517,7 +1517,7 @@ export default function InterviewPage() {
                   {/* Swift 코드 */}
                   <div className="rounded-lg bg-bg/80 border border-border/30 overflow-hidden">
                     <div className="px-3 py-1.5 border-b border-border/20">
-                      <span className="text-[10px] font-code text-text/30">swift · 실전 코드 예시</span>
+                      <span className="text-xs font-code text-text/30">swift · 실전 코드 예시</span>
                     </div>
                     <pre className="p-4 text-xs font-code text-text/55 leading-relaxed overflow-x-auto whitespace-pre">{entry.code}</pre>
                   </div>
@@ -1533,33 +1533,33 @@ export default function InterviewPage() {
         {activeTab === "assignment" && (<>
         {/* Full Process Guide의 01-02 단계만 표시 */}
         <section className="mb-12">
-          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">
+          <h2 className="font-display text-base font-bold uppercase tracking-[0.15em] text-text/45 mb-4">
             사전과제 완전 가이드
           </h2>
           <div className="space-y-2">
             {PROCESS_STAGES.filter((s) => s.step <= 2).map((stage) => (
               <details key={stage.id} open={stage.step === 2} className="rounded-xl border border-border/30 bg-surface/20 overflow-hidden">
                 <summary className="px-5 py-4 cursor-pointer hover:bg-surface/50 transition-colors flex items-center gap-3">
-                  <span className="w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-black font-code shrink-0" style={{ background: `${stage.color}20`, color: stage.color }}>{stage.icon}</span>
-                  <span className="text-sm font-bold flex-1">{stage.title}</span>
+                  <span className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black font-code shrink-0" style={{ background: `${stage.color}20`, color: stage.color }}>{stage.icon}</span>
+                  <span className="text-base font-bold flex-1">{stage.title}</span>
                 </summary>
                 <div className="px-5 pb-5 border-t border-border/20 pt-4 space-y-3">
-                  <p className="text-xs text-text/50 leading-relaxed">{stage.overview}</p>
+                  <p className="text-sm text-text/50 leading-relaxed">{stage.overview}</p>
                   <div className="space-y-1.5">
                     {stage.checklist.map((item, i) => (
                       <div key={i} className="flex items-start gap-2">
                         <span className="text-green-400/50 text-xs mt-0.5">&#10003;</span>
-                        <p className="text-xs text-text/60 leading-relaxed">{item}</p>
+                        <p className="text-sm text-text/60 leading-relaxed">{item}</p>
                       </div>
                     ))}
                   </div>
                   <div className="rounded-lg bg-accent/5 border border-accent/15 px-3 py-2.5">
-                    <p className="text-[10px] font-code font-bold text-accent/50 mb-1 uppercase">Tips</p>
-                    {stage.tips.map((tip, i) => <p key={i} className="text-xs text-text/55 leading-relaxed">&#8226; {tip}</p>)}
+                    <p className="text-xs font-code font-bold text-accent/50 mb-1 uppercase">Tips</p>
+                    {stage.tips.map((tip, i) => <p key={i} className="text-sm text-text/55 leading-relaxed">&#8226; {tip}</p>)}
                   </div>
                   <div className="rounded-lg bg-red-500/5 border border-red-500/15 px-3 py-2.5">
-                    <p className="text-[10px] font-code font-bold text-red-400/50 mb-1 uppercase">Pitfalls</p>
-                    {stage.pitfalls.map((p, i) => <p key={i} className="text-xs text-text/45 leading-relaxed">&#10005; {p}</p>)}
+                    <p className="text-xs font-code font-bold text-red-400/50 mb-1 uppercase">Pitfalls</p>
+                    {stage.pitfalls.map((p, i) => <p key={i} className="text-sm text-text/45 leading-relaxed">&#10005; {p}</p>)}
                   </div>
                 </div>
               </details>
@@ -1568,25 +1568,25 @@ export default function InterviewPage() {
         </section>
         {/* README + AI + Timeline */}
         <section className="mb-12">
-          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">README / AI 활용 / 타임라인</h2>
+          <h2 className="font-display text-base font-bold uppercase tracking-[0.15em] text-text/45 mb-4">README / AI 활용 / 타임라인</h2>
           <div className="space-y-3">
             <div className="rounded-xl border border-border/30 bg-surface/20 p-5">
               <h3 className="text-xs font-bold text-text/40 mb-2 uppercase tracking-wider">README 필수 항목</h3>
-              {ASSIGNMENT_CHECKLIST.readme.map((item, i) => <p key={i} className="text-xs text-text/50 leading-relaxed">{i+1}. {item}</p>)}
+              {ASSIGNMENT_CHECKLIST.readme.map((item, i) => <p key={i} className="text-sm text-text/50 leading-relaxed">{i+1}. {item}</p>)}
             </div>
             <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 p-5">
               <h3 className="text-xs font-bold text-purple-400/70 mb-2 uppercase tracking-wider">AI 도구 활용 가이드</h3>
-              {ASSIGNMENT_CHECKLIST.aiUsage.map((item, i) => <p key={i} className="text-xs text-text/50 leading-relaxed">&#8226; {item}</p>)}
+              {ASSIGNMENT_CHECKLIST.aiUsage.map((item, i) => <p key={i} className="text-sm text-text/50 leading-relaxed">&#8226; {item}</p>)}
             </div>
             <div className="rounded-xl border border-border/30 bg-surface/20 p-5">
               <h3 className="text-xs font-bold text-text/40 mb-2 uppercase tracking-wider">5일 과제 타임라인</h3>
-              {ASSIGNMENT_CHECKLIST.timeline5day.map((item, i) => <p key={i} className="text-xs text-text/50 leading-relaxed">{item}</p>)}
+              {ASSIGNMENT_CHECKLIST.timeline5day.map((item, i) => <p key={i} className="text-sm text-text/50 leading-relaxed">{item}</p>)}
             </div>
           </div>
         </section>
         {/* Today's Assignment Tip */}
         <section className="mb-12">
-          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">
+          <h2 className="font-display text-base font-bold uppercase tracking-[0.15em] text-text/45 mb-4">
             Today&apos;s Tip — Day {selectedDay}
           </h2>
           {(() => {
@@ -1606,7 +1606,7 @@ export default function InterviewPage() {
         {activeTab === "cs" && (<>
         {/* Today's CS Topic */}
         <section className="mb-8">
-          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">
+          <h2 className="font-display text-base font-bold uppercase tracking-[0.15em] text-text/45 mb-4">
             Today&apos;s CS — Day {selectedDay}
           </h2>
           {(() => {
@@ -1623,7 +1623,7 @@ export default function InterviewPage() {
 
         {/* CS Topics */}
         <section className="mb-12">
-          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">
+          <h2 className="font-display text-base font-bold uppercase tracking-[0.15em] text-text/45 mb-4">
             CS Fundamentals
             <span className="ml-2 text-text/25 normal-case tracking-normal font-normal">— 면접 단골 CS + 실무 연결</span>
           </h2>
@@ -1631,39 +1631,39 @@ export default function InterviewPage() {
             {CS_TOPICS.map((topic) => (
               <details key={topic.id} className="rounded-xl border border-border/30 bg-surface/20 overflow-hidden">
                 <summary className="px-5 py-3.5 cursor-pointer hover:bg-surface/40 transition-colors flex items-center gap-3">
-                  <span className="text-[10px] font-code px-2 py-0.5 rounded-full shrink-0" style={{ color: topic.categoryColor, background: `${topic.categoryColor}15` }}>{topic.category}</span>
-                  <span className="text-sm font-bold flex-1">{topic.title}</span>
+                  <span className="text-xs font-code px-2 py-0.5 rounded-full shrink-0" style={{ color: topic.categoryColor, background: `${topic.categoryColor}15` }}>{topic.category}</span>
+                  <span className="text-base font-bold flex-1">{topic.title}</span>
                 </summary>
                 <div className="px-5 pb-5 border-t border-border/20 pt-4 space-y-4">
                   {/* 면접 질문 */}
                   <div className="rounded-lg bg-accent/5 border border-accent/15 px-4 py-3">
-                    <p className="text-[10px] font-code text-accent/50 mb-1 uppercase">Interview Question</p>
+                    <p className="text-xs font-code text-accent/50 mb-1 uppercase">Interview Question</p>
                     <p className="text-sm font-medium text-text/70">{topic.question}</p>
                   </div>
 
                   {/* 시각적 설명 */}
                   <div className="rounded-lg bg-bg/80 border border-border/30 p-4 overflow-x-auto">
-                    <p className="text-[10px] font-code font-bold text-text/30 mb-2 uppercase tracking-wider">Visual</p>
+                    <p className="text-xs font-code font-bold text-text/30 mb-2 uppercase tracking-wider">Visual</p>
                     <pre className="text-xs font-code text-text/55 leading-relaxed whitespace-pre">{topic.visual}</pre>
                   </div>
 
                   {/* 답변 */}
                   <div>
-                    <p className="text-[10px] font-code text-text/30 mb-1 uppercase">Answer</p>
-                    <p className="text-sm text-text/60 leading-[1.8]">{topic.answer}</p>
+                    <p className="text-xs font-code text-text/30 mb-1 uppercase">Answer</p>
+                    <p className="text-base text-text/60 leading-[1.8]">{topic.answer}</p>
                   </div>
 
                   {/* 실무 연결 */}
                   <div className="rounded-lg bg-green-500/5 border border-green-500/15 px-4 py-3">
-                    <p className="text-[10px] font-code text-green-400/50 mb-1 uppercase">iOS 실무에서는?</p>
-                    <p className="text-xs text-text/55 leading-relaxed">{topic.realWorld}</p>
+                    <p className="text-xs font-code text-green-400/50 mb-1 uppercase">iOS 실무에서는?</p>
+                    <p className="text-sm text-text/55 leading-relaxed">{topic.realWorld}</p>
                   </div>
 
                   {/* 코드 (있는 경우) */}
                   {topic.code && (
                     <div className="rounded-lg bg-bg/80 border border-border/30 overflow-hidden">
                       <div className="px-3 py-1.5 border-b border-border/20">
-                        <span className="text-[10px] font-code text-text/30">swift · 실전 코드</span>
+                        <span className="text-xs font-code text-text/30">swift · 실전 코드</span>
                       </div>
                       <pre className="p-4 text-xs font-code text-text/55 leading-relaxed overflow-x-auto whitespace-pre">{topic.code}</pre>
                     </div>
@@ -1680,7 +1680,7 @@ export default function InterviewPage() {
         {/* Flash Cards */}
         <section className="mb-12">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45">
+            <h2 className="font-display text-base font-bold uppercase tracking-[0.15em] text-text/45">
               기술면접 Flash Cards — {track === "ios" ? "iOS" : "FDE"}
               <span className="ml-2 text-text/25 normal-case tracking-normal font-normal">{todayReviewed}/{todayCards.length} reviewed</span>
             </h2>
@@ -1694,18 +1694,18 @@ export default function InterviewPage() {
                   <button onClick={() => toggleReveal(q.id)} className="w-full px-5 py-4 text-left cursor-pointer hover:bg-surface/50 transition-colors">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1">
-                        <span className="text-[10px] font-code px-2 py-0.5 rounded-full bg-accent/10 text-accent/60 mr-2">{q.topic}</span>
-                        <p className="text-sm text-text/80 mt-2 leading-relaxed font-medium">{q.question}</p>
+                        <span className="text-xs font-code px-2 py-0.5 rounded-full bg-accent/10 text-accent/60 mr-2">{q.topic}</span>
+                        <p className="text-base text-text/80 mt-2 leading-relaxed font-medium">{q.question}</p>
                       </div>
                       <span className={`shrink-0 text-xs mt-1 ${isRevealed ? "text-green-400" : "text-text/25"}`}>{isRevealed ? "reviewed" : "tap to reveal"}</span>
                     </div>
                   </button>
                   {isRevealed && (
                     <div className="px-5 py-4 border-t border-border/20 bg-accent/3">
-                      <p className="text-sm text-text/60 leading-[1.8]">{q.answer}</p>
+                      <p className="text-base text-text/60 leading-[1.8]">{q.answer}</p>
                       <button
                         onClick={(e) => { e.stopPropagation(); toggleHard(q.id); }}
-                        className={`mt-3 text-[10px] font-code px-2.5 py-1 rounded-full cursor-pointer transition-colors ${
+                        className={`mt-3 text-xs font-code px-2.5 py-1 rounded-full cursor-pointer transition-colors ${
                           hardCards[q.id]
                             ? "bg-red-500/15 text-red-400/70 hover:bg-red-500/25"
                             : "bg-surface/40 text-text/30 hover:text-red-400/60"
@@ -1715,8 +1715,8 @@ export default function InterviewPage() {
                       </button>
                       {q.followUp && (
                         <div className="mt-3 rounded-lg bg-amber-500/5 border border-amber-500/15 px-4 py-2.5">
-                          <p className="text-[10px] font-code text-amber-400/50 mb-0.5">꼬리질문 (면접관이 이어서 물어본다)</p>
-                          <p className="text-xs text-text/55 leading-relaxed">{q.followUp}</p>
+                          <p className="text-xs font-code text-amber-400/50 mb-0.5">꼬리질문 (면접관이 이어서 물어본다)</p>
+                          <p className="text-sm text-text/55 leading-relaxed">{q.followUp}</p>
                         </div>
                       )}
                     </div>
@@ -1731,7 +1731,7 @@ export default function InterviewPage() {
         </section>
         {/* Company Strategy */}
         <section className="mb-12">
-          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">
+          <h2 className="font-display text-base font-bold uppercase tracking-[0.15em] text-text/45 mb-4">
             Company Strategy — {track === "ios" ? "iOS" : "FDE"}
           </h2>
           <div className="space-y-3">
@@ -1739,7 +1739,7 @@ export default function InterviewPage() {
               <details key={c.name} className="rounded-xl border border-border/40 bg-surface/30 overflow-hidden">
                 <summary className="px-5 py-4 cursor-pointer hover:bg-surface/50 transition-colors flex items-center gap-3">
                   <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: c.color }} />
-                  <span className="text-sm font-bold flex-1">{c.name}</span>
+                  <span className="text-base font-bold flex-1">{c.name}</span>
                 </summary>
                 <div className="px-5 pb-4 border-t border-border/20 pt-3 space-y-3">
                   <div className="flex items-center gap-1.5 flex-wrap">
@@ -1750,9 +1750,9 @@ export default function InterviewPage() {
                       </span>
                     ))}
                   </div>
-                  <div><p className="text-[10px] font-code text-text/30 mb-0.5">CODING TEST</p><p className="text-xs text-text/60">{c.codingTest}</p></div>
-                  <div className="rounded-lg bg-accent/5 border border-accent/15 px-3 py-2"><p className="text-[10px] font-code text-accent/50 mb-0.5">KEY TIP</p><p className="text-xs text-text/60">{c.keyTip}</p></div>
-                  <div className="rounded-lg bg-red-500/5 border border-red-500/15 px-3 py-2"><p className="text-[10px] font-code text-red-400/50 mb-0.5">FAIL REASON</p><p className="text-xs text-text/50">{c.failReason}</p></div>
+                  <div><p className="text-xs font-code text-text/30 mb-0.5">CODING TEST</p><p className="text-xs text-text/60">{c.codingTest}</p></div>
+                  <div className="rounded-lg bg-accent/5 border border-accent/15 px-3 py-2"><p className="text-xs font-code text-accent/50 mb-0.5">KEY TIP</p><p className="text-xs text-text/60">{c.keyTip}</p></div>
+                  <div className="rounded-lg bg-red-500/5 border border-red-500/15 px-3 py-2"><p className="text-xs font-code text-red-400/50 mb-0.5">FAIL REASON</p><p className="text-xs text-text/50">{c.failReason}</p></div>
                 </div>
               </details>
             ))}
@@ -1761,7 +1761,7 @@ export default function InterviewPage() {
 
         {/* Today's Deep Dive */}
         <section className="mb-12">
-          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">
+          <h2 className="font-display text-base font-bold uppercase tracking-[0.15em] text-text/45 mb-4">
             Today&apos;s Deep Dive
             <span className="ml-2 text-text/25 normal-case tracking-normal font-normal">— Day {selectedDay}</span>
           </h2>
@@ -1779,7 +1779,7 @@ export default function InterviewPage() {
 
         {/* System Design Cases */}
         <section className="mb-12">
-          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">
+          <h2 className="font-display text-base font-bold uppercase tracking-[0.15em] text-text/45 mb-4">
             {track === "ios" ? "Mobile System Design" : "Solution Architecture"}
             <span className="ml-2 text-text/25 normal-case tracking-normal font-normal">
               {track === "ios" ? "— weeeBox 프레임워크 기반" : "— 고객 솔루션 설계"}
@@ -1790,11 +1790,11 @@ export default function InterviewPage() {
             {SD_FRAMEWORK_STEPS.map((s) => (
               <div key={s.step} className="shrink-0 rounded-lg border border-border/30 bg-surface/20 px-3 py-2 min-w-[180px]">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="w-5 h-5 rounded flex items-center justify-center text-[10px] font-black" style={{ background: `${s.color}20`, color: s.color }}>{s.step}</span>
+                  <span className="w-5 h-5 rounded flex items-center justify-center text-xs font-black" style={{ background: `${s.color}20`, color: s.color }}>{s.step}</span>
                   <span className="text-xs font-bold">{s.title}</span>
-                  <span className="text-[10px] text-text/25 font-code ml-auto">{s.time}</span>
+                  <span className="text-xs text-text/25 font-code ml-auto">{s.time}</span>
                 </div>
-                <p className="text-[10px] text-text/40 leading-relaxed">{s.description}</p>
+                <p className="text-xs text-text/40 leading-relaxed">{s.description}</p>
               </div>
             ))}
           </div>
@@ -1804,7 +1804,7 @@ export default function InterviewPage() {
               면접 시작 시 물어볼 질문 {SD_CLARIFYING_QUESTIONS.length}가지
             </summary>
             <div className="px-5 pb-4 border-t border-border/20 pt-3 space-y-1.5">
-              {SD_CLARIFYING_QUESTIONS.map((q, i) => <p key={i} className="text-xs text-text/50 leading-relaxed">&#8226; {q}</p>)}
+              {SD_CLARIFYING_QUESTIONS.map((q, i) => <p key={i} className="text-sm text-text/50 leading-relaxed">&#8226; {q}</p>)}
             </div>
           </details>
           {/* API Comparison */}
@@ -1817,9 +1817,9 @@ export default function InterviewPage() {
                 {SD_API_COMPARISON.map((api) => (
                   <div key={api.name} className="rounded-lg bg-surface/40 p-3">
                     <p className="text-xs font-bold mb-1">{api.name}</p>
-                    <p className="text-[10px] text-green-400/60 mb-0.5">+ {api.pros}</p>
-                    <p className="text-[10px] text-red-400/50 mb-0.5">- {api.cons}</p>
-                    <p className="text-[10px] text-accent/50">Best: {api.bestFor}</p>
+                    <p className="text-xs text-green-400/60 mb-0.5">+ {api.pros}</p>
+                    <p className="text-xs text-red-400/50 mb-0.5">- {api.cons}</p>
+                    <p className="text-xs text-accent/50">Best: {api.bestFor}</p>
                   </div>
                 ))}
               </div>
@@ -1830,35 +1830,35 @@ export default function InterviewPage() {
             {(track === "fde" ? FDE_DESIGN_CASES : SYSTEM_DESIGN_CASES).map((c) => (
               <details key={c.id} className="rounded-xl border border-border/30 bg-surface/20 overflow-hidden">
                 <summary className="px-5 py-3.5 cursor-pointer hover:bg-surface/40 transition-colors flex items-center gap-3">
-                  <span className="text-sm font-bold flex-1">{c.title}</span>
-                  <span className={`text-[10px] font-code px-2 py-0.5 rounded-full ${c.difficulty === "hard" ? "bg-red-500/10 text-red-400/70" : "bg-amber-500/10 text-amber-400/70"}`}>{c.difficulty}</span>
-                  <span className="text-[10px] font-code text-text/25">{c.timeLimit}</span>
+                  <span className="text-base font-bold flex-1">{c.title}</span>
+                  <span className={`text-xs font-code px-2 py-0.5 rounded-full ${c.difficulty === "hard" ? "bg-red-500/10 text-red-400/70" : "bg-amber-500/10 text-amber-400/70"}`}>{c.difficulty}</span>
+                  <span className="text-xs font-code text-text/25">{c.timeLimit}</span>
                 </summary>
                 <div className="px-5 pb-5 border-t border-border/20 pt-4 space-y-3">
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <p className="text-[10px] font-code text-green-400/50 mb-1 uppercase">Functional</p>
+                      <p className="text-xs font-code text-green-400/50 mb-1 uppercase">Functional</p>
                       {c.functional.map((f, i) => <p key={i} className="text-xs text-text/50">&#10003; {f}</p>)}
                     </div>
                     <div>
-                      <p className="text-[10px] font-code text-blue-400/50 mb-1 uppercase">Non-Functional</p>
+                      <p className="text-xs font-code text-blue-400/50 mb-1 uppercase">Non-Functional</p>
                       {c.nonFunctional.map((f, i) => <p key={i} className="text-xs text-text/50">&#10003; {f}</p>)}
                     </div>
                   </div>
                   <div>
-                    <p className="text-[10px] font-code text-text/30 mb-1 uppercase">Architecture</p>
-                    {c.architecture.map((a, i) => <p key={i} className="text-xs text-text/50 leading-relaxed">&#8226; {a}</p>)}
+                    <p className="text-xs font-code text-text/30 mb-1 uppercase">Architecture</p>
+                    {c.architecture.map((a, i) => <p key={i} className="text-sm text-text/50 leading-relaxed">&#8226; {a}</p>)}
                   </div>
                   <div>
-                    <p className="text-[10px] font-code text-text/30 mb-1 uppercase">Deep Dive Points</p>
-                    {c.deepDive.map((d, i) => <p key={i} className="text-xs text-text/50 leading-relaxed">&#8226; {d}</p>)}
+                    <p className="text-xs font-code text-text/30 mb-1 uppercase">Deep Dive Points</p>
+                    {c.deepDive.map((d, i) => <p key={i} className="text-sm text-text/50 leading-relaxed">&#8226; {d}</p>)}
                   </div>
                   <div>
-                    <p className="text-[10px] font-code text-amber-400/50 mb-1 uppercase">Tradeoffs (면접관이 여기서 물어본다)</p>
-                    {c.tradeoffs.map((t, i) => <p key={i} className="text-xs text-text/50 leading-relaxed">&#8226; {t}</p>)}
+                    <p className="text-xs font-code text-amber-400/50 mb-1 uppercase">Tradeoffs (면접관이 여기서 물어본다)</p>
+                    {c.tradeoffs.map((t, i) => <p key={i} className="text-sm text-text/50 leading-relaxed">&#8226; {t}</p>)}
                   </div>
                   <div className="rounded-lg bg-bg/80 border border-border/30 overflow-hidden">
-                    <div className="px-3 py-1.5 border-b border-border/20"><span className="text-[10px] font-code text-text/30">45분 답변 템플릿</span></div>
+                    <div className="px-3 py-1.5 border-b border-border/20"><span className="text-xs font-code text-text/30">45분 답변 템플릿</span></div>
                     <pre className="p-4 text-xs font-code text-text/50 leading-relaxed overflow-x-auto whitespace-pre">{c.template}</pre>
                   </div>
                 </div>
@@ -1873,7 +1873,7 @@ export default function InterviewPage() {
         <section>
           {/* Stats bar */}
           <div className="flex items-center justify-between mb-6">
-            <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45">
+            <h2 className="font-display text-base font-bold uppercase tracking-[0.15em] text-text/45">
               Quiz
               <span className="ml-2 text-text/25 normal-case tracking-normal font-normal">
                 {quizIndex + 1} / {quizTotal}
@@ -1939,7 +1939,7 @@ export default function InterviewPage() {
                         <button
                           key={ci}
                           onClick={() => { if (!submitted) setQuizSelection((prev) => ({ ...prev, [q.id]: ci })); }}
-                          className={`w-full text-left px-5 py-3.5 rounded-xl border text-sm transition-all ${style} ${!submitted ? "cursor-pointer" : ""}`}
+                          className={`w-full text-left px-5 py-3.5 rounded-xl border text-base transition-all ${style} ${!submitted ? "cursor-pointer" : ""}`}
                           disabled={submitted}
                         >
                           <span className="font-code text-text/25 mr-3">{["A", "B", "C", "D"][ci]}.</span>
@@ -2024,7 +2024,7 @@ export default function InterviewPage() {
 
         {/* Today's Culture Tip */}
         <section className="mb-12">
-          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">
+          <h2 className="font-display text-base font-bold uppercase tracking-[0.15em] text-text/45 mb-4">
             Today&apos;s Practice — Day {selectedDay}
           </h2>
           {(() => {
@@ -2040,7 +2040,7 @@ export default function InterviewPage() {
 
         {/* ═══════════ HIRING STRATEGY ═══════════ */}
         <section className="mb-12">
-          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">
+          <h2 className="font-display text-base font-bold uppercase tracking-[0.15em] text-text/45 mb-4">
             Hiring Strategy
             <span className="ml-2 text-text/25 normal-case tracking-normal font-normal">— 실제 합격자 데이터 기반</span>
           </h2>
@@ -2051,7 +2051,7 @@ export default function InterviewPage() {
               <div className="space-y-2">
                 {HIRING_INSIGHTS.portfolio.map((r, i) => (
                   <div key={i} className="flex gap-3">
-                    <span className="shrink-0 w-5 h-5 rounded bg-accent/10 text-accent/60 flex items-center justify-center text-[10px] font-bold mt-0.5">{i + 1}</span>
+                    <span className="shrink-0 w-5 h-5 rounded bg-accent/10 text-accent/60 flex items-center justify-center text-xs font-bold mt-0.5">{i + 1}</span>
                     <div>
                       <p className="text-sm font-semibold text-text/70">{r.rule}</p>
                       <p className="text-xs text-text/40 leading-relaxed mt-0.5">{r.detail}</p>
@@ -2066,7 +2066,7 @@ export default function InterviewPage() {
               <div className="space-y-2">
                 {HIRING_INSIGHTS.experienced.map((r, i) => (
                   <div key={i} className="flex gap-3">
-                    <span className="shrink-0 w-5 h-5 rounded bg-green-500/10 text-green-400/60 flex items-center justify-center text-[10px] font-bold mt-0.5">{i + 1}</span>
+                    <span className="shrink-0 w-5 h-5 rounded bg-green-500/10 text-green-400/60 flex items-center justify-center text-xs font-bold mt-0.5">{i + 1}</span>
                     <div>
                       <p className="text-sm font-semibold text-text/70">{r.rule}</p>
                       <p className="text-xs text-text/40 leading-relaxed mt-0.5">{r.detail}</p>
@@ -2082,7 +2082,7 @@ export default function InterviewPage() {
                 {HIRING_INSIGHTS.commonFails.map((f, i) => (
                   <div key={i} className="flex items-start gap-2">
                     <span className="text-red-400/40 text-xs mt-0.5">&#10005;</span>
-                    <p className="text-xs text-text/50 leading-relaxed">{f}</p>
+                    <p className="text-sm text-text/50 leading-relaxed">{f}</p>
                   </div>
                 ))}
               </div>
@@ -2105,7 +2105,7 @@ export default function InterviewPage() {
                   <div>
                     <p className="text-xs font-bold text-accent/60 mb-0.5">{tip.principle}</p>
                     <p className="text-sm text-text/60 leading-relaxed"><B text={tip.tip} /></p>
-                    <p className="text-[10px] text-text/25 mt-1 font-code">{tip.source}</p>
+                    <p className="text-xs text-text/25 mt-1 font-code">{tip.source}</p>
                   </div>
                 </div>
               ))}
@@ -2119,7 +2119,7 @@ export default function InterviewPage() {
 
         {/* ═══════════ INTERVIEW DAY PLAYBOOK ═══════════ */}
         <section className="mb-12">
-          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">
+          <h2 className="font-display text-base font-bold uppercase tracking-[0.15em] text-text/45 mb-4">
             Interview Day Playbook
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -2130,7 +2130,7 @@ export default function InterviewPage() {
                   {phase.items.map((item, i) => (
                     <div key={i} className="flex items-start gap-2">
                       <span className="text-green-400/50 text-xs mt-0.5 shrink-0">&#10003;</span>
-                      <p className="text-xs text-text/55 leading-relaxed">{item}</p>
+                      <p className="text-sm text-text/55 leading-relaxed">{item}</p>
                     </div>
                   ))}
                 </div>
@@ -2141,7 +2141,7 @@ export default function InterviewPage() {
 
         {/* ═══════════ SALARY + RED FLAGS ═══════════ */}
         <section className="mb-12">
-          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">
+          <h2 className="font-display text-base font-bold uppercase tracking-[0.15em] text-text/45 mb-4">
             연봉 협상 + Red Flags
           </h2>
           <div className="space-y-3">
@@ -2150,7 +2150,7 @@ export default function InterviewPage() {
               <div className="space-y-2">
                 {SALARY_TIPS.map((t, i) => (
                   <div key={i} className="flex gap-3">
-                    <span className="shrink-0 w-5 h-5 rounded bg-green-500/10 text-green-400/60 flex items-center justify-center text-[10px] font-bold mt-0.5">{i + 1}</span>
+                    <span className="shrink-0 w-5 h-5 rounded bg-green-500/10 text-green-400/60 flex items-center justify-center text-xs font-bold mt-0.5">{i + 1}</span>
                     <div>
                       <p className="text-sm font-semibold text-text/70">{t.rule}</p>
                       <p className="text-xs text-text/40 leading-relaxed mt-0.5">{t.detail}</p>
@@ -2165,7 +2165,7 @@ export default function InterviewPage() {
                 {RED_FLAGS.map((f, i) => (
                   <div key={i} className="flex items-start gap-2">
                     <span className="text-red-400/40 text-xs mt-0.5">&#9888;</span>
-                    <p className="text-xs text-text/50 leading-relaxed">{f}</p>
+                    <p className="text-sm text-text/50 leading-relaxed">{f}</p>
                   </div>
                 ))}
               </div>
@@ -2175,7 +2175,7 @@ export default function InterviewPage() {
 
         {/* ═══════════ ONBOARDING 30-60-90 ═══════════ */}
         <section className="mb-12">
-          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">
+          <h2 className="font-display text-base font-bold uppercase tracking-[0.15em] text-text/45 mb-4">
             Onboarding 30-60-90
             <span className="ml-2 text-text/25 normal-case tracking-normal font-normal">— 입사 후 첫 90일 생존 가이드</span>
           </h2>
@@ -2188,12 +2188,12 @@ export default function InterviewPage() {
                 </summary>
                 <div className="px-5 pb-4 border-t border-border/20 pt-3 space-y-3">
                   <div>
-                    <p className="text-[10px] font-code text-text/30 mb-1.5 uppercase">Goals</p>
-                    {phase.goals.map((g, i) => <p key={i} className="text-xs text-text/60 leading-relaxed">&#10003; {g}</p>)}
+                    <p className="text-xs font-code text-text/30 mb-1.5 uppercase">Goals</p>
+                    {phase.goals.map((g, i) => <p key={i} className="text-sm text-text/60 leading-relaxed">&#10003; {g}</p>)}
                   </div>
                   <div className="rounded-lg bg-accent/5 border border-accent/15 px-3 py-2">
-                    <p className="text-[10px] font-code text-accent/50 mb-1 uppercase">Tips</p>
-                    {phase.tips.map((t, i) => <p key={i} className="text-xs text-text/55 leading-relaxed">&#8226; {t}</p>)}
+                    <p className="text-xs font-code text-accent/50 mb-1 uppercase">Tips</p>
+                    {phase.tips.map((t, i) => <p key={i} className="text-sm text-text/55 leading-relaxed">&#8226; {t}</p>)}
                   </div>
                 </div>
               </details>
@@ -2203,7 +2203,7 @@ export default function InterviewPage() {
 
         {/* ═══════════ MOCK FEEDBACK ═══════════ */}
         <section className="mb-12">
-          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">
+          <h2 className="font-display text-base font-bold uppercase tracking-[0.15em] text-text/45 mb-4">
             Mock Interview Feedback
             <span className="ml-2 text-text/25 normal-case tracking-normal font-normal">— 모의면접 후 셀프 체크</span>
           </h2>
@@ -2211,11 +2211,11 @@ export default function InterviewPage() {
             {MOCK_FEEDBACK_CRITERIA.map((c) => (
               <div key={c.id} className="rounded-xl border border-border/30 bg-surface/20 p-4">
                 <p className="text-xs font-bold text-text/60 mb-1">{c.label}</p>
-                <p className="text-[10px] text-text/35 leading-relaxed">{c.description}</p>
+                <p className="text-xs text-text/35 leading-relaxed">{c.description}</p>
               </div>
             ))}
           </div>
-          <p className="text-[10px] text-text/20 mt-2">* 모의면접 녹음 후 각 항목 1-10점 셀프 채점. 주간 추이를 관찰하면 성장이 보인다.</p>
+          <p className="text-xs text-text/20 mt-2">* 모의면접 녹음 후 각 항목 1-10점 셀프 채점. 주간 추이를 관찰하면 성장이 보인다.</p>
         </section>
         </>)}
 
