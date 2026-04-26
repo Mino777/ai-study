@@ -880,8 +880,8 @@ export default function InterviewPage() {
             const trackQs = QUIZ_BANK.filter((q) =>
               track === "fde" ? q.category !== "ios" && q.category !== "swift" : q.category !== "fde",
             );
-            const dailyQuizzes = Array.from({ length: 5 }, (_, i) => {
-              const idx = ((today - 1) * 5 + i) % trackQs.length;
+            const dailyQuizzes = Array.from({ length: 10 }, (_, i) => {
+              const idx = ((today - 1) * 10 + i) % trackQs.length;
               return trackQs[idx];
             });
 
