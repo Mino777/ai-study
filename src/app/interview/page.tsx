@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { IOS_QUESTIONS, FDE_QUESTIONS, PHASE_PROBLEMS, COMPANY_STRATEGIES, HIRING_INSIGHTS, type InterviewQuestion } from "./constants";
+import { IOS_QUESTIONS, FDE_QUESTIONS, CULTURE_QUESTIONS, PHASE_PROBLEMS, COMPANY_STRATEGIES, HIRING_INSIGHTS, PROCESS_STAGES, ASSIGNMENT_CHECKLIST, type InterviewQuestion } from "./constants";
 
 /* ═══════════════════════════════════════════════════════════ */
 /*  TYPES                                                      */
@@ -462,15 +462,17 @@ export default function InterviewPage() {
     setCheckedTasks((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
-  // Flash card data for current track & phase
+  // Flash card data for current track & phase (tech + culture)
   const flashCards = useMemo(() => {
-    const qs = track === "ios" ? IOS_QUESTIONS : FDE_QUESTIONS;
-    return qs.filter((q) => q.phase <= currentPhase.id);
+    const techQs = track === "ios" ? IOS_QUESTIONS : FDE_QUESTIONS;
+    const allQs = [...techQs, ...CULTURE_QUESTIONS];
+    return allQs.filter((q) => q.phase <= currentPhase.id);
   }, [track, currentPhase.id]);
 
   const todayCards = useMemo(() => {
-    const qs = track === "ios" ? IOS_QUESTIONS : FDE_QUESTIONS;
-    const phaseQs = qs.filter((q) => q.phase === currentPhase.id);
+    const techQs = track === "ios" ? IOS_QUESTIONS : FDE_QUESTIONS;
+    const allQs = [...techQs, ...CULTURE_QUESTIONS];
+    const phaseQs = allQs.filter((q) => q.phase === currentPhase.id);
     // 5 cards per day, cycling through phase questions
     const startIdx = ((selectedDay - 1) * 5) % Math.max(1, phaseQs.length);
     return phaseQs.slice(startIdx, startIdx + 5).concat(
@@ -733,6 +735,102 @@ export default function InterviewPage() {
                     })}
                   </div>
                 </div>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* ═══════════ FULL PROCESS GUIDE ═══════════ */}
+        <section className="mb-12">
+          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">
+            Full Process Guide
+            <span className="ml-2 text-text/25 normal-case tracking-normal font-normal">— 서류부터 최종까지 5단계</span>
+          </h2>
+          <div className="space-y-2">
+            {PROCESS_STAGES.map((stage) => {
+              const isCurrentStage = (stage.step <= 2 && currentPhase.id >= 3) ||
+                (stage.step === 3 && currentPhase.id >= 1 && currentPhase.id <= 2) ||
+                (stage.step === 4 && currentPhase.id === 3) ||
+                (stage.step === 5 && currentPhase.id === 4);
+              return (
+                <details key={stage.id} className={`rounded-xl border overflow-hidden ${isCurrentStage ? "border-accent/30 bg-surface/40" : "border-border/30 bg-surface/20"}`}>
+                  <summary className="px-5 py-4 cursor-pointer hover:bg-surface/50 transition-colors flex items-center gap-3">
+                    <span className="w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-black font-code shrink-0" style={{ background: `${stage.color}20`, color: stage.color }}>
+                      {stage.icon}
+                    </span>
+                    <div className="flex-1">
+                      <span className="text-sm font-bold">{stage.title}</span>
+                      <span className="text-xs text-text/30 ml-2">{stage.timeline}</span>
+                    </div>
+                    {isCurrentStage && <span className="text-[10px] font-code animate-pulse" style={{ color: stage.color }}>FOCUS</span>}
+                  </summary>
+                  <div className="px-5 pb-5 border-t border-border/20 pt-4 space-y-4">
+                    <p className="text-xs text-text/50 leading-relaxed">{stage.overview}</p>
+
+                    {/* Checklist */}
+                    <div>
+                      <p className="text-[10px] font-code font-bold text-text/40 mb-2 uppercase tracking-wider">Checklist</p>
+                      <div className="space-y-1.5">
+                        {stage.checklist.map((item, i) => (
+                          <div key={i} className="flex items-start gap-2">
+                            <span className="text-green-400/50 text-xs mt-0.5">&#10003;</span>
+                            <p className="text-xs text-text/60 leading-relaxed">{item}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Tips */}
+                    <div className="rounded-lg bg-accent/5 border border-accent/15 px-3 py-2.5">
+                      <p className="text-[10px] font-code font-bold text-accent/50 mb-1.5 uppercase tracking-wider">Tips</p>
+                      <div className="space-y-1">
+                        {stage.tips.map((tip, i) => (
+                          <p key={i} className="text-xs text-text/55 leading-relaxed">&#8226; {tip}</p>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Pitfalls */}
+                    <div className="rounded-lg bg-red-500/5 border border-red-500/15 px-3 py-2.5">
+                      <p className="text-[10px] font-code font-bold text-red-400/50 mb-1.5 uppercase tracking-wider">Pitfalls</p>
+                      <div className="space-y-1">
+                        {stage.pitfalls.map((p, i) => (
+                          <p key={i} className="text-xs text-text/45 leading-relaxed">&#10005; {p}</p>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Assignment-specific: README template + AI usage guide */}
+                    {stage.id === "assignment" && (
+                      <div className="space-y-3 mt-2">
+                        <div className="rounded-lg bg-surface/50 border border-border/30 px-3 py-2.5">
+                          <p className="text-[10px] font-code font-bold text-text/40 mb-1.5 uppercase tracking-wider">README 필수 항목</p>
+                          <div className="space-y-1">
+                            {ASSIGNMENT_CHECKLIST.readme.map((item, i) => (
+                              <p key={i} className="text-xs text-text/50 leading-relaxed">{i + 1}. {item}</p>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="rounded-lg bg-purple-500/5 border border-purple-500/15 px-3 py-2.5">
+                          <p className="text-[10px] font-code font-bold text-purple-400/50 mb-1.5 uppercase tracking-wider">AI 도구 활용 가이드</p>
+                          <div className="space-y-1">
+                            {ASSIGNMENT_CHECKLIST.aiUsage.map((item, i) => (
+                              <p key={i} className="text-xs text-text/50 leading-relaxed">&#8226; {item}</p>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="rounded-lg bg-surface/50 border border-border/30 px-3 py-2.5">
+                          <p className="text-[10px] font-code font-bold text-text/40 mb-1.5 uppercase tracking-wider">5일 과제 타임라인</p>
+                          <div className="space-y-1">
+                            {ASSIGNMENT_CHECKLIST.timeline5day.map((item, i) => (
+                              <p key={i} className="text-xs text-text/50 leading-relaxed">{item}</p>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </details>
               );
             })}
           </div>
