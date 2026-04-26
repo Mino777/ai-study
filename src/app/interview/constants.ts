@@ -961,3 +961,80 @@ func topK(_ arr: [Int], _ k: Int) -> [Int] {
     representative: "N-Queen, 단어 변환, 소수 찾기",
   },
 ];
+
+/* ═══════════════════════════════════════════════════════════ */
+/*  BIG-O NOTATION GUIDE                                       */
+/* ═══════════════════════════════════════════════════════════ */
+
+export interface BigOEntry {
+  notation: string;
+  name: string;
+  nameKo: string;
+  color: string;
+  speed: string;
+  analogy: string;
+  example: string;
+  limit: string;
+}
+
+export const BIG_O_GUIDE: BigOEntry[] = [
+  {
+    notation: "O(1)", name: "Constant", nameKo: "상수 시간", color: "#10b981",
+    speed: "즉시",
+    analogy: "책장에서 3번째 책 꺼내기 — 책이 100권이든 100만 권이든 같은 시간",
+    example: "배열 인덱스 접근 arr[5], 해시맵 조회 map[key]",
+    limit: "데이터 무한대도 OK",
+  },
+  {
+    notation: "O(log n)", name: "Logarithmic", nameKo: "로그 시간", color: "#22c55e",
+    speed: "매우 빠름",
+    analogy: "사전에서 단어 찾기 — 절반씩 넘기면 1000페이지도 10번이면 끝",
+    example: "이분 탐색, 균형 이진 트리 탐색",
+    limit: "n=10억도 30번이면 끝",
+  },
+  {
+    notation: "O(n)", name: "Linear", nameKo: "선형 시간", color: "#3b82f6",
+    speed: "빠름",
+    analogy: "출석부 한 명씩 부르기 — 학생 수만큼 걸린다",
+    example: "배열 순회, 선형 탐색, 해시맵 생성",
+    limit: "n=1000만까지 1초 내",
+  },
+  {
+    notation: "O(n log n)", name: "Linearithmic", nameKo: "선형 로그", color: "#8b5cf6",
+    speed: "괜찮음",
+    analogy: "학생들을 키 순서로 줄 세우기 — 효율적 정렬의 한계",
+    example: "퀵소트, 병합정렬, 힙정렬",
+    limit: "n=100만까지 1초 내",
+  },
+  {
+    notation: "O(n²)", name: "Quadratic", nameKo: "이차 시간", color: "#f59e0b",
+    speed: "느림",
+    analogy: "반 학생 30명이 서로 악수 — 30×29 = 870번",
+    example: "이중 for문, 버블정렬, 선택정렬",
+    limit: "n=1만까지. 10만이면 시간초과",
+  },
+  {
+    notation: "O(2ⁿ)", name: "Exponential", nameKo: "지수 시간", color: "#ef4444",
+    speed: "매우 느림",
+    analogy: "모든 부분집합 구하기 — 20개면 100만, 30개면 10억",
+    example: "피보나치(메모이제이션 없을 때), 부분집합 전체 탐색",
+    limit: "n=20~25가 한계",
+  },
+  {
+    notation: "O(n!)", name: "Factorial", nameKo: "팩토리얼", color: "#dc2626",
+    speed: "사실상 불가",
+    analogy: "모든 순열 구하기 — 10명 줄 세우는 방법 = 362만가지",
+    example: "순열, 외판원 문제(TSP) brute force",
+    limit: "n=10~12가 한계",
+  },
+];
+
+/* 시각적 비교 바 (n=100 기준 상대적 연산 횟수) */
+export const BIG_O_COMPARISON = [
+  { notation: "O(1)", ops: 1, bar: 1 },
+  { notation: "O(log n)", ops: 7, bar: 2 },
+  { notation: "O(n)", ops: 100, bar: 10 },
+  { notation: "O(n log n)", ops: 664, bar: 20 },
+  { notation: "O(n²)", ops: 10000, bar: 50 },
+  { notation: "O(2ⁿ)", ops: 1267650600228229401496703205376, bar: 100 },
+];

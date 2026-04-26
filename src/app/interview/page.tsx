@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { IOS_QUESTIONS, FDE_QUESTIONS, CULTURE_QUESTIONS, PHASE_PROBLEMS, COMPANY_STRATEGIES, HIRING_INSIGHTS, PROCESS_STAGES, ASSIGNMENT_CHECKLIST, ALGO_GUIDES, type InterviewQuestion } from "./constants";
+import { IOS_QUESTIONS, FDE_QUESTIONS, CULTURE_QUESTIONS, PHASE_PROBLEMS, COMPANY_STRATEGIES, HIRING_INSIGHTS, PROCESS_STAGES, ASSIGNMENT_CHECKLIST, ALGO_GUIDES, BIG_O_GUIDE, BIG_O_COMPARISON, type InterviewQuestion } from "./constants";
 
 /* ═══════════════════════════════════════════════════════════ */
 /*  TYPES                                                      */
@@ -373,6 +373,7 @@ function formatDate(day: number): string {
 
 export default function InterviewPage() {
   const [track, setTrack] = useState<TrackKey>("ios");
+  const [activeTab, setActiveTab] = useState<"overview" | "coding" | "assignment" | "tech" | "culture">("overview");
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [checkedTasks, setCheckedTasks] = useState<Record<string, boolean>>({});
   const [selectedDay, setSelectedDay] = useState<number>(getToday());
@@ -628,50 +629,31 @@ export default function InterviewPage() {
           </span>
         </div>
 
-        {/* ═══════════ COMPANY STRATEGY ═══════════ */}
-        <section className="mb-12">
-          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">
-            Company Strategy — {track === "ios" ? "iOS" : "FDE"}
-            <span className="ml-2 text-text/25 normal-case tracking-normal font-normal">회사별 맞춤 전략</span>
-          </h2>
-          <div className="space-y-3">
-            {(COMPANY_STRATEGIES[track] ?? []).map((c) => (
-              <details key={c.name} className="rounded-xl border border-border/40 bg-surface/30 overflow-hidden group">
-                <summary className="px-5 py-4 cursor-pointer hover:bg-surface/50 transition-colors flex items-center gap-3">
-                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: c.color }} />
-                  <span className="text-sm font-bold flex-1">{c.name}</span>
-                  <span className="text-xs text-text/30 font-code">{c.process.length}단계</span>
-                </summary>
-                <div className="px-5 pb-4 border-t border-border/20 pt-3 space-y-3">
-                  {/* 전형 프로세스 */}
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    {c.process.map((step, i) => (
-                      <span key={i} className="flex items-center gap-1.5">
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-surface/60 text-text/50">{step}</span>
-                        {i < c.process.length - 1 && <span className="text-text/20 text-xs">&rarr;</span>}
-                      </span>
-                    ))}
-                  </div>
-                  {/* 코딩테스트 */}
-                  <div>
-                    <p className="text-[10px] font-code text-text/30 mb-0.5">CODING TEST</p>
-                    <p className="text-xs text-text/60 leading-relaxed">{c.codingTest}</p>
-                  </div>
-                  {/* 핵심 팁 */}
-                  <div className="rounded-lg bg-accent/5 border border-accent/15 px-3 py-2">
-                    <p className="text-[10px] font-code text-accent/50 mb-0.5">KEY TIP</p>
-                    <p className="text-xs text-text/60 leading-relaxed">{c.keyTip}</p>
-                  </div>
-                  {/* 탈락 사유 */}
-                  <div className="rounded-lg bg-red-500/5 border border-red-500/15 px-3 py-2">
-                    <p className="text-[10px] font-code text-red-400/50 mb-0.5">FAIL REASON</p>
-                    <p className="text-xs text-text/50 leading-relaxed">{c.failReason}</p>
-                  </div>
-                </div>
-              </details>
-            ))}
-          </div>
-        </section>
+        {/* ═══════════ TAB NAVIGATION ═══════════ */}
+        <div className="flex gap-1 mb-8 overflow-x-auto pb-1 -mx-1 px-1">
+          {([
+            { key: "overview" as const, label: "Overview" },
+            { key: "coding" as const, label: "코딩테스트" },
+            { key: "assignment" as const, label: "사전과제" },
+            { key: "tech" as const, label: "기술면접" },
+            { key: "culture" as const, label: "인성면접" },
+          ]).map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
+                activeTab === tab.key
+                  ? "bg-accent text-white shadow-sm"
+                  : "bg-surface/30 text-text/40 hover:text-text/70 hover:bg-surface/50"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* ═══════════ TAB: OVERVIEW ═══════════ */}
+        {activeTab === "overview" && (<>
 
         {/* ═══════════ PHASE ROADMAP ═══════════ */}
         <section className="mb-12">
@@ -735,102 +717,6 @@ export default function InterviewPage() {
                     })}
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* ═══════════ FULL PROCESS GUIDE ═══════════ */}
-        <section className="mb-12">
-          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">
-            Full Process Guide
-            <span className="ml-2 text-text/25 normal-case tracking-normal font-normal">— 서류부터 최종까지 5단계</span>
-          </h2>
-          <div className="space-y-2">
-            {PROCESS_STAGES.map((stage) => {
-              const isCurrentStage = (stage.step <= 2 && currentPhase.id >= 3) ||
-                (stage.step === 3 && currentPhase.id >= 1 && currentPhase.id <= 2) ||
-                (stage.step === 4 && currentPhase.id === 3) ||
-                (stage.step === 5 && currentPhase.id === 4);
-              return (
-                <details key={stage.id} className={`rounded-xl border overflow-hidden ${isCurrentStage ? "border-accent/30 bg-surface/40" : "border-border/30 bg-surface/20"}`}>
-                  <summary className="px-5 py-4 cursor-pointer hover:bg-surface/50 transition-colors flex items-center gap-3">
-                    <span className="w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-black font-code shrink-0" style={{ background: `${stage.color}20`, color: stage.color }}>
-                      {stage.icon}
-                    </span>
-                    <div className="flex-1">
-                      <span className="text-sm font-bold">{stage.title}</span>
-                      <span className="text-xs text-text/30 ml-2">{stage.timeline}</span>
-                    </div>
-                    {isCurrentStage && <span className="text-[10px] font-code animate-pulse" style={{ color: stage.color }}>FOCUS</span>}
-                  </summary>
-                  <div className="px-5 pb-5 border-t border-border/20 pt-4 space-y-4">
-                    <p className="text-xs text-text/50 leading-relaxed">{stage.overview}</p>
-
-                    {/* Checklist */}
-                    <div>
-                      <p className="text-[10px] font-code font-bold text-text/40 mb-2 uppercase tracking-wider">Checklist</p>
-                      <div className="space-y-1.5">
-                        {stage.checklist.map((item, i) => (
-                          <div key={i} className="flex items-start gap-2">
-                            <span className="text-green-400/50 text-xs mt-0.5">&#10003;</span>
-                            <p className="text-xs text-text/60 leading-relaxed">{item}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Tips */}
-                    <div className="rounded-lg bg-accent/5 border border-accent/15 px-3 py-2.5">
-                      <p className="text-[10px] font-code font-bold text-accent/50 mb-1.5 uppercase tracking-wider">Tips</p>
-                      <div className="space-y-1">
-                        {stage.tips.map((tip, i) => (
-                          <p key={i} className="text-xs text-text/55 leading-relaxed">&#8226; {tip}</p>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Pitfalls */}
-                    <div className="rounded-lg bg-red-500/5 border border-red-500/15 px-3 py-2.5">
-                      <p className="text-[10px] font-code font-bold text-red-400/50 mb-1.5 uppercase tracking-wider">Pitfalls</p>
-                      <div className="space-y-1">
-                        {stage.pitfalls.map((p, i) => (
-                          <p key={i} className="text-xs text-text/45 leading-relaxed">&#10005; {p}</p>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Assignment-specific: README template + AI usage guide */}
-                    {stage.id === "assignment" && (
-                      <div className="space-y-3 mt-2">
-                        <div className="rounded-lg bg-surface/50 border border-border/30 px-3 py-2.5">
-                          <p className="text-[10px] font-code font-bold text-text/40 mb-1.5 uppercase tracking-wider">README 필수 항목</p>
-                          <div className="space-y-1">
-                            {ASSIGNMENT_CHECKLIST.readme.map((item, i) => (
-                              <p key={i} className="text-xs text-text/50 leading-relaxed">{i + 1}. {item}</p>
-                            ))}
-                          </div>
-                        </div>
-                        <div className="rounded-lg bg-purple-500/5 border border-purple-500/15 px-3 py-2.5">
-                          <p className="text-[10px] font-code font-bold text-purple-400/50 mb-1.5 uppercase tracking-wider">AI 도구 활용 가이드</p>
-                          <div className="space-y-1">
-                            {ASSIGNMENT_CHECKLIST.aiUsage.map((item, i) => (
-                              <p key={i} className="text-xs text-text/50 leading-relaxed">&#8226; {item}</p>
-                            ))}
-                          </div>
-                        </div>
-                        <div className="rounded-lg bg-surface/50 border border-border/30 px-3 py-2.5">
-                          <p className="text-[10px] font-code font-bold text-text/40 mb-1.5 uppercase tracking-wider">5일 과제 타임라인</p>
-                          <div className="space-y-1">
-                            {ASSIGNMENT_CHECKLIST.timeline5day.map((item, i) => (
-                              <p key={i} className="text-xs text-text/50 leading-relaxed">{item}</p>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </details>
               );
             })}
           </div>
@@ -951,105 +837,7 @@ export default function InterviewPage() {
           </div>
         </section>
 
-        {/* ═══════════ TODAY'S FLASH CARDS ═══════════ */}
-        <section className="mb-12">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45">
-              Flash Cards — {track === "ios" ? "iOS" : "FDE"}
-              <span className="ml-2 text-text/25 normal-case tracking-normal font-normal">
-                {todayReviewed}/{todayCards.length} reviewed
-              </span>
-            </h2>
-            <span className="text-xs font-code text-text/30">
-              전체 {totalReviewed}/{flashCards.length}
-            </span>
-          </div>
-          <div className="space-y-3">
-            {todayCards.map((q) => {
-              const isRevealed = !!revealedCards[q.id];
-              return (
-                <div key={q.id} className="rounded-xl border border-border/40 bg-surface/30 overflow-hidden">
-                  <button
-                    onClick={() => toggleReveal(q.id)}
-                    className="w-full px-5 py-4 text-left cursor-pointer hover:bg-surface/50 transition-colors"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1">
-                        <span className="text-[10px] font-code px-2 py-0.5 rounded-full bg-accent/10 text-accent/60 mr-2">{q.topic}</span>
-                        <p className="text-sm text-text/80 mt-2 leading-relaxed font-medium">{q.question}</p>
-                      </div>
-                      <span className={`shrink-0 text-xs mt-1 ${isRevealed ? "text-green-400" : "text-text/25"}`}>
-                        {isRevealed ? "reviewed" : "tap to reveal"}
-                      </span>
-                    </div>
-                  </button>
-                  {isRevealed && (
-                    <div className="px-5 py-4 border-t border-border/20 bg-accent/3">
-                      <p className="text-sm text-text/60 leading-[1.8]">{q.answer}</p>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-          {todayReviewed === todayCards.length && todayCards.length > 0 && (
-            <p className="text-xs text-green-400/70 mt-3 font-code text-center">
-              All cards reviewed for today!
-            </p>
-          )}
-        </section>
-
-        {/* ═══════════ TODAY'S CODING PROBLEMS ═══════════ */}
-        <section className="mb-12">
-          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">
-            Today&apos;s Problems
-            <span className="ml-2 text-text/25 normal-case tracking-normal font-normal">— Phase {currentPhase.id} 추천 문제</span>
-          </h2>
-          <div className="space-y-2">
-            {todayProblems.map((p) => (
-              <div
-                key={p.title}
-                className={`rounded-xl border p-4 flex items-center gap-4 transition-all ${
-                  solvedProblems[p.title]
-                    ? "border-green-500/30 bg-green-500/5"
-                    : "border-border/40 bg-surface/30"
-                }`}
-              >
-                <input
-                  type="checkbox"
-                  checked={!!solvedProblems[p.title]}
-                  onChange={() => toggleProblem(p.title)}
-                  className="w-4 h-4 rounded accent-green-500 cursor-pointer shrink-0"
-                />
-                <div className="flex-1 min-w-0">
-                  <a
-                    href={p.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`text-sm font-medium hover:text-accent transition-colors ${
-                      solvedProblems[p.title] ? "line-through text-text/30" : "text-text/80"
-                    }`}
-                  >
-                    {p.title}
-                  </a>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-[10px] font-code text-text/30">{p.platform}</span>
-                    <span className="text-[10px] font-code text-accent/50">{p.difficulty}</span>
-                    <span className="text-[10px] font-code text-text/20">{p.topic}</span>
-                  </div>
-                </div>
-                <a
-                  href={p.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="shrink-0 text-xs text-accent/50 hover:text-accent transition-colors"
-                >
-                  풀러가기 &rarr;
-                </a>
-              </div>
-            ))}
-          </div>
-        </section>
+        {/* Flash Cards + Coding Problems → 코딩테스트/기술면접 탭에서 확인 */}
 
         {/* ═══════════ WEEKLY FOCUS ═══════════ */}
         <section className="mb-12">
@@ -1100,6 +888,11 @@ export default function InterviewPage() {
             })}
           </div>
         </section>
+
+        </>)}
+
+        {/* ═══════════ TAB: CODING TEST ═══════════ */}
+        {activeTab === "coding" && (<>
 
         {/* ═══════════ KEY RESOURCES ═══════════ */}
         <section className="mb-12">
@@ -1323,6 +1116,204 @@ export default function InterviewPage() {
           </div>
         </section>
 
+        {/* Today's Problems */}
+        <section className="mb-12">
+          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">
+            Today&apos;s Problems
+            <span className="ml-2 text-text/25 normal-case tracking-normal font-normal">— Phase {currentPhase.id} 추천 문제</span>
+          </h2>
+          <div className="space-y-2">
+            {todayProblems.map((p) => (
+              <div key={p.title} className={`rounded-xl border p-4 flex items-center gap-4 transition-all ${solvedProblems[p.title] ? "border-green-500/30 bg-green-500/5" : "border-border/40 bg-surface/30"}`}>
+                <input type="checkbox" checked={!!solvedProblems[p.title]} onChange={() => toggleProblem(p.title)} className="w-4 h-4 rounded accent-green-500 cursor-pointer shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <a href={p.url} target="_blank" rel="noopener noreferrer" className={`text-sm font-medium hover:text-accent transition-colors ${solvedProblems[p.title] ? "line-through text-text/30" : "text-text/80"}`}>{p.title}</a>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-[10px] font-code text-text/30">{p.platform}</span>
+                    <span className="text-[10px] font-code text-accent/50">{p.difficulty}</span>
+                    <span className="text-[10px] font-code text-text/20">{p.topic}</span>
+                  </div>
+                </div>
+                <a href={p.url} target="_blank" rel="noopener noreferrer" className="shrink-0 text-xs text-accent/50 hover:text-accent transition-colors">풀러가기 &rarr;</a>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Big-O Notation Guide */}
+        <section className="mb-12">
+          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">
+            Big-O Notation
+            <span className="ml-2 text-text/25 normal-case tracking-normal font-normal">— 시간복잡도 한눈에 이해하기</span>
+          </h2>
+          {/* 비교 바 */}
+          <div className="rounded-xl border border-border/40 bg-surface/30 p-5 mb-4">
+            <p className="text-[10px] font-code text-text/30 mb-3">n=100 기준 연산 횟수 비교</p>
+            <div className="space-y-2">
+              {BIG_O_COMPARISON.map((item) => {
+                const entry = BIG_O_GUIDE.find((e) => e.notation === item.notation);
+                return (
+                  <div key={item.notation} className="flex items-center gap-3">
+                    <span className="text-xs font-code w-20 shrink-0" style={{ color: entry?.color }}>{item.notation}</span>
+                    <div className="flex-1 h-3 rounded-full bg-surface/60 overflow-hidden">
+                      <div className="h-full rounded-full transition-all" style={{ width: `${item.bar}%`, background: entry?.color }} />
+                    </div>
+                    <span className="text-[10px] font-code text-text/25 w-16 text-right shrink-0">
+                      {item.ops > 1e9 ? "∞" : item.ops.toLocaleString()}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          {/* 상세 카드 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {BIG_O_GUIDE.map((entry) => (
+              <div key={entry.notation} className="rounded-xl border border-border/30 bg-surface/20 p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-lg font-display font-black" style={{ color: entry.color }}>{entry.notation}</span>
+                  <span className="text-xs text-text/40">{entry.nameKo}</span>
+                  <span className="ml-auto text-[10px] font-code px-2 py-0.5 rounded-full" style={{ color: entry.color, background: `${entry.color}15` }}>{entry.speed}</span>
+                </div>
+                <p className="text-xs text-text/60 leading-relaxed mb-2">{entry.analogy}</p>
+                <p className="text-[10px] text-text/35 font-code">예: {entry.example}</p>
+                <p className="text-[10px] text-text/25 font-code mt-1">한계: {entry.limit}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        </>)}
+
+        {/* ═══════════ TAB: ASSIGNMENT ═══════════ */}
+        {activeTab === "assignment" && (<>
+        {/* Full Process Guide의 01-02 단계만 표시 */}
+        <section className="mb-12">
+          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">
+            사전과제 완전 가이드
+          </h2>
+          <div className="space-y-2">
+            {PROCESS_STAGES.filter((s) => s.step <= 2).map((stage) => (
+              <details key={stage.id} open={stage.step === 2} className="rounded-xl border border-border/30 bg-surface/20 overflow-hidden">
+                <summary className="px-5 py-4 cursor-pointer hover:bg-surface/50 transition-colors flex items-center gap-3">
+                  <span className="w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-black font-code shrink-0" style={{ background: `${stage.color}20`, color: stage.color }}>{stage.icon}</span>
+                  <span className="text-sm font-bold flex-1">{stage.title}</span>
+                </summary>
+                <div className="px-5 pb-5 border-t border-border/20 pt-4 space-y-3">
+                  <p className="text-xs text-text/50 leading-relaxed">{stage.overview}</p>
+                  <div className="space-y-1.5">
+                    {stage.checklist.map((item, i) => (
+                      <div key={i} className="flex items-start gap-2">
+                        <span className="text-green-400/50 text-xs mt-0.5">&#10003;</span>
+                        <p className="text-xs text-text/60 leading-relaxed">{item}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="rounded-lg bg-accent/5 border border-accent/15 px-3 py-2.5">
+                    <p className="text-[10px] font-code font-bold text-accent/50 mb-1 uppercase">Tips</p>
+                    {stage.tips.map((tip, i) => <p key={i} className="text-xs text-text/55 leading-relaxed">&#8226; {tip}</p>)}
+                  </div>
+                  <div className="rounded-lg bg-red-500/5 border border-red-500/15 px-3 py-2.5">
+                    <p className="text-[10px] font-code font-bold text-red-400/50 mb-1 uppercase">Pitfalls</p>
+                    {stage.pitfalls.map((p, i) => <p key={i} className="text-xs text-text/45 leading-relaxed">&#10005; {p}</p>)}
+                  </div>
+                </div>
+              </details>
+            ))}
+          </div>
+        </section>
+        {/* README + AI + Timeline */}
+        <section className="mb-12">
+          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">README / AI 활용 / 타임라인</h2>
+          <div className="space-y-3">
+            <div className="rounded-xl border border-border/30 bg-surface/20 p-5">
+              <h3 className="text-xs font-bold text-text/40 mb-2 uppercase tracking-wider">README 필수 항목</h3>
+              {ASSIGNMENT_CHECKLIST.readme.map((item, i) => <p key={i} className="text-xs text-text/50 leading-relaxed">{i+1}. {item}</p>)}
+            </div>
+            <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 p-5">
+              <h3 className="text-xs font-bold text-purple-400/70 mb-2 uppercase tracking-wider">AI 도구 활용 가이드</h3>
+              {ASSIGNMENT_CHECKLIST.aiUsage.map((item, i) => <p key={i} className="text-xs text-text/50 leading-relaxed">&#8226; {item}</p>)}
+            </div>
+            <div className="rounded-xl border border-border/30 bg-surface/20 p-5">
+              <h3 className="text-xs font-bold text-text/40 mb-2 uppercase tracking-wider">5일 과제 타임라인</h3>
+              {ASSIGNMENT_CHECKLIST.timeline5day.map((item, i) => <p key={i} className="text-xs text-text/50 leading-relaxed">{item}</p>)}
+            </div>
+          </div>
+        </section>
+        </>)}
+
+        {/* ═══════════ TAB: TECH INTERVIEW ═══════════ */}
+        {activeTab === "tech" && (<>
+        {/* Flash Cards */}
+        <section className="mb-12">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45">
+              기술면접 Flash Cards — {track === "ios" ? "iOS" : "FDE"}
+              <span className="ml-2 text-text/25 normal-case tracking-normal font-normal">{todayReviewed}/{todayCards.length} reviewed</span>
+            </h2>
+            <span className="text-xs font-code text-text/30">전체 {totalReviewed}/{flashCards.length}</span>
+          </div>
+          <div className="space-y-3">
+            {todayCards.map((q) => {
+              const isRevealed = !!revealedCards[q.id];
+              return (
+                <div key={q.id} className="rounded-xl border border-border/40 bg-surface/30 overflow-hidden">
+                  <button onClick={() => toggleReveal(q.id)} className="w-full px-5 py-4 text-left cursor-pointer hover:bg-surface/50 transition-colors">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1">
+                        <span className="text-[10px] font-code px-2 py-0.5 rounded-full bg-accent/10 text-accent/60 mr-2">{q.topic}</span>
+                        <p className="text-sm text-text/80 mt-2 leading-relaxed font-medium">{q.question}</p>
+                      </div>
+                      <span className={`shrink-0 text-xs mt-1 ${isRevealed ? "text-green-400" : "text-text/25"}`}>{isRevealed ? "reviewed" : "tap to reveal"}</span>
+                    </div>
+                  </button>
+                  {isRevealed && (
+                    <div className="px-5 py-4 border-t border-border/20 bg-accent/3">
+                      <p className="text-sm text-text/60 leading-[1.8]">{q.answer}</p>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          {todayReviewed === todayCards.length && todayCards.length > 0 && (
+            <p className="text-xs text-green-400/70 mt-3 font-code text-center">All cards reviewed for today!</p>
+          )}
+        </section>
+        {/* Company Strategy */}
+        <section className="mb-12">
+          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">
+            Company Strategy — {track === "ios" ? "iOS" : "FDE"}
+          </h2>
+          <div className="space-y-3">
+            {(COMPANY_STRATEGIES[track] ?? []).map((c) => (
+              <details key={c.name} className="rounded-xl border border-border/40 bg-surface/30 overflow-hidden">
+                <summary className="px-5 py-4 cursor-pointer hover:bg-surface/50 transition-colors flex items-center gap-3">
+                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: c.color }} />
+                  <span className="text-sm font-bold flex-1">{c.name}</span>
+                </summary>
+                <div className="px-5 pb-4 border-t border-border/20 pt-3 space-y-3">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {c.process.map((step, i) => (
+                      <span key={i} className="flex items-center gap-1.5">
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-surface/60 text-text/50">{step}</span>
+                        {i < c.process.length - 1 && <span className="text-text/20 text-xs">&rarr;</span>}
+                      </span>
+                    ))}
+                  </div>
+                  <div><p className="text-[10px] font-code text-text/30 mb-0.5">CODING TEST</p><p className="text-xs text-text/60">{c.codingTest}</p></div>
+                  <div className="rounded-lg bg-accent/5 border border-accent/15 px-3 py-2"><p className="text-[10px] font-code text-accent/50 mb-0.5">KEY TIP</p><p className="text-xs text-text/60">{c.keyTip}</p></div>
+                  <div className="rounded-lg bg-red-500/5 border border-red-500/15 px-3 py-2"><p className="text-[10px] font-code text-red-400/50 mb-0.5">FAIL REASON</p><p className="text-xs text-text/50">{c.failReason}</p></div>
+                </div>
+              </details>
+            ))}
+          </div>
+        </section>
+        </>)}
+
+        {/* ═══════════ TAB: CULTURE FIT ═══════════ */}
+        {activeTab === "culture" && (<>
+
         {/* ═══════════ HIRING STRATEGY ═══════════ */}
         <section className="mb-12">
           <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">
@@ -1401,6 +1392,8 @@ export default function InterviewPage() {
             </div>
           </div>
         </section>
+        </>)}
+
       </main>
     </div>
   );
