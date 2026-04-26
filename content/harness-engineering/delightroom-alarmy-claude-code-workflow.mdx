@@ -1,0 +1,57 @@
+---
+title: "딜라이트룸(알라미) iOS 팀의 Claude Code 워크플로우 — 10x 생산성의 실체"
+category: harness-engineering
+date: "2026-04-26"
+tags: [claude-code, ios, workflow, harness-engineering, case-study, agents]
+confidence: 2
+connections: [harness-engineering/ai-agent-start-here, harness-engineering/context-loading-strategy]
+description: "글로벌 1위 알람 앱 알라미의 iOS 팀이 Claude Code를 실전에 도입하며 발견한 워크플로우 패턴과 10x 생산성 주장의 근거를 분석한다."
+type: entry
+last_verified: "2026-04-26"
+applicable_to: ["any"]
+---
+
+글로벌 1위 알람 앱 알라미(Alarmy)를 만드는 딜라이트룸의 iOS 팀이 Claude Code를 장기간 실전 프로젝트에 도입한 사례다. Cursor 대비 iOS/SwiftUI 개발에서 유의미한 차이를 보였다고 보고한다.
+
+## 핵심 워크플로우 패턴
+
+### 1. CLAUDE.md 기반 컨텍스트 로딩
+
+프로젝트 루트의 `CLAUDE.md`에 개발 규칙, 테스트 방법, 코딩 컨벤션을 박제한다. Claude Code가 매 실행마다 이 파일을 자동으로 컨텍스트에 포함하므로, 반복 지시 없이도 팀 규칙을 따르는 코드를 생성한다.
+
+이것은 Context Engineering의 핵심 패턴 중 하나다. AI에게 "무엇을 보여줄지"를 설계하는 것이 품질을 결정한다.
+
+### 2. 스크린샷 기반 지시
+
+유튜브 UI의 스크린샷과 "음량이 0일 때 사운드 레이블 비활성화"라는 한 줄 지시만으로 정확한 SwiftUI 구현을 얻었다. Cursor는 같은 작업에서 실패했다고 보고한다. 시각적 컨텍스트를 이해하는 능력이 iOS 개발에서 큰 차이를 만든다.
+
+### 3. 자율 에이전트 모드
+
+"목적지만 정하면 자율주행이 경로를 찾는다"는 비유로 워크플로우를 설명한다.
+
+- **개발자의 역할**: 문제 정의 + 결과 검증
+- **AI의 역할**: 경로 탐색 + 구현
+- **핵심**: "선택적 위임"으로 인지 부하를 대폭 줄임
+
+## 10x 주장의 근거
+
+| 영역 | Before (수동) | After (Claude Code) |
+|------|-------------|-------------------|
+| SwiftUI 구현 | 직접 코딩 | 스크린샷 + 한 줄 지시 |
+| 코드베이스 온보딩 | 코드 리딩 수시간 | 코드 로직 즉석 설명 |
+| 반복 작업 | 수동 복사 + 수정 | 패턴 인식 + 자동 적용 |
+| 디버깅 | 로그 분석 → 가설 → 수정 | 에러 컨텍스트 → 해결 제안 |
+
+## Harness Engineering 관점
+
+딜라이트룸의 접근은 세 가지 Harness 패턴을 암묵적으로 적용하고 있다.
+
+1. **Context Engineering**: CLAUDE.md로 AI가 볼 정보를 설계
+2. **Harness**: "선택적 위임"은 AI 출력을 개발자가 검증하는 구조
+3. **Compound**: 프로젝트 규칙이 CLAUDE.md에 누적되면서 세션마다 품질 상승
+
+## 자기 점검
+
+1. 당신의 프로젝트에 CLAUDE.md가 있는가? 없다면 어떤 규칙을 박제할 것인가?
+2. 스크린샷 기반 지시가 효과적인 이유는 무엇인가? (힌트: 모달리티와 컨텍스트)
+3. "선택적 위임"에서 개발자가 반드시 직접 해야 하는 것과 AI에 맡길 수 있는 것의 경계는?

@@ -67,6 +67,8 @@ export const IOS_QUESTIONS: InterviewQuestion[] = [
   // ── 성능 (Phase 3) ──
   { id: "ios-29", topic: "성능", phase: 3, question: "앱 성능 최적화 방법?", answer: "Instruments: Time Profiler(CPU), Allocations(메모리), Leaks(메모리 누수). 이미지: 적절한 크기로 다운샘플링. 레이아웃: 복잡한 뷰 계층 최소화. 스레딩: 무거운 작업 백그라운드. 캐싱: 반복 계산/네트워크 결과. 지연 로딩: 필요할 때만 초기화." },
   { id: "ios-30", topic: "성능", phase: 3, question: "앱 크기 줄이는 방법?", answer: "Asset Catalog: App Thinning(Slicing, Bitcode, On-Demand Resources). 이미지: WebP/HEIC 포맷, 벡터 PDF. 코드: Dead Code Stripping, unused import 제거. 라이브러리: 필요한 모듈만 포함(SPM). Bitcode: Apple이 디바이스별 최적화." },
+  { id: "ios-31", topic: "성능", phase: 3, question: "SwiftUI vs UIKit 성능 차이 (2026년 기준)?", answer: "iOS 26에서도 복잡한 스크롤 UI에서 UIKit이 압도적. 벤치마크: SwiftUI Hitch 3.4/초 vs UIKit 0.7/초, CPU 유휴 100% vs 11%, 메모리 248MB vs 92MB. 원인: SwiftUI의 반응형 아키텍처가 상태 변경 시 뷰 계층 전체 재계산. 단순 UI는 SwiftUI, 성능 중시는 UIKit. 면접에서 '왜 UIKit을 아직 쓰는가?'에 대한 데이터 기반 답변.", followUp: "그러면 SwiftUI는 아직 프로덕션에서 쓸 수 없나요? 어떤 경우에 SwiftUI가 적합한가요?" },
+  { id: "ios-32", topic: "AI 도구", phase: 4, question: "CLAUDE.md 기반 AI 워크플로우란?", answer: "프로젝트 루트에 CLAUDE.md 파일로 개발 규칙/컨벤션/테스트 방법을 박제. Claude Code가 매 실행마다 자동 컨텍스트 로딩. 딜라이트룸(알라미) iOS 팀이 실전 도입하여 Cursor 대비 SwiftUI 개발 정확도/속도 유의미한 차이 보고. 핵심: Context Engineering — AI에게 '무엇을 보여줄지' 설계.", followUp: "당신이 AI 도구를 실무에 도입한다면 어떤 규칙을 CLAUDE.md에 넣을 건가요?" },
 ];
 
 /* ── FDE Track ───────────────────────────────────────────── */
@@ -2452,6 +2454,12 @@ export const QUIZ_BANK: QuizItem[] = [
   { id: "q80", category: "ios", question: "Swift Testing 프레임워크(@Test)와 XCTest의 차이는?", choices: ["Swift Testing이 더 느리다", "@Test 매크로로 더 간결한 테스트, 파라미터화 테스트 지원", "XCTest가 Swift 전용이다", "Swift Testing은 UI 테스트만 가능"], answer: 1, explanation: "Swift Testing(Swift 5.9+): @Test 매크로, #expect 대신 XCTAssert, 파라미터화 테스트(@Test(arguments:)), 태그 기반 필터링. XCTest보다 간결하고 표현력 높음. Xcode 16+ 기본 지원." },
   { id: "q81", category: "ios", question: "AI Pair Programming 면접에서 가장 중요한 것은?", choices: ["AI에게 모든 코드를 생성시키기", "AI 제안을 비판적으로 검토하고 수정하는 능력", "AI 없이 모든 것을 직접 구현", "가장 최신 AI 모델 사용"], answer: 1, explanation: "2026년 Meta 등에서 도입한 AI Pair Programming 면접: AI가 코드를 제안하면 개발자가 검토·수정·개선. 핵심 평가: Critical thinking + AI 출력 검증 능력 + 아키텍처 판단. AI에 의존 X, AI와 협력 O." },
   { id: "q82", category: "fde", question: "고객사에 솔루션을 제안할 때 MVP를 강조하는 이유는?", choices: ["비용을 줄이기 위해", "빠른 검증으로 리스크를 줄이고, 피드백 기반 개선이 가능해서", "완성도가 낮아도 되므로", "개발자가 편하므로"], answer: 1, explanation: "MVP(Minimum Viable Product): 핵심 가설을 최소 기능으로 검증. 6개월 전체 개발 → 실패 vs 2주 MVP → 피드백 → 방향 수정. FDE의 핵심 역량: '뭘 만들지'보다 '뭘 먼저 검증할지' 판단." },
+
+  // ── 2026 최신 트렌드 (뉴스레터 기반) ──
+  { id: "q83", category: "ios", question: "iOS 26에서 SwiftUI가 UIKit만큼 빠른가? (Jacob Bartlett 벤치마크)", choices: ["SwiftUI가 더 빠르다", "동등한 성능이다", "UIKit이 여전히 복잡한 스크롤 UI에서 압도적으로 빠르다", "SwiftUI가 메모리만 더 효율적이다"], answer: 2, explanation: "iOS 26에서도 복잡한 스크롤 UI에서 SwiftUI는 UIKit 대비: Hitch 3.4/초 vs 0.7/초, CPU 유휴 시 100% vs 11%, 메모리 248MB vs 92MB. SwiftUI의 반응형 아키텍처가 뷰 계층 전체를 재계산하는 구조적 한계. 단순 UI는 SwiftUI OK, 성능 중시는 UIKit 필수." },
+  { id: "q84", category: "ios", question: "CLAUDE.md 파일의 역할은?", choices: ["테스트 자동화 설정", "프로젝트 규칙/컨벤션을 AI에게 전달하는 컨텍스트 파일", "CI/CD 파이프라인 설정", "린트 규칙 정의"], answer: 1, explanation: "CLAUDE.md는 Claude Code가 매 실행마다 자동으로 읽는 컨텍스트 파일. 개발 규칙, 코딩 컨벤션, 테스트 방법을 박제하면 반복 지시 없이 팀 규칙을 따르는 코드 생성. Context Engineering의 핵심. 딜라이트룸(알라미)이 실전에서 활용하여 10x 생산성 달성." },
+  { id: "q85", category: "algo", question: "SOLID의 단일 책임 원칙(SRP)을 에이전트 시스템에 적용하면?", choices: ["에이전트 하나가 모든 것을 처리", "에이전트 하나는 책임이 하나여야 한다", "에이전트 수를 최소화해야 한다", "에이전트 간 통신을 금지해야 한다"], answer: 1, explanation: "SRP 에이전트 적용: 계획/검색/실행/검증을 하나의 에이전트가 다 하면 안 된다. 초과 책임 에이전트 = 예측 불가 행동 + 비용 폭증. MoneyFlow 13개 에이전트가 각각 한 가지 분석만 담당하는 것이 실례." },
+  { id: "q86", category: "ios", question: "SOLID의 LSP(리스코프 치환)를 AI 에이전트에 적용하면?", choices: ["모든 에이전트가 같은 언어를 사용", "같은 인터페이스를 따르는 에이전트는 상호 교체 가능", "에이전트를 상속해야 함", "에이전트 수를 제한"], answer: 1, explanation: "추천 에이전트의 구현이 OpenAI/로컬 ML/규칙 기반이든 동일한 입출력 계약. MoneyFlow의 Bounded Retry: Claude 실패 → Gemini 전환 → GPT 폴백. 같은 인터페이스라 가능. DIP(의존성 역전)과 함께 폴백 패턴의 기반." },
 ];
 
 /* ═══════════════════════════════════════════════════════════ */
