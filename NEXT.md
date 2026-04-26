@@ -7,112 +7,55 @@
 
 ---
 
-## 🕒 작성 시점
+## 작성 시점
 
-- **작성 일시**: 2026-04-25 (Session 23 — iOS Journal 010~011 + Aidy Journal 017)
-- **작성 주체**: Claude (Session 23)
+- **작성 일시**: 2026-04-27 (Session 24 — 100일 면접 Boot Camp 구축)
+- **작성 주체**: Claude (Session 24)
 - **이유**: 세션 핸드오프
 
 ---
 
-## 📸 현재 상태 스냅샷
+## 현재 상태 스냅샷
 
 ### ai-study Wiki
-- **엔트리 수**: 170 (iOS Journal 010~011 + Aidy Journal 017 추가)
-- **Solutions**: workflow 14, mdx 8, ai-pipeline 5, github-actions 5, next-patterns 3, performance 1
-- **Skillify 도구**: `check:skills` · `eval:resolver` · `extract:failures`
-- **Resolver eval**: **48/48 = 100%** 유지
-- **Weekly CI**: 허브 + 워커 6 = **7 repo** ON
+- **엔트리 수**: 174
+- **Solutions**: workflow 14, mdx 8, ai-pipeline 6, github-actions 5, next-patterns 3, performance 1
+- **Resolver eval**: 48/48 = 100% 유지
+- **Weekly CI**: 허브 + 워커 6 = 7 repo ON
 
-### 워커 프로젝트 상태 (/projects-sync 2026-04-25)
-| repo | 상태 | 조치 필요 |
-|---|---|---|
-| mino-moneyflow | ⚠️ behind 4 + conductor worktree | `git pull` + la-paz worktree 확인 후 정리 |
-| mino-tarosaju | ⚠️ feat 브랜치 체크아웃 + behind 3 + modified 2 | `git checkout main && git pull` + modified 확인 |
-| aidy-architect | ⚠️ ahead 1 + modified 2 | 미푸시 커밋 확인 후 push 또는 drop 결정 |
-
-### 이번 세션 산출물
-- **iOS Journal 010**: AI 오케스트레이션 3연 스프린트 (tmux 4-Pane + Worker Pool + 스킬 시스템)
-- **iOS Journal 011**: 토스 SLASH23 전면 이식 (Tuist 46모듈 + scan-imports 자동화 + 3차 세션 멀티타겟 7모듈 패치)
-- **Aidy Journal 017**: dispatch 단일 함수 통합 + AGENT_TEAMS=1 + s34 3-Feature 병렬 (v4.7~v4.9)
-- **회사명 노출 수정**: gma/GreenCar/greencarModule → 익명화 완료. 메모리에 "ios-study로 통일" 피드백 저장
+### /interview 히든 페이지
+- **규모**: constants.ts 2,651줄 + page.tsx 2,235줄 = 4,886줄
+- **구성**: 7탭 / 96퀴즈 / 47플래시카드 / 11알고리즘 / 20CS / 6시스템디자인
+- **iOS/FDE**: 듀얼트랙 완전 분리
+- **접근**: I키 5회 이스터에그 + URL 직접
 
 ---
 
-## 🎯 다음 작업 큐 (우선순위 순)
+## 다음 작업 큐 (우선순위순)
 
-### 🔴 High
+### P0 — 즉시
+1. **면접 페이지 테스트 추가**: 퀴즈 셔플 균등분포, localStorage 영속성, 트랙 전환 독립성 최소 테스트
+2. **Vercel 배포 확인**: 빌드 통과 확인 (description 누락 재발 방지)
 
-1. **ccusage 설치 + 베이스라인 수집** — 5 스프린트 연속 방치. 다음 세션 첫 5분 안에 처리. `brew install ccusage` 또는 blocker 확정. 크기: S
-2. **워커 프로젝트 3개 정리** — moneyflow pull + tarosaju 브랜치 정리 + aidy 미푸시 커밋 처리. 크기: S
-3. **콘텐츠 생성 재개** — 엔트리 170 → 180. AI 튜터 추천 또는 수동 주제. 크기: L
+### P1 — 이번 주
+3. **퀴즈 뱅크 100문제 달성**: 현재 96문제 → 100+ (AI 워크플로우 4문제 추가)
+4. **플래시카드 iOS 50장 목표**: 현재 35장 → 50장 (UIKit 성능, SwiftUI 실전, Combine 심화)
+5. **뉴스레터 엔트리 보강**: 딜라이트룸 사례 원문 재확인 + SwiftUI vs UIKit 벤치마크 엔트리
 
-### 🟡 Medium
+### P2 — 다음 주
+6. **면접 페이지 모바일 반응형**: 현재 데스크탑 위주 — 모바일에서 탭/카드 레이아웃 확인
+7. **CS 토픽 30개 목표**: 현재 20개 → 분산시스템/캐싱/인증 심화 추가
 
-4. **LLM-기반 resolver eval (Claude Haiku)** — 구조적 eval이 "qa vs qa-only" 같은 의도 유사 충돌을 놓침. Journal 028 ⚠️ 항목. 크기: M
-5. **github-actions 솔루션 N=5 promote** — 스킬 자동 생성 + 리뷰. 크기: M
-6. **워커 resolver-eval golden set 난이도 상향** — 현재 11케이스 내 말투 편향. 크기: M
-
-### 🟢 Low
-
-7. **JIT 검색 성과 검증** (#69) — totalQueries 100 도달 시
-
----
-
-## ⚠️ 블로커 / 대기 사항
-
-- 없음
+### Backlog
+- SM-2 분산반복 알고리즘을 퀴즈에 적용 (틀린 문제 우선 출제)
+- 자소서 기반 맞춤 질문 생성 (AI 연동)
+- AI 역량검사 시뮬레이터
 
 ---
 
-## ⚠️ 주의사항 (이번 세션에서 발견)
+## 다음 세션 시작 체크리스트
 
-- **회사명 노출 절대 금지**: ios-study 프로젝트 언급 시 gma/GreenCar/LOTTIMS/greencar 등 실명 사용 금지. 반드시 **ios-study**로 표기. 메모리 `feedback_ios_project_naming.md` 참조.
-- **iOS Journal 011의 `applicable_to`**: `["ios-study"]`로 설정됨 (gma-ios 아님)
-
----
-
-## 이번 스프린트 KPI
-
-| 지표 | baseline | target | direction | actual |
-|------|----------|--------|-----------|--------|
-| ccusage 설치 | 미구축 | 구축 or blocker 확정 | achieve | ? |
-| 엔트리 수 | 167 | 180 | higher | 170 (+3) |
-| resolver-eval accuracy | 100% | 90% (유지) | maintain | ? |
-| 워커 프로젝트 정리 | 3개 미정리 | 0개 | achieve | ? |
-
----
-
-## 📋 다음 세션 시작 체크리스트 (18분)
-
-### Phase 1: 필수 파일 로드 (5분)
-- [ ] `CLAUDE.md` / `SPEC.md` / ai-agent-start-here
-
-### Phase 2: 이 NEXT.md (3분)
-
-### Phase 3: Git 동기화 + 정합 확인 (5분)
-- [ ] `rtk git fetch`
-- [ ] `/projects-sync` (3 워커 전부)
-- [ ] `npm run check:skills`
-- [ ] `npm run eval:resolver`
-
-### Phase 4: 최근 박제 훑기 (3분)
-- [ ] `node scripts/graph-query.mjs suggest`
-- [ ] `node scripts/scan-promotions.mjs`
-
-### Phase 5: 작업 시작 (2분 내)
-- [ ] **첫 5분 안에 ccusage 확인** (`brew install ccusage` or blocker 기록)
-- [ ] High #2(워커 정리) → High #3(콘텐츠) 순서
-- [ ] `/compound` 후 NEXT.md 교체
-
----
-
-## 📜 최근 갱신
-
-### 2026-04-25 (Session 23 — iOS Journal 010~011 + Aidy Journal 017)
-- **완료**: iOS Journal 010 — AI 오케스트레이션 tmux + Worker Pool + 스킬 시스템 (170 엔트리)
-- **완료**: iOS Journal 011 — 토스 SLASH23 Tuist 46모듈 전환 + 빌드 체인 자동 복구
-- **완료**: Aidy Journal 017 — dispatch 통합 + s34 3-Feature 병렬 (v4.7~v4.9)
-- **수정**: 회사명 노출 3건 제거 + 메모리 피드백 저장
-- **/projects-sync**: moneyflow behind 4, tarosaju feat 브랜치, aidy ahead 1 — 전부 정리 필요
-- **다음**: ccusage(High #1) + 워커 정리(High #2) + 콘텐츠 재개(High #3)
+1. CLAUDE.md → SPEC.md → ai-agent-start-here → 이 문서 로드
+2. `git pull --rebase` (AI 파이프라인 자동 생성 엔트리 확인)
+3. `npm run build` (빌드 정상 확인)
+4. P0 작업부터 시작

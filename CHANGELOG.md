@@ -2,6 +2,60 @@
 
 모든 주목할 만한 변경사항을 이 파일에 기록합니다.
 
+## [2026-04-26] 세션 24 — 100일 면접 Boot Camp 히든 페이지 구축
+
+> `/interview` 히든 페이지를 처음부터 구축하여 4,886줄(constants 2,651 + page 2,235)의 올인원 면접 준비 플랫폼 완성. 7개 탭, 96문제 퀴즈, 47장 플래시카드, 11 알고리즘 패턴 가이드, 4+2 시스템 디자인 케이스, 20 CS 토픽, 5사 코테 스타일 분석. 엔트리 170→174. 30커밋.
+
+### Added
+
+- **src/app/interview/page.tsx** — 100일 Boot Camp 히든 페이지 (2,235줄)
+  - 7개 탭: Overview / 코딩테스트 / 사전과제 / CS 기초 / 기술면접 / 퀴즈 / 인성면접
+  - D-Day 카운트다운, 스트릭, Today's Mission, Weakness 분석, Company D-Day
+  - Mock Timer (8 프리셋), Weekly Report, Review Queue (오답노트)
+  - Overview UX 재설계: Progressive Disclosure (Duolingo/Brilliant.org 원칙)
+- **src/app/interview/constants.ts** — 면접 데이터 뱅크 (2,651줄)
+  - 퀴즈 96문제 (Swift/iOS/CS/Algo/SystemDesign/FDE/AI)
+  - 플래시카드 47장 (iOS 35 + FDE 12 + Culture 8) — 꼬리질문 포함
+  - Algorithm Playbook 11패턴 (Visual + Swift 템플릿)
+  - Big-O 7단계 (비유 + 성장 시각화 + Swift 코드)
+  - CS 20토픽 (Visual + 코드 + iOS 실무 연결)
+  - 시스템 디자인 6케이스 (iOS 4 + FDE 2, 45분 답변 템플릿)
+  - 회사별 전략 7사 (전형/코테/팁/탈락사유)
+  - 회사별 코테 스타일 5사 (카카오/네이버/삼성/쿠팡/토스)
+  - Interview Day Playbook (D-1/당일/30분전)
+  - 연봉 협상 5전략 + Red Flags 7개
+  - Onboarding 30-60-90 Playbook
+  - Mock Feedback Template 6기준
+  - 채용 페이지 직링크 10사
+- **src/components/easter-egg-nav.tsx** — R×5→/resume, I×5→/interview 이스터에그
+- **content/harness-engineering/delightroom-alarmy-claude-code-workflow.mdx** — 딜라이트룸 Claude Code 워크플로우 사례
+- **content/agents/solid-principles-for-agent-design.mdx** — SOLID 에이전트 재해석
+- **content/agents/google-cloud-a2a-mcp-multi-agent-communication-control-patte.mdx** — A2A/MCP 패턴 (AI 파이프라인 자동 생성 + Mermaid 수정)
+
+### Changed
+
+- **scripts/generate-lesson.mjs** — mermaid-fix.mjs 후처리 + void 태그 self-closing 자동 변환 연결
+- **src/app/robots.ts** — /interview disallow 추가
+- **src/app/layout.tsx** — EasterEggNav 글로벌 마운트
+
+### Fixed
+
+- Mermaid 렌더링 에러 (A2A/MCP 다이어그램 괄호/콜론 quoting)
+- React key 중복 (fde-1, 플래시카드/퀴즈 진행 바)
+- iOS/FDE 트랙 전환 시 퀴즈 인덱스 미리셋
+- shuffledQuiz useEffect 선언 순서 (Block-scoped variable 에러)
+- multi-agent-quality-sprint-pattern.mdx description 누락
+
+### Metrics
+
+- 커밋: 30건 (2일간)
+- 코드: +4,170줄 (interview 4,886줄 신규)
+- 엔트리: 170→174 (+4)
+- 퀴즈: 0→96문제
+- 플래시카드: 0→47장
+- 알고리즘 가이드: 0→11패턴
+- CS 토픽: 0→20개
+
 ## [2026-04-24] 세션 22 — Journal 028/029 박제 + 6 워커 resolver-eval rollout 완료
 
 > Journal 028(3-lever playbook)을 박은 동일 세션에 워커 6개 전원에 적용. baseline 분포: moneyflow 54.5% / architect 81.8% / aidy 3개 ~27-36%. 전원 100% 달성. 총 45분(7분/워커). Skillify 트릴로지(027/028/029) 닫힘. weekly CI 활성 repo 1→7. 엔트리 167 (+Journal 028, 029).
