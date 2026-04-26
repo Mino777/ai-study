@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { IOS_QUESTIONS, FDE_QUESTIONS, CULTURE_QUESTIONS, PHASE_PROBLEMS, COMPANY_STRATEGIES, HIRING_INSIGHTS, PROCESS_STAGES, ASSIGNMENT_CHECKLIST, type InterviewQuestion } from "./constants";
+import { IOS_QUESTIONS, FDE_QUESTIONS, CULTURE_QUESTIONS, PHASE_PROBLEMS, COMPANY_STRATEGIES, HIRING_INSIGHTS, PROCESS_STAGES, ASSIGNMENT_CHECKLIST, ALGO_GUIDES, type InterviewQuestion } from "./constants";
 
 /* ═══════════════════════════════════════════════════════════ */
 /*  TYPES                                                      */
@@ -1174,6 +1174,80 @@ export default function InterviewPage() {
             })}
           </div>
           <p className="text-[10px] text-text/25 mt-2">* 클릭하면 풀이 수 +1. 각 패턴별 목표 문제 수 달성 시 마스터.</p>
+        </section>
+
+        {/* ═══════════ ALGORITHM GUIDES ═══════════ */}
+        <section className="mb-12">
+          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">
+            Algorithm Playbook
+            <span className="ml-2 text-text/25 normal-case tracking-normal font-normal">— 유형별 완전 정복 가이드</span>
+          </h2>
+          <div className="space-y-2">
+            {ALGO_GUIDES.map((guide) => (
+              <details key={guide.id} className="rounded-xl border border-border/30 bg-surface/20 overflow-hidden group">
+                <summary className="px-5 py-3.5 cursor-pointer hover:bg-surface/40 transition-colors flex items-center gap-3">
+                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: guide.color }} />
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm font-bold">{guide.nameKo}</span>
+                    <span className="text-xs text-text/30 ml-2 font-code">{guide.name}</span>
+                  </div>
+                  <span className="text-xs text-text/25 shrink-0 hidden md:block max-w-[300px] truncate">{guide.oneLiner}</span>
+                </summary>
+                <div className="px-5 pb-5 border-t border-border/20 pt-4 space-y-4">
+                  {/* 한줄 설명 */}
+                  <p className="text-sm font-medium" style={{ color: guide.color }}>{guide.oneLiner}</p>
+
+                  {/* 이 패턴을 쓸 때 */}
+                  <div>
+                    <p className="text-[10px] font-code font-bold text-text/40 mb-1.5 uppercase tracking-wider">이런 문제가 나오면 이 패턴!</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {guide.whenToUse.map((signal, i) => (
+                        <span key={i} className="text-xs px-2.5 py-1 rounded-lg bg-surface/60 text-text/60 border border-border/30">{signal}</span>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 시각적 설명 */}
+                  <div className="rounded-lg bg-bg/80 border border-border/30 p-4 overflow-x-auto">
+                    <p className="text-[10px] font-code font-bold text-text/30 mb-2 uppercase tracking-wider">Visual</p>
+                    <pre className="text-xs font-code text-text/60 leading-relaxed whitespace-pre">{guide.visual}</pre>
+                  </div>
+
+                  {/* 풀이 순서 */}
+                  <div>
+                    <p className="text-[10px] font-code font-bold text-text/40 mb-1.5 uppercase tracking-wider">풀이 순서</p>
+                    <div className="space-y-1">
+                      {guide.steps.map((step, i) => (
+                        <div key={i} className="flex items-start gap-2">
+                          {!step.startsWith("  ") ? (
+                            <span className="shrink-0 w-4 h-4 rounded bg-accent/10 text-accent/60 flex items-center justify-center text-[10px] font-bold mt-0.5">{i + 1}</span>
+                          ) : (
+                            <span className="shrink-0 w-4" />
+                          )}
+                          <p className="text-xs text-text/60 leading-relaxed">{step}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 템플릿 코드 */}
+                  <div className="rounded-lg bg-bg/80 border border-border/30 overflow-hidden">
+                    <div className="flex items-center justify-between px-3 py-1.5 border-b border-border/20">
+                      <span className="text-[10px] font-code text-text/30">{guide.templateLang} · 바로 쓸 수 있는 템플릿</span>
+                      <span className="text-[10px] font-code text-text/20">{guide.complexity}</span>
+                    </div>
+                    <pre className="p-4 text-xs font-code text-text/60 leading-relaxed overflow-x-auto whitespace-pre">{guide.template}</pre>
+                  </div>
+
+                  {/* 대표 문제 */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-code text-text/30">대표 문제:</span>
+                    <span className="text-xs text-text/50">{guide.representative}</span>
+                  </div>
+                </div>
+              </details>
+            ))}
+          </div>
         </section>
 
         {/* ═══════════ TIMEBOX RULES ═══════════ */}

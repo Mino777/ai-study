@@ -415,3 +415,549 @@ export const ASSIGNMENT_CHECKLIST = {
     "Day 5 (4h): 리팩토링 2h + README 작성 2h",
   ],
 };
+
+/* ═══════════════════════════════════════════════════════════ */
+/*  ALGORITHM PATTERN GUIDES (시각적 설명 + 템플릿)             */
+/* ═══════════════════════════════════════════════════════════ */
+
+export interface AlgoGuide {
+  id: string;
+  name: string;
+  nameKo: string;
+  color: string;
+  oneLiner: string;
+  whenToUse: string[];
+  visual: string;
+  steps: string[];
+  template: string;
+  templateLang: string;
+  complexity: string;
+  representative: string;
+}
+
+export const ALGO_GUIDES: AlgoGuide[] = [
+  {
+    id: "hash",
+    name: "Hash Map",
+    nameKo: "해시맵",
+    color: "#3b82f6",
+    oneLiner: "\"이 값을 본 적 있나?\" → 해시맵에 저장해두고 O(1)로 조회",
+    whenToUse: [
+      "\"~가 존재하는지 확인\" 또는 \"~의 개수를 세라\"",
+      "두 배열의 교집합/차집합",
+      "빈도수 세기 (문자, 숫자 등)",
+      "중복 확인",
+    ],
+    visual: `  배열: [1, 2, 3, 2, 1]
+
+  해시맵에 하나씩 저장:
+  ┌──────────┐
+  │ key → val│
+  │ 1   → 2  │  ← 1이 2번 등장
+  │ 2   → 2  │  ← 2가 2번 등장
+  │ 3   → 1  │  ← 3이 1번 등장
+  └──────────┘
+  조회: map[2] → O(1)로 즉시 확인!`,
+    steps: [
+      "빈 해시맵(딕셔너리) 생성",
+      "배열을 순회하며 각 요소를 key로 저장",
+      "이미 있으면 값 업데이트 (카운트+1 등)",
+      "필요한 조건 확인 (존재 여부, 개수 등)",
+    ],
+    template: `func solution(_ arr: [Int], target: Int) -> Bool {
+    var map: [Int: Int] = [:]   // 해시맵 생성
+
+    for num in arr {
+        let complement = target - num
+        if map[complement] != nil {
+            return true  // 찾았다!
+        }
+        map[num] = num  // 저장해두기
+    }
+    return false
+}`,
+    templateLang: "swift",
+    complexity: "시간 O(n), 공간 O(n)",
+    representative: "완주하지 못한 선수, Two Sum",
+  },
+  {
+    id: "two-pointers",
+    name: "Two Pointers",
+    nameKo: "투 포인터",
+    color: "#8b5cf6",
+    oneLiner: "양쪽 끝에서 포인터 2개가 서로를 향해 좁혀오며 답을 찾는다",
+    whenToUse: [
+      "정렬된 배열에서 합/차이 조건 만족하는 쌍 찾기",
+      "\"두 수의 합이 X\"",
+      "팰린드롬 확인",
+      "정렬된 데이터에서 조건 만족하는 구간",
+    ],
+    visual: `  정렬된 배열: [1, 3, 5, 7, 9]   목표합: 10
+
+  L→              ←R
+  [1, 3, 5, 7, 9]
+   ↑            ↑
+   L=1 + R=9 = 10  ✅ 찾았다!
+
+  만약 합이 작으면 → L을 오른쪽으로 (더 큰 수)
+  만약 합이 크면  → R을 왼쪽으로 (더 작은 수)`,
+    steps: [
+      "배열을 정렬 (이미 정렬되어 있으면 생략)",
+      "왼쪽 포인터 L=0, 오른쪽 포인터 R=끝",
+      "L < R 인 동안 반복:",
+      "  합이 목표보다 작으면 → L += 1",
+      "  합이 목표보다 크면 → R -= 1",
+      "  합이 목표와 같으면 → 정답!",
+    ],
+    template: `func twoSum(_ arr: [Int], _ target: Int) -> [Int]? {
+    let sorted = arr.sorted()
+    var left = 0
+    var right = sorted.count - 1
+
+    while left < right {
+        let sum = sorted[left] + sorted[right]
+        if sum == target {
+            return [sorted[left], sorted[right]]
+        } else if sum < target {
+            left += 1      // 합이 작으니 왼쪽을 키운다
+        } else {
+            right -= 1     // 합이 크니 오른쪽을 줄인다
+        }
+    }
+    return nil
+}`,
+    templateLang: "swift",
+    complexity: "시간 O(n), 공간 O(1) — 정렬 제외",
+    representative: "구명보트, Container With Most Water",
+  },
+  {
+    id: "sliding-window",
+    name: "Sliding Window",
+    nameKo: "슬라이딩 윈도우",
+    color: "#10b981",
+    oneLiner: "창문(window)을 밀면서 구간의 합/최대/조건을 추적한다",
+    whenToUse: [
+      "\"연속된 K개의 합/최대/최소\"",
+      "\"조건을 만족하는 가장 짧은/긴 부분 배열\"",
+      "부분 문자열 관련 문제",
+      "고정 크기 또는 가변 크기 구간",
+    ],
+    visual: `  배열: [2, 1, 5, 1, 3, 2]   K=3 연속 합의 최대?
+
+  윈도우가 오른쪽으로 한 칸씩 밀린다:
+  [2, 1, 5] 1, 3, 2  → 합=8
+   2 [1, 5, 1] 3, 2  → 합=7  (왼쪽 빼고 오른쪽 추가)
+   2, 1 [5, 1, 3] 2  → 합=9  ← 최대!
+   2, 1, 5 [1, 3, 2] → 합=6
+
+  핵심: 매번 K개를 다시 더하지 않는다.
+        왼쪽 1개 빼고 + 오른쪽 1개 더하면 O(1)!`,
+    steps: [
+      "첫 K개의 합을 구한다 (초기 윈도우)",
+      "윈도우를 한 칸씩 오른쪽으로 이동:",
+      "  새로 들어오는 오른쪽 값을 더하고",
+      "  빠지는 왼쪽 값을 뺀다",
+      "매 이동마다 최대/최소/조건 업데이트",
+    ],
+    template: `func maxSumSubarray(_ arr: [Int], _ k: Int) -> Int {
+    // 1. 첫 윈도우 합
+    var windowSum = arr[0..<k].reduce(0, +)
+    var maxSum = windowSum
+
+    // 2. 윈도우 슬라이드
+    for i in k..<arr.count {
+        windowSum += arr[i]       // 오른쪽 추가
+        windowSum -= arr[i - k]   // 왼쪽 제거
+        maxSum = max(maxSum, windowSum)
+    }
+    return maxSum
+}`,
+    templateLang: "swift",
+    complexity: "시간 O(n), 공간 O(1)",
+    representative: "DNA 비밀번호, Minimum Window Substring",
+  },
+  {
+    id: "bfs",
+    name: "BFS",
+    nameKo: "너비 우선 탐색",
+    color: "#06b6d4",
+    oneLiner: "가까운 것부터 먼저! 큐(Queue)로 층별로 탐색한다",
+    whenToUse: [
+      "\"최단 거리\" \"최소 이동 횟수\"",
+      "미로 탈출, 최단 경로",
+      "레벨별 탐색 (트리의 각 층)",
+      "가중치 없는 그래프의 최단 경로",
+    ],
+    visual: `  시작 → 1층 → 2층 → 3층 (가까운 것부터!)
+
+      [S]          큐: [S]
+     / | \\
+    A  B  C        큐: [A, B, C]  ← 1층 전부
+   / \\   |
+  D   E  [G]       큐: [D, E, G]  ← 2층 전부
+                   G 도착! 최단거리 = 2
+
+  핵심: 큐에 넣고 → 꺼내고 → 인접한 거 넣고 반복`,
+    steps: [
+      "시작점을 큐에 넣고 방문 표시",
+      "큐가 빌 때까지 반복:",
+      "  큐에서 하나 꺼냄",
+      "  목표면 종료 (최단거리 찾음!)",
+      "  아니면 인접 노드 중 미방문을 큐에 추가",
+    ],
+    template: `func bfs(_ graph: [[Int]], _ start: Int, _ target: Int) -> Int {
+    var queue: [(node: Int, dist: Int)] = [(start, 0)]
+    var visited = Set<Int>([start])
+    var index = 0
+
+    while index < queue.count {
+        let (node, dist) = queue[index]
+        index += 1
+
+        if node == target { return dist }  // 찾았다!
+
+        for next in graph[node] {
+            if !visited.contains(next) {
+                visited.insert(next)
+                queue.append((next, dist + 1))
+            }
+        }
+    }
+    return -1  // 도달 불가
+}`,
+    templateLang: "swift",
+    complexity: "시간 O(V+E), 공간 O(V)",
+    representative: "게임 맵 최단거리, 미로 탐색",
+  },
+  {
+    id: "dfs",
+    name: "DFS",
+    nameKo: "깊이 우선 탐색",
+    color: "#f59e0b",
+    oneLiner: "한 길로 끝까지 가본다 → 막히면 돌아와서 다른 길",
+    whenToUse: [
+      "\"모든 경우의 수\" \"경로 탐색\"",
+      "순열/조합 구하기",
+      "연결된 영역 찾기 (섬의 개수)",
+      "백트래킹 (조건 만족하는 해 찾기)",
+    ],
+    visual: `  한 길로 끝까지 간다!
+
+      [S]
+     / | \\
+    A  B  C      S→A→D (막힘!) 돌아와서
+   / \\   |      S→A→E (막힘!) 돌아와서
+  D   E  [G]    S→B (막힘!) 돌아와서
+                S→C→G 도착!
+
+  핵심: 재귀 또는 스택으로 구현`,
+    steps: [
+      "시작점에서 출발, 방문 표시",
+      "인접 노드 중 미방문 하나를 선택 → 그쪽으로 깊이 들어감",
+      "더 이상 갈 곳 없으면 → 돌아옴 (백트래킹)",
+      "모든 경로를 탐색할 때까지 반복",
+    ],
+    template: `func dfs(_ graph: [[Int]], _ node: Int,
+         _ visited: inout Set<Int>, _ path: inout [Int]) {
+    visited.insert(node)
+    path.append(node)
+
+    for next in graph[node] {
+        if !visited.contains(next) {
+            dfs(graph, next, &visited, &path)
+        }
+    }
+    // 필요시 path.removeLast()  ← 백트래킹
+}`,
+    templateLang: "swift",
+    complexity: "시간 O(V+E), 공간 O(V)",
+    representative: "타겟 넘버, 여행경로, 네트워크",
+  },
+  {
+    id: "binary-search",
+    name: "Binary Search",
+    nameKo: "이분 탐색",
+    color: "#ef4444",
+    oneLiner: "정렬된 곳에서 절반씩 버리며 찾는다 — 1000개도 10번이면 끝",
+    whenToUse: [
+      "\"정렬된 배열에서 X 찾기\"",
+      "\"조건을 만족하는 최소/최대값\"",
+      "\"N이 10억 이상\" (완전 탐색 불가능할 때)",
+      "Parametric Search (답을 정해놓고 가능한지 확인)",
+    ],
+    visual: `  정렬: [1, 3, 5, 7, 9, 11, 13]   찾는 값: 9
+
+  1단계: mid = 7   →  9 > 7  →  오른쪽 절반만!
+         [1, 3, 5, 7, | 9, 11, 13]
+                        ↑ 이쪽!
+  2단계: mid = 11  →  9 < 11 →  왼쪽 절반만!
+                       [9, | 11, 13]
+                        ↑
+  3단계: mid = 9   →  찾았다! ✅
+
+  7개 중 3번 만에 발견 (log₂7 ≈ 3)`,
+    steps: [
+      "left = 0, right = 배열 끝",
+      "left <= right 인 동안:",
+      "  mid = (left + right) / 2",
+      "  arr[mid] == target → 찾았다!",
+      "  arr[mid] < target → left = mid + 1",
+      "  arr[mid] > target → right = mid - 1",
+    ],
+    template: `func binarySearch(_ arr: [Int], _ target: Int) -> Int {
+    var left = 0
+    var right = arr.count - 1
+
+    while left <= right {
+        let mid = (left + right) / 2
+        if arr[mid] == target {
+            return mid            // 찾았다!
+        } else if arr[mid] < target {
+            left = mid + 1        // 오른쪽 절반
+        } else {
+            right = mid - 1       // 왼쪽 절반
+        }
+    }
+    return -1  // 없음
+}`,
+    templateLang: "swift",
+    complexity: "시간 O(log n), 공간 O(1)",
+    representative: "입국심사, 징검다리, 나무 자르기",
+  },
+  {
+    id: "dp",
+    name: "Dynamic Programming",
+    nameKo: "동적 계획법",
+    color: "#8b5cf6",
+    oneLiner: "큰 문제를 작은 문제로 쪼개고, 한 번 푼 건 저장해서 재사용",
+    whenToUse: [
+      "\"최소 비용\" \"최대 이익\" \"경우의 수\"",
+      "피보나치처럼 반복되는 하위 문제가 보일 때",
+      "\"~까지의 최적값\" \"~를 만드는 방법의 수\"",
+      "문제를 점화식(dp[i] = dp[i-1] + ...)으로 표현 가능할 때",
+    ],
+    visual: `  계단 오르기: 1칸 또는 2칸씩, N번째 도달 방법 수?
+
+  dp[1] = 1        (1칸)
+  dp[2] = 2        (1+1 또는 2)
+  dp[3] = dp[2] + dp[1] = 3
+  dp[4] = dp[3] + dp[2] = 5
+
+  ┌───┬───┬───┬───┬───┐
+  │ 1 │ 2 │ 3 │ 5 │ 8 │  ← 한 번 구한 건 저장!
+  └───┴───┴───┴───┴───┘
+   dp1 dp2 dp3 dp4 dp5
+
+  핵심: dp[n] = dp[n-1] + dp[n-2]  ← 점화식`,
+    steps: [
+      "점화식 찾기: dp[i]를 이전 값들로 어떻게 표현?",
+      "기저 조건(base case) 설정: dp[0], dp[1] 등",
+      "배열을 만들어 작은 문제부터 채워나감 (Bottom-up)",
+      "또는 재귀 + 메모이제이션 (Top-down)",
+    ],
+    template: `// Bottom-up DP (더 직관적)
+func climbStairs(_ n: Int) -> Int {
+    if n <= 2 { return n }
+    var dp = Array(repeating: 0, count: n + 1)
+    dp[1] = 1
+    dp[2] = 2
+
+    for i in 3...n {
+        dp[i] = dp[i-1] + dp[i-2]  // 점화식!
+    }
+    return dp[n]
+}`,
+    templateLang: "swift",
+    complexity: "시간 O(n), 공간 O(n) — 보통",
+    representative: "정수 삼각형, 등굣길, N으로 표현",
+  },
+  {
+    id: "stack",
+    name: "Stack",
+    nameKo: "스택",
+    color: "#f97316",
+    oneLiner: "마지막에 넣은 게 먼저 나온다 (LIFO) — 괄호/되돌리기의 핵심",
+    whenToUse: [
+      "\"괄호 짝 맞추기\"",
+      "\"가장 가까운 이전 값\" (히스토리)",
+      "문자열 뒤집기, 실행 취소",
+      "단조 스택 (Monotone Stack) — 다음 큰 값 찾기",
+    ],
+    visual: `  괄호 검증: "( [ { } ] )"
+
+  (  →  스택: [(]
+  [  →  스택: [(, []
+  {  →  스택: [(, [, {]
+  }  →  { 와 매칭! 스택: [(, []
+  ]  →  [ 와 매칭! 스택: [(]
+  )  →  ( 와 매칭! 스택: []  ← 비었다 = 유효! ✅`,
+    steps: [
+      "빈 스택 생성",
+      "입력을 하나씩 순회",
+      "열린 괄호면 → 스택에 push",
+      "닫힌 괄호면 → 스택 top과 비교 → 매칭이면 pop",
+      "끝나고 스택이 비어있으면 유효",
+    ],
+    template: `func isValid(_ s: String) -> Bool {
+    var stack: [Character] = []
+    let pairs: [Character: Character] = [")": "(", "]": "[", "}": "{"]
+
+    for char in s {
+        if let match = pairs[char] {
+            // 닫힌 괄호 → top과 비교
+            if stack.isEmpty || stack.last != match {
+                return false
+            }
+            stack.removeLast()
+        } else {
+            stack.append(char)  // 열린 괄호 → push
+        }
+    }
+    return stack.isEmpty
+}`,
+    templateLang: "swift",
+    complexity: "시간 O(n), 공간 O(n)",
+    representative: "Valid Parentheses, 주식 가격",
+  },
+  {
+    id: "greedy",
+    name: "Greedy",
+    nameKo: "탐욕법",
+    color: "#22c55e",
+    oneLiner: "매 순간 가장 좋은 선택을 하면 전체적으로도 최적이 된다",
+    whenToUse: [
+      "\"최소 횟수\" \"최소 비용\"으로 뭔가를 완성",
+      "정렬 후 앞/뒤에서 선택하는 문제",
+      "구간 스케줄링 (회의실, 시간표)",
+      "DP처럼 보이지만 욕심내면 풀리는 문제",
+    ],
+    visual: `  구명보트: 무게 제한 100kg, [70, 50, 80, 40]
+
+  정렬: [40, 50, 70, 80]
+       L→          ←R
+
+  40 + 80 = 120 > 100 → 80 혼자 탑승. R--
+  40 + 70 = 110 > 100 → 70 혼자 탑승. R--
+  40 + 50 = 90  ≤ 100 → 둘이 같이! L++, R--
+
+  보트 3대. 매 순간 "가장 무거운 사람"부터 처리!`,
+    steps: [
+      "정렬 (보통 오름차순 또는 내림차순)",
+      "매 단계에서 '지금 가장 좋은 선택' 실행",
+      "선택 후 상태 업데이트",
+      "끝까지 반복",
+    ],
+    template: `func lifeboat(_ people: [Int], _ limit: Int) -> Int {
+    let sorted = people.sorted()
+    var left = 0
+    var right = sorted.count - 1
+    var boats = 0
+
+    while left <= right {
+        if sorted[left] + sorted[right] <= limit {
+            left += 1   // 가벼운 사람도 탑승
+        }
+        right -= 1       // 무거운 사람은 무조건 탑승
+        boats += 1
+    }
+    return boats
+}`,
+    templateLang: "swift",
+    complexity: "시간 O(n log n) — 정렬 포함",
+    representative: "구명보트, 섬 연결하기, 체육복",
+  },
+  {
+    id: "heap",
+    name: "Heap / Priority Queue",
+    nameKo: "힙 / 우선순위 큐",
+    color: "#ec4899",
+    oneLiner: "항상 가장 작은(또는 큰) 값을 O(log n)으로 꺼낸다",
+    whenToUse: [
+      "\"상위 K개\" \"K번째로 큰/작은\"",
+      "실시간으로 최소/최대를 빠르게 알아야 할 때",
+      "작업 스케줄링 (가장 짧은 작업 먼저)",
+      "다익스트라 최단경로",
+    ],
+    visual: `  최소 힙 (항상 제일 작은 게 맨 위):
+
+       [1]          push(5): [1,3,5]
+      /   \\         pop():   1 나옴!  [3,5]
+    [3]   [5]       push(2): [2,3,5]
+                    pop():   2 나옴!  [3,5]
+
+  어떤 순서로 넣든 꺼내면 항상 정렬됨!`,
+    steps: [
+      "힙(우선순위 큐) 생성",
+      "데이터를 넣으면 자동으로 정렬됨",
+      "pop하면 항상 최소(또는 최대)값이 나옴",
+      "필요한 만큼 pop하면 상위 K개 완성",
+    ],
+    template: `// Swift에는 내장 힙이 없어서 배열+정렬 또는 직접 구현
+// 프로그래머스에서는 보통 배열로 대체
+func topK(_ arr: [Int], _ k: Int) -> [Int] {
+    // 간단 버전: 정렬 후 앞에서 K개
+    return Array(arr.sorted().prefix(k))
+
+    // 실전에서는 Heap 구현 또는
+    // Python의 heapq 사용이 더 효율적
+}`,
+    templateLang: "swift",
+    complexity: "push/pop O(log n), 전체 O(n log n)",
+    representative: "디스크 컨트롤러, 이중우선순위큐",
+  },
+  {
+    id: "backtracking",
+    name: "Backtracking",
+    nameKo: "백트래킹",
+    color: "#a855f7",
+    oneLiner: "DFS + 가지치기 — 안 되는 건 일찍 포기하고 돌아온다",
+    whenToUse: [
+      "\"모든 조합\" \"모든 순열\"",
+      "N-Queen, 스도쿠 같은 배치 문제",
+      "조건을 만족하는 모든 경우 탐색",
+      "DFS인데 조건 불만족 시 빠른 포기 필요",
+    ],
+    visual: `  [1,2,3]에서 합이 4인 조합 찾기:
+
+  시작 → 1 선택
+         → 1+2=3 → 1+2+3=6 > 4 ✗ 포기! (가지치기)
+         → 1+3=4 ✅ 찾았다!
+       → 2 선택
+         → 2+3=5 > 4 ✗ 포기!
+       → 3 선택
+         → 3만으론 부족
+
+  핵심: "이 길은 답이 없다" → 즉시 돌아감`,
+    steps: [
+      "선택지 중 하나를 선택",
+      "조건 확인 → 불만족이면 즉시 return (가지치기)",
+      "만족이면 다음 단계로 재귀",
+      "답을 찾으면 저장",
+      "현재 선택 취소 (되돌리기) → 다음 선택지 시도",
+    ],
+    template: `func combinations(_ nums: [Int], _ target: Int) -> [[Int]] {
+    var result: [[Int]] = []
+    var path: [Int] = []
+
+    func backtrack(_ start: Int, _ sum: Int) {
+        if sum == target {
+            result.append(path)  // 찾았다!
+            return
+        }
+        if sum > target { return }  // 가지치기!
+
+        for i in start..<nums.count {
+            path.append(nums[i])           // 선택
+            backtrack(i + 1, sum + nums[i]) // 재귀
+            path.removeLast()              // 되돌리기
+        }
+    }
+
+    backtrack(0, 0)
+    return result
+}`,
+    templateLang: "swift",
+    complexity: "시간 O(2^n) — 가지치기로 실제론 훨씬 빠름",
+    representative: "N-Queen, 단어 변환, 소수 찾기",
+  },
+];
