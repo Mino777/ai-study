@@ -9,31 +9,32 @@ export interface InterviewQuestion {
   answer: string;
   phase: number;
   followUp?: string;
+  followUpAnswer?: string;
 }
 
 /* ── iOS Track ───────────────────────────────────────────── */
 
 export const IOS_QUESTIONS: InterviewQuestion[] = [
   // ── Swift 기초 (Phase 1) ──
-  { id: "ios-1", topic: "Swift 기초", phase: 1, question: "struct와 class의 차이는?", answer: "struct는 값 타입(복사), class는 참조 타입(공유). struct는 상속 불가, class는 가능. struct는 스택, class는 힙 할당. Swift 표준 라이브러리의 대부분(String, Array, Dictionary)이 struct.", followUp: "그러면 struct가 class보다 항상 좋은 건가요? class를 써야 하는 경우는?" },
+  { id: "ios-1", topic: "Swift 기초", phase: 1, question: "struct와 class의 차이는?", answer: "struct는 값 타입(복사), class는 참조 타입(공유). struct는 상속 불가, class는 가능. struct는 스택, class는 힙 할당. Swift 표준 라이브러리의 대부분(String, Array, Dictionary)이 struct.", followUp: "그러면 struct가 class보다 항상 좋은 건가요? class를 써야 하는 경우는?", followUpAnswer: "class가 필요한 경우: ①상속이 필요할 때 ②identity가 중요할 때(같은 인스턴스를 여러 곳에서 참조) ③Objective-C 호환 필요 시. 예: UIViewController는 class(UIKit 상속 체계), 네트워크 매니저는 class(싱글톤). 단, Swift 6에서는 Actor가 class의 많은 역할을 대체." },
   { id: "ios-2", topic: "Swift 기초", phase: 1, question: "Optional이란? 왜 필요한가?", answer: "값이 있을 수도 없을 수도 있는 타입. nil safety를 컴파일 타임에 보장. Optional Binding(if let, guard let), Optional Chaining(?.), Nil Coalescing(??)으로 안전하게 처리. 강제 언래핑(!)은 크래시 위험." },
   { id: "ios-3", topic: "Swift 기초", phase: 1, question: "프로토콜(Protocol)이란?", answer: "메서드/프로퍼티의 청사진(인터페이스). 다중 채택 가능. 프로토콜 확장(extension)으로 기본 구현 제공. POP(Protocol-Oriented Programming)는 Swift의 핵심 패러다임. Equatable, Hashable, Codable 등이 대표적." },
   { id: "ios-4", topic: "Swift 기초", phase: 1, question: "클로저(Closure)란? 캡처 리스트는?", answer: "이름 없는 함수. 주변 컨텍스트의 변수를 캡처(참조)할 수 있음. 캡처 리스트 [weak self], [unowned self]로 순환 참조 방지. @escaping은 함수 스코프 이후 실행되는 클로저. 후행 클로저(trailing closure) 문법 지원." },
   { id: "ios-5", topic: "Swift 기초", phase: 1, question: "제네릭(Generics)이란?", answer: "타입에 독립적인 코드 작성. Array<Element>, Result<Success, Failure> 등. where 절로 제약 조건 추가. associated type으로 프로토콜에서 사용. 코드 재사용성과 타입 안전성을 동시에 달성." },
 
   // ── 메모리 관리 (Phase 1-2) ──
-  { id: "ios-6", topic: "메모리 관리", phase: 1, question: "ARC(Automatic Reference Counting)란?", answer: "컴파일 타임에 retain/release를 자동 삽입하여 메모리 관리. 참조 카운트가 0이 되면 해제. GC(Garbage Collection)와 달리 런타임 오버헤드 없음. 단, 순환 참조(Retain Cycle)는 자동으로 해결 못 함.", followUp: "ARC와 GC의 성능 차이를 구체적으로 설명해주세요. iOS에서 GC를 안 쓰는 이유는?" },
+  { id: "ios-6", topic: "메모리 관리", phase: 1, question: "ARC(Automatic Reference Counting)란?", answer: "컴파일 타임에 retain/release를 자동 삽입하여 메모리 관리. 참조 카운트가 0이 되면 해제. GC(Garbage Collection)와 달리 런타임 오버헤드 없음. 단, 순환 참조(Retain Cycle)는 자동으로 해결 못 함.", followUp: "ARC와 GC의 성능 차이를 구체적으로 설명해주세요. iOS에서 GC를 안 쓰는 이유는?", followUpAnswer: "ARC: 컴파일 타임에 결정 → 런타임 오버헤드 0. 해제 시점 예측 가능(결정론적). GC(Java/Go): 런타임에 주기적으로 스캔 → STW(Stop-The-World) 발생, 해제 시점 비결정적. iOS에서 GC 안 쓰는 이유: 모바일은 CPU/메모리/배터리 제한 → GC의 주기적 스캔이 프레임 드롭과 배터리 소모 유발. 60fps UI에서 GC pause는 치명적." },
   { id: "ios-7", topic: "메모리 관리", phase: 1, question: "strong, weak, unowned 차이는?", answer: "strong: 참조 카운트 +1 (기본값). weak: 카운트 증가 안 함, nil 가능(Optional). unowned: 카운트 증가 안 함, nil 불가(Non-Optional) — 해제된 후 접근 시 크래시. delegate 패턴에서 weak 사용이 일반적." },
-  { id: "ios-8", topic: "메모리 관리", phase: 2, question: "순환 참조(Retain Cycle) 예시와 해결법?", answer: "두 객체가 서로 strong 참조하면 영원히 해제 안 됨. 대표적: 클로저에서 self 캡처, delegate 패턴. 해결: [weak self] 캡처 리스트, delegate를 weak으로 선언. Instruments의 Leaks/Allocations으로 탐지.", followUp: "실무에서 순환 참조를 발견한 경험이 있나요? 어떻게 디버깅했나요?" },
+  { id: "ios-8", topic: "메모리 관리", phase: 2, question: "순환 참조(Retain Cycle) 예시와 해결법?", answer: "두 객체가 서로 strong 참조하면 영원히 해제 안 됨. 대표적: 클로저에서 self 캡처, delegate 패턴. 해결: [weak self] 캡처 리스트, delegate를 weak으로 선언. Instruments의 Leaks/Allocations으로 탐지.", followUp: "실무에서 순환 참조를 발견한 경험이 있나요? 어떻게 디버깅했나요?", followUpAnswer: "그린카에서 RxSwift DisposeBag + 클로저 캡처로 retain cycle 발생. Instruments Memory Graph에서 순환 참조 시각적으로 확인 → [weak self] 추가로 해결. 디버깅 순서: ①deinit에 print 추가 → 호출 안 되면 의심 ②Instruments Memory Graph로 retain cycle 시각화 ③Xcode Debug Memory Graph로 실시간 확인." },
   { id: "ios-9", topic: "메모리 관리", phase: 2, question: "메모리 구조: 스택 vs 힙?", answer: "스택: 값 타입(struct, enum), 빠름, LIFO, 스레드별 독립. 힙: 참조 타입(class), 느림, ARC로 관리, 스레드 간 공유. 값 타입이 참조 타입을 포함하면 힙에 할당될 수 있음(Copy-on-Write)." },
 
   // ── 동시성 (Phase 2) ──
-  { id: "ios-10", topic: "동시성", phase: 2, question: "GCD(Grand Central Dispatch)란?", answer: "C 기반 동시성 라이브러리. DispatchQueue로 작업을 큐에 제출. main(UI), global(백그라운드), custom 큐. sync(동기, 현재 스레드 블로킹), async(비동기, 다른 스레드)로 작업 실행. QoS로 우선순위 지정.", followUp: "GCD 대신 async/await를 쓰면 GCD는 더 이상 필요 없나요? 언제 아직도 GCD가 필요한가요?" },
+  { id: "ios-10", topic: "동시성", phase: 2, question: "GCD(Grand Central Dispatch)란?", answer: "C 기반 동시성 라이브러리. DispatchQueue로 작업을 큐에 제출. main(UI), global(백그라운드), custom 큐. sync(동기, 현재 스레드 블로킹), async(비동기, 다른 스레드)로 작업 실행. QoS로 우선순위 지정.", followUp: "GCD 대신 async/await를 쓰면 GCD는 더 이상 필요 없나요? 언제 아직도 GCD가 필요한가요?", followUpAnswer: "GCD가 여전히 필요한 경우: ①DispatchSource(파일 변경 감시, 타이머) ②정밀한 QoS 제어가 필요할 때 ③레거시 코드와의 호환 ④Objective-C API 래핑. async/await가 대체하는 것: 비동기 콜백 체인, completion handler. 실무: 새 코드는 async/await, 기존 GCD는 withCheckedContinuation으로 점진 마이그레이션." },
   { id: "ios-11", topic: "동시성", phase: 2, question: "async/await와 Actor란?", answer: "Swift 5.5+. async: 비동기 함수 선언. await: 비동기 결과 대기. Task로 비동기 컨텍스트 생성. Actor: 데이터 레이스 방지를 위한 참조 타입. @MainActor: UI 업데이트 보장. Sendable: 스레드 간 안전한 전달." },
   { id: "ios-12", topic: "동시성", phase: 2, question: "Race Condition이란? 방지법?", answer: "여러 스레드가 동시에 같은 자원에 접근하여 예측 불가한 결과 발생. 방지: Serial Queue, NSLock, DispatchSemaphore, Actor(Swift Concurrency). @Sendable 프로토콜로 컴파일 타임 검증." },
 
   // ── 아키텍처 (Phase 2) ──
-  { id: "ios-13", topic: "아키텍처", phase: 2, question: "MVC, MVVM, VIPER 비교?", answer: "MVC: Model-View-Controller. 간단하지만 Controller 비대화(Massive VC). MVVM: Model-View-ViewModel. 데이터 바인딩으로 뷰 로직 분리. VIPER: View-Interactor-Presenter-Entity-Router. 가장 세분화, 테스트 용이. 프로젝트 규모에 따라 선택.", followUp: "현재 프로젝트에서 어떤 아키텍처를 쓰고 있고, 왜 그걸 선택했나요? 다시 선택한다면?" },
+  { id: "ios-13", topic: "아키텍처", phase: 2, question: "MVC, MVVM, VIPER 비교?", answer: "MVC: Model-View-Controller. 간단하지만 Controller 비대화(Massive VC). MVVM: Model-View-ViewModel. 데이터 바인딩으로 뷰 로직 분리. VIPER: View-Interactor-Presenter-Entity-Router. 가장 세분화, 테스트 용이. 프로젝트 규모에 따라 선택.", followUp: "현재 프로젝트에서 어떤 아키텍처를 쓰고 있고, 왜 그걸 선택했나요? 다시 선택한다면?", followUpAnswer: "그린카: SPM 모노레포 + Clean Architecture + RIBs + ReactorKit. 선택 이유: 4개 앱 공유 모듈 + 팀 규모(3-5명)에 적합한 모듈화. RIBs로 화면 전환 로직 분리 → 테스트 용이. 다시 선택한다면: SwiftUI + TCA 조합 고려. TCA는 상태 관리가 명확하고 테스트가 쉬움. 단, UIKit 레거시가 많으면 RIBs 유지가 현실적." },
   { id: "ios-14", topic: "아키텍처", phase: 2, question: "Clean Architecture란?", answer: "의존성 규칙: 바깥 → 안쪽으로만 의존. Domain(Entity, UseCase) → Data(Repository 구현) → Presentation(ViewModel, View). 프레임워크 독립적. 테스트 용이. iOS에서는 보통 MVVM + Clean Architecture 조합." },
   { id: "ios-15", topic: "아키텍처", phase: 2, question: "의존성 주입(DI)이란?", answer: "객체가 직접 의존성을 생성하지 않고 외부에서 주입받는 패턴. 생성자 주입, 프로퍼티 주입, 메서드 주입. 테스트 시 Mock 객체 주입 용이. Swinject, Factory 등 DI 프레임워크 활용. 프로토콜 기반 추상화와 함께 사용." },
 
@@ -58,7 +59,7 @@ export const IOS_QUESTIONS: InterviewQuestion[] = [
   { id: "ios-25", topic: "보안", phase: 3, question: "Keychain이란?", answer: "iOS 보안 저장소. AES 암호화. 앱 삭제해도 유지(옵션). 비밀번호, 토큰, 인증서 저장에 적합. UserDefaults와 달리 암호화됨. kSecAttrAccessible로 접근 제어. 앱 그룹으로 앱 간 공유 가능." },
 
   // ── 시스템 디자인 (Phase 3) ──
-  { id: "ios-26", topic: "시스템 디자인", phase: 3, question: "소셜 피드 앱 설계?", answer: "아키텍처: MVVM + Repository. 네트워크: 페이지네이션(cursor-based). 캐싱: 메모리(NSCache) + 디스크(CoreData/Realm). 이미지: 썸네일 프리로딩 + 풀사이즈 lazy load. 오프라인: 로컬 DB 우선, 네트워크 동기화. 성능: 셀 높이 캐싱, prefetching.", followUp: "피드에 새 글이 실시간으로 추가될 때 스크롤 위치는 어떻게 유지하나요?" },
+  { id: "ios-26", topic: "시스템 디자인", phase: 3, question: "소셜 피드 앱 설계?", answer: "아키텍처: MVVM + Repository. 네트워크: 페이지네이션(cursor-based). 캐싱: 메모리(NSCache) + 디스크(CoreData/Realm). 이미지: 썸네일 프리로딩 + 풀사이즈 lazy load. 오프라인: 로컬 DB 우선, 네트워크 동기화. 성능: 셀 높이 캐싱, prefetching.", followUp: "피드에 새 글이 실시간으로 추가될 때 스크롤 위치는 어떻게 유지하나요?", followUpAnswer: "방법: ①새 글은 상단에 삽입하되, 사용자가 스크롤 중이면 'N개 새 글' 배너만 표시 → 탭하면 최상단으로 이동 ②contentOffset 저장 후 insertRows → 이전 offset + 새 셀 높이만큼 보정 ③UITableViewDiffableDataSource의 animatingDifferences:false로 깜빡임 방지. Twitter/Instagram이 이 패턴 사용." },
   { id: "ios-27", topic: "시스템 디자인", phase: 3, question: "채팅 앱 설계?", answer: "실시간: WebSocket/SSE로 양방향 통신. 메시지 저장: CoreData/Realm 로컬 + 서버 동기화. 읽음 처리: 마지막 읽은 messageId 추적. 미디어: 백그라운드 업로드 + 프로그레스. 푸시: APNs + Silent Push로 백그라운드 동기화. 페이지네이션: 과거 메시지 역순 로딩." },
 
   // ── RxSwift / Combine (Phase 2) ──
@@ -67,11 +68,11 @@ export const IOS_QUESTIONS: InterviewQuestion[] = [
   // ── 성능 (Phase 3) ──
   { id: "ios-29", topic: "성능", phase: 3, question: "앱 성능 최적화 방법?", answer: "Instruments: Time Profiler(CPU), Allocations(메모리), Leaks(메모리 누수). 이미지: 적절한 크기로 다운샘플링. 레이아웃: 복잡한 뷰 계층 최소화. 스레딩: 무거운 작업 백그라운드. 캐싱: 반복 계산/네트워크 결과. 지연 로딩: 필요할 때만 초기화." },
   { id: "ios-30", topic: "성능", phase: 3, question: "앱 크기 줄이는 방법?", answer: "Asset Catalog: App Thinning(Slicing, Bitcode, On-Demand Resources). 이미지: WebP/HEIC 포맷, 벡터 PDF. 코드: Dead Code Stripping, unused import 제거. 라이브러리: 필요한 모듈만 포함(SPM). Bitcode: Apple이 디바이스별 최적화." },
-  { id: "ios-31", topic: "성능", phase: 3, question: "SwiftUI vs UIKit 성능 차이 (2026년 기준)?", answer: "iOS 26에서도 복잡한 스크롤 UI에서 UIKit이 압도적. 벤치마크: SwiftUI Hitch 3.4/초 vs UIKit 0.7/초, CPU 유휴 100% vs 11%, 메모리 248MB vs 92MB. 원인: SwiftUI의 반응형 아키텍처가 상태 변경 시 뷰 계층 전체 재계산. 단순 UI는 SwiftUI, 성능 중시는 UIKit. 면접에서 '왜 UIKit을 아직 쓰는가?'에 대한 데이터 기반 답변.", followUp: "그러면 SwiftUI는 아직 프로덕션에서 쓸 수 없나요? 어떤 경우에 SwiftUI가 적합한가요?" },
-  { id: "ios-32", topic: "AI 도구", phase: 4, question: "CLAUDE.md 기반 AI 워크플로우란?", answer: "프로젝트 루트에 CLAUDE.md 파일로 개발 규칙/컨벤션/테스트 방법을 박제. Claude Code가 매 실행마다 자동 컨텍스트 로딩. 딜라이트룸(알라미) iOS 팀이 실전 도입하여 Cursor 대비 SwiftUI 개발 정확도/속도 유의미한 차이 보고. 핵심: Context Engineering — AI에게 '무엇을 보여줄지' 설계.", followUp: "당신이 AI 도구를 실무에 도입한다면 어떤 규칙을 CLAUDE.md에 넣을 건가요?" },
-  { id: "ios-33", topic: "AI 방법론", phase: 3, question: "Harness/Context/Compound Engineering 3가지를 설명해주세요.", answer: "Harness: AI가 안전하게 달릴 울타리(입력 검증→출력 검증→폴백). Context: AI에게 무엇을 보여줄지 설계(CLAUDE.md, 에이전트별 격리). Compound: 매 작업의 회고가 다음 작업의 입력이 되는 복리 루프(실패도 기록→같은 삽질 방지). 이 3가지는 Mino가 정의한 AI Engineering 방법론으로 4개 프로젝트에서 실증.", followUp: "이 3가지 방법론 중 가장 임팩트가 컸던 것은? 구체적 사례를 들어주세요." },
-  { id: "ios-34", topic: "AI 방법론", phase: 3, question: "LLM 출력을 어떻게 검증하나요?", answer: "5단계: ①입력 검증(타입/범위/null) ②출력 구조 검증(JSON 스키마) ③내부 모순 탐지(강력 매수인데 신뢰도 30% → 자동 차단) ④Bounded Retry(2회 실패 시 다른 모델 전환) ⑤LLM-as-a-Judge(별도 AI가 4차원 채점). MoneyFlow에서 13개 에이전트 출력에 적용. 프롬프트만으로 품질 보장 불가 → 구조적 검증 필수.", followUp: "LLM-as-a-Judge에서 평가 AI도 틀릴 수 있지 않나요? 어떻게 대응하나요?" },
-  { id: "ios-35", topic: "AI 방법론", phase: 4, question: "바이브 코딩의 위험성과 대응법?", answer: "바이브 코딩: AI에게 '분위기'만 전달하고 코드 생성 맡기는 것. 위험: retain cycle, race condition, 하드코딩 시크릿 등을 AI가 만들어도 검증 안 하면 프로덕션까지 감. 대응: 70/30 Rule — AI가 70% 생성 + 개발자가 30% 검증/리뷰. 핵심은 '생성은 AI, 판단은 사람'. Harness Engineering이 바이브 코딩의 안전망.", followUp: "AI가 생성한 코드에서 retain cycle을 어떻게 탐지하나요?" },
+  { id: "ios-31", topic: "성능", phase: 3, question: "SwiftUI vs UIKit 성능 차이 (2026년 기준)?", answer: "iOS 26에서도 복잡한 스크롤 UI에서 UIKit이 압도적. 벤치마크: SwiftUI Hitch 3.4/초 vs UIKit 0.7/초, CPU 유휴 100% vs 11%, 메모리 248MB vs 92MB. 원인: SwiftUI의 반응형 아키텍처가 상태 변경 시 뷰 계층 전체 재계산. 단순 UI는 SwiftUI, 성능 중시는 UIKit. 면접에서 '왜 UIKit을 아직 쓰는가?'에 대한 데이터 기반 답변.", followUp: "그러면 SwiftUI는 아직 프로덕션에서 쓸 수 없나요? 어떤 경우에 SwiftUI가 적합한가요?", followUpAnswer: "SwiftUI가 적합한 경우: ①설정 화면, 폼, 리스트 등 단순 UI ②프로토타이핑/MVP ③watchOS/위젯 (SwiftUI 전용) ④새 프로젝트에서 iOS 17+ 타겟. UIKit이 필수인 경우: ①복잡한 스크롤 (컬렉션뷰 + 제스처) ②카메라/비디오 프리뷰 ③고성능 애니메이션 ④기존 UIKit 레거시와의 통합. 실무: 하이브리드(UIKit 기반 + SwiftUI 화면 점진 도입)가 현실적." },
+  { id: "ios-32", topic: "AI 도구", phase: 4, question: "CLAUDE.md 기반 AI 워크플로우란?", answer: "프로젝트 루트에 CLAUDE.md 파일로 개발 규칙/컨벤션/테스트 방법을 박제. Claude Code가 매 실행마다 자동 컨텍스트 로딩. 딜라이트룸(알라미) iOS 팀이 실전 도입하여 Cursor 대비 SwiftUI 개발 정확도/속도 유의미한 차이 보고. 핵심: Context Engineering — AI에게 '무엇을 보여줄지' 설계.", followUp: "당신이 AI 도구를 실무에 도입한다면 어떤 규칙을 CLAUDE.md에 넣을 건가요?", followUpAnswer: "필수 항목: ①빌드/테스트 명령어 (copy-paste 가능하게) ②아키텍처 패턴 (MVVM/TCA/RIBs 중 뭘 쓰는지) ③코딩 컨벤션 (네이밍, 들여쓰기, 파일 구조) ④금지 사항 (.pbxproj 수정 금지, 특정 패턴 금지) ⑤iOS 최소 버전 + 타겟 디바이스. 딜라이트룸처럼 키워드 트리거로 워크플로우 문서를 분리하면 CLAUDE.md 자체는 200줄 이하로 유지 가능." },
+  { id: "ios-33", topic: "AI 방법론", phase: 3, question: "Harness/Context/Compound Engineering 3가지를 설명해주세요.", answer: "Harness: AI가 안전하게 달릴 울타리(입력 검증→출력 검증→폴백). Context: AI에게 무엇을 보여줄지 설계(CLAUDE.md, 에이전트별 격리). Compound: 매 작업의 회고가 다음 작업의 입력이 되는 복리 루프(실패도 기록→같은 삽질 방지). 이 3가지는 Mino가 정의한 AI Engineering 방법론으로 4개 프로젝트에서 실증.", followUp: "이 3가지 방법론 중 가장 임팩트가 컸던 것은? 구체적 사례를 들어주세요.", followUpAnswer: "가장 임팩트가 컸던 것: Compound. MoneyFlow에서 매 분석 사이클 회고에 '다음에 할 일'을 명시 → 다음 세션이 그 목록을 입력으로 시작. 실패한 시도도 솔루션 문서로 기록 → 같은 삽질 반복 0건. Aidy에서 20라운드 운영 중 품질 검증 실패 초기 2건 → Compound 루프 이후 0건. 핵심: '실패를 기록하는 것'이 '성공을 반복하는 것'보다 가치 있었다." },
+  { id: "ios-34", topic: "AI 방법론", phase: 3, question: "LLM 출력을 어떻게 검증하나요?", answer: "5단계: ①입력 검증(타입/범위/null) ②출력 구조 검증(JSON 스키마) ③내부 모순 탐지(강력 매수인데 신뢰도 30% → 자동 차단) ④Bounded Retry(2회 실패 시 다른 모델 전환) ⑤LLM-as-a-Judge(별도 AI가 4차원 채점). MoneyFlow에서 13개 에이전트 출력에 적용. 프롬프트만으로 품질 보장 불가 → 구조적 검증 필수.", followUp: "LLM-as-a-Judge에서 평가 AI도 틀릴 수 있지 않나요? 어떻게 대응하나요?", followUpAnswer: "대응 전략: ①교차 평가: 생성 AI와 다른 모델을 평가 AI로 사용 (Claude가 생성 → GPT가 평가). 같은 모델의 자체 평가보다 신뢰도 높음 ②다차원 채점: 단일 점수가 아닌 4차원(정확성/일관성/완성도/안전성) 개별 채점 ③임계값 기반: 4차원 중 1개라도 기준 미달이면 재생성 ④골든 셋: 정답이 확실한 테스트 케이스로 평가 AI 자체를 주기적 검증." },
+  { id: "ios-35", topic: "AI 방법론", phase: 4, question: "바이브 코딩의 위험성과 대응법?", answer: "바이브 코딩: AI에게 '분위기'만 전달하고 코드 생성 맡기는 것. 위험: retain cycle, race condition, 하드코딩 시크릿 등을 AI가 만들어도 검증 안 하면 프로덕션까지 감. 대응: 70/30 Rule — AI가 70% 생성 + 개발자가 30% 검증/리뷰. 핵심은 '생성은 AI, 판단은 사람'. Harness Engineering이 바이브 코딩의 안전망.", followUp: "AI가 생성한 코드에서 retain cycle을 어떻게 탐지하나요?", followUpAnswer: "3단계: ①정적 분석: SwiftLint 커스텀 룰로 클로저 내 [weak self] 누락 감지 (self. 사용 + @escaping 조합) ②런타임 감지: deinit에 로그 추가 → 화면 dismiss 후 호출 안 되면 의심 ③Instruments: Xcode Memory Graph + Leaks instrument. AI 생성 코드 리뷰 시 체크 우선순위: delegate 선언(weak?), 클로저 캡처([weak self]?), Timer/NotificationCenter 해제." },
 ];
 
 /* ── FDE Track ───────────────────────────────────────────── */
@@ -87,8 +88,8 @@ export const FDE_QUESTIONS: InterviewQuestion[] = [
   { id: "fde-8", topic: "AI/LLM", phase: 3, question: "Harness Engineering이란?", answer: "AI가 안전하게 달릴 울타리를 만드는 것. 입력 검증(타입/범위/null), 출력 검증(모순 탐지), 폴백(다른 모델로 전환), 자동 채점(LLM-as-a-Judge). 프롬프트만으로는 품질 보장 불가 → 구조적 안전망 필수. Mino의 MoneyFlow/Aidy에서 실증." },
   { id: "fde-9", topic: "커뮤니케이션", phase: 3, question: "기술 내용을 비개발자에게 설명하는 법?", answer: "1) 비유 활용: 'API는 식당 메뉴판' 2) 숫자로 말하기: '응답 시간 3초 → 0.5초로 개선' 3) 임팩트 중심: 기술이 아닌 비즈니스 결과 강조 4) 시각화: 다이어그램, 데모 5) 용어 줄이기: 전문 용어 대신 일상어. 핵심: 상대방이 아는 것에서 시작." },
   { id: "fde-10", topic: "커뮤니케이션", phase: 3, question: "프로젝트 스코프가 계속 확장될 때?", answer: "1) 현재 스코프 문서화 (합의된 것 vs 추가 요청). 2) 추가 요청의 비용(시간/인력) 정량화. 3) 우선순위 매트릭스: 임팩트 vs 노력. 4) 'Yes, and...' 프레임: '가능합니다. 단, X를 미루면 됩니다.' 5) MVP 제안: 핵심 기능 먼저 → 반복 개선." },
-  { id: "fde-11", topic: "AI 통합", phase: 3, question: "고객사에 RAG 파이프라인을 설계할 때 핵심 고려사항?", answer: "1) 청킹 전략: 문서를 어떤 단위로 분할할지 (문단/섹션/의미 단위). 2) 임베딩 모델 선택: 다국어 지원 여부, 차원 수. 3) 검색 정확도: 코사인 유사도 임계값 + 리랭킹. 4) 프롬프트 구성: 검색 결과를 어떻게 LLM 컨텍스트에 넣을지. 5) 평가: 적중률(Precision/Recall) 측정 + 골든 셋 구축.", followUp: "RAG에서 검색 품질이 낮으면 어떻게 디버깅하나요?" },
-  { id: "fde-12", topic: "AI 통합", phase: 3, question: "AI 에이전트의 Bounded Retry란?", answer: "실패 시 무한 재시도가 아닌, 최대 N회 재시도 후 다른 전략으로 전환. 예: Claude 2회 실패 → Gemini 전환 → 그래도 실패 → 캐시된 이전 응답 반환. 핵심: 1) 재시도 횟수 제한 2) 모델 간 폴백 체인 3) 최종 폴백(캐시/기본값). 무한 재시도 = 비용 폭증 + 사용자 대기.", followUp: "폴백 체인에서 모델마다 응답 형식이 다르면 어떻게 통일하나요?" },
+  { id: "fde-11", topic: "AI 통합", phase: 3, question: "고객사에 RAG 파이프라인을 설계할 때 핵심 고려사항?", answer: "1) 청킹 전략: 문서를 어떤 단위로 분할할지 (문단/섹션/의미 단위). 2) 임베딩 모델 선택: 다국어 지원 여부, 차원 수. 3) 검색 정확도: 코사인 유사도 임계값 + 리랭킹. 4) 프롬프트 구성: 검색 결과를 어떻게 LLM 컨텍스트에 넣을지. 5) 평가: 적중률(Precision/Recall) 측정 + 골든 셋 구축.", followUp: "RAG에서 검색 품질이 낮으면 어떻게 디버깅하나요?", followUpAnswer: "디버깅 순서: ①골든 셋(정답 쌍) 구축 → 적중률(Precision@K) 측정 ②청킹 크기 조정: 너무 크면 노이즈, 너무 작으면 컨텍스트 부족 ③임베딩 모델 교체: multilingual-e5 vs OpenAI ada 비교 ④리랭킹 추가: 1차 벡터 검색 → 2차 Cross-Encoder 리랭킹 ⑤하이브리드 검색: 벡터 + BM25(키워드) 조합. ai-study 위키의 Layer 3 JIT 검색이 이 과정을 거쳐 적중률 개선." },
+  { id: "fde-12", topic: "AI 통합", phase: 3, question: "AI 에이전트의 Bounded Retry란?", answer: "실패 시 무한 재시도가 아닌, 최대 N회 재시도 후 다른 전략으로 전환. 예: Claude 2회 실패 → Gemini 전환 → 그래도 실패 → 캐시된 이전 응답 반환. 핵심: 1) 재시도 횟수 제한 2) 모델 간 폴백 체인 3) 최종 폴백(캐시/기본값). 무한 재시도 = 비용 폭증 + 사용자 대기.", followUp: "폴백 체인에서 모델마다 응답 형식이 다르면 어떻게 통일하나요?", followUpAnswer: "Adapter 패턴: 각 모델의 응답을 공통 인터페이스로 변환하는 어댑터 레이어. 예: ClaudeAdapter, GeminiAdapter, GPTAdapter가 모두 AnalysisResult 타입을 반환. JSON Schema를 프롬프트에 포함시켜 출력 형식 강제 + Zod/Codable로 파싱 검증. 파싱 실패 시 1회 재시도(형식 명시 강화) → 그래도 실패 시 다음 모델로 폴백." },
 ];
 
 /* ═══════════════════════════════════════════════════════════ */
@@ -1461,6 +1462,7 @@ export interface DailyTip {
   day: number;
   title: string;
   content: string;
+  detail?: string;
 }
 
 /** 사전과제 탭: Day별 실전 팁 */
@@ -1487,12 +1489,12 @@ export const CULTURE_DAILY_TIPS: DailyTip[] = [
 
 /** 기술면접 탭: Day별 Deep Dive 주제 */
 export const TECH_DAILY_TOPICS: DailyTip[] = [
-  { day: 1, title: "ARC 완전 정복", content: "Strong/Weak/Unowned 차이를 화이트보드에 그릴 수 있는가? retain cycle 예시 3개(delegate, closure, timer)를 즉석에서 설명할 수 있는가?" },
-  { day: 2, title: "GCD vs async/await", content: "DispatchQueue.main.async vs @MainActor 차이. Task, TaskGroup, AsyncSequence 실전 사용법. Actor로 data race 방지하는 코드를 즉석에서 쓸 수 있는가?" },
+  { day: 1, title: "ARC 완전 정복", content: "Strong/Weak/Unowned 차이를 화이트보드에 그릴 수 있는가? retain cycle 예시 3개(delegate, closure, timer)를 즉석에서 설명할 수 있는가?", detail: "Strong: 참조 카운트 +1 (기본값). 해제하려면 모든 strong 참조가 nil이어야. Weak: 카운트 증가 안 함. 참조 대상 해제 시 자동 nil (Optional). delegate 패턴에서 필수. Unowned: 카운트 증가 안 함. nil이 안 됨(Non-Optional). 해제 후 접근 시 크래시. self와 생명주기가 동일할 때만. Retain Cycle 3대 패턴: ①delegate를 strong으로 선언 ②클로저에서 [weak self] 없이 self 캡처 ③Timer/NotificationCenter 해제 누락." },
+  { day: 2, title: "GCD vs async/await", content: "DispatchQueue.main.async vs @MainActor 차이. Task, TaskGroup, AsyncSequence 실전 사용법. Actor로 data race 방지하는 코드를 즉석에서 쓸 수 있는가?", detail: "GCD: DispatchQueue.main.async { UI 업데이트 }. 콜백 기반. async/await: @MainActor func updateUI() async { }. 선형 코드. Task { }: 비동기 컨텍스트 생성. TaskGroup: 병렬 작업 후 결과 수집. Actor: 내부 프로퍼티 접근을 자동 직렬화 — data race 컴파일 타임 방지. @MainActor: UI 업데이트를 메인 스레드에서 보장. Sendable: 스레드 간 안전한 전달 보장 프로토콜." },
   { day: 3, title: "앱 라이프사이클 완벽 이해", content: "Not Running → Inactive → Active → Background → Suspended. SceneDelegate vs AppDelegate. didFinishLaunchingWithOptions에서 하면 안 되는 것." },
   { day: 4, title: "UIKit 성능 최적화", content: "TableView/CollectionView 셀 재사용. Prefetching API. 셀 높이 캐싱. 이미지 다운샘플링. Instruments Time Profiler 사용법." },
   { day: 5, title: "네트워킹 Deep Dive", content: "URLSession 구조. URLSessionConfiguration 3종류. Codable 커스터마이징. 인증서 핀닝. 캐시 정책(304 Not Modified)." },
-  { day: 6, title: "아키텍처 트레이드오프", content: "MVVM vs Clean Architecture vs RIBs. 각각의 장단점을 프로젝트 규모별로 설명. 'Aidy에서 RIBs를 선택한 이유'를 30초로." },
+  { day: 6, title: "아키텍처 트레이드오프", content: "MVVM vs Clean Architecture vs RIBs. 각각의 장단점을 프로젝트 규모별로 설명. 'Aidy에서 RIBs를 선택한 이유'를 30초로.", detail: "MVVM: 간단, 데이터 바인딩. 소규모(1-3명)에 적합. 단점: 뷰모델 비대화. Clean Architecture: 의존성 역전, 레이어 분리. 중규모(3-7명). 단점: 보일러플레이트. RIBs: 라우터/인터랙터/빌더 분리. 대규모(5명+), 멀티모듈. 단점: 러닝커브. TCA: 단방향 데이터 플로우 + 상태 관리. SwiftUI와 궁합. 단점: 러닝커브, 매크로 의존. 그린카: RIBs + ReactorKit (4개 앱 공유 모듈). Aidy: TCA (iOS) + Jetpack Compose." },
   { day: 7, title: "시스템 디자인 실전", content: "소셜 피드 or 채팅 or 이미지 로더 중 1개를 45분 내 설계. 요구사항→아키텍처→핵심 컴포넌트→트레이드오프 4단계로." },
 ];
 

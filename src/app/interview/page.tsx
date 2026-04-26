@@ -1724,10 +1724,18 @@ export default function InterviewPage() {
                         {hardCards[q.id] ? "어려움 ✓ (복습 큐)" : "어려움 마크"}
                       </button>
                       {q.followUp && (
-                        <div className="mt-3 rounded-lg bg-amber-500/5 border border-amber-500/15 px-4 py-2.5">
-                          <p className="text-xs font-code text-amber-400/50 mb-0.5">꼬리질문 (면접관이 이어서 물어본다)</p>
-                          <p className="text-sm text-text/55 leading-relaxed">{q.followUp}</p>
-                        </div>
+                        <details className="mt-3 rounded-lg bg-amber-500/5 border border-amber-500/15 overflow-hidden">
+                          <summary className="px-4 py-2.5 cursor-pointer hover:bg-amber-500/10 transition-colors">
+                            <span className="text-xs font-code text-amber-400/50">꼬리질문</span>
+                            <p className="text-sm text-text/55 leading-relaxed mt-1">{q.followUp}</p>
+                          </summary>
+                          {q.followUpAnswer && (
+                            <div className="px-4 py-3 border-t border-amber-500/10 bg-amber-500/3">
+                              <p className="text-xs font-code text-green-400/50 mb-1">모범 답변</p>
+                              <p className="text-sm text-text/55 leading-relaxed">{q.followUpAnswer}</p>
+                            </div>
+                          )}
+                        </details>
                       )}
                     </div>
                   )}
@@ -1779,9 +1787,21 @@ export default function InterviewPage() {
             const tips = track === "fde" ? FDE_TECH_DAILY_TOPICS : TECH_DAILY_TOPICS;
             const tip = tips[(selectedDay - 1) % tips.length];
             return (
-              <div className="rounded-xl border border-accent/20 bg-accent/5 p-5">
-                <h3 className="text-sm font-bold text-accent/80 mb-2">{tip.title}</h3>
-                <p className="text-sm text-text/60 leading-relaxed">{tip.content}</p>
+              <div className="rounded-xl border border-accent/20 bg-accent/5 overflow-hidden">
+                <div className="p-5">
+                  <h3 className="text-base font-bold text-accent/80 mb-2">{tip.title}</h3>
+                  <p className="text-sm text-text/60 leading-relaxed">{tip.content}</p>
+                </div>
+                {tip.detail && (
+                  <details className="border-t border-accent/10">
+                    <summary className="px-5 py-3 cursor-pointer hover:bg-accent/5 transition-colors text-xs font-code text-accent/40">
+                      학습 내용 보기
+                    </summary>
+                    <div className="px-5 pb-4">
+                      <p className="text-sm text-text/55 leading-[1.8]">{tip.detail}</p>
+                    </div>
+                  </details>
+                )}
               </div>
             );
           })()}
