@@ -421,13 +421,6 @@ export default function InterviewPage() {
     } catch { /* noop */ }
   }, [checkedTasks, revealedCards, solvedProblems, hardCards, companyDdays, quizHistory, mounted]);
 
-  // Clamp quizIndex when track changes (shuffledQuiz length may differ)
-  useEffect(() => {
-    if (quizIndex >= shuffledQuiz.length && shuffledQuiz.length > 0) {
-      setQuizIndex(0);
-    }
-  }, [quizIndex, shuffledQuiz.length]);
-
   // Timer countdown
   useEffect(() => {
     if (!timerActive || timerSeconds <= 0) return;
@@ -581,6 +574,13 @@ export default function InterviewPage() {
   }, [track, today]);
 
   const quizTotal = shuffledQuiz.length;
+
+  // Clamp quizIndex when track changes
+  useEffect(() => {
+    if (quizIndex >= shuffledQuiz.length && shuffledQuiz.length > 0) {
+      setQuizIndex(0);
+    }
+  }, [quizIndex, shuffledQuiz.length]);
   const quizCorrectTotal = useMemo(() => Object.values(quizHistory).filter((h) => h.correct).length, [quizHistory]);
   const quizAnsweredTotal = Object.keys(quizHistory).length;
 
