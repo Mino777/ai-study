@@ -8,31 +8,32 @@ export interface InterviewQuestion {
   question: string;
   answer: string;
   phase: number;
+  followUp?: string;
 }
 
 /* ── iOS Track ───────────────────────────────────────────── */
 
 export const IOS_QUESTIONS: InterviewQuestion[] = [
   // ── Swift 기초 (Phase 1) ──
-  { id: "ios-1", topic: "Swift 기초", phase: 1, question: "struct와 class의 차이는?", answer: "struct는 값 타입(복사), class는 참조 타입(공유). struct는 상속 불가, class는 가능. struct는 스택, class는 힙 할당. Swift 표준 라이브러리의 대부분(String, Array, Dictionary)이 struct." },
+  { id: "ios-1", topic: "Swift 기초", phase: 1, question: "struct와 class의 차이는?", answer: "struct는 값 타입(복사), class는 참조 타입(공유). struct는 상속 불가, class는 가능. struct는 스택, class는 힙 할당. Swift 표준 라이브러리의 대부분(String, Array, Dictionary)이 struct.", followUp: "그러면 struct가 class보다 항상 좋은 건가요? class를 써야 하는 경우는?" },
   { id: "ios-2", topic: "Swift 기초", phase: 1, question: "Optional이란? 왜 필요한가?", answer: "값이 있을 수도 없을 수도 있는 타입. nil safety를 컴파일 타임에 보장. Optional Binding(if let, guard let), Optional Chaining(?.), Nil Coalescing(??)으로 안전하게 처리. 강제 언래핑(!)은 크래시 위험." },
   { id: "ios-3", topic: "Swift 기초", phase: 1, question: "프로토콜(Protocol)이란?", answer: "메서드/프로퍼티의 청사진(인터페이스). 다중 채택 가능. 프로토콜 확장(extension)으로 기본 구현 제공. POP(Protocol-Oriented Programming)는 Swift의 핵심 패러다임. Equatable, Hashable, Codable 등이 대표적." },
   { id: "ios-4", topic: "Swift 기초", phase: 1, question: "클로저(Closure)란? 캡처 리스트는?", answer: "이름 없는 함수. 주변 컨텍스트의 변수를 캡처(참조)할 수 있음. 캡처 리스트 [weak self], [unowned self]로 순환 참조 방지. @escaping은 함수 스코프 이후 실행되는 클로저. 후행 클로저(trailing closure) 문법 지원." },
   { id: "ios-5", topic: "Swift 기초", phase: 1, question: "제네릭(Generics)이란?", answer: "타입에 독립적인 코드 작성. Array<Element>, Result<Success, Failure> 등. where 절로 제약 조건 추가. associated type으로 프로토콜에서 사용. 코드 재사용성과 타입 안전성을 동시에 달성." },
 
   // ── 메모리 관리 (Phase 1-2) ──
-  { id: "ios-6", topic: "메모리 관리", phase: 1, question: "ARC(Automatic Reference Counting)란?", answer: "컴파일 타임에 retain/release를 자동 삽입하여 메모리 관리. 참조 카운트가 0이 되면 해제. GC(Garbage Collection)와 달리 런타임 오버헤드 없음. 단, 순환 참조(Retain Cycle)는 자동으로 해결 못 함." },
+  { id: "ios-6", topic: "메모리 관리", phase: 1, question: "ARC(Automatic Reference Counting)란?", answer: "컴파일 타임에 retain/release를 자동 삽입하여 메모리 관리. 참조 카운트가 0이 되면 해제. GC(Garbage Collection)와 달리 런타임 오버헤드 없음. 단, 순환 참조(Retain Cycle)는 자동으로 해결 못 함.", followUp: "ARC와 GC의 성능 차이를 구체적으로 설명해주세요. iOS에서 GC를 안 쓰는 이유는?" },
   { id: "ios-7", topic: "메모리 관리", phase: 1, question: "strong, weak, unowned 차이는?", answer: "strong: 참조 카운트 +1 (기본값). weak: 카운트 증가 안 함, nil 가능(Optional). unowned: 카운트 증가 안 함, nil 불가(Non-Optional) — 해제된 후 접근 시 크래시. delegate 패턴에서 weak 사용이 일반적." },
-  { id: "ios-8", topic: "메모리 관리", phase: 2, question: "순환 참조(Retain Cycle) 예시와 해결법?", answer: "두 객체가 서로 strong 참조하면 영원히 해제 안 됨. 대표적: 클로저에서 self 캡처, delegate 패턴. 해결: [weak self] 캡처 리스트, delegate를 weak으로 선언. Instruments의 Leaks/Allocations으로 탐지." },
+  { id: "ios-8", topic: "메모리 관리", phase: 2, question: "순환 참조(Retain Cycle) 예시와 해결법?", answer: "두 객체가 서로 strong 참조하면 영원히 해제 안 됨. 대표적: 클로저에서 self 캡처, delegate 패턴. 해결: [weak self] 캡처 리스트, delegate를 weak으로 선언. Instruments의 Leaks/Allocations으로 탐지.", followUp: "실무에서 순환 참조를 발견한 경험이 있나요? 어떻게 디버깅했나요?" },
   { id: "ios-9", topic: "메모리 관리", phase: 2, question: "메모리 구조: 스택 vs 힙?", answer: "스택: 값 타입(struct, enum), 빠름, LIFO, 스레드별 독립. 힙: 참조 타입(class), 느림, ARC로 관리, 스레드 간 공유. 값 타입이 참조 타입을 포함하면 힙에 할당될 수 있음(Copy-on-Write)." },
 
   // ── 동시성 (Phase 2) ──
-  { id: "ios-10", topic: "동시성", phase: 2, question: "GCD(Grand Central Dispatch)란?", answer: "C 기반 동시성 라이브러리. DispatchQueue로 작업을 큐에 제출. main(UI), global(백그라운드), custom 큐. sync(동기, 현재 스레드 블로킹), async(비동기, 다른 스레드)로 작업 실행. QoS로 우선순위 지정." },
+  { id: "ios-10", topic: "동시성", phase: 2, question: "GCD(Grand Central Dispatch)란?", answer: "C 기반 동시성 라이브러리. DispatchQueue로 작업을 큐에 제출. main(UI), global(백그라운드), custom 큐. sync(동기, 현재 스레드 블로킹), async(비동기, 다른 스레드)로 작업 실행. QoS로 우선순위 지정.", followUp: "GCD 대신 async/await를 쓰면 GCD는 더 이상 필요 없나요? 언제 아직도 GCD가 필요한가요?" },
   { id: "ios-11", topic: "동시성", phase: 2, question: "async/await와 Actor란?", answer: "Swift 5.5+. async: 비동기 함수 선언. await: 비동기 결과 대기. Task로 비동기 컨텍스트 생성. Actor: 데이터 레이스 방지를 위한 참조 타입. @MainActor: UI 업데이트 보장. Sendable: 스레드 간 안전한 전달." },
   { id: "ios-12", topic: "동시성", phase: 2, question: "Race Condition이란? 방지법?", answer: "여러 스레드가 동시에 같은 자원에 접근하여 예측 불가한 결과 발생. 방지: Serial Queue, NSLock, DispatchSemaphore, Actor(Swift Concurrency). @Sendable 프로토콜로 컴파일 타임 검증." },
 
   // ── 아키텍처 (Phase 2) ──
-  { id: "ios-13", topic: "아키텍처", phase: 2, question: "MVC, MVVM, VIPER 비교?", answer: "MVC: Model-View-Controller. 간단하지만 Controller 비대화(Massive VC). MVVM: Model-View-ViewModel. 데이터 바인딩으로 뷰 로직 분리. VIPER: View-Interactor-Presenter-Entity-Router. 가장 세분화, 테스트 용이. 프로젝트 규모에 따라 선택." },
+  { id: "ios-13", topic: "아키텍처", phase: 2, question: "MVC, MVVM, VIPER 비교?", answer: "MVC: Model-View-Controller. 간단하지만 Controller 비대화(Massive VC). MVVM: Model-View-ViewModel. 데이터 바인딩으로 뷰 로직 분리. VIPER: View-Interactor-Presenter-Entity-Router. 가장 세분화, 테스트 용이. 프로젝트 규모에 따라 선택.", followUp: "현재 프로젝트에서 어떤 아키텍처를 쓰고 있고, 왜 그걸 선택했나요? 다시 선택한다면?" },
   { id: "ios-14", topic: "아키텍처", phase: 2, question: "Clean Architecture란?", answer: "의존성 규칙: 바깥 → 안쪽으로만 의존. Domain(Entity, UseCase) → Data(Repository 구현) → Presentation(ViewModel, View). 프레임워크 독립적. 테스트 용이. iOS에서는 보통 MVVM + Clean Architecture 조합." },
   { id: "ios-15", topic: "아키텍처", phase: 2, question: "의존성 주입(DI)이란?", answer: "객체가 직접 의존성을 생성하지 않고 외부에서 주입받는 패턴. 생성자 주입, 프로퍼티 주입, 메서드 주입. 테스트 시 Mock 객체 주입 용이. Swinject, Factory 등 DI 프레임워크 활용. 프로토콜 기반 추상화와 함께 사용." },
 
@@ -57,7 +58,7 @@ export const IOS_QUESTIONS: InterviewQuestion[] = [
   { id: "ios-25", topic: "보안", phase: 3, question: "Keychain이란?", answer: "iOS 보안 저장소. AES 암호화. 앱 삭제해도 유지(옵션). 비밀번호, 토큰, 인증서 저장에 적합. UserDefaults와 달리 암호화됨. kSecAttrAccessible로 접근 제어. 앱 그룹으로 앱 간 공유 가능." },
 
   // ── 시스템 디자인 (Phase 3) ──
-  { id: "ios-26", topic: "시스템 디자인", phase: 3, question: "소셜 피드 앱 설계?", answer: "아키텍처: MVVM + Repository. 네트워크: 페이지네이션(cursor-based). 캐싱: 메모리(NSCache) + 디스크(CoreData/Realm). 이미지: 썸네일 프리로딩 + 풀사이즈 lazy load. 오프라인: 로컬 DB 우선, 네트워크 동기화. 성능: 셀 높이 캐싱, prefetching." },
+  { id: "ios-26", topic: "시스템 디자인", phase: 3, question: "소셜 피드 앱 설계?", answer: "아키텍처: MVVM + Repository. 네트워크: 페이지네이션(cursor-based). 캐싱: 메모리(NSCache) + 디스크(CoreData/Realm). 이미지: 썸네일 프리로딩 + 풀사이즈 lazy load. 오프라인: 로컬 DB 우선, 네트워크 동기화. 성능: 셀 높이 캐싱, prefetching.", followUp: "피드에 새 글이 실시간으로 추가될 때 스크롤 위치는 어떻게 유지하나요?" },
   { id: "ios-27", topic: "시스템 디자인", phase: 3, question: "채팅 앱 설계?", answer: "실시간: WebSocket/SSE로 양방향 통신. 메시지 저장: CoreData/Realm 로컬 + 서버 동기화. 읽음 처리: 마지막 읽은 messageId 추적. 미디어: 백그라운드 업로드 + 프로그레스. 푸시: APNs + Silent Push로 백그라운드 동기화. 페이지네이션: 과거 메시지 역순 로딩." },
 
   // ── RxSwift / Combine (Phase 2) ──
@@ -2545,4 +2546,81 @@ export const MOCK_FEEDBACK_CRITERIA = [
   { id: "pace", label: "Pace & Filler Words", description: "적절한 속도? '음...', '그...' 3회 이하?" },
   { id: "confidence", label: "Confidence Level", description: "목소리 톤, 아이컨택, 자세가 자신감 있었나?" },
   { id: "question", label: "Reverse Questions", description: "면접 마지막 역질문이 구체적이고 인상적이었나?" },
+];
+
+/* ═══════════════════════════════════════════════════════════ */
+/*  COMPANY-SPECIFIC CODING TEST STYLES                        */
+/* ═══════════════════════════════════════════════════════════ */
+
+export interface CompanyCodingStyle {
+  company: string;
+  color: string;
+  format: string;
+  difficulty: string;
+  focusAreas: string[];
+  tips: string[];
+  recentTopics: string[];
+}
+
+export const COMPANY_CODING_STYLES: CompanyCodingStyle[] = [
+  {
+    company: "카카오", color: "#fee500",
+    format: "5시간 7문제 · 프로그래머스 · 효율성 테스트 포함",
+    difficulty: "Lv.1~4 혼합 (배점제, 문제별 가중치 다름)",
+    focusAreas: ["문자열 파싱/처리", "그래프(BFS/DFS)", "구현(시뮬레이션)", "트리 탐색"],
+    tips: [
+      "앞 3문제를 30분 내 확보 → 나머지 시간을 4~7번에 투자",
+      "효율성 테스트 실패해도 정확성 부분 점수 있음 → brute force라도 제출",
+      "5시간 체력 관리: 2시간마다 스트레칭 + 물",
+    ],
+    recentTopics: ["2023: 개인정보 수집(구현), 이모티콘 할인(완전탐색), 미로 탈출(BFS+DFS)", "2022: 양궁대회(완전탐색), 주차요금(구현), 양과 늑대(DFS+비트마스킹)"],
+  },
+  {
+    company: "네이버", color: "#03c75a",
+    format: "2시간 3문제 · 프로그래머스",
+    difficulty: "Silver 상위 ~ Gold (높은 편)",
+    focusAreas: ["구현(복잡한 조건 처리)", "자료구조 활용", "창의적 사고"],
+    tips: [
+      "3문제 중 2개 이상 풀어야 통과",
+      "부분 점수가 있다면 완벽하지 않아도 제출",
+      "코너 케이스(경계값, 0, 빈 배열)에 특히 주의",
+    ],
+    recentTopics: ["구현 중심 (문자열 처리, 시뮬레이션)", "자료구조 응용 (해시맵, 우선순위 큐)"],
+  },
+  {
+    company: "삼성", color: "#1428a0",
+    format: "3시간 2문제 · 삼성 SW Expert Academy",
+    difficulty: "쉬운 알고리즘 + 복잡한 구현",
+    focusAreas: ["BFS/DFS + 시뮬레이션", "백트래킹", "구현(2D 배열 조작)"],
+    tips: [
+      "1문제만 완벽하게 풀어도 통과 가능",
+      "IDE 없이 구현하는 연습 필수 (삼성 자체 에디터)",
+      "문제가 길다 → 요구사항 정리에 20분 투자",
+    ],
+    recentTopics: ["격자 위 시뮬레이션(뱀, 로봇 청소기)", "BFS + 조건 분기(벽 부수기)", "백트래킹(N-Queen 변형)"],
+  },
+  {
+    company: "쿠팡", color: "#e4002b",
+    format: "1시간 3문제 · HackerRank",
+    difficulty: "평이한 편 (코테보다 면접에 비중)",
+    focusAreas: ["기본 자료구조", "해시맵", "정렬"],
+    tips: [
+      "1시간 내 3문제 전부 풀기 목표",
+      "HackerRank 환경에 미리 익숙해지기",
+      "코테보다 이후 라이브 코딩 3회가 더 중요",
+    ],
+    recentTopics: ["해시맵 활용", "문자열 처리", "기본 DP"],
+  },
+  {
+    company: "토스", color: "#3b82f6",
+    format: "코딩테스트 없음 · 과제전형으로 대체",
+    difficulty: "과제 난이도는 중~상",
+    focusAreas: ["실무 구현 능력", "아키텍처 설계", "코드 품질"],
+    tips: [
+      "NEXT 챌린지(90분 7문제)는 매우 쉬움 — 기본기 확인용",
+      "과제전형이 핵심: 코드 리뷰 + 설계 판단 평가",
+      "README와 커밋 히스토리가 코드만큼 중요",
+    ],
+    recentTopics: ["NEXT: 기초 구현 (정렬, 문자열)", "과제: API 연동 + UI 구현 + 아키텍처"],
+  },
 ];

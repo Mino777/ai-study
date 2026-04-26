@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { IOS_QUESTIONS, FDE_QUESTIONS, CULTURE_QUESTIONS, PHASE_PROBLEMS, COMPANY_STRATEGIES, HIRING_INSIGHTS, PROCESS_STAGES, ASSIGNMENT_CHECKLIST, ALGO_GUIDES, BIG_O_GUIDE, BIG_O_COMPARISON, SYSTEM_DESIGN_CASES, FDE_DESIGN_CASES, SD_FRAMEWORK_STEPS, SD_CLARIFYING_QUESTIONS, SD_API_COMPARISON, ASSIGNMENT_DAILY_TIPS, FDE_ASSIGNMENT_DAILY_TIPS, CULTURE_DAILY_TIPS, TECH_DAILY_TOPICS, FDE_TECH_DAILY_TOPICS, CS_TOPICS, CS_DAILY_TOPICS, FDE_CS_DAILY_TOPICS, FDE_ALGO_TEMPLATES, CAREER_PAGES, TIMER_PRESETS, QUIZ_BANK, INTERVIEW_DAY_PLAYBOOK, SALARY_TIPS, RED_FLAGS, ONBOARDING_PLAYBOOK, MOCK_FEEDBACK_CRITERIA, type InterviewQuestion } from "./constants";
+import { IOS_QUESTIONS, FDE_QUESTIONS, CULTURE_QUESTIONS, PHASE_PROBLEMS, COMPANY_STRATEGIES, HIRING_INSIGHTS, PROCESS_STAGES, ASSIGNMENT_CHECKLIST, ALGO_GUIDES, BIG_O_GUIDE, BIG_O_COMPARISON, SYSTEM_DESIGN_CASES, FDE_DESIGN_CASES, SD_FRAMEWORK_STEPS, SD_CLARIFYING_QUESTIONS, SD_API_COMPARISON, ASSIGNMENT_DAILY_TIPS, FDE_ASSIGNMENT_DAILY_TIPS, CULTURE_DAILY_TIPS, TECH_DAILY_TOPICS, FDE_TECH_DAILY_TOPICS, CS_TOPICS, CS_DAILY_TOPICS, FDE_CS_DAILY_TOPICS, FDE_ALGO_TEMPLATES, CAREER_PAGES, TIMER_PRESETS, QUIZ_BANK, INTERVIEW_DAY_PLAYBOOK, SALARY_TIPS, RED_FLAGS, ONBOARDING_PLAYBOOK, MOCK_FEEDBACK_CRITERIA, COMPANY_CODING_STYLES, type InterviewQuestion } from "./constants";
 
 /* ═══════════════════════════════════════════════════════════ */
 /*  TYPES                                                      */
@@ -1137,6 +1137,50 @@ export default function InterviewPage() {
         {/* ═══════════ TAB: CODING TEST ═══════════ */}
         {activeTab === "coding" && (<>
 
+        {/* ═══════════ COMPANY CODING STYLES ═══════════ */}
+        <section className="mb-12">
+          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">
+            회사별 코딩테스트 스타일
+          </h2>
+          <div className="space-y-2">
+            {COMPANY_CODING_STYLES.map((c) => (
+              <details key={c.company} className="rounded-xl border border-border/30 bg-surface/20 overflow-hidden">
+                <summary className="px-5 py-3.5 cursor-pointer hover:bg-surface/40 transition-colors flex items-center gap-3">
+                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: c.color }} />
+                  <span className="text-sm font-bold flex-1">{c.company}</span>
+                  <span className="text-xs text-text/25 font-code hidden md:block">{c.format.split("·")[0]}</span>
+                </summary>
+                <div className="px-5 pb-5 border-t border-border/20 pt-4 space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-[10px] font-code text-text/30 mb-1">형식</p>
+                      <p className="text-xs text-text/60">{c.format}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-code text-text/30 mb-1">난이도</p>
+                      <p className="text-xs text-text/60">{c.difficulty}</p>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-code text-text/30 mb-1">출제 중점</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {c.focusAreas.map((a) => <span key={a} className="text-xs px-2.5 py-1 rounded-lg bg-surface/60 text-text/50 border border-border/30">{a}</span>)}
+                    </div>
+                  </div>
+                  <div className="rounded-lg bg-accent/5 border border-accent/15 px-3 py-2">
+                    <p className="text-[10px] font-code text-accent/50 mb-1">합격 전략</p>
+                    {c.tips.map((t, i) => <p key={i} className="text-xs text-text/55 leading-relaxed">&#8226; {t}</p>)}
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-code text-text/30 mb-1">최근 기출 경향</p>
+                    {c.recentTopics.map((t, i) => <p key={i} className="text-xs text-text/40 leading-relaxed">{t}</p>)}
+                  </div>
+                </div>
+              </details>
+            ))}
+          </div>
+        </section>
+
         {/* ═══════════ KEY RESOURCES ═══════════ */}
         <section className="mb-12">
           <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">
@@ -1642,6 +1686,12 @@ export default function InterviewPage() {
                       >
                         {hardCards[q.id] ? "어려움 ✓ (복습 큐)" : "어려움 마크"}
                       </button>
+                      {q.followUp && (
+                        <div className="mt-3 rounded-lg bg-amber-500/5 border border-amber-500/15 px-4 py-2.5">
+                          <p className="text-[10px] font-code text-amber-400/50 mb-0.5">꼬리질문 (면접관이 이어서 물어본다)</p>
+                          <p className="text-xs text-text/55 leading-relaxed">{q.followUp}</p>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
