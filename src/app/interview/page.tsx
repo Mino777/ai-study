@@ -558,20 +558,23 @@ export default function InterviewPage() {
   }, [track, hardCards]);
 
   // Weakness analysis: patterns with lowest progress
-  // Shuffled quiz (deterministic per day, all questions)
+  // Quiz shuffle seed — changes every time quiz tab is entered
+  const [quizSeed, setQuizSeed] = useState(() => Date.now());
+
   const shuffledQuiz = useMemo(() => {
     const trackQs = QUIZ_BANK.filter((q) =>
       track === "fde" ? q.category !== "ios" && q.category !== "swift" : q.category !== "fde",
     );
-    // Fisher-Yates shuffle with day-based seed
-    const seed = today * 2654435761;
+    // Fisher-Yates shuffle with random seed
     const arr = [...trackQs];
+    let seed = quizSeed;
     for (let i = arr.length - 1; i > 0; i--) {
-      const j = Math.abs((seed * (i + 1) * 16807) % 2147483647) % (i + 1);
+      seed = (seed * 16807 + 12345) % 2147483647;
+      const j = Math.abs(seed) % (i + 1);
       [arr[i], arr[j]] = [arr[j], arr[i]];
     }
     return arr;
-  }, [track, today]);
+  }, [track, quizSeed]);
 
   const quizTotal = shuffledQuiz.length;
 
@@ -733,7 +736,14 @@ export default function InterviewPage() {
           ]).map((tab) => (
             <button
               key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
+              onClick={() => {
+                setActiveTab(tab.key);
+                if (tab.key === "quiz") {
+                  setQuizSeed(Date.now());
+                  setQuizIndex(0);
+                  setQuizSelection({});
+                }
+              }}
               className={`shrink-0 px-4 py-2.5 rounded-lg text-base font-medium transition-all cursor-pointer ${
                 activeTab === tab.key
                   ? "bg-accent text-white shadow-sm"
