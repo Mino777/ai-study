@@ -421,6 +421,13 @@ export default function InterviewPage() {
     } catch { /* noop */ }
   }, [checkedTasks, revealedCards, solvedProblems, hardCards, companyDdays, quizHistory, mounted]);
 
+  // Clamp quizIndex when track changes (shuffledQuiz length may differ)
+  useEffect(() => {
+    if (quizIndex >= shuffledQuiz.length && shuffledQuiz.length > 0) {
+      setQuizIndex(0);
+    }
+  }, [quizIndex, shuffledQuiz.length]);
+
   // Timer countdown
   useEffect(() => {
     if (!timerActive || timerSeconds <= 0) return;
@@ -517,11 +524,14 @@ export default function InterviewPage() {
     const techQs = track === "ios" ? IOS_QUESTIONS : FDE_QUESTIONS;
     const allQs = [...techQs, ...CULTURE_QUESTIONS];
     const phaseQs = allQs.filter((q) => q.phase === currentPhase.id);
-    // 5 cards per day, cycling through phase questions
-    const startIdx = ((selectedDay - 1) * 5) % Math.max(1, phaseQs.length);
-    return phaseQs.slice(startIdx, startIdx + 5).concat(
-      startIdx + 5 > phaseQs.length ? phaseQs.slice(0, Math.max(0, (startIdx + 5) - phaseQs.length)) : [],
-    ).slice(0, 5);
+    if (phaseQs.length === 0) return [];
+    // 5 unique cards per day, cycling through phase questions
+    const result: typeof phaseQs = [];
+    for (let i = 0; i < 5 && i < phaseQs.length; i++) {
+      const idx = ((selectedDay - 1) * 5 + i) % phaseQs.length;
+      result.push(phaseQs[idx]);
+    }
+    return result;
   }, [track, currentPhase.id, selectedDay]);
 
   const todayProblems = useMemo(() => {
@@ -694,7 +704,7 @@ export default function InterviewPage() {
             {TRACKS.map((t) => (
               <button
                 key={t.key}
-                onClick={() => setTrack(t.key)}
+                onClick={() => { setTrack(t.key); setQuizIndex(0); }}
                 className={`rounded-full px-5 py-2 text-sm font-medium transition-all cursor-pointer ${
                   track === t.key
                     ? "bg-accent text-white shadow-sm"
@@ -1606,10 +1616,10 @@ export default function InterviewPage() {
             <span className="text-xs font-code text-text/30">전체 {totalReviewed}/{flashCards.length}</span>
           </div>
           <div className="space-y-3">
-            {todayCards.map((q) => {
+            {todayCards.map((q, qi) => {
               const isRevealed = !!revealedCards[q.id];
               return (
-                <div key={q.id} className="rounded-xl border border-border/40 bg-surface/30 overflow-hidden">
+                <div key={`${q.id}-${qi}`} className="rounded-xl border border-border/40 bg-surface/30 overflow-hidden">
                   <button onClick={() => toggleReveal(q.id)} className="w-full px-5 py-4 text-left cursor-pointer hover:bg-surface/50 transition-colors">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1">
@@ -1805,7 +1815,7 @@ export default function InterviewPage() {
               const h = quizHistory[q.id];
               return (
                 <div
-                  key={q.id}
+                  key={`${q.id}-${i}`}
                   className={`h-1 flex-1 rounded-full cursor-pointer transition-all ${
                     i === quizIndex ? "bg-accent" : h ? (h.correct ? "bg-green-500/60" : "bg-red-500/60") : "bg-surface/40"
                   }`}
