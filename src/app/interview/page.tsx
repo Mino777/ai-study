@@ -373,7 +373,8 @@ function formatDate(day: number): string {
 
 export default function InterviewPage() {
   const [track, setTrack] = useState<TrackKey>("ios");
-  const [activeTab, setActiveTab] = useState<"overview" | "coding" | "assignment" | "tech" | "cs" | "culture">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "coding" | "assignment" | "cs" | "tech" | "quiz" | "culture">("overview");
+  const [quizIndex, setQuizIndex] = useState(0);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [checkedTasks, setCheckedTasks] = useState<Record<string, boolean>>({});
   const [selectedDay, setSelectedDay] = useState<number>(getToday());
@@ -554,6 +555,25 @@ export default function InterviewPage() {
   }, [track, hardCards]);
 
   // Weakness analysis: patterns with lowest progress
+  // Shuffled quiz (deterministic per day, all questions)
+  const shuffledQuiz = useMemo(() => {
+    const trackQs = QUIZ_BANK.filter((q) =>
+      track === "fde" ? q.category !== "ios" && q.category !== "swift" : q.category !== "fde",
+    );
+    // Fisher-Yates shuffle with day-based seed
+    const seed = today * 2654435761;
+    const arr = [...trackQs];
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.abs((seed * (i + 1) * 16807) % 2147483647) % (i + 1);
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }, [track, today]);
+
+  const quizTotal = shuffledQuiz.length;
+  const quizCorrectTotal = useMemo(() => Object.values(quizHistory).filter((h) => h.correct).length, [quizHistory]);
+  const quizAnsweredTotal = Object.keys(quizHistory).length;
+
   const weakPatterns = useMemo(() => {
     return ALGO_PATTERNS
       .map((p) => ({ ...p, solved: patternProgress[p.id] ?? 0, pct: Math.round(((patternProgress[p.id] ?? 0) / p.problems) * 100) }))
@@ -698,6 +718,7 @@ export default function InterviewPage() {
             { key: "assignment" as const, label: "사전과제" },
             { key: "cs" as const, label: "CS 기초" },
             { key: "tech" as const, label: "기술면접" },
+            { key: "quiz" as const, label: "퀴즈" },
             { key: "culture" as const, label: "인성면접" },
           ]).map((tab) => (
             <button
@@ -865,89 +886,6 @@ export default function InterviewPage() {
               <p className="text-[10px] text-text/30 mt-0.5">연속 일수</p>
             </div>
           </div>
-        </section>
-
-        {/* ═══════════ DAILY QUIZ ═══════════ */}
-        <section className="mb-8">
-          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-3">
-            Daily Quiz — Day {today}
-            <span className="ml-2 text-text/25 normal-case tracking-normal font-normal">
-              누적 {Object.values(quizHistory).filter((h) => h.correct).length}/{Object.keys(quizHistory).length} 정답
-            </span>
-          </h2>
-          {(() => {
-            // 매일 3문제 선택 (track 기반 필터 + day 기반 순환)
-            const trackQs = QUIZ_BANK.filter((q) =>
-              track === "fde" ? q.category !== "ios" && q.category !== "swift" : q.category !== "fde",
-            );
-            const dailyQuizzes = Array.from({ length: 10 }, (_, i) => {
-              const idx = ((today - 1) * 10 + i) % trackQs.length;
-              return trackQs[idx];
-            });
-
-            return (
-              <div className="space-y-3">
-                {dailyQuizzes.map((q) => {
-                  const history = quizHistory[q.id];
-                  const selection = quizSelection[q.id];
-                  const submitted = !!history;
-                  return (
-                    <div key={q.id} className={`rounded-xl border overflow-hidden ${submitted ? (history.correct ? "border-green-500/30 bg-green-500/5" : "border-red-500/30 bg-red-500/5") : "border-border/40 bg-surface/30"}`}>
-                      <div className="px-5 py-4">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-[10px] font-code px-2 py-0.5 rounded-full bg-accent/10 text-accent/60">{q.category}</span>
-                          {submitted && <span className={`text-[10px] font-code ${history.correct ? "text-green-400" : "text-red-400"}`}>{history.correct ? "correct" : "wrong"}</span>}
-                        </div>
-                        <p className="text-sm text-text/80 font-medium mb-3">{q.question}</p>
-                        <div className="space-y-1.5">
-                          {q.choices.map((choice, ci) => {
-                            const isSelected = selection === ci || (submitted && history.answer === ci);
-                            const isCorrect = ci === q.answer;
-                            let style = "border-border/30 bg-surface/20 text-text/60";
-                            if (submitted) {
-                              if (isCorrect) style = "border-green-500/40 bg-green-500/10 text-green-400/80";
-                              else if (isSelected && !isCorrect) style = "border-red-500/40 bg-red-500/10 text-red-400/80 line-through";
-                            } else if (isSelected) {
-                              style = "border-accent/40 bg-accent/10 text-accent";
-                            }
-                            return (
-                              <button
-                                key={ci}
-                                onClick={() => { if (!submitted) setQuizSelection((prev) => ({ ...prev, [q.id]: ci })); }}
-                                className={`w-full text-left px-4 py-2.5 rounded-lg border text-xs transition-colors ${style} ${!submitted ? "cursor-pointer hover:border-accent/30" : ""}`}
-                                disabled={submitted}
-                              >
-                                {choice}
-                              </button>
-                            );
-                          })}
-                        </div>
-                        {!submitted && selection !== undefined && selection !== null && (
-                          <button
-                            onClick={() => {
-                              const correct = selection === q.answer;
-                              setQuizHistory((prev) => ({
-                                ...prev,
-                                [q.id]: { answer: selection, correct, date: new Date().toISOString().slice(0, 10) },
-                              }));
-                            }}
-                            className="mt-3 px-4 py-2 rounded-lg bg-accent text-white text-xs font-medium cursor-pointer hover:bg-accent/80 transition-colors"
-                          >
-                            제출
-                          </button>
-                        )}
-                        {submitted && (
-                          <div className="mt-3 rounded-lg bg-surface/40 px-4 py-3">
-                            <p className="text-xs text-text/50 leading-relaxed">{q.explanation}</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            );
-          })()}
         </section>
 
         {/* ═══════════ PHASE ROADMAP ═══════════ */}
@@ -1839,6 +1777,157 @@ export default function InterviewPage() {
                 </div>
               </details>
             ))}
+          </div>
+        </section>
+        </>)}
+
+        {/* ═══════════ TAB: QUIZ ═══════════ */}
+        {activeTab === "quiz" && (<>
+        <section>
+          {/* Stats bar */}
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45">
+              Quiz
+              <span className="ml-2 text-text/25 normal-case tracking-normal font-normal">
+                {quizIndex + 1} / {quizTotal}
+              </span>
+            </h2>
+            <div className="flex items-center gap-4">
+              <span className="text-xs font-code text-green-400/70">{quizCorrectTotal} correct</span>
+              <span className="text-xs font-code text-text/30">{quizAnsweredTotal} answered</span>
+              <span className="text-xs font-code text-text/20">{quizTotal} total</span>
+            </div>
+          </div>
+
+          {/* Progress dots */}
+          <div className="flex gap-0.5 mb-6 overflow-hidden">
+            {shuffledQuiz.map((q, i) => {
+              const h = quizHistory[q.id];
+              return (
+                <div
+                  key={q.id}
+                  className={`h-1 flex-1 rounded-full cursor-pointer transition-all ${
+                    i === quizIndex ? "bg-accent" : h ? (h.correct ? "bg-green-500/60" : "bg-red-500/60") : "bg-surface/40"
+                  }`}
+                  onClick={() => setQuizIndex(i)}
+                  title={`#${i + 1} ${q.category}`}
+                />
+              );
+            })}
+          </div>
+
+          {/* Card */}
+          {(() => {
+            const q = shuffledQuiz[quizIndex];
+            if (!q) return null;
+            const history = quizHistory[q.id];
+            const selection = quizSelection[q.id];
+            const submitted = !!history;
+            return (
+              <div className={`rounded-2xl border-2 overflow-hidden transition-all ${submitted ? (history.correct ? "border-green-500/40" : "border-red-500/40") : "border-border/40"}`}>
+                <div className="p-6 md:p-8">
+                  {/* Category + number */}
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-xs font-code px-3 py-1 rounded-full bg-accent/10 text-accent/70">{q.category}</span>
+                    <span className="text-xs font-code text-text/20">#{quizIndex + 1}</span>
+                  </div>
+
+                  {/* Question */}
+                  <p className="text-lg font-bold text-text/90 leading-relaxed mb-6">{q.question}</p>
+
+                  {/* Choices */}
+                  <div className="space-y-2">
+                    {q.choices.map((choice, ci) => {
+                      const isSelected = selection === ci || (submitted && history.answer === ci);
+                      const isCorrect = ci === q.answer;
+                      let style = "border-border/30 bg-surface/20 text-text/60 hover:border-accent/30";
+                      if (submitted) {
+                        if (isCorrect) style = "border-green-500/50 bg-green-500/10 text-green-300";
+                        else if (isSelected && !isCorrect) style = "border-red-500/50 bg-red-500/10 text-red-300 line-through";
+                        else style = "border-border/20 bg-surface/10 text-text/30";
+                      } else if (isSelected) {
+                        style = "border-accent/50 bg-accent/10 text-accent ring-1 ring-accent/30";
+                      }
+                      return (
+                        <button
+                          key={ci}
+                          onClick={() => { if (!submitted) setQuizSelection((prev) => ({ ...prev, [q.id]: ci })); }}
+                          className={`w-full text-left px-5 py-3.5 rounded-xl border text-sm transition-all ${style} ${!submitted ? "cursor-pointer" : ""}`}
+                          disabled={submitted}
+                        >
+                          <span className="font-code text-text/25 mr-3">{["A", "B", "C", "D"][ci]}.</span>
+                          {choice}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Submit button */}
+                  {!submitted && selection !== undefined && selection !== null && (
+                    <button
+                      onClick={() => {
+                        const correct = selection === q.answer;
+                        setQuizHistory((prev) => ({
+                          ...prev,
+                          [q.id]: { answer: selection, correct, date: new Date().toISOString().slice(0, 10) },
+                        }));
+                      }}
+                      className="mt-6 w-full py-3 rounded-xl bg-accent text-white text-sm font-bold cursor-pointer hover:bg-accent/80 transition-colors"
+                    >
+                      제출
+                    </button>
+                  )}
+
+                  {/* Explanation */}
+                  {submitted && (
+                    <div className={`mt-6 rounded-xl px-5 py-4 ${history.correct ? "bg-green-500/5 border border-green-500/20" : "bg-red-500/5 border border-red-500/20"}`}>
+                      <p className={`text-xs font-bold mb-1 ${history.correct ? "text-green-400" : "text-red-400"}`}>
+                        {history.correct ? "Correct!" : "Wrong — 정답: " + ["A", "B", "C", "D"][q.answer]}
+                      </p>
+                      <p className="text-sm text-text/60 leading-relaxed">{q.explanation}</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Navigation */}
+                <div className="border-t border-border/20 px-6 py-4 flex items-center justify-between bg-surface/20">
+                  <button
+                    onClick={() => setQuizIndex(Math.max(0, quizIndex - 1))}
+                    disabled={quizIndex === 0}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${quizIndex === 0 ? "text-text/20" : "text-text/50 hover:text-text hover:bg-surface/40 cursor-pointer"}`}
+                  >
+                    &larr; 이전
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (submitted || (selection !== undefined && selection !== null)) {
+                        // Auto-submit if not yet submitted
+                        if (!submitted && selection !== undefined && selection !== null) {
+                          const correct = selection === q.answer;
+                          setQuizHistory((prev) => ({ ...prev, [q.id]: { answer: selection, correct, date: new Date().toISOString().slice(0, 10) } }));
+                        }
+                        setQuizIndex(Math.min(quizTotal - 1, quizIndex + 1));
+                      }
+                    }}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      quizIndex === quizTotal - 1 ? "text-text/20" : "text-text/50 hover:text-text hover:bg-surface/40 cursor-pointer"
+                    }`}
+                  >
+                    다음 &rarr;
+                  </button>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Reset button */}
+          <div className="mt-6 text-center">
+            <button
+              onClick={() => { setQuizHistory({}); setQuizSelection({}); setQuizIndex(0); }}
+              className="text-xs text-text/20 hover:text-red-400/60 cursor-pointer transition-colors"
+            >
+              전체 기록 초기화
+            </button>
           </div>
         </section>
         </>)}
