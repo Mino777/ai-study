@@ -2076,3 +2076,208 @@ export const CS_DAILY_TOPICS: DailyTip[] = [
   { day: 13, title: "정적 vs 동적 디스패치 + 컴파일", content: "struct=정적(빠름), class=동적(vtable). final/private으로 정적 전환. Swift 컴파일 6단계(AST→SIL→LLVM→Machine Code). WMO 최적화." },
   { day: 14, title: "순수함수 + map/flatMap 완벽 이해", content: "순수함수의 정의와 테스트 이점. map vs flatMap vs compactMap 차이를 Optional/Array 각각에서. SwiftUI가 함수형인 이유." },
 ];
+
+/* ═══════════════════════════════════════════════════════════ */
+/*  FDE-SPECIFIC CONTENT (트랙별 차별화)                        */
+/* ═══════════════════════════════════════════════════════════ */
+
+/** FDE용 알고리즘 템플릿 (Python) — iOS는 기존 Swift 사용 */
+export const FDE_ALGO_TEMPLATES: Record<string, { code: string; lang: string }> = {
+  hash: { lang: "python", code: `# 딕셔너리로 빈도수 세기 + 두 수의 합
+from collections import Counter
+
+def two_sum(nums, target):
+    seen = {}
+    for i, num in enumerate(nums):
+        complement = target - num
+        if complement in seen:
+            return [seen[complement], i]
+        seen[num] = i
+    return []
+
+# Counter로 빈도수
+freq = Counter([1, 2, 2, 3, 3, 3])
+# Counter({3: 3, 2: 2, 1: 1})` },
+  "two-pointers": { lang: "python", code: `def two_sum_sorted(arr, target):
+    arr.sort()
+    left, right = 0, len(arr) - 1
+
+    while left < right:
+        total = arr[left] + arr[right]
+        if total == target:
+            return [arr[left], arr[right]]
+        elif total < target:
+            left += 1
+        else:
+            right -= 1
+    return None` },
+  "sliding-window": { lang: "python", code: `def max_sum_subarray(arr, k):
+    window_sum = sum(arr[:k])
+    max_sum = window_sum
+
+    for i in range(k, len(arr)):
+        window_sum += arr[i] - arr[i - k]
+        max_sum = max(max_sum, window_sum)
+    return max_sum` },
+  bfs: { lang: "python", code: `from collections import deque
+
+def bfs(graph, start, target):
+    queue = deque([(start, 0)])
+    visited = {start}
+
+    while queue:
+        node, dist = queue.popleft()
+        if node == target:
+            return dist
+        for next_node in graph[node]:
+            if next_node not in visited:
+                visited.add(next_node)
+                queue.append((next_node, dist + 1))
+    return -1` },
+  dp: { lang: "python", code: `# Bottom-up DP
+def climb_stairs(n):
+    if n <= 2:
+        return n
+    dp = [0] * (n + 1)
+    dp[1], dp[2] = 1, 2
+    for i in range(3, n + 1):
+        dp[i] = dp[i-1] + dp[i-2]
+    return dp[n]
+
+# 2D DP 예시: 격자 경로
+def unique_paths(m, n):
+    dp = [[1] * n for _ in range(m)]
+    for i in range(1, m):
+        for j in range(1, n):
+            dp[i][j] = dp[i-1][j] + dp[i][j-1]
+    return dp[m-1][n-1]` },
+};
+
+/** FDE용 사전과제 Daily Tips */
+export const FDE_ASSIGNMENT_DAILY_TIPS: DailyTip[] = [
+  { day: 1, title: "풀스택 과제 셋업", content: "React/Next.js + API 서버 셋업. Docker Compose로 로컬 환경 구성. 면접관이 'docker compose up' 한 번으로 실행 가능해야. README에 환경 변수 설정법 명시." },
+  { day: 2, title: "데이터 모델링 먼저", content: "코드 전에 ERD 그리기. 테이블 관계, 인덱스 전략 문서화. '왜 이 스키마를 선택했는지' 면접에서 반드시 물어본다. 정규화 vs 비정규화 트레이드오프." },
+  { day: 3, title: "API 설계 문서", content: "Swagger/OpenAPI 또는 README에 API 명세. 엔드포인트, 요청/응답 형식, 에러 코드. FDE는 '문서화 능력'이 iOS보다 더 중요하게 평가됨." },
+  { day: 4, title: "데이터 파이프라인 과제", content: "ETL 과제 시: 입력 데이터 검증(스키마 체크) → 변환(정제/집계) → 적재(DB/파일). 에러 핸들링과 로깅이 핵심 평가 항목. 부분 실패 대응 보여주기." },
+  { day: 5, title: "대시보드 과제", content: "차트/테이블로 데이터 시각화. 핵심: '데이터가 말하는 것'을 이해하고 표현. 필터/검색 기능 + 반응형 레이아웃. Recharts/Visx 등 라이브러리 활용." },
+  { day: 6, title: "AI 통합 과제 대비", content: "LLM API 호출 과제 시: 프롬프트 설계 + 출력 검증 + 에러 폴백. 'AI가 틀린 답을 줄 때 어떻게 하나?'가 FDE의 핵심 차별점. Harness 패턴 적용." },
+  { day: 7, title: "제출 전: 고객 관점 체크", content: "FDE 과제 평가 기준: '고객이 이걸 받으면 만족할까?'. 기술 완성도 + 사용자 경험 + 문서 품질 3가지. 데모 시나리오 1개를 README에 포함." },
+];
+
+/** FDE용 CS Daily Topics */
+export const FDE_CS_DAILY_TOPICS: DailyTip[] = [
+  { day: 1, title: "분산 시스템 기초", content: "CAP 정리: Consistency, Availability, Partition Tolerance 중 2개만 선택 가능. FDE가 고객에게 설명할 수 있어야. 'DB가 2대인데 하나가 죽으면?' 시나리오." },
+  { day: 2, title: "캐싱 전략 (Redis/CDN)", content: "Cache-Aside vs Write-Through vs Write-Behind. TTL 설정. 캐시 무효화(Invalidation)가 CS에서 가장 어려운 문제인 이유. Redis vs Memcached 선택 기준." },
+  { day: 3, title: "로드 밸런싱", content: "Round Robin vs Least Connections vs IP Hash. L4 vs L7 로드밸런서 차이. 고객사에 '왜 서버가 2대 필요한가?' 설명하는 연습." },
+  { day: 4, title: "메시지 큐 (Pub/Sub)", content: "동기 vs 비동기 처리. Kafka vs RabbitMQ vs SQS 선택 기준. 'A2A 패턴에서 왜 Pub/Sub을 쓰나?' 실무 연결. 메시지 순서 보장 vs 처리량 트레이드오프." },
+  { day: 5, title: "SQL 성능 최적화", content: "EXPLAIN ANALYZE 읽는 법. JOIN vs Subquery 성능 차이. 인덱스 설계 원칙 (선택도 높은 컬럼 우선). N+1 쿼리 문제와 해결법." },
+  { day: 6, title: "컨테이너 + CI/CD", content: "Docker 기본 (이미지 vs 컨테이너). Kubernetes 핵심 개념 (Pod, Service, Deployment). CI/CD 파이프라인: Build → Test → Deploy. GitHub Actions 기본." },
+  { day: 7, title: "보안 + 인증/인가", content: "Authentication(인증) vs Authorization(인가). JWT 구조(Header.Payload.Signature). OAuth 2.0 흐름. API Key vs Bearer Token. CORS가 뭔지, 왜 필요한지." },
+  { day: 8, title: "데이터베이스 설계", content: "정규화 1NF/2NF/3NF 왜 하는지. 비정규화는 언제 하는지 (읽기 성능 vs 쓰기 복잡도). NoSQL(MongoDB/DynamoDB) 선택 기준. FDE는 고객 데이터 구조를 설계할 일이 많다." },
+  { day: 9, title: "API Rate Limiting", content: "Token Bucket vs Sliding Window 알고리즘. 429 응답 + Retry-After 헤더. 고객사 API를 보호하는 FDE의 역할. DDoS 방어 기초." },
+  { day: 10, title: "모니터링 + 옵저버빌리티", content: "Metrics(수치) vs Logs(이벤트) vs Traces(흐름). Prometheus + Grafana 기본. SLI/SLO/SLA 차이. '고객사에 장애 보고서 쓰기' 연습." },
+];
+
+/** FDE용 기술면접 Daily Topics */
+export const FDE_TECH_DAILY_TOPICS: DailyTip[] = [
+  { day: 1, title: "고객 문제 정의 프레임", content: "'시스템이 느리다' → 어디가? 얼마나? 언제부터? 누구에게? 재현 가능? 5가지 질문으로 문제를 정량화. 고객의 '느리다'를 '응답 시간 3초 → 0.5초 목표'로 바꾸는 연습." },
+  { day: 2, title: "솔루션 아키텍처 설계", content: "고객 요구사항 → 기술 요구사항 변환. 다이어그램(Client→API→DB→Cache) 그리기 연습. 'MVP로 2주 내 검증 가능한 범위'를 제안하는 것이 FDE의 핵심." },
+  { day: 3, title: "데이터 파이프라인 설계", content: "ETL vs ELT 차이와 선택 기준. 배치 vs 스트리밍. 에러 핸들링(dead letter queue). 데이터 품질 검증. '고객 데이터가 더럽다'는 전제로 설계." },
+  { day: 4, title: "비즈니스 임팩트 정량화", content: "기술 개선 → 비즈니스 수치 변환. '캐시 도입 → 응답 시간 80% 단축 → 사용자 이탈률 15% 감소 → 월 매출 X% 증가'. ROI 계산법." },
+  { day: 5, title: "AI/LLM 통합 설계", content: "RAG 파이프라인: 문서 → 임베딩 → 벡터 DB → 검색 → LLM 생성. Harness 패턴: 입력 검증 → 출력 검증 → 폴백 → 채점. 'AI가 틀리면?'에 대한 구조적 답변." },
+  { day: 6, title: "마이그레이션 전략", content: "레거시 시스템 → 신규 시스템 전환. Strangler Fig 패턴. Blue-Green Deployment. 데이터 마이그레이션 시 다운타임 최소화. 고객에게 리스크 커뮤니케이션." },
+  { day: 7, title: "장애 대응 + 포스트모템", content: "장애 발생 시: 감지 → 영향 범위 파악 → 임시 조치 → 근본 원인 → 재발 방지. 포스트모템 문서 작성법. '고객에게 장애 보고하는 법'이 FDE 면접에서 나온다." },
+];
+
+/** FDE용 시스템 디자인 케이스 */
+export const FDE_DESIGN_CASES: SystemDesignCase[] = [
+  {
+    id: "fde-sd-dashboard", title: "고객 대시보드 설계", difficulty: "medium", timeLimit: "45분", phase: 3,
+    functional: ["실시간 KPI 표시", "필터/검색/날짜 범위", "CSV 다운로드", "알림 설정"],
+    nonFunctional: ["1000명 동시 접속", "차트 렌더링 < 2초", "데이터 정합성", "모바일 반응형"],
+    architecture: [
+      "Frontend: React + Recharts/D3.js",
+      "API: REST (페이지네이션 + 필터) 또는 GraphQL",
+      "Cache: Redis (집계 데이터 캐싱, TTL 5분)",
+      "DB: PostgreSQL (시계열 → TimescaleDB 확장)",
+      "실시간: SSE 또는 WebSocket (KPI 업데이트)",
+    ],
+    deepDive: [
+      "집계 쿼리 최적화: Materialized View + CRON 갱신",
+      "대용량 CSV 다운로드: 서버 스트리밍 (메모리 절약)",
+      "차트 성능: 데이터 포인트 1000개 이상 시 다운샘플링",
+      "권한: Row-Level Security로 고객별 데이터 격리",
+    ],
+    tradeoffs: [
+      "실시간 vs 배치: KPI는 5분 배치로 충분 vs 주문 수는 실시간 필요",
+      "서버 집계 vs 클라이언트 집계: 데이터 크면 서버, 인터랙티브면 클라이언트",
+      "Redis 캐시 TTL: 짧으면 DB 부하 ↑, 길면 데이터 신선도 ↓",
+    ],
+    template: `1. 요구사항 (5분)
+   "고객사 운영팀이 매일 보는 대시보드"
+   - 기능: KPI 카드, 시계열 차트, 테이블, 필터, CSV
+   - 비기능: 1000명 동시, 2초 내 로딩, 권한 분리
+
+2. 아키텍처 (10분)
+   [Browser] → [API Server] → [Redis Cache]
+                    ↓               ↓
+              [PostgreSQL] ← [Batch Aggregation]
+              [TimescaleDB]
+
+3. 핵심 결정 (20분)
+   - 집계: Materialized View (5분 갱신)
+   - 실시간: SSE로 KPI 카드만 실시간 업데이트
+   - 권한: RLS로 고객 ID 기반 데이터 격리
+
+4. 고객 가치 (5분)
+   "이전: 수동 SQL → CSV → Excel 1시간"
+   "이후: 대시보드 접속 2초 → 바로 의사결정"`,
+  },
+  {
+    id: "fde-sd-etl", title: "데이터 파이프라인 설계", difficulty: "hard", timeLimit: "45분", phase: 3,
+    functional: ["다중 소스 데이터 수집", "정제/변환/적재", "스케줄 실행", "에러 알림"],
+    nonFunctional: ["일 1억 건 처리", "부분 실패 복구", "데이터 품질 검증", "감사 로그"],
+    architecture: [
+      "Orchestrator: Airflow 또는 Prefect",
+      "Extract: API 호출 + DB 쿼리 + 파일 읽기",
+      "Transform: Python (pandas/PySpark)",
+      "Load: Data Warehouse (BigQuery/Snowflake)",
+      "Quality: Great Expectations (데이터 검증)",
+    ],
+    deepDive: [
+      "Idempotency: 같은 작업 재실행해도 결과 동일 (UPSERT)",
+      "Dead Letter Queue: 실패한 레코드 별도 저장 → 수동 재처리",
+      "Backfill: 과거 데이터 재처리 시 날짜 파라미터로 범위 지정",
+      "Schema Evolution: 소스 스키마 변경 감지 → 자동 알림",
+    ],
+    tradeoffs: [
+      "배치 vs 스트리밍: 일 단위 리포트 = 배치, 실시간 알림 = 스트리밍",
+      "pandas vs PySpark: 1GB 이하 = pandas, 이상 = PySpark",
+      "Data Lake vs Warehouse: 원본 보존 = Lake, 분석용 = Warehouse",
+    ],
+    template: `1. 요구사항 (5분)
+   "고객사 3개 시스템 데이터를 통합 분석"
+   - 소스: REST API + PostgreSQL + CSV 파일
+   - 처리: 일 1억 건, 매일 새벽 3시 배치
+   - 적재: BigQuery (분석팀 사용)
+
+2. 파이프라인 (15분)
+   [Source A: API] ──→ Extract ──→ Stage
+   [Source B: DB]  ──→ Extract ──→ Stage
+   [Source C: CSV] ──→ Extract ──→ Stage
+                          ↓
+                    Transform (정제/조인/집계)
+                          ↓
+                    Quality Check (스키마/NULL/범위)
+                          ↓
+                    Load (BigQuery UPSERT)
+
+3. 에러 대응 (10분)
+   - 부분 실패: Dead Letter Queue + 재시도
+   - 소스 장애: 이전 성공 데이터 유지 + 알림
+   - 스키마 변경: 자동 감지 → Slack 알림
+
+4. 고객 가치 (5분)
+   "수동 Excel 통합 3일 → 자동 파이프라인 30분"`,
+  },
+];

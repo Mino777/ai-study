@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { IOS_QUESTIONS, FDE_QUESTIONS, CULTURE_QUESTIONS, PHASE_PROBLEMS, COMPANY_STRATEGIES, HIRING_INSIGHTS, PROCESS_STAGES, ASSIGNMENT_CHECKLIST, ALGO_GUIDES, BIG_O_GUIDE, BIG_O_COMPARISON, SYSTEM_DESIGN_CASES, SD_FRAMEWORK_STEPS, SD_CLARIFYING_QUESTIONS, SD_API_COMPARISON, ASSIGNMENT_DAILY_TIPS, CULTURE_DAILY_TIPS, TECH_DAILY_TOPICS, CS_TOPICS, CS_DAILY_TOPICS, type InterviewQuestion } from "./constants";
+import { IOS_QUESTIONS, FDE_QUESTIONS, CULTURE_QUESTIONS, PHASE_PROBLEMS, COMPANY_STRATEGIES, HIRING_INSIGHTS, PROCESS_STAGES, ASSIGNMENT_CHECKLIST, ALGO_GUIDES, BIG_O_GUIDE, BIG_O_COMPARISON, SYSTEM_DESIGN_CASES, FDE_DESIGN_CASES, SD_FRAMEWORK_STEPS, SD_CLARIFYING_QUESTIONS, SD_API_COMPARISON, ASSIGNMENT_DAILY_TIPS, FDE_ASSIGNMENT_DAILY_TIPS, CULTURE_DAILY_TIPS, TECH_DAILY_TOPICS, FDE_TECH_DAILY_TOPICS, CS_TOPICS, CS_DAILY_TOPICS, FDE_CS_DAILY_TOPICS, FDE_ALGO_TEMPLATES, type InterviewQuestion } from "./constants";
 
 /* ═══════════════════════════════════════════════════════════ */
 /*  TYPES                                                      */
@@ -1277,7 +1277,8 @@ export default function InterviewPage() {
             Today&apos;s Tip — Day {selectedDay}
           </h2>
           {(() => {
-            const tip = ASSIGNMENT_DAILY_TIPS[(selectedDay - 1) % ASSIGNMENT_DAILY_TIPS.length];
+            const tips = track === "fde" ? FDE_ASSIGNMENT_DAILY_TIPS : ASSIGNMENT_DAILY_TIPS;
+            const tip = tips[(selectedDay - 1) % tips.length];
             return (
               <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 p-5">
                 <h3 className="text-sm font-bold text-purple-400/80 mb-2">{tip.title}</h3>
@@ -1296,7 +1297,8 @@ export default function InterviewPage() {
             Today&apos;s CS — Day {selectedDay}
           </h2>
           {(() => {
-            const tip = CS_DAILY_TOPICS[(selectedDay - 1) % CS_DAILY_TOPICS.length];
+            const tips = track === "fde" ? FDE_CS_DAILY_TOPICS : CS_DAILY_TOPICS;
+            const tip = tips[(selectedDay - 1) % tips.length];
             return (
               <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-5">
                 <h3 className="text-sm font-bold text-cyan-400/80 mb-2">{tip.title}</h3>
@@ -1435,7 +1437,8 @@ export default function InterviewPage() {
             <span className="ml-2 text-text/25 normal-case tracking-normal font-normal">— Day {selectedDay}</span>
           </h2>
           {(() => {
-            const tip = TECH_DAILY_TOPICS[(selectedDay - 1) % TECH_DAILY_TOPICS.length];
+            const tips = track === "fde" ? FDE_TECH_DAILY_TOPICS : TECH_DAILY_TOPICS;
+            const tip = tips[(selectedDay - 1) % tips.length];
             return (
               <div className="rounded-xl border border-accent/20 bg-accent/5 p-5">
                 <h3 className="text-sm font-bold text-accent/80 mb-2">{tip.title}</h3>
@@ -1448,8 +1451,10 @@ export default function InterviewPage() {
         {/* System Design Cases */}
         <section className="mb-12">
           <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-text/45 mb-4">
-            Mobile System Design
-            <span className="ml-2 text-text/25 normal-case tracking-normal font-normal">— weeeBox 프레임워크 기반</span>
+            {track === "ios" ? "Mobile System Design" : "Solution Architecture"}
+            <span className="ml-2 text-text/25 normal-case tracking-normal font-normal">
+              {track === "ios" ? "— weeeBox 프레임워크 기반" : "— 고객 솔루션 설계"}
+            </span>
           </h2>
           {/* Framework Steps */}
           <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
@@ -1493,7 +1498,7 @@ export default function InterviewPage() {
           </details>
           {/* Design Cases */}
           <div className="space-y-2">
-            {SYSTEM_DESIGN_CASES.map((c) => (
+            {(track === "fde" ? FDE_DESIGN_CASES : SYSTEM_DESIGN_CASES).map((c) => (
               <details key={c.id} className="rounded-xl border border-border/30 bg-surface/20 overflow-hidden">
                 <summary className="px-5 py-3.5 cursor-pointer hover:bg-surface/40 transition-colors flex items-center gap-3">
                   <span className="text-sm font-bold flex-1">{c.title}</span>
