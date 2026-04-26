@@ -973,8 +973,10 @@ export interface BigOEntry {
   color: string;
   speed: string;
   analogy: string;
+  visual: string;
   example: string;
   limit: string;
+  code: string;
 }
 
 export const BIG_O_GUIDE: BigOEntry[] = [
@@ -982,50 +984,227 @@ export const BIG_O_GUIDE: BigOEntry[] = [
     notation: "O(1)", name: "Constant", nameKo: "상수 시간", color: "#10b981",
     speed: "즉시",
     analogy: "책장에서 3번째 책 꺼내기 — 책이 100권이든 100만 권이든 같은 시간",
-    example: "배열 인덱스 접근 arr[5], 해시맵 조회 map[key]",
+    visual: `  n=10     → 1번
+  n=1000   → 1번
+  n=100만  → 1번
+  데이터가 아무리 커져도 딱 1번!`,
+    example: "배열 인덱스 접근, 해시맵 조회, 스택 push/pop",
     limit: "데이터 무한대도 OK",
+    code: `// 배열 인덱스 접근 — 항상 1번
+let arr = [10, 20, 30, 40, 50]
+let value = arr[3]  // O(1) — 바로 접근!
+
+// 딕셔너리(해시맵) 조회
+let map = ["apple": 3, "banana": 5]
+let count = map["apple"]  // O(1) — 키로 즉시 조회!
+
+// 스택 push/pop
+var stack = [1, 2, 3]
+stack.append(4)       // O(1) — 맨 뒤에 추가
+stack.removeLast()    // O(1) — 맨 뒤에서 제거`,
   },
   {
     notation: "O(log n)", name: "Logarithmic", nameKo: "로그 시간", color: "#22c55e",
     speed: "매우 빠름",
     analogy: "사전에서 단어 찾기 — 절반씩 넘기면 1000페이지도 10번이면 끝",
-    example: "이분 탐색, 균형 이진 트리 탐색",
+    visual: `  n=10     → 약 3번
+  n=1000   → 약 10번
+  n=100만  → 약 20번
+  n=10억   → 약 30번  ← 10억 개도 30번!
+
+  매번 절반을 버리니까 기하급수적으로 빨라진다`,
+    example: "이분 탐색, 균형 이진 트리(BST), 힙 삽입/삭제",
     limit: "n=10억도 30번이면 끝",
+    code: `// 이분 탐색 — 정렬된 배열에서 값 찾기
+func binarySearch(_ arr: [Int], _ target: Int) -> Int? {
+    var lo = 0, hi = arr.count - 1
+
+    while lo <= hi {
+        let mid = (lo + hi) / 2   // 가운데를 본다
+        if arr[mid] == target {
+            return mid             // 찾았다!
+        } else if arr[mid] < target {
+            lo = mid + 1           // 오른쪽 절반만
+        } else {
+            hi = mid - 1           // 왼쪽 절반만
+        }
+    }
+    return nil  // 없음
+}
+// [1,3,5,7,9,11,13] 에서 9 찾기 → 3번 만에 발견`,
   },
   {
     notation: "O(n)", name: "Linear", nameKo: "선형 시간", color: "#3b82f6",
     speed: "빠름",
     analogy: "출석부 한 명씩 부르기 — 학생 수만큼 걸린다",
-    example: "배열 순회, 선형 탐색, 해시맵 생성",
-    limit: "n=1000만까지 1초 내",
+    visual: `  n=10     → 10번
+  n=1000   → 1,000번
+  n=100만  → 1,000,000번
+
+  데이터가 2배 → 시간도 2배. 정직한 비례!`,
+    example: "배열 순회, 선형 탐색, 합계 구하기, 해시맵 생성",
+    limit: "n=1000만까지 1초 내 (Swift 기준)",
+    code: `// 배열에서 최대값 찾기 — 하나씩 다 봐야 함
+func findMax(_ arr: [Int]) -> Int? {
+    guard var maxVal = arr.first else { return nil }
+
+    for num in arr {           // n번 반복
+        if num > maxVal {
+            maxVal = num
+        }
+    }
+    return maxVal
+}
+
+// 배열 합계
+let sum = arr.reduce(0, +)     // O(n) — 전부 더해야 하니까
+
+// 해시맵 생성
+var freq: [Int: Int] = [:]
+for num in arr {               // O(n)
+    freq[num, default: 0] += 1
+}`,
   },
   {
     notation: "O(n log n)", name: "Linearithmic", nameKo: "선형 로그", color: "#8b5cf6",
     speed: "괜찮음",
     analogy: "학생들을 키 순서로 줄 세우기 — 효율적 정렬의 한계",
-    example: "퀵소트, 병합정렬, 힙정렬",
+    visual: `  n=10     → 약 33번
+  n=1000   → 약 10,000번
+  n=100만  → 약 2000만번
+
+  "비교 기반 정렬은 이보다 빨라질 수 없다"
+  → 정렬이 필요하면 이게 최선!`,
+    example: "Swift .sorted(), 병합정렬, 퀵소트, 힙정렬",
     limit: "n=100만까지 1초 내",
+    code: `// Swift 내장 정렬 — Tim Sort (O(n log n))
+let sorted = arr.sorted()
+
+// 병합 정렬 직접 구현
+func mergeSort(_ arr: [Int]) -> [Int] {
+    guard arr.count > 1 else { return arr }
+    let mid = arr.count / 2
+    let left = mergeSort(Array(arr[..<mid]))    // 반으로 쪼개고
+    let right = mergeSort(Array(arr[mid...]))   // 반으로 쪼개고
+    return merge(left, right)                   // 합치면서 정렬
+}
+
+func merge(_ a: [Int], _ b: [Int]) -> [Int] {
+    var result: [Int] = []
+    var i = 0, j = 0
+    while i < a.count && j < b.count {
+        if a[i] <= b[j] { result.append(a[i]); i += 1 }
+        else { result.append(b[j]); j += 1 }
+    }
+    return result + Array(a[i...]) + Array(b[j...])
+}`,
   },
   {
     notation: "O(n²)", name: "Quadratic", nameKo: "이차 시간", color: "#f59e0b",
     speed: "느림",
-    analogy: "반 학생 30명이 서로 악수 — 30×29 = 870번",
-    example: "이중 for문, 버블정렬, 선택정렬",
-    limit: "n=1만까지. 10만이면 시간초과",
+    analogy: "반 학생 30명이 서로 악수 — 30×29/2 = 435번",
+    visual: `  n=10     → 100번
+  n=100    → 10,000번
+  n=1000   → 1,000,000번 (100만!)
+  n=1만    → 1억번 (위험!)
+  n=10만   → 100억번 (시간초과! ✗)
+
+  이중 for문이 보이면 O(n²)를 의심해라`,
+    example: "이중 for문, 버블정렬, 선택정렬, 2D 배열 순회",
+    limit: "n=1만까지 안전. 10만이면 시간초과",
+    code: `// 버블 정렬 — 옆에 것과 비교하며 교환
+func bubbleSort(_ arr: inout [Int]) {
+    for i in 0..<arr.count {               // n번
+        for j in 0..<arr.count - 1 - i {   // n번 (이중 루프!)
+            if arr[j] > arr[j + 1] {
+                arr.swapAt(j, j + 1)
+            }
+        }
+    }
+}
+
+// "모든 쌍" 찾기 — 전형적인 O(n²)
+func allPairs(_ arr: [Int]) -> [(Int, Int)] {
+    var pairs: [(Int, Int)] = []
+    for i in 0..<arr.count {
+        for j in (i+1)..<arr.count {  // 이중 for문!
+            pairs.append((arr[i], arr[j]))
+        }
+    }
+    return pairs
+}
+// ⚠️ n이 크면 투포인터/해시맵으로 O(n)에 풀 수 있는지 확인!`,
   },
   {
     notation: "O(2ⁿ)", name: "Exponential", nameKo: "지수 시간", color: "#ef4444",
     speed: "매우 느림",
-    analogy: "모든 부분집합 구하기 — 20개면 100만, 30개면 10억",
-    example: "피보나치(메모이제이션 없을 때), 부분집합 전체 탐색",
-    limit: "n=20~25가 한계",
+    analogy: "모든 부분집합 구하기 — 20개면 100만, 30개면 10억 가지",
+    visual: `  n=10   → 1,024번
+  n=20   → 1,048,576번 (100만)
+  n=30   → 1,073,741,824번 (10억! ✗)
+
+  1개 추가될 때마다 경우의 수가 2배!
+  → DP(메모이제이션)로 줄일 수 있는지 먼저 확인`,
+    example: "재귀 피보나치(메모 없음), 부분집합 전체 탐색, 백트래킹",
+    limit: "n=20~25가 한계. 그 이상이면 DP 필수",
+    code: `// 피보나치 — 메모이제이션 없으면 O(2ⁿ)
+func fibSlow(_ n: Int) -> Int {
+    if n <= 1 { return n }
+    return fibSlow(n - 1) + fibSlow(n - 2)  // 매번 2갈래!
+}
+// fib(40)만 해도 수 초 걸림...
+
+// DP로 개선하면 O(n)으로 변신!
+func fibFast(_ n: Int) -> Int {
+    if n <= 1 { return n }
+    var dp = [0, 1]
+    for i in 2...n {
+        dp.append(dp[i-1] + dp[i-2])  // 저장해두고 재사용
+    }
+    return dp[n]
+}
+// fib(10000)도 순식간!
+
+// 모든 부분집합 구하기 — O(2ⁿ)
+func subsets(_ nums: [Int]) -> [[Int]] {
+    var result: [[Int]] = [[]]
+    for num in nums {
+        result += result.map { $0 + [num] }  // 매번 2배!
+    }
+    return result
+}`,
   },
   {
     notation: "O(n!)", name: "Factorial", nameKo: "팩토리얼", color: "#dc2626",
     speed: "사실상 불가",
-    analogy: "모든 순열 구하기 — 10명 줄 세우는 방법 = 362만가지",
-    example: "순열, 외판원 문제(TSP) brute force",
-    limit: "n=10~12가 한계",
+    analogy: "모든 순열 구하기 — 10명 줄 세우는 방법 = 362만 가지",
+    visual: `  n=5    → 120번
+  n=10   → 3,628,800번 (362만)
+  n=12   → 479,001,600번 (4.7억)
+  n=15   → 1,307,674,368,000번 (1.3조! ✗✗✗)
+
+  "모든 순서를 다 시도" 하면 이렇게 된다
+  → 거의 항상 다른 방법이 있다`,
+    example: "순열, 외판원 문제(TSP) brute force, N-Queen brute force",
+    limit: "n=10~12가 현실적 한계",
+    code: `// 모든 순열 구하기 — O(n!)
+func permutations(_ arr: [Int]) -> [[Int]] {
+    if arr.count <= 1 { return [arr] }
+    var result: [[Int]] = []
+
+    for i in 0..<arr.count {
+        var rest = arr
+        let picked = rest.remove(at: i)  // 1개 꺼내고
+        for perm in permutations(rest) {  // 나머지로 재귀
+            result.append([picked] + perm)
+        }
+    }
+    return result
+}
+// [1,2,3] → [[1,2,3],[1,3,2],[2,1,3],[2,3,1],[3,1,2],[3,2,1]]
+// 3! = 6가지. n=10이면 362만 가지...
+
+// ⚠️ 순열이 필요하면 백트래킹 + 가지치기로 최적화 필수!`,
   },
 ];
 

@@ -1167,18 +1167,48 @@ export default function InterviewPage() {
             </div>
           </div>
           {/* 상세 카드 */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+          <div className="space-y-2">
             {BIG_O_GUIDE.map((entry) => (
-              <div key={entry.notation} className="rounded-xl border border-border/30 bg-surface/20 p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-lg font-display font-black" style={{ color: entry.color }}>{entry.notation}</span>
-                  <span className="text-xs text-text/40">{entry.nameKo}</span>
-                  <span className="ml-auto text-[10px] font-code px-2 py-0.5 rounded-full" style={{ color: entry.color, background: `${entry.color}15` }}>{entry.speed}</span>
+              <details key={entry.notation} className="rounded-xl border border-border/30 bg-surface/20 overflow-hidden">
+                <summary className="px-5 py-3.5 cursor-pointer hover:bg-surface/40 transition-colors flex items-center gap-3">
+                  <span className="text-lg font-display font-black shrink-0 w-20" style={{ color: entry.color }}>{entry.notation}</span>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm font-semibold text-text/70">{entry.nameKo}</span>
+                    <span className="text-xs text-text/30 ml-2">{entry.name}</span>
+                  </div>
+                  <span className="text-[10px] font-code px-2 py-0.5 rounded-full shrink-0" style={{ color: entry.color, background: `${entry.color}15` }}>{entry.speed}</span>
+                </summary>
+                <div className="px-5 pb-5 border-t border-border/20 pt-4 space-y-4">
+                  {/* 비유 */}
+                  <p className="text-sm text-text/60 leading-relaxed">{entry.analogy}</p>
+
+                  {/* 성장 시각화 */}
+                  <div className="rounded-lg bg-bg/80 border border-border/30 p-4">
+                    <p className="text-[10px] font-code font-bold text-text/30 mb-2 uppercase tracking-wider">n이 커지면?</p>
+                    <pre className="text-xs font-code text-text/50 leading-relaxed whitespace-pre">{entry.visual}</pre>
+                  </div>
+
+                  {/* 예시 + 한계 */}
+                  <div className="flex gap-4">
+                    <div className="flex-1">
+                      <p className="text-[10px] font-code text-text/30 mb-1">대표 예시</p>
+                      <p className="text-xs text-text/50">{entry.example}</p>
+                    </div>
+                    <div className="shrink-0">
+                      <p className="text-[10px] font-code text-text/30 mb-1">실전 한계</p>
+                      <p className="text-xs font-semibold" style={{ color: entry.color }}>{entry.limit}</p>
+                    </div>
+                  </div>
+
+                  {/* Swift 코드 */}
+                  <div className="rounded-lg bg-bg/80 border border-border/30 overflow-hidden">
+                    <div className="px-3 py-1.5 border-b border-border/20">
+                      <span className="text-[10px] font-code text-text/30">swift · 실전 코드 예시</span>
+                    </div>
+                    <pre className="p-4 text-xs font-code text-text/55 leading-relaxed overflow-x-auto whitespace-pre">{entry.code}</pre>
+                  </div>
                 </div>
-                <p className="text-xs text-text/60 leading-relaxed mb-2">{entry.analogy}</p>
-                <p className="text-[10px] text-text/35 font-code">예: {entry.example}</p>
-                <p className="text-[10px] text-text/25 font-code mt-1">한계: {entry.limit}</p>
-              </div>
+              </details>
             ))}
           </div>
         </section>
