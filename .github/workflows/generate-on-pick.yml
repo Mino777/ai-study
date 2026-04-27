@@ -79,6 +79,13 @@ jobs:
             node scripts/generate-lesson.mjs generate-custom "${{ steps.parse.outputs.custom_topic }}"
           fi
 
+      - name: Validate generated MDX
+        if: steps.parse.outputs.valid == 'true'
+        run: |
+          echo "🔍 생성된 MDX 검증 중..."
+          node scripts/validate-content.mjs
+          echo "✅ MDX 검증 통과"
+
       - name: Create PR
         if: steps.parse.outputs.valid == 'true'
         env:

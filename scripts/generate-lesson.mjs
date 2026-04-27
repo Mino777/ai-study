@@ -419,6 +419,56 @@ function quizArrayToYaml(quiz) {
     .join("\n");
 }
 
+// ─── 3.5 JSX Curly Brace Auto-Escape ────────────────────────────
+// AI가 생성한 본문 텍스트의 {variable} 패턴을 `{variable}`로 자동 이스케이프.
+// 코드 블록, 인라인 코드, frontmatter 안은 건드리지 않는다.
+
+function escapeJsxCurlyBraces(mdxContent) {
+  const lines = mdxContent.split("\n");
+  let inCodeBlock = false;
+  let inFrontmatter = false;
+  let fixCount = 0;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    // frontmatter 스킵
+    if (i === 0 && line.trim() === "---") { inFrontmatter = true; continue; }
+    if (inFrontmatter && line.trim() === "---") { inFrontmatter = false; continue; }
+    if (inFrontmatter) continue;
+
+    // 코드 블록 스킵
+    if (line.trim().startsWith("```")) { inCodeBlock = !inCodeBlock; continue; }
+    if (inCodeBlock) continue;
+
+    // JSX import/export/component 줄은 건드리지 않음
+    if (/^\s*(import|export)\s/.test(line)) continue;
+    if (/^\s*<[A-Z]/.test(line)) continue;
+
+    // 인라인 코드 영역을 플레이스홀더로 치환 후 처리
+    const placeholders = [];
+    let safe = line.replace(/`[^`]+`/g, (m) => {
+      placeholders.push(m);
+      return `__INLINE_CODE_${placeholders.length - 1}__`;
+    });
+
+    // {알파벳_or_한글 포함 내용} 패턴을 백틱으로 감싸기
+    const escaped = safe.replace(/\{([^}]*[a-zA-Z가-힣][^}]*)\}/g, (m, inner) => {
+      fixCount++;
+      return "`{" + inner + "}`";
+    });
+
+    // 플레이스홀더 복원
+    let restored = escaped.replace(/__INLINE_CODE_(\d+)__/g, (_, idx) => placeholders[idx]);
+    lines[i] = restored;
+  }
+
+  if (fixCount > 0) {
+    console.log(`🔧 JSX 중괄호 자동 이스케이프: ${fixCount}건`);
+  }
+  return lines.join("\n");
+}
+
 // ─── 4. Write file ──────────────────────────────────────────────
 
 function writeMDX(topic, mdxContent) {
@@ -439,7 +489,10 @@ function writeMDX(topic, mdxContent) {
     .replace(/<hr\s*(?!\/)>/gi, "<hr />")
     .replace(/<img\s+([^>]*?)(?<!\/)>/gi, "<img $1 />");
 
-  // 2) Mermaid 블록 자동 수정 (mermaid-fix.mjs)
+  // 2) JSX 중괄호 자동 이스케이프 (코드 블록/인라인 코드 밖의 {var} → `{var}`)
+  mdxContent = escapeJsxCurlyBraces(mdxContent);
+
+  // 3) Mermaid 블록 자동 수정 (mermaid-fix.mjs)
   const mermaidRegex = /```mermaid\n([\s\S]*?)```/g;
   let mermaidMatch;
   let mermaidFixCount = 0;

@@ -181,12 +181,16 @@ async function main() {
 
     const { content } = matter(raw);
 
-    // 1a. MDX JSX 함정 사전 탐지 (컴파일 전 경고)
+    // 1a. MDX JSX 함정 사전 탐지 → 에러로 승격 (빌드 차단)
+    // AI 생성 콘텐츠에서 {중괄호} JSX 파싱 에러 반복 발생 — warning만으로는 방어 불가
     const jsxWarnings = detectJsxTraps(content, rel);
     if (jsxWarnings.length > 0) {
+      console.error(`❌ ${rel} (JSX 함정 ${jsxWarnings.length}건 — 빌드 차단)`);
       for (const w of jsxWarnings) {
-        console.warn(`⚠️  ${rel} Line ~${w.line}: ${w.message}`);
+        console.error(`   Line ~${w.line}: ${w.message}`);
       }
+      mdxErrors++;
+      totalErrors++;
     }
 
     // 1b. No-Placeholder Scan (Superpowers 패턴 이식)
