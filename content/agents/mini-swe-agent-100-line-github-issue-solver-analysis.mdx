@@ -73,7 +73,7 @@ sequenceDiagram
 
 `mini-swe-agent`는 Python으로 작성되었지만, 그 로직은 TypeScript나 Swift로도 쉽게 재현할 수 있습니다. 핵심 아이디어는 외부 라이브러리 의존성을 최소화하고, 순수 API 호출과 셸 명령어 실행으로 문제를 해결하는 것입니다.
 
-```python
+````python
 # mini-swe-agent의 핵심 로직을 단순화한 의사코드
 import os
 import subprocess
@@ -122,7 +122,7 @@ with open("changes.patch", "w") as f:
 subprocess.run(["patch", "-p1", "<", "changes.patch"])
 
 print("Patch applied successfully!")
-```
+````
 
 이 코드에서 볼 수 있듯이, 복잡한 상태 관리나 메모리, 동적 도구 사용(tool use) 없이도 강력한 자동화가 가능합니다. 이것이 바로 최소주의 에이전트의 힘입니다.
 

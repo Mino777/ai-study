@@ -27,7 +27,7 @@ const CONTENT_DIR = path.join(process.cwd(), "content");
 function detectJsxTraps(content, filePath) {
   const warnings = [];
   const lines = content.split("\n");
-  let inCodeBlock = false;
+  let codeBlockFenceLen = 0; // 0 = 코드 블록 밖, >0 = 현재 코드 블록의 백틱 개수
   let inFrontmatter = false;
 
   for (let i = 0; i < lines.length; i++) {
@@ -39,9 +39,20 @@ function detectJsxTraps(content, filePath) {
     if (inFrontmatter && line.trim() === "---") { inFrontmatter = false; continue; }
     if (inFrontmatter) continue;
 
-    // 코드 블록 영역 스킵
-    if (line.trim().startsWith("```")) { inCodeBlock = !inCodeBlock; continue; }
-    if (inCodeBlock) continue;
+    // 코드 블록 영역 스킵 — 백틱 개수 추적으로 중첩 코드 펜스 지원
+    const fenceMatch = line.trim().match(/^(`{3,})/);
+    if (fenceMatch) {
+      const fenceLen = fenceMatch[1].length;
+      if (codeBlockFenceLen === 0) {
+        // 코드 블록 시작
+        codeBlockFenceLen = fenceLen;
+      } else if (fenceLen >= codeBlockFenceLen && line.trim() === fenceMatch[0]) {
+        // 동일 이상 길이의 백틱만으로 구성된 줄 = 코드 블록 종료
+        codeBlockFenceLen = 0;
+      }
+      continue;
+    }
+    if (codeBlockFenceLen > 0) continue;
 
     // 패턴 1: 본문 텍스트의 {중괄호} (인라인 코드 밖)
     // 인라인 코드(backtick) 안은 안전하므로 제거 후 체크
@@ -83,7 +94,7 @@ function detectJsxTraps(content, filePath) {
 function detectPlaceholders(content, filePath) {
   const warnings = [];
   const lines = content.split("\n");
-  let inCodeBlock = false;
+  let codeBlockFenceLen = 0;
   let inFrontmatter = false;
 
   // 정밀도 우선: "TODO 개념을 설명하는" 콘텐츠와 "실제 미완성 마커"를 구분
@@ -106,8 +117,14 @@ function detectPlaceholders(content, filePath) {
     if (inFrontmatter && line.trim() === "---") { inFrontmatter = false; continue; }
     if (inFrontmatter) continue;
 
-    if (line.trim().startsWith("```")) { inCodeBlock = !inCodeBlock; continue; }
-    if (inCodeBlock) continue;
+    const fenceMatch = line.trim().match(/^(`{3,})/);
+    if (fenceMatch) {
+      const fenceLen = fenceMatch[1].length;
+      if (codeBlockFenceLen === 0) { codeBlockFenceLen = fenceLen; }
+      else if (fenceLen >= codeBlockFenceLen && line.trim() === fenceMatch[0]) { codeBlockFenceLen = 0; }
+      continue;
+    }
+    if (codeBlockFenceLen > 0) continue;
 
     const withoutInlineCode = line.replace(/`[^`]+`/g, "");
 
