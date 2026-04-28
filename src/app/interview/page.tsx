@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { IOS_QUESTIONS, FDE_QUESTIONS, CULTURE_QUESTIONS, PHASE_PROBLEMS, COMPANY_STRATEGIES, HIRING_INSIGHTS, PROCESS_STAGES, ASSIGNMENT_CHECKLIST, ALGO_GUIDES, BIG_O_GUIDE, BIG_O_COMPARISON, SYSTEM_DESIGN_CASES, FDE_DESIGN_CASES, SD_FRAMEWORK_STEPS, SD_CLARIFYING_QUESTIONS, SD_API_COMPARISON, ASSIGNMENT_DAILY_TIPS, FDE_ASSIGNMENT_DAILY_TIPS, CULTURE_DAILY_TIPS, TECH_DAILY_TOPICS, FDE_TECH_DAILY_TOPICS, CS_TOPICS, CS_DAILY_TOPICS, FDE_CS_DAILY_TOPICS, FDE_ALGO_TEMPLATES, CAREER_PAGES, TIMER_PRESETS, QUIZ_BANK, INTERVIEW_DAY_PLAYBOOK, SALARY_TIPS, RED_FLAGS, ONBOARDING_PLAYBOOK, MOCK_FEEDBACK_CRITERIA, COMPANY_CODING_STYLES, TOSS_7DAY_PLAN, TOSS_CORE_VALUES, TOSS_INTERVIEW_FAQ, type InterviewQuestion } from "./constants";
+import { IOS_QUESTIONS, FDE_QUESTIONS, CULTURE_QUESTIONS, PHASE_PROBLEMS, COMPANY_STRATEGIES, HIRING_INSIGHTS, PROCESS_STAGES, ASSIGNMENT_CHECKLIST, ALGO_GUIDES, BIG_O_GUIDE, BIG_O_COMPARISON, SYSTEM_DESIGN_CASES, FDE_DESIGN_CASES, SD_FRAMEWORK_STEPS, SD_CLARIFYING_QUESTIONS, SD_API_COMPARISON, ASSIGNMENT_DAILY_TIPS, FDE_ASSIGNMENT_DAILY_TIPS, CULTURE_DAILY_TIPS, TECH_DAILY_TOPICS, FDE_TECH_DAILY_TOPICS, CS_TOPICS, CS_DAILY_TOPICS, FDE_CS_DAILY_TOPICS, FDE_ALGO_TEMPLATES, CAREER_PAGES, TIMER_PRESETS, QUIZ_BANK, INTERVIEW_DAY_PLAYBOOK, SALARY_TIPS, RED_FLAGS, ONBOARDING_PLAYBOOK, MOCK_FEEDBACK_CRITERIA, COMPANY_CODING_STYLES, TOSS_7DAY_PLAN, TOSS_CORE_VALUES, TOSS_INTERVIEW_FAQ, TOSS_IOS_TOPICS, TOSS_INTERVIEW_FORMAT, TOSS_NIGHT_SHIFT_TIPS, TOSS_RESOURCES, type InterviewQuestion } from "./constants";
 
 /* ═══════════════════════════════════════════════════════════ */
 /*  TYPES                                                      */
@@ -2391,15 +2391,48 @@ export default function InterviewPage() {
                 </div>
               </section>
 
-              {/* TOSS CORE VALUES */}
+              {/* TOSS INTERVIEW FORMAT — 실제 단계별 형식 */}
               <section className="mb-10">
-                <h2 className="font-display text-base font-bold uppercase tracking-[0.15em] text-text/45 mb-4">토스 Core Value 5</h2>
+                <h2 className="font-display text-base font-bold uppercase tracking-[0.15em] text-text/45 mb-4">
+                  실제 면접 형식
+                  <span className="ml-2 text-text/25 normal-case tracking-normal font-normal">— 합격자 후기 종합 (iOS 직무)</span>
+                </h2>
+                <div className="space-y-2">
+                  {TOSS_INTERVIEW_FORMAT.map((stage, i) => (
+                    <details key={i} open={i <= 2} className="rounded-xl border border-border/30 bg-surface/20 overflow-hidden">
+                      <summary className="px-5 py-4 cursor-pointer hover:bg-surface/50 transition-colors flex items-center gap-3">
+                        <span className="w-6 h-6 rounded bg-accent/15 text-accent/70 text-xs font-black flex items-center justify-center shrink-0">{i + 1}</span>
+                        <span className="text-base font-bold flex-1">{stage.stage}</span>
+                        <span className="text-xs font-code text-text/40 shrink-0">{stage.duration}</span>
+                      </summary>
+                      <div className="px-5 pb-5 border-t border-border/20 pt-4 space-y-2">
+                        <div><span className="text-xs font-code text-text/35 uppercase">Format</span> <p className="text-sm text-text/65 mt-0.5">{stage.format}</p></div>
+                        <div><span className="text-xs font-code text-text/35 uppercase">평가 포인트</span> <p className="text-sm text-text/65 mt-0.5">{stage.keyEval}</p></div>
+                        <div className="rounded-lg bg-accent/5 border border-accent/15 px-3 py-2">
+                          <p className="text-xs font-code font-bold text-accent/60 mb-1 uppercase">Tips</p>
+                          <p className="text-sm text-text/60 leading-relaxed">{stage.tips}</p>
+                        </div>
+                      </div>
+                    </details>
+                  ))}
+                </div>
+              </section>
+
+              {/* TOSS CORE VALUES 3.1 — 8 항목 */}
+              <section className="mb-10">
+                <h2 className="font-display text-base font-bold uppercase tracking-[0.15em] text-text/45 mb-4">
+                  Core Values 3.1
+                  <span className="ml-2 text-text/25 normal-case tracking-normal font-normal">— 2023.10 업데이트, 8 항목</span>
+                </h2>
                 <div className="grid md:grid-cols-2 gap-3">
                   {TOSS_CORE_VALUES.map((cv) => (
                     <div key={cv.name} className="rounded-xl border border-border/40 bg-surface/30 p-5">
                       <div className="flex items-center gap-2 mb-2">
                         <span className="text-2xl">{cv.icon}</span>
-                        <h3 className="text-base font-bold text-text">{cv.name}</h3>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-base font-bold text-text leading-tight">{cv.name}</h3>
+                          <p className="text-xs font-code text-text/40 mt-0.5">{cv.ko}</p>
+                        </div>
                       </div>
                       <p className="text-sm text-text/55 leading-relaxed mb-3">{cv.description}</p>
                       <div className="rounded-lg bg-accent/5 border border-accent/15 px-3 py-2">
@@ -2407,6 +2440,74 @@ export default function InterviewPage() {
                         <p className="text-xs text-text/55 leading-relaxed">{cv.interviewKey}</p>
                       </div>
                     </div>
+                  ))}
+                </div>
+              </section>
+
+              {/* iOS 단골 토픽 */}
+              <section className="mb-10">
+                <h2 className="font-display text-base font-bold uppercase tracking-[0.15em] text-text/45 mb-4">
+                  토스 iOS 단골 토픽
+                  <span className="ml-2 text-text/25 normal-case tracking-normal font-normal">— SLASH22~24 + 후기 종합</span>
+                </h2>
+                <div className="space-y-2">
+                  {TOSS_IOS_TOPICS.map((cat, i) => (
+                    <details key={i} open={i === 0} className="rounded-xl border border-border/30 bg-surface/20 overflow-hidden">
+                      <summary className="px-5 py-4 cursor-pointer hover:bg-surface/50 transition-colors flex items-center gap-3">
+                        <span className="text-base font-bold flex-1">{cat.category}</span>
+                        <span className="text-xs font-code text-text/30 shrink-0">{cat.items.length}개</span>
+                      </summary>
+                      <div className="px-5 pb-5 border-t border-border/20 pt-3">
+                        <ol className="space-y-1.5">
+                          {cat.items.map((item, j) => (
+                            <li key={j} className="flex items-start gap-2">
+                              <span className="text-xs font-code text-blue-400/40 mt-0.5 shrink-0">{j + 1}.</span>
+                              <p className="text-sm text-text/60 leading-relaxed">{item}</p>
+                            </li>
+                          ))}
+                        </ol>
+                      </div>
+                    </details>
+                  ))}
+                </div>
+              </section>
+
+              {/* 밤샘 컨디션 가이드 */}
+              <section className="mb-10">
+                <h2 className="font-display text-base font-bold uppercase tracking-[0.15em] text-text/45 mb-4">
+                  밤샘 컨디션 관리
+                  <span className="ml-2 text-text/25 normal-case tracking-normal font-normal">— 의학적 근거 기반</span>
+                </h2>
+                <div className="grid md:grid-cols-2 gap-3">
+                  {TOSS_NIGHT_SHIFT_TIPS.map((tip, i) => (
+                    <div key={i} className="rounded-xl border border-orange-500/20 bg-orange-500/5 p-4">
+                      <h3 className="text-sm font-bold text-orange-400/80 mb-2">{tip.title}</h3>
+                      <p className="text-xs text-text/60 leading-relaxed">{tip.content}</p>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              {/* 추천 리소스 */}
+              <section className="mb-10">
+                <h2 className="font-display text-base font-bold uppercase tracking-[0.15em] text-text/45 mb-4">추천 리소스</h2>
+                <div className="space-y-2">
+                  {TOSS_RESOURCES.map((res, i) => (
+                    <a key={i} href={res.url} target="_blank" rel="noopener noreferrer" className="block rounded-xl border border-border/30 bg-surface/20 hover:bg-surface/40 hover:border-accent/30 p-4 transition-all">
+                      <div className="flex items-start gap-3">
+                        <span className={`shrink-0 px-2 py-0.5 rounded text-[10px] font-code font-bold uppercase ${
+                          res.type === "iOS 필독" ? "bg-blue-500/15 text-blue-400/80" :
+                          res.type === "공통" ? "bg-accent/15 text-accent/80" :
+                          res.type === "후기" ? "bg-purple-500/15 text-purple-400/80" :
+                          "bg-text/10 text-text/50"
+                        }`}>{res.type}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold text-text/80 mb-0.5 truncate">{res.title}</p>
+                          <p className="text-xs text-text/45 leading-relaxed">{res.note}</p>
+                        </div>
+                        <span className="text-text/30 text-xs shrink-0">↗</span>
+                      </div>
+                    </a>
                   ))}
                 </div>
               </section>

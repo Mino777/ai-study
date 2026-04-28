@@ -2746,11 +2746,11 @@ export const TOSS_7DAY_PLAN: Toss7DayPlan[] = [
       { time: "08:00–12:00", task: "통합 테스트 + E2E 1개 + 에러 처리 표준화", checkId: "d3-3" },
       { time: "12:00–16:00", task: "성능 최적화: 렌더링/네트워크/메모리 측정 → 개선 (수치 기록)", checkId: "d3-4" },
       { time: "16:00–20:00", task: "접근성 + i18n + 반응형 (요구사항에 있는 경우만, 없으면 P1 추가)", checkId: "d3-5" },
-      { time: "20:00–24:00", task: "토스 오픈소스 (es-toolkit, suspensive) 코드 30분 정독 → 본인 코드와 비교", checkId: "d3-6" },
+      { time: "20:00–24:00", task: "토스 iOS SLASH22~24 세션 30분 시청 (RIBs / Concurrency / 모듈화) → 본인 코드와 비교", checkId: "d3-6" },
     ],
-    deliverable: "P0 100% + P1 80% + 테스트 커버리지 70%+ + 성능 측정 수치",
-    tossInsight: "토스는 '함수 길이 50줄 이하', '순수 함수 우선', '명확한 네이밍'을 강하게 본다. es-toolkit/suspensive 코드 스타일을 흡수하면 사전과제에서 즉시 점수.",
-    aiPrompt: "이 코드를 토스 스타일로 리팩토링: (1) 50줄 넘는 함수 분해 (2) 순수 함수 추출 (3) 네이밍 명료화 (4) 테스트 가능성 향상. 변경 이유를 주석으로:\n\n[코드]",
+    deliverable: "P0 100% + P1 80% + 테스트 커버리지 70%+ + 성능 측정 수치 (앱 시작 시간 / 메모리)",
+    tossInsight: "토스 iOS는 '함수 50줄 이하 / Value type 우선 / Sendable 명시 / 테스트 가능한 DI'를 본다. RIBs/MVVM-C 어떤 패턴이든 OK지만 '왜 이 패턴인가'를 ADR로 답할 수 있어야.",
+    aiPrompt: "이 Swift 코드를 토스 iOS 스타일로 리팩토링: (1) 50줄 넘는 함수 분해 (2) class → struct 가능 부분 (3) DI로 테스트 가능 (4) @MainActor / Sendable 명시 (5) 네이밍 명료화. 변경 이유 주석으로:\n\n[코드]",
     pitfalls: [
       "테스트 없이 기능만 쌓기 → 과제 막판에 테스트 못 씀",
       "성능 측정 없이 '최적화했다'고 README에 쓰기 → 면접 때 추궁",
@@ -2772,10 +2772,10 @@ export const TOSS_7DAY_PLAN: Toss7DayPlan[] = [
       { time: "00:00–04:00", task: "P1 잔여 + P2 욕심 1개 (시간 되면) + 최종 테스트 통과 확인", checkId: "d4-1" },
       { time: "04:00–08:00", task: "README 작성: 실행법 / 아키텍처 / 의사결정 / 트레이드오프 / 향후 개선 / AI 사용", checkId: "d4-2" },
       { time: "08:00–10:00", task: "셀프 데모 영상 5분 녹화 (선택) + 최종 커밋 + 제출", checkId: "d4-3" },
-      { time: "10:00–14:00", task: "기술면접 단골 토픽 30개 한 줄 답변 작성 (CS 기초 + iOS/FDE 핵심)", checkId: "d4-4" },
-      { time: "14:00–18:00", task: "본인 사전과제 코드 워크스루 5분 시나리오 작성 + 예상 꼬리질문 20개", checkId: "d4-5" },
-      { time: "18:00–22:00", task: "심화 토픽 5개 (메모리/동시성/네트워크/렌더링/번들링) 깊이 1m 답변", checkId: "d4-6" },
-      { time: "22:00–24:00", task: "토스 기술 블로그 면접 후기 5건 정독 → 단골 질문 추출", checkId: "d4-7" },
+      { time: "10:00–14:00", task: "iOS 단골 토픽 5 카테고리 (모듈화/Concurrency/성능/테스트/보안) 25개 한 줄 답변", checkId: "d4-4" },
+      { time: "14:00–18:00", task: "본인 사전과제 코드 워크스루 5분 시나리오 + iOS 꼬리질문 20개 (메모리/스레드/Optional)", checkId: "d4-5" },
+      { time: "18:00–22:00", task: "심화 토픽 5개 (Swift Concurrency / ARC / SDUI / RIBs vs MVVM-C / Tuist 모듈화) 깊이 1m", checkId: "d4-6" },
+      { time: "22:00–24:00", task: "토스 iOS 기술 블로그 + SLASH22~24 iOS 세션 5개 정독 → 단골 키워드 추출", checkId: "d4-7" },
     ],
     deliverable: "사전과제 제출 + 기술 토픽 30개 한 줄 답변 + 심화 5개 + 코드 워크스루 시나리오",
     tossInsight: "토스 기술면접은 '본인 코드를 어디까지 설명할 수 있나'를 본다. 본인이 짠 코드의 모든 라인에 '왜 이렇게 했나' 답할 수 있어야. 모르는 부분은 솔직히 '여기는 가설입니다' 라고 말하는 게 가산점.",
@@ -2798,10 +2798,10 @@ export const TOSS_7DAY_PLAN: Toss7DayPlan[] = [
     color: "#F59E0B",
     goal: "라이브 코딩 3문제 + 시스템 디자인 2케이스 + 모의면접 2회 완료.",
     hours: [
-      { time: "00:00–04:00", task: "라이브 코딩 3문제 풀이 (말하면서 코딩 + 시간제한 30분/문제)", checkId: "d5-1" },
-      { time: "04:00–08:00", task: "시스템 디자인 2케이스: 송금 시스템 / 실시간 알림 — 화이트보드 30분", checkId: "d5-2" },
-      { time: "08:00–12:00", task: "본인 사전과제 5분 발표 → 녹음 → 셀프 피드백 3 round", checkId: "d5-3" },
-      { time: "12:00–16:00", task: "예상 꼬리질문 50개 답변 녹음 (iOS/FDE 트랙별 단골 30 + 사전과제 20)", checkId: "d5-4" },
+      { time: "00:00–04:00", task: "Swift 라이브 코딩 3문제 (LRU 캐시 / 비동기 이미지 로더 / 디바운스) — 30분/문제, 말하면서", checkId: "d5-1" },
+      { time: "04:00–08:00", task: "iOS 시스템 디자인 2케이스: 송금 화면(SDUI) / 푸시 알림 신뢰성 — 화이트보드 30분", checkId: "d5-2" },
+      { time: "08:00–12:00", task: "본인 사전과제 5분 발표 → 녹음 → 셀프 피드백 3 round (메모리/Concurrency 강조)", checkId: "d5-3" },
+      { time: "12:00–16:00", task: "iOS 꼬리질문 50개 답변 녹음 (모듈화 10 + Concurrency 10 + 메모리 10 + 사전과제 20)", checkId: "d5-4" },
       { time: "16:00–20:00", task: "모의면접 1: 친구/AI 면접관 — 전체 1시간 시나리오 + 피드백", checkId: "d5-5" },
       { time: "20:00–22:00", task: "약점 토픽 3개 보강 (모의면접에서 막힌 부분)", checkId: "d5-6" },
       { time: "22:00–24:00", task: "모의면접 2: 압박 모드 (꼬리질문 5단까지) + 마인드셋 정리", checkId: "d5-7" },
@@ -2881,18 +2881,167 @@ export const TOSS_7DAY_PLAN: Toss7DayPlan[] = [
   },
 ];
 
+// Toss Core Values 3.1 (2023.10 업데이트, 8 항목)
+// 출처: blog.toss.im/article/core-values-are-evolving + tosscx.oopy.io/core_value
 export const TOSS_CORE_VALUES = [
-  { name: "사용자 중심", icon: "👥", description: "모든 의사결정의 시작은 사용자. 사용자가 좋아하지 않으면 만들지 않는다.", interviewKey: "본인의 사용자 중심 의사결정 사례 1개. 데이터 + 행동 + 결과." },
-  { name: "임팩트", icon: "⚡", description: "큰 임팩트를 만드는 일에 시간을 쓴다. 사소한 일은 자동화하거나 안 한다.", interviewKey: "본인이 만든 임팩트 수치 (DAU/매출/시간/비용 절감)." },
-  { name: "오너십", icon: "🎯", description: "내 일의 끝까지 책임진다. 안 되면 다른 길 찾는다.", interviewKey: "주인의식 발휘 사례 — 끝까지 끌고 간 경험." },
-  { name: "솔직함", icon: "🗣️", description: "솔직하게 말하고, 솔직하게 듣는다. 갈등을 피하지 않는다.", interviewKey: "갈등 해결 / 솔직한 피드백 사례." },
-  { name: "함께", icon: "🤝", description: "혼자 빠르게 가지 않고, 함께 멀리 간다.", interviewKey: "협업 사례 — 본인이 팀의 임팩트를 키운 방식." },
+  { name: "Mission over Individual", ko: "미션 우선", icon: "🎯", description: "개인 목표보다 팀과 회사 미션을 우선한다. '내 커리어를 위해'가 아니라 '미션을 위해'.", interviewKey: "본인의 의사결정이 미션(사용자 임팩트)에 정렬됐던 사례. 개인 인센티브와 충돌했을 때 어떻게 했는가." },
+  { name: "Aim Higher", ko: "더 높이", icon: "🚀", description: "주어진 일을 끝내는 게 아니라 새로운 기준을 만든다. (3.0의 'Go the Extra-mile' 진화)", interviewKey: "주어진 스펙 너머로 끌어올린 경험. 'OK 수준 → 탁월함'으로 끌어올린 의사결정." },
+  { name: "Focus on Impact", ko: "임팩트 집중", icon: "⚡", description: "하면 좋을 10가지 대신 가장 중요한 1가지에 집중. 사소한 일은 자동화하거나 안 한다.", interviewKey: "본인이 만든 임팩트 수치 (DAU/매출/시간/비용 절감). '왜 이걸 우선했는가'의 근거." },
+  { name: "Question Every Assumption", ko: "근원적 질문", icon: "🔍", description: "모든 기본 가정에 근원적 물음을 제기한다. '원래 그렇다'를 거부하라.", interviewKey: "당연하다고 여겨진 것을 뒤집어 본 경험. 'Why?'를 5번 물어 본질을 발견한 사례." },
+  { name: "Execution over Perfection", ko: "실행 우선", icon: "🏃", description: "완벽을 추구하기보다 빠르게 실행하고 학습한다. (3.0의 'Courage to Fail Fast' 진화)", interviewKey: "완벽한 계획 대신 빠른 출시 후 학습한 사례. MVP/A/B 테스트 의사결정." },
+  { name: "Learn Proactively", ko: "주도적 학습", icon: "📚", description: "지시를 기다리지 말고 스스로 배운다. 모르는 영역에 먼저 뛰어든다.", interviewKey: "최근 6개월 자발적으로 배운 것. '왜 이걸 배웠고 어떻게 적용했나'." },
+  { name: "Move with Urgency", ko: "긴박감", icon: "⏱️", description: "리스크가 있어도 신속히 움직인다. 기회는 기다려주지 않는다.", interviewKey: "느린 의사결정의 리스크가 더 컸던 사례. 빠르게 움직여 기회를 잡은 경험." },
+  { name: "Ask for Feedback", ko: "피드백 요청", icon: "💬", description: "동료의 솔직한 피드백을 자주 구한다. (3.0의 'Radical Candor' 진화)", interviewKey: "본인이 받은 어려운 피드백과 그것을 어떻게 받아들이고 변화했는지. 자주 피드백 구하는 루틴." },
+];
+
+// 토스 iOS 직무 단골 기술 토픽 (SLASH 컨퍼런스 + 면접 후기 종합)
+// 출처: toss.tech, toss.im/slash-22~24, 합격 후기 블로그
+export const TOSS_IOS_TOPICS = [
+  {
+    category: "아키텍처 / 모듈화",
+    items: [
+      "Tuist 기반 멀티 모듈 구조 (Feature/Core/Shared 레이어)",
+      "RIBs (Uber) 아키텍처 vs MVVM-C — 토스 iOS 도입 사례",
+      "Microfeatures 패턴 (모듈 단위 독립 빌드/테스트)",
+      "DI 컨테이너 설계 (Needle, Swinject) + 스코프 관리",
+      "서버 드리븐 UI (SDUI) — 송금/홈 화면 동적 구성",
+    ],
+  },
+  {
+    category: "Swift 언어 / 동시성",
+    items: [
+      "Swift Concurrency (async/await, Actor) vs RxSwift/Combine 트레이드오프",
+      "@MainActor / @globalActor — 데이터 레이스 방지",
+      "Sendable / @Sendable 클로저 — Strict Concurrency 대응",
+      "메모리 그래프 디버거로 retain cycle 추적 사례",
+      "Value type vs Reference type 선택 기준",
+    ],
+  },
+  {
+    category: "성능 / 안정성",
+    items: [
+      "앱 시작 시간 단축 (Pre-main vs Post-main 측정)",
+      "이미지 캐싱 / 다운샘플링 / 메모리 트래킹",
+      "Crash 대응 — Symbolication + Sentry/Firebase 분류",
+      "백그라운드 태스크 / Push Notification 신뢰성",
+      "송금 같은 금융 거래 트랜잭션의 idempotency 보장",
+    ],
+  },
+  {
+    category: "테스트 / CI",
+    items: [
+      "단위 테스트 + UI 테스트 비율 (피라미드 전략)",
+      "Snapshot 테스트 (iOSSnapshotTestCase / SwiftSnapshotTesting)",
+      "Tuist + Xcode Cloud / Bitrise CI 파이프라인",
+      "테스트 가능한 아키텍처 — Protocol Witness / Spy / Stub",
+      "Flaky test 디버깅 사례",
+    ],
+  },
+  {
+    category: "보안 / 금융 도메인",
+    items: [
+      "민감 데이터 보호: Keychain + Secure Enclave",
+      "Jailbreak / Hooking 탐지 + Anti-tampering",
+      "SSL Pinning + MITM 방어",
+      "App Attest / DeviceCheck 인증",
+      "PCI-DSS 관련 카드 정보 처리 흐름",
+    ],
+  },
+];
+
+// 토스 면접 실제 형식 (합격자 후기 종합)
+// 출처: hvho.github.io/2021-09-01/toss-interview, medium @l2hyunwoo
+export const TOSS_INTERVIEW_FORMAT = [
+  {
+    stage: "서류 + 사전 시험",
+    duration: "결과: 보통 1주 이내",
+    format: "이력서/포트폴리오 + 온라인 객관식 (CS 기초 + iOS 지식)",
+    keyEval: "임팩트 수치화 / Core Value 적합성 / iOS 깊이 신호",
+    tips: "포트폴리오 정량 수치 1개 이상 / 사이드 프로젝트 깃허브 활성도",
+  },
+  {
+    stage: "사전과제",
+    duration: "공식 5-7일 / 실제 평균 작업 20-30시간",
+    format: "원격 과제 (요구사항 PDF + 깃허브 제출)",
+    keyEval: "코드 품질 / 의사결정 근거 (README) / 테스트 작성 / 트레이드오프 명시",
+    tips: "함수 50줄 이하 / ADR 작성 / AI 사용 명시 / es-toolkit·suspensive 코드 스타일 흡수",
+  },
+  {
+    stage: "직무 인터뷰 (기술)",
+    duration: "약 1시간 30분",
+    format: "1:3 (면접관 3명) — Google Meet 비대면",
+    keyEval: "사전과제 코드 워크스루 50% + CS/iOS 깊이 50% / 모르는 질문 풀어내는 태도",
+    tips: "본인 코드 모든 함수 '왜 이렇게'에 답하기 / 모르면 '가설입니다' 명시 / 침묵 금지",
+  },
+  {
+    stage: "컬처핏 인터뷰",
+    duration: "약 1시간 30분",
+    format: "1:1 (해당 조직 CTO 또는 챕터 리드) — 비대면",
+    keyEval: "Core Value 8개 적합성 / 진정성 / 솔직함 / 미션 정렬",
+    tips: "외운 답변 금지 / 'Core Value 8개 = 본인 인생 사례'로 자연스럽게 / 약점 솔직히 + 보완",
+  },
+  {
+    stage: "레퍼런스 + 처우",
+    duration: "약 1주",
+    format: "전 직장 동료 2-3명 레퍼런스 + 연봉 협상",
+    keyEval: "동료가 본 본인의 일하는 방식 / 협업 평판",
+    tips: "레퍼런스 미리 부탁 / 연봉 시장가 +α 협상 가능 (스톡옵션 포함 협상)",
+  },
+];
+
+// 밤샘 컨디션 관리 (의학적 근거 기반)
+// 출처: kormedi.com, esquirekorea, 수면의학회 가이드
+export const TOSS_NIGHT_SHIFT_TIPS = [
+  {
+    title: "카페인 400mg 룰",
+    content: "하루 카페인 400mg 이하 (커피 4잔). 초과 시 손떨림/심박수 증가/불안 → 면접에서 역효과. 밤 22시 이후 카페인은 다음 날 컨디션 파괴.",
+  },
+  {
+    title: "파워냅 15-20분",
+    content: "졸음 못 참을 때 15-20분 낮잠. 30분 넘으면 깊은 수면 진입 → 깨고 나서 1시간 멍함 (수면 관성). 알람 18분 세팅 권장.",
+  },
+  {
+    title: "새벽 3-4시는 휴식",
+    content: "코르티솔 최저점, 집중력 바닥. 이 시간엔 이론 학습 금지 → 코드 리팩토링/체크리스트 정리 같은 단순 작업 배치. 또는 짧은 산책.",
+  },
+  {
+    title: "조명: 3000K 이하 + 집중 조명",
+    content: "전체 조명보다 스탠드 집중 조명. 색온도 3000K 이하 (따뜻한 색). 블루라이트 차단 안경 권장. 휴대폰은 30분 1회 5분 휴식.",
+  },
+  {
+    title: "수분 + 견과류",
+    content: "30분마다 물 한 모금. 간식은 초콜릿(혈당 스파이크) 대신 견과류/그릭요거트. 라면/단 음료 금물 — 1시간 후 졸음 폭탄.",
+  },
+  {
+    title: "D-Day 최소 3시간 수면",
+    content: "면접 당일 0시간 수면 = 인지능력 -30%. 최소 3시간이라도 자고, 면접 1.5시간 전 기상. 알람 + 햇빛 + 찬물 세수로 코르티솔 정상화.",
+  },
+  {
+    title: "회복 비용",
+    content: "3일 이상 밤샘 시 인지능력 회복에 6개월~1년 소요. 7일 스프린트 후 최소 2주 회복기 확보 — 합격 후 입사 전 휴식 권장.",
+  },
+];
+
+// 토스 기술 블로그 / SLASH 추천 리소스 (iOS 직무 우선)
+export const TOSS_RESOURCES = [
+  { type: "iOS 필독", title: "토스 iOS 챕터 — 멀티 모듈 도입기", url: "https://toss.tech/article/swift-package-manager", note: "Tuist + SPM 전환 사례, 빌드 시간 단축" },
+  { type: "iOS 필독", title: "SLASH22 — 누구나 한 번쯤 들어봤을 RIBs 아키텍처", url: "https://toss.im/slash-22", note: "토스 iOS RIBs 도입 의사결정" },
+  { type: "iOS 필독", title: "SLASH23 — Swift Concurrency 도입과 회피", url: "https://toss.im/slash-23", note: "Actor / Strict Concurrency 토스 사례" },
+  { type: "공통", title: "토스 핵심 가치 3.1 — 8개 항목 정의", url: "https://blog.toss.im/article/core-values-are-evolving", note: "컬쳐핏 면접 정확한 매핑용" },
+  { type: "공통", title: "토스 합류 여정 — 채용 프로세스 공식 가이드", url: "https://toss.im/career/joining-guide", note: "각 단계 평가 포인트" },
+  { type: "공통", title: "토스 기술 블로그 (SLASH24 태그)", url: "https://toss.tech/?tag=SLASH24", note: "29개 메인 세션 + 3개 스페셜" },
+  { type: "참고", title: "토스 NEXT 2022 코딩테스트 기출", url: "https://toss.im/career/article/next-developer-2023-sample-questions", note: "공식 공개 기출 — 사전과제 난이도 가늠" },
+  { type: "후기", title: "토스 안드로이드 합격 후기 (Medium @l2hyunwoo)", url: "https://medium.com/@l2hyunwoo/%ED%86%A0%EC%8A%A4-%EC%95%88%EB%93%9C%EB%A1%9C%EC%9D%B4%EB%93%9C-%EA%B0%9C%EB%B0%9C%EC%9E%90-%ED%95%A9%EA%B2%A9-%ED%9B%84%EA%B8%B0-41d3490286a6", note: "사전과제·인터뷰 단계별 디테일" },
+  { type: "후기", title: "2021 TOSS 기술/컬처핏 면접 후기 (HVHO)", url: "https://hvho.github.io/2021-09-01/toss-interview", note: "면접 형식·시간·면접관 수 구체적" },
 ];
 
 export const TOSS_INTERVIEW_FAQ = [
-  { q: "토스 면접 평균 합격률이 어떻게 되나요?", a: "공개 데이터 기준 서류 ~30%, 사전과제 ~50%, 기술 ~40%, 컬쳐핏 ~60%. 최종 환산 ~3-5%. 7일 스프린트는 매 단계 합격을 가정한 강행군." },
-  { q: "AI 도구 써도 되나요?", a: "써도 되지만 README/면접에서 솔직히 명시. '어디까지 AI / 어디부터 본인 의사결정'을 명확히 구분해야. 숨기면 즉시 컷." },
-  { q: "사전과제 시간은 보통 며칠?", a: "공식 5-7일이지만 실제 평균 작업 시간은 20-30시간. 7일 스프린트에서는 Day 2-4 = 약 36시간 할당." },
-  { q: "기술면접에서 가장 많이 묻는 것?", a: "(1) 본인 사전과제 코드 워크스루 (2) 단골 CS 토픽 (3) 시스템 디자인 1케이스. 사전과제 비중 50%+." },
-  { q: "컬쳐핏 면접 압박 질문 사례?", a: "'본인의 가장 큰 실패는?', '왜 이전 회사를 떠나려 하나?', '연봉이 30% 낮아도 올 건가?', '5년 후 토스를 떠나면 뭐 할 건가?'" },
+  { q: "토스 면접 평균 합격률은?", a: "공식 비공개. 후기 종합: 서류 ~20-30%, 사전과제 ~40-50%, 기술 ~40%, 컬쳐핏 ~60%. 최종 환산 ~2-5%. iOS는 모수가 적어 합격률은 더 변동 큼." },
+  { q: "AI 도구 써도 되나요?", a: "써도 되지만 README/면접에서 솔직히 명시. '어디까지 AI / 어디부터 본인 의사결정'을 명확히 구분. 숨기면 컷 — 토스 Core Value '솔직함(Ask for Feedback)' 위반." },
+  { q: "사전과제 실제 시간은?", a: "공식 5-7일. 실제 평균 작업 20-30시간. 7일 스프린트에서는 Day 2-4 = 약 36시간 할당. iOS는 빌드/시뮬레이터 시간이 많아 시간 관리 더 빠듯." },
+  { q: "iOS 기술면접에서 자주 묻는 것?", a: "(1) 본인 사전과제 코드 워크스루 50% (2) Swift Concurrency / 메모리 / 동시성 (3) 모듈화 / 의존성 / 테스트 (4) 토스 iOS 단골: SDUI / RIBs / Tuist 의사결정 근거." },
+  { q: "컬쳐핏 면접관은 누구?", a: "해당 조직 CTO 또는 챕터 리드. iOS는 iOS 챕터 리드. 1:1, 90분, 비대면. 분위기는 편안하지만 Core Value 8개 매핑은 깊이 본다." },
+  { q: "압박 질문 사례?", a: "'가장 큰 실패는?' / '왜 이전 회사를 떠나려 하나?' / '연봉이 낮아도 올 건가?' / '미션과 개인 목표가 충돌하면?' / '5년 후 토스를 떠나면 뭐 할 건가?'" },
+  { q: "포트폴리오 iOS 어필 포인트?", a: "(1) 임팩트 수치 (DAU/충돌률/시작시간) (2) 깊이 있는 1개 (Tuist 모듈화 / 메모리 디버깅 사례) (3) 토스 도메인 연관 (송금/결제) 또는 사이드 프로젝트로 보여주기." },
+  { q: "사전과제 평가 비중?", a: "코드 품질 30% / 의사결정 근거 (README) 30% / 테스트 작성 20% / 트레이드오프 명시 20%. README가 코드만큼 중요." },
 ];
