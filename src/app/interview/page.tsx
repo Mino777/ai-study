@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { IOS_QUESTIONS, FDE_QUESTIONS, CULTURE_QUESTIONS, PHASE_PROBLEMS, COMPANY_STRATEGIES, HIRING_INSIGHTS, PROCESS_STAGES, ASSIGNMENT_CHECKLIST, ALGO_GUIDES, BIG_O_GUIDE, BIG_O_COMPARISON, SYSTEM_DESIGN_CASES, FDE_DESIGN_CASES, SD_FRAMEWORK_STEPS, SD_CLARIFYING_QUESTIONS, SD_API_COMPARISON, ASSIGNMENT_DAILY_TIPS, FDE_ASSIGNMENT_DAILY_TIPS, CULTURE_DAILY_TIPS, TECH_DAILY_TOPICS, FDE_TECH_DAILY_TOPICS, CS_TOPICS, CS_DAILY_TOPICS, FDE_CS_DAILY_TOPICS, FDE_ALGO_TEMPLATES, CAREER_PAGES, TIMER_PRESETS, QUIZ_BANK, INTERVIEW_DAY_PLAYBOOK, SALARY_TIPS, RED_FLAGS, ONBOARDING_PLAYBOOK, MOCK_FEEDBACK_CRITERIA, COMPANY_CODING_STYLES, type InterviewQuestion } from "./constants";
+import { IOS_QUESTIONS, FDE_QUESTIONS, CULTURE_QUESTIONS, PHASE_PROBLEMS, COMPANY_STRATEGIES, HIRING_INSIGHTS, PROCESS_STAGES, ASSIGNMENT_CHECKLIST, ALGO_GUIDES, BIG_O_GUIDE, BIG_O_COMPARISON, SYSTEM_DESIGN_CASES, FDE_DESIGN_CASES, SD_FRAMEWORK_STEPS, SD_CLARIFYING_QUESTIONS, SD_API_COMPARISON, ASSIGNMENT_DAILY_TIPS, FDE_ASSIGNMENT_DAILY_TIPS, CULTURE_DAILY_TIPS, TECH_DAILY_TOPICS, FDE_TECH_DAILY_TOPICS, CS_TOPICS, CS_DAILY_TOPICS, FDE_CS_DAILY_TOPICS, FDE_ALGO_TEMPLATES, CAREER_PAGES, TIMER_PRESETS, QUIZ_BANK, INTERVIEW_DAY_PLAYBOOK, SALARY_TIPS, RED_FLAGS, ONBOARDING_PLAYBOOK, MOCK_FEEDBACK_CRITERIA, COMPANY_CODING_STYLES, TOSS_7DAY_PLAN, TOSS_CORE_VALUES, TOSS_INTERVIEW_FAQ, type InterviewQuestion } from "./constants";
 
 /* ═══════════════════════════════════════════════════════════ */
 /*  TYPES                                                      */
@@ -373,7 +373,9 @@ function formatDate(day: number): string {
 
 export default function InterviewPage() {
   const [track, setTrack] = useState<TrackKey>("ios");
-  const [activeTab, setActiveTab] = useState<"overview" | "coding" | "assignment" | "cs" | "tech" | "quiz" | "culture">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "coding" | "assignment" | "cs" | "tech" | "quiz" | "culture" | "toss7">("overview");
+  const [toss7Day, setToss7Day] = useState<number>(1);
+  const [toss7Tasks, setToss7Tasks] = useState<Record<string, boolean>>({});
   const [quizIndex, setQuizIndex] = useState(0);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [checkedTasks, setCheckedTasks] = useState<Record<string, boolean>>({});
@@ -405,6 +407,8 @@ export default function InterviewPage() {
       if (ddays) setCompanyDdays(JSON.parse(ddays));
       const quiz = localStorage.getItem("interview-quiz-history");
       if (quiz) setQuizHistory(JSON.parse(quiz));
+      const t7 = localStorage.getItem("interview-toss7-tasks");
+      if (t7) setToss7Tasks(JSON.parse(t7));
     } catch { /* noop */ }
   }, []);
 
@@ -418,8 +422,9 @@ export default function InterviewPage() {
       localStorage.setItem("interview-hard-cards", JSON.stringify(hardCards));
       localStorage.setItem("interview-company-ddays", JSON.stringify(companyDdays));
       localStorage.setItem("interview-quiz-history", JSON.stringify(quizHistory));
+      localStorage.setItem("interview-toss7-tasks", JSON.stringify(toss7Tasks));
     } catch { /* noop */ }
-  }, [checkedTasks, revealedCards, solvedProblems, hardCards, companyDdays, quizHistory, mounted]);
+  }, [checkedTasks, revealedCards, solvedProblems, hardCards, companyDdays, quizHistory, toss7Tasks, mounted]);
 
   // Timer countdown
   useEffect(() => {
@@ -733,6 +738,7 @@ export default function InterviewPage() {
             { key: "tech" as const, label: "기술면접" },
             { key: "quiz" as const, label: "퀴즈" },
             { key: "culture" as const, label: "인성면접" },
+            { key: "toss7" as const, label: "🔥 토스 7일" },
           ]).map((tab) => (
             <button
               key={tab.key}
@@ -2248,6 +2254,194 @@ export default function InterviewPage() {
           <p className="text-xs text-text/20 mt-2">* 모의면접 녹음 후 각 항목 1-10점 셀프 채점. 주간 추이를 관찰하면 성장이 보인다.</p>
         </section>
         </>)}
+
+        {/* ═══════════ TAB: TOSS 7-DAY ALL-NIGHTER SPRINT ═══════════ */}
+        {activeTab === "toss7" && (() => {
+          const day = TOSS_7DAY_PLAN[toss7Day - 1];
+          const totalChecks = TOSS_7DAY_PLAN.flatMap((d) => d.hours.map((h) => h.checkId));
+          const doneCount = totalChecks.filter((id) => toss7Tasks[id]).length;
+          const progress = Math.round((doneCount / totalChecks.length) * 100);
+          const dayDoneCount = day.hours.filter((h) => toss7Tasks[h.checkId]).length;
+          return (
+            <>
+              {/* HERO — countdown + progress */}
+              <section className="mb-10">
+                <div className="rounded-2xl border-2 border-red-500/30 bg-gradient-to-br from-red-500/10 via-orange-500/5 to-transparent p-8">
+                  <div className="flex items-center justify-between flex-wrap gap-4 mb-6">
+                    <div>
+                      <p className="text-xs font-code text-red-400/60 mb-2 tracking-wider uppercase">🔥 ALL-NIGHTER SPRINT</p>
+                      <h2 className="text-3xl font-display font-black text-text mb-1">토스 7일 완성</h2>
+                      <p className="text-sm text-text/50">서류 → 사전과제 → 기술면접 → 컬쳐핏까지 168시간 강행군</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs font-code text-text/30 mb-1">전체 진도</p>
+                      <p className="text-4xl font-display font-black text-red-400 tabular-nums">{progress}%</p>
+                      <p className="text-xs text-text/40">{doneCount} / {totalChecks.length} 완료</p>
+                    </div>
+                  </div>
+                  <div className="h-2 rounded-full bg-surface/30 overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-red-500 to-orange-400 transition-all" style={{ width: `${progress}%` }} />
+                  </div>
+                </div>
+              </section>
+
+              {/* DAY SELECTOR */}
+              <section className="mb-8">
+                <div className="grid grid-cols-7 gap-2">
+                  {TOSS_7DAY_PLAN.map((d) => {
+                    const dDone = d.hours.filter((h) => toss7Tasks[h.checkId]).length;
+                    const dProgress = Math.round((dDone / d.hours.length) * 100);
+                    const isActive = toss7Day === d.day;
+                    return (
+                      <button
+                        key={d.day}
+                        onClick={() => setToss7Day(d.day)}
+                        className={`rounded-xl border-2 p-3 transition-all cursor-pointer ${
+                          isActive ? "shadow-lg" : "hover:bg-surface/30"
+                        }`}
+                        style={{
+                          borderColor: isActive ? d.color : `${d.color}30`,
+                          background: isActive ? `${d.color}15` : "transparent",
+                        }}
+                      >
+                        <p className="text-xs font-code mb-1" style={{ color: `${d.color}aa` }}>DAY {d.day}</p>
+                        <p className="text-xs font-bold text-text/70 leading-tight mb-2">{d.phase.split(" ")[0]}</p>
+                        <div className="h-1 rounded-full bg-surface/40 overflow-hidden">
+                          <div className="h-full transition-all" style={{ width: `${dProgress}%`, background: d.color }} />
+                        </div>
+                        <p className="text-[10px] font-code text-text/30 mt-1 tabular-nums">{dDone}/{d.hours.length}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+
+              {/* DAY DETAIL */}
+              <section className="mb-10">
+                <div className="rounded-2xl border-2 p-6 mb-4" style={{ borderColor: `${day.color}40`, background: `${day.color}08` }}>
+                  <div className="flex items-center gap-3 mb-3">
+                    <span className="text-xs font-code font-bold tracking-wider uppercase" style={{ color: day.color }}>DAY {day.day} · {day.phase}</span>
+                    <span className="text-xs font-code text-text/30 tabular-nums">{dayDoneCount}/{day.hours.length}</span>
+                  </div>
+                  <h3 className="text-2xl font-display font-bold text-text mb-2">{day.title}</h3>
+                  <p className="text-sm text-text/60 leading-relaxed">{day.goal}</p>
+                </div>
+
+                {/* Hourly schedule */}
+                <h4 className="font-display text-base font-bold uppercase tracking-[0.15em] text-text/45 mb-3">24시간 스케줄</h4>
+                <div className="space-y-2 mb-6">
+                  {day.hours.map((h) => {
+                    const done = !!toss7Tasks[h.checkId];
+                    return (
+                      <button
+                        key={h.checkId}
+                        onClick={() => setToss7Tasks((prev) => ({ ...prev, [h.checkId]: !prev[h.checkId] }))}
+                        className={`w-full text-left rounded-xl border p-4 transition-all flex items-start gap-3 cursor-pointer ${
+                          done ? "border-green-500/40 bg-green-500/10" : "border-border/30 bg-surface/20 hover:bg-surface/40"
+                        }`}
+                      >
+                        <span className={`mt-0.5 w-5 h-5 rounded-md flex items-center justify-center text-xs font-black shrink-0 ${
+                          done ? "bg-green-500 text-white" : "bg-surface/60 text-text/30"
+                        }`}>{done ? "✓" : ""}</span>
+                        <div className="flex-1">
+                          <p className="text-xs font-code font-bold mb-1" style={{ color: `${day.color}cc` }}>{h.time}</p>
+                          <p className={`text-sm leading-relaxed ${done ? "text-text/40 line-through" : "text-text/75"}`}>{h.task}</p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Deliverable */}
+                <div className="rounded-xl border border-accent/30 bg-accent/5 p-5 mb-4">
+                  <p className="text-xs font-code font-bold text-accent/70 mb-2 uppercase tracking-wider">📦 Deliverable</p>
+                  <p className="text-sm text-text/70 leading-relaxed">{day.deliverable}</p>
+                </div>
+
+                {/* Toss insight */}
+                <div className="rounded-xl border border-blue-500/25 bg-blue-500/5 p-5 mb-4">
+                  <p className="text-xs font-code font-bold text-blue-400/70 mb-2 uppercase tracking-wider">💡 토스 인사이트</p>
+                  <p className="text-sm text-text/70 leading-relaxed">{day.tossInsight}</p>
+                </div>
+
+                {/* AI prompt */}
+                <div className="rounded-xl border border-purple-500/25 bg-purple-500/5 p-5 mb-4">
+                  <p className="text-xs font-code font-bold text-purple-400/70 mb-2 uppercase tracking-wider">🤖 AI 활용 프롬프트</p>
+                  <pre className="text-xs text-text/65 leading-relaxed whitespace-pre-wrap font-code">{day.aiPrompt}</pre>
+                </div>
+
+                {/* Pitfalls */}
+                <div className="rounded-xl border border-red-500/25 bg-red-500/5 p-5 mb-4">
+                  <p className="text-xs font-code font-bold text-red-400/70 mb-2 uppercase tracking-wider">⚠️ 함정</p>
+                  <div className="space-y-1.5">
+                    {day.pitfalls.map((p, i) => (
+                      <p key={i} className="text-sm text-text/55 leading-relaxed">✗ {p}</p>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Self-check */}
+                <div className="rounded-xl border border-green-500/25 bg-green-500/5 p-5">
+                  <p className="text-xs font-code font-bold text-green-400/70 mb-2 uppercase tracking-wider">✅ 셀프 체크 (다음날 가기 전)</p>
+                  <div className="space-y-1.5">
+                    {day.selfCheck.map((s, i) => (
+                      <p key={i} className="text-sm text-text/65 leading-relaxed">□ {s}</p>
+                    ))}
+                  </div>
+                </div>
+              </section>
+
+              {/* TOSS CORE VALUES */}
+              <section className="mb-10">
+                <h2 className="font-display text-base font-bold uppercase tracking-[0.15em] text-text/45 mb-4">토스 Core Value 5</h2>
+                <div className="grid md:grid-cols-2 gap-3">
+                  {TOSS_CORE_VALUES.map((cv) => (
+                    <div key={cv.name} className="rounded-xl border border-border/40 bg-surface/30 p-5">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-2xl">{cv.icon}</span>
+                        <h3 className="text-base font-bold text-text">{cv.name}</h3>
+                      </div>
+                      <p className="text-sm text-text/55 leading-relaxed mb-3">{cv.description}</p>
+                      <div className="rounded-lg bg-accent/5 border border-accent/15 px-3 py-2">
+                        <p className="text-xs font-code font-bold text-accent/60 mb-1 uppercase">면접 키</p>
+                        <p className="text-xs text-text/55 leading-relaxed">{cv.interviewKey}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              {/* FAQ */}
+              <section className="mb-10">
+                <h2 className="font-display text-base font-bold uppercase tracking-[0.15em] text-text/45 mb-4">자주 묻는 질문</h2>
+                <div className="space-y-2">
+                  {TOSS_INTERVIEW_FAQ.map((faq, i) => (
+                    <details key={i} className="rounded-xl border border-border/30 bg-surface/20 overflow-hidden">
+                      <summary className="px-5 py-4 cursor-pointer hover:bg-surface/50 transition-colors flex items-center gap-3">
+                        <span className="text-xs font-code text-text/30 shrink-0">Q{i + 1}</span>
+                        <span className="text-sm font-bold text-text/75 flex-1">{faq.q}</span>
+                      </summary>
+                      <div className="px-5 pb-5 border-t border-border/20 pt-4">
+                        <p className="text-sm text-text/60 leading-relaxed">{faq.a}</p>
+                      </div>
+                    </details>
+                  ))}
+                </div>
+              </section>
+
+              {/* DISCLAIMER */}
+              <section className="mb-10">
+                <div className="rounded-xl border border-orange-500/25 bg-orange-500/5 p-5">
+                  <p className="text-xs font-code font-bold text-orange-400/70 mb-2 uppercase tracking-wider">⚡ 강행군 주의</p>
+                  <p className="text-sm text-text/55 leading-relaxed">
+                    7일 밤샘은 비추천. 가능하면 14-21일로 늘리고, 수면 5시간 이상 확보하길. 이 플랜은 &quot;시간 없을 때 최선&quot;의 선택지다.
+                    Day 7만큼은 무조건 3시간 이상 자야 면접에서 머리가 돈다.
+                  </p>
+                </div>
+              </section>
+            </>
+          );
+        })()}
 
       </main>
     </div>
