@@ -2,6 +2,25 @@
 
 모든 주목할 만한 변경사항을 이 파일에 기록합니다.
 
+## [2026-04-27] 세션 25 — AI 파이프라인 JSX 3중 방어 구축
+
+> AI 생성 MDX의 JSX 중괄호 빌드 에러 재발 방지를 위한 3중 방어 체계 구축. 엔트리 174→177.
+
+### Fixed
+
+- **scripts/generate-lesson.mjs** — `escapeJsxCurlyBraces()` 자동 이스케이프 추가 (코드 블록/frontmatter/import 제외)
+- **scripts/validate-content.mjs** — JSX 함정 warning → error 승격 (빌드 차단)
+- **.github/workflows/generate-on-pick.yml** — 커밋 전 `validate-content.mjs` 게이트 추가
+- **코드 블록 파싱** — 단순 토글 → 백틱 개수 추적 (중첩 코드 펜스 지원, 3개 파일)
+- **content/agents/mini-swe-agent** — 외부 코드 블록 4개 백틱으로 수정
+
+### Metrics
+
+- 엔트리: 174 → 177
+- Solutions: mdx 8→9, workflow 14→15
+- JSX 방어 레이어: 0 → 3
+- 테스트: 64 pass
+
 ## [2026-04-26] 세션 24 — 100일 면접 Boot Camp 히든 페이지 구축
 
 > `/interview` 히든 페이지를 처음부터 구축하여 4,886줄(constants 2,651 + page 2,235)의 올인원 면접 준비 플랫폼 완성. 7개 탭, 96문제 퀴즈, 47장 플래시카드, 11 알고리즘 패턴 가이드, 4+2 시스템 디자인 케이스, 20 CS 토픽, 5사 코테 스타일 분석. 엔트리 170→174. 30커밋.

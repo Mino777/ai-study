@@ -9,8 +9,8 @@
 
 ## 작성 시점
 
-- **작성 일시**: 2026-04-27 (Session 24 — 100일 면접 Boot Camp 구축)
-- **작성 주체**: Claude (Session 24)
+- **작성 일시**: 2026-04-28 (Session 25 — AI 파이프라인 JSX 3중 방어)
+- **작성 주체**: Claude (Session 25)
 - **이유**: 세션 핸드오프
 
 ---
@@ -18,13 +18,14 @@
 ## 현재 상태 스냅샷
 
 ### ai-study Wiki
-- **엔트리 수**: 174
-- **Solutions**: workflow 14, mdx 8, ai-pipeline 6, github-actions 5, next-patterns 3, performance 1
+- **엔트리 수**: 177
+- **Solutions**: workflow 15, mdx 9, ai-pipeline 6, github-actions 5, next-patterns 3, performance 1
 - **Resolver eval**: 48/48 = 100% 유지
 - **Weekly CI**: 허브 + 워커 6 = 7 repo ON
+- **AI 파이프라인 방어**: 3중 (자동이스케이프 + 빌드차단 + GHA게이트) — 2026-04-27 구축
 
 ### /interview 히든 페이지
-- **규모**: constants.ts 2,651줄 + page.tsx 2,235줄 = 4,886줄
+- **규모**: constants.ts 3,039줄 + page.tsx 2,536줄 = 5,575줄
 - **구성**: 7탭 / 96퀴즈 / 47플래시카드 / 11알고리즘 / 20CS / 6시스템디자인
 - **iOS/FDE**: 듀얼트랙 완전 분리
 - **접근**: I키 5회 이스터에그 + URL 직접
@@ -35,7 +36,7 @@
 
 ### P0 — 즉시
 1. **면접 페이지 테스트 추가**: 퀴즈 셔플 균등분포, localStorage 영속성, 트랙 전환 독립성 최소 테스트
-2. **Vercel 배포 확인**: 빌드 통과 확인 (description 누락 재발 방지)
+2. **Vercel 배포 확인**: 빌드 통과 확인
 
 ### P1 — 이번 주
 3. **퀴즈 뱅크 100문제 달성**: 현재 96문제 → 100+ (AI 워크플로우 4문제 추가)
