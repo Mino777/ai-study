@@ -69,7 +69,7 @@ graph TD
         LLM_B -->|Model-Specific Logic| LLM_Local[Local SLM]
         subgraph validation_sub ["Validation & Structuring"]
             direction TB
-            LLM_B -->|Raw Response| Validator[Output Validator (Zod/TypeGuard)]
+            LLM_B -->|Raw Response| Validator["Output Validator (Zod/TypeGuard)"]
             Validator -->|Structured Data| Harness
         end
     end
