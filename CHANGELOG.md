@@ -2,6 +2,22 @@
 
 모든 주목할 만한 변경사항을 이 파일에 기록합니다.
 
+## [2026-04-29] 세션 26 — iOS Harness Journal 012 엔트리화 + 업데이트
+
+> gma-ios claude-setup 브랜치 2일치(18커밋) 작업을 iOS 저널 엔트리로 박제. 엔트리 177→180.
+
+### Added
+
+- **content/ios-ai/ios-ai-journal-012** — UI 테스트 인프라 Phase 1 완결 저널
+  - 5병목 진단 + 3-tier 등급(Level 1/2/3) + condition wait(22s→7s)
+  - wait-for-ui.sh 헬퍼 / fixture zstd 압축 / screenshot-diff.sh / setup-onboarding.sh
+  - deeplink lazy 등록 정책(RIB 깊이별 패턴) + Xcode-attached 모드
+
+### Metrics
+
+- 엔트리: 177 → 180
+- ios-ai 시리즈: journal-012 추가
+
 ## [2026-04-27] 세션 25 — AI 파이프라인 JSX 3중 방어 구축
 
 > AI 생성 MDX의 JSX 중괄호 빌드 에러 재발 방지를 위한 3중 방어 체계 구축. 엔트리 174→177.
