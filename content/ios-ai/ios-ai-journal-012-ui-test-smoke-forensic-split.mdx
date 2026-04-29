@@ -1,0 +1,378 @@
+---
+title: "iOS Harness Journal 012 — UI 테스트 인프라 Phase 1: smoke/forensic 분리 + 5병목 진단 + 22s→7s condition wait"
+category: ios-ai
+series: ios-ai-journal
+date: "2026-04-29"
+tags: [ios-harness-journal, ios, ui-test, deeplink, ribs, condition-wait, smoke-test, forensic, fixture, xcode, idb, xcodebuildmcp]
+confidence: 4
+last_verified: "2026-04-29"
+applicable_to: ["ios-study"]
+connections: [ios-ai/ios-ai-journal-009-ai-probe-dual-pipeline, ios-ai/ios-ai-journal-010-ai-orchestration-tmux-worker-pool, ios-ai/ios-ai-journal-008-first-full-harness-setup-retro, harness-engineering/ai-agent-start-here]
+status: complete
+type: entry
+description: >-
+  `/ios-ui-test` 한 번에 30초+ → 5-8초. 단일 원인이 아닌 5개 병목 누적 진단. smoke/forensic 모드 분리,
+  고정 sleep → condition wait(22s→7s), seed-fixture 자동 복원, deeplink lazy 등록 정책(RIB 깊이별 패턴),
+  Xcode-attached 모드(LLDB attach 공존). 2일 스프린트 9커밋.
+quiz:
+  - question: "APP_FRESHLY_LAUNCHED 플래그를 도입한 이유는?"
+    choices:
+      - "앱이 이미 떠있으면 시뮬레이터를 재부팅해야 하기 때문"
+      - "이미 진행된 일(DebugMode/열기 다이얼로그)을 계속 폴링하는 비용을 막기 위해 분기점을 두었다"
+      - "idb describe-all이 fresh launch에서만 동작하기 때문"
+      - "Xcode-attached 모드 전환 신호로 사용하기 위해"
+    answer: 1
+    explanation: >-
+      fresh launch일 때만 DebugMode와 '열기' 다이얼로그가 나타난다. 이미 떠있는 앱에서 폴링을 10회 반복하면
+      idb 호출 비용이 8-13초 추가된다. 플래그로 fresh/ready 분기 → 재호출 시 ~10s로 단축.
+  - question: "deeplink lazy 등록 정책의 핵심 전제는?"
+    choices:
+      - "자주 쓰는 화면을 사전에 일괄 등록해 시간을 절약한다"
+      - "deeplink 등록은 Phase 2에 전담 스프린트로 묶어서 한다"
+      - "어떤 화면이 자주 쓰일지 미리 알 수 없다 — /ios-ui-test 호출 시점에 미등록이면 그 자리에서 lazy 등록한다"
+      - "navigation fallback이 deeplink보다 항상 빠르다"
+    answer: 2
+    explanation: >-
+      사전 일괄 등록은 over-engineering이다. 실제로 어떤 화면을 자주 테스트할지는 작업하다 보면 드러난다.
+      lazy 등록 정책은 1단(Workflow 1개) / 2-3단(ActionableItem 정공법) 패턴 가이드를 갖추고,
+      등록 작업 자체도 30분 내 완료할 수 있어 진입 비용이 낮다.
+  - question: "smoke 모드에서 snapshot_ui 호출을 최소화하는 방법으로 올바른 것은?"
+    choices:
+      - "snapshot_ui 대신 XCUITest를 항상 사용한다"
+      - "deeplink 직진 후 snapshot_ui 1회 + 핵심 라벨만 idb python grep으로 확인 후 종료한다"
+      - "snapshot_ui를 각 단계마다 호출해 진행 상황을 트래킹한다"
+      - "forensic 모드를 기본으로 설정하고 --smoke 옵션으로 줄인다"
+    answer: 1
+    explanation: >-
+      snapshot_ui는 JSON 트리 전체를 덤프하므로 한 번에 ~5KB 토큰이 나간다. smoke에서는 deeplink 직진 후
+      단 1회만 호출하거나, idb describe-all + python 라벨 grep(훨씬 가벼움)으로 대체한다.
+      단계마다 호출하면 토큰이 폭발한다.
+---
+
+## 배경 — /ios-ui-test가 사람보다 느려지다
+
+RIBs 기반 사내 iOS 앱에 `/ios-ui-test` 하네스를 붙인 이후 세션을 거듭할수록 사용 빈도가 떨어지고 있었다. 이유는 하나였다: **화면 1개 검증에 30초+**.
+
+체감 측정(편도 핫딜 시간 선택 화면 기준):
+
+```
+시뮬레이터 부팅 + 앱 launch + DebugMode 통과 + deeplink 발사 + snapshot_ui 1회 = ~22초
+```
+
+이 22초도 이미 느린데, 위에 snapshot_ui 반복 호출, navigation 더듬기, 로그 캡처까지 더하면 30초가 넘는다. **사람이 직접 시뮬레이터 보면서 확인하는 게 더 빠른** 상황이었다.
+
+### 5개 병목 진단
+
+단일 원인이 아니었다. 외부 의견서(5병목 분석)를 같이 읽으면서 원인이 누적임을 확인:
+
+| # | 병목 | 영향 |
+|---|------|------|
+| 1 | smoke와 forensic 한 모드로 통합 | 회귀 확인용도 매번 트리/로그/시나리오 전부 |
+| 2 | deeplink 미등록 화면 多 | navigation 5-7단계로 더듬어 진입 |
+| 3 | fixture/인증 상태 사전 복원 부재 | 매번 fresh install → 수동 로그인 반복 |
+| 4 | snapshot_ui 단계마다 호출 | 각 5KB JSON, 토큰 폭발 |
+| 5 | 고정 sleep N초가 곳곳에 | 누적 지연 + 이미 끝난 화면도 기다림 |
+
+**병목 #1이 전제 조건**이었다. smoke/forensic 분리부터 시작하지 않으면 나머지 최적화 효과가 증발한다.
+
+---
+
+## 해결 1: smoke / forensic 모드 분리
+
+### 설계
+
+```
+/ios-ui-test                # smoke (기본, 5-8초 목표)
+/ios-ui-test --forensic    # forensic (기존 Phase 1-6, 30초+)
+```
+
+| 구분 | smoke | forensic |
+|------|-------|----------|
+| 목적 | 회귀 확인, 빠른 도착 검증 | 버그 재현, 인터랙션 시나리오, 깊은 분석 |
+| snapshot_ui | 1회 | 여러 번 |
+| 로그 캡처 | 없음 | 있음 |
+| 스크린샷 | 없음 | 있음 |
+| 시간 목표 | 5-8초 | 30초+ |
+
+### 모드 선택 가이드
+
+```
+회귀 확인 (코드 수정 후 "깨졌나 봐")  → smoke
+인터랙션 검증 (탭 시퀀스, 상태 전이)  → smoke + 필요 시 forensic
+빈 화면 / 렌더 버그 디버깅             → forensic
+디자인 정합성 (Figma 비교)             → forensic
+```
+
+smoke 흐름:
+
+```
+S0-A: fixture restore (인증 게이트 뒤 화면만)
+S0-B: build_run_sim (코드 수정 있으면 incremental 빌드)
+S1:   deeplink 발사 → 화면 직진
+S2:   snapshot_ui 1회 + 핵심 라벨 매칭 → 도착 확인 후 종료
+```
+
+---
+
+## 해결 2: 고정 sleep → condition wait (22s → 7s)
+
+### 실측이 밝혀준 진짜 병목
+
+"sleep만 줄이면 빨라질 것"이라 추측했는데 실제 측정은 달랐다:
+
+```
+Before: sleep 총합 줄임 → 22s → 21s  (1초 절감, 의미 없음)
+After:  condition wait + fresh-launch 플래그 → 22s → 7s  (3배 절감)
+```
+
+진짜 병목은 sleep 자체가 아니라 **"이미 일어난 일을 계속 폴링하는 비용"** 이었다.
+
+### 변경 내역
+
+```bash
+# Before: 고정 sleep
+sleep 3   # 시뮬 부팅 대기
+sleep 4   # 앱 launch 대기
+sleep 3   # DebugMode 통과 대기
+
+# After: condition wait
+simctl bootstatus $SIM_ID -b           # 부팅 완료까지 block
+wait_for_app_ready 12                  # 트리에 children > 1 보일 때까지 폴링 (cap 6s)
+wait_for_label_gone "Continue" 10      # DebugMode 버튼 사라질 때까지 (cap 5s)
+wait_for_label_gone "열기" 6           # 열기 다이얼로그 닫힐 때까지 (cap 3s)
+```
+
+### APP_FRESHLY_LAUNCHED 플래그 패턴
+
+핵심 아이디어: **한 번만 나타나는 것을 매번 폴링하지 않는다**.
+
+```bash
+if [[ "$APP_FRESHLY_LAUNCHED" == "true" ]]; then
+  MAX_RETRY=10   # DebugMode/열기 다이얼로그 기다림
+else
+  MAX_RETRY=2    # 이미 ready 상태, 1-2회만 확인
+fi
+```
+
+DebugMode 버튼과 "열기" 다이얼로그는 **fresh launch일 때만 나타난다**. 이미 앱이 떠있는 재호출에서 MAX_RETRY=10을 유지하면 idb 호출 8-13초가 낭비된다. 플래그로 분기 → 재호출 시 ~10s로 단축.
+
+### 최종 측정값
+
+| 시나리오 | Before | After |
+|----------|--------|-------|
+| `launch-test-screen.sh` (앱 떠있음) | ~22s | ~7s |
+| smoke 전체 (첫 호출, fixture 포함) | ~30초+ | ~60s (fixture 45s 포함) |
+| smoke 전체 (재호출, fixture 유지) | ~30초+ | ~10s |
+| Xcode-attached smoke | ~30초+ | ~6-7s |
+
+---
+
+## 해결 3: seed-fixture 자동 복원 (S0-A)
+
+### 왜 필요한가
+
+로그인 + 면허인증 + 기기인증 상태여야 진입 가능한 화면이 대부분이다. 미인증 상태에서 deeplink 발사 → 로그인 화면으로 fallback → 수동 로그인 1-2분 낭비.
+
+**시뮬레이터 data 디렉토리(키체인 + UserDefaults + .app)를 tar.gz로 박제**해두면 즉시 복원된다.
+
+### 복원 흐름
+
+```bash
+bash .claude/scripts/seed-fixture.sh restore logged_in_verified
+# ~45초 (2.4GB tar.gz 풀기), 세션 첫 1회만 필요
+```
+
+### 주의: 순서가 중요하다
+
+```
+restore → build_run_sim  ✅  (키체인/UserDefaults 보존 + 최신 .app 덮어쓰기)
+build_run_sim → restore  ❌  (restore가 build 결과를 박제된 .app으로 롤백)
+```
+
+`build_run_sim`은 `.app`만 교체하므로 fixture의 키체인/UserDefaults는 건드리지 않는다. 그래서 restore 먼저, build 나중이 정답이다.
+
+### 권장 시드 목록
+
+| 이름 | 인증 상태 | 주요 용도 |
+|------|----------|----------|
+| `logged_in_verified` | 로그인 + 면허 + 기기 | 인증 게이트 뒤 화면 전반 |
+| `oh-with-permissions` | logged_in_verified + 위치/알림 권한 허용 | 편도 핫딜 등 위치 필요 화면 |
+
+### fixture 파일 관리 원칙
+
+- **git 비공유**: 2.4GB tar.gz를 레포에 넣으면 clone 불가. 팀 내 공유 스토리지(내부 서버/오브젝트 스토리지)에 올리거나 개인이 각자 생성.
+- **토큰 만료 시 갱신**: fixture 안의 인증 토큰이 만료되면 수동으로 재로그인 후 `seed-fixture.sh save logged_in_verified` 재실행.
+
+---
+
+## 해결 4: deeplink lazy 등록 정책
+
+### 정책
+
+> 자주 쓰는 화면을 사전에 일괄 등록하지 않는다. `/ios-ui-test` 호출 시점에 미등록이면 **그 자리에서 lazy 등록 후 진행**.
+
+사전 일괄 등록은 over-engineering이다: 어떤 화면을 자주 쓸지는 해봐야 안다. 반면 각 화면의 등록 작업은 30분 내 완료 가능하므로 lazy 방식이 전체 ROI가 높다.
+
+### RIB 깊이별 패턴
+
+RIBs 구조에서 deeplink로 진입하려면 화면 깊이에 따라 접근법이 달라진다.
+
+#### 1단 패턴 — 탭/메뉴 직진
+
+메뉴를 통해 바로 도달 가능한 화면. Workflow 파일 하나면 끝난다 (~30줄).
+
+```swift
+public class FooWorkflow: Workflow<RootActionableItem> {
+  public init?(url: URL) {
+    super.init()
+    guard url.path.hasPrefix("/foo") else { return nil }
+
+    onStep { rootItem in
+      rootItem.waitBridge()
+    }
+    .onStep { (bridgeItem, _) in
+      bridgeItem.moveBridgeMenu(menu: .foo)
+    }
+    .commit()
+  }
+}
+```
+
+#### 2-3단 패턴 — 중첩 RIB (ActionableItem 정공법)
+
+Bridge 아래 중간 RIB을 거쳐야 하는 화면. `*ActionableItem` 프로토콜을 중간 RIB에 채택해야 한다.
+
+```
+작업량:
+1. Bridge/Sources/Bridge/Workflow/<Group>/<Name>.swift 신규
+2. AppRootInteractor+DeepLink.swift에 1줄 등록
+3. 중간 RIB Interactor에 *ActionableItem 채택
+4. wait*ActionableItem() 메서드 구현 (Observable 반환)
+```
+
+```swift
+// 중간 RIB Interactor
+extension FooInteractor: FooActionableItem {
+  public func waitFooScreen() -> Observable<(FooActionableItem, ())> {
+    // 화면 준비 완료 신호 emit
+    return .just((self, ()))
+  }
+}
+```
+
+#### 깊이별 선택 기준
+
+| RIB 깊이 | 참고 패턴 | 작업량 | 비고 |
+|----------|----------|--------|------|
+| 1단 | FreeOneWay 스타일 | Workflow 1개 | 가장 단순 |
+| 2-3단 | MyInfoInvite 스타일 | Workflow + ActionableItem | 중간 RIB 수정 필요 |
+| 4단+ | 권장 X | 과도한 coupling | navigation fallback 검토 |
+
+---
+
+## 해결 5: Xcode-attached 모드 (LLDB 공존)
+
+### 발견 경로
+
+사용자의 자연스러운 질문에서 함정을 발견했다:
+
+> "어차피 Xcode로 런 해놓으면 그거 쓰는 거지?"
+
+이 시나리오에서 기본 흐름은 즉시 깨진다:
+- `fixture restore` → 시뮬레이터 data 교체 → 앱 프로세스 종료
+- `build_run_sim` → 앱 재실행 → Xcode LLDB attach 끊김 → 콘솔 로그 stream 종료
+
+### 해결
+
+트리거 키워드 감지 → S0-A/S0-B 전부 스킵, S1(deeplink)만 발사:
+
+```
+트리거: "방금 Run 했어", "런 안해도 돼", "Xcode 띄워놨어", --xcode-attached 플래그
+
+동작:
+- build_run_sim 스킵 (코드 수정 있으면 "Xcode에서 직접 Cmd+R 하세요" 안내)
+- fixture restore 스킵
+- simctl openurl <deeplink> 만 발사
+  → Xcode LLDB attach된 그 프로세스가 deeplink 수신
+  → Xcode 콘솔 로그 stream 유지
+```
+
+| 기존 흐름 | Xcode-attached 모드 |
+|---------|------------------|
+| fixture restore → build → deeplink | deeplink만 발사 |
+| LLDB attach 끊김 | LLDB attach 유지 |
+| 콘솔 stream 끊김 | 콘솔 stream 유지 |
+| ~60s | ~6-7s |
+
+한계 명시: **코드 수정사항은 이 모드에서 반영 안 됨.** "rebuild 포함해줘"라고 명시하면 build_run_sim 모드로 자동 전환.
+
+---
+
+## 부가: Harness 유지보수 (2026-04-28)
+
+같은 스프린트 오전 세션에서 진행한 harness 정리.
+
+### CLAUDE.md 다이어트 (371줄 → 219줄, -41%)
+
+CLAUDE.md가 길어질수록 프롬프트 캐시 TTL이 불안정해진다. 핵심 규약만 남기고 상세 내용은 슬래시 커맨드로 분리.
+
+- 제거: 반복 설명, 예시 코드 블록, 이미 skills 파일에 있는 절차
+- 유지: 스킬 라우팅 테이블, 브랜치 정책, 컴포넌트 핵심 목록
+
+### XcodeBuildMCP 검증
+
+`session_set_defaults persist:true` 설정 → `.xcodebuildmcp/config.yaml` 생성 확인. `.gitignore`에 해당 경로 추가 (절대 경로 + 시뮬레이터 ID 포함이라 git 추적 불가).
+
+### check-claude-drift.sh 신설
+
+`CLAUDE.md`에 선언된 스킬 목록과 `.claude/skills/` 실제 파일 목록 정합성 검사. 선언만 있고 파일 없는 스킬, 파일은 있는데 CLAUDE.md에 없는 스킬 탐지.
+
+> pipefail 함정: `grep | while` 파이프라인은 grep 매치 없으면 pipefail로 전체 스크립트 종료된다. here-string 방식이나 `|| true` 래핑으로 해결.
+
+---
+
+## 사고 & 교훈
+
+### worktree 폴백 사고
+
+```bash
+git worktree add /tmp/proj-claude-setup chore/claude-setup
+# ← "ok"로 끝났지만 실제로는 develop 브랜치로 폴백돼있었음
+```
+
+perf 커밋 1개가 엉뚱한 브랜치에 들어가서 cherry-pick + reset으로 복구.
+
+**예방 규칙: worktree 만든 후 즉시 검증.**
+
+```bash
+git -C /tmp/proj-claude-setup branch --show-current
+# ← 예상 브랜치가 아니면 즉시 중단
+```
+
+### scheduled_tasks.lock 추적 사고
+
+ScheduleWakeup 런타임 파일이 commit에 휩쓸려 들어감. 별도 커밋으로 untrack했지만 처음부터 `.gitignore`에 추가했어야 함.
+
+**규칙: 새 도구 도입 시 런타임 산출물 위치 먼저 확인 → .gitignore 선등록.**
+
+---
+
+## Compound Assets (재사용 자산)
+
+| 자산 | 적용 범위 |
+|------|----------|
+| smoke/forensic 2-mode 패턴 | 다른 무거운 스킬(ios-investigate 등)에 그대로 이식 가능 |
+| `wait_for_app_ready`, `wait_for_label_gone`, `simctl bootstatus -b` | 다른 시뮬레이터 자동화 스크립트에 직접 복사 |
+| APP_FRESHLY_LAUNCHED 플래그 패턴 | "한 번만 일어날 일을 매번 폴링"하는 안티패턴의 일반 해결법 |
+| deeplink lazy 등록 정책 | Phase N 작업 전반의 over-engineering 회피 원칙 |
+| ActionableItem 정공법 가이드 | 깊은 RIB deeplink 등록 표준 절차, 재사용 가능 |
+| fixture 셋업 가이드 | 팀 온보딩용 5분 표준 절차 |
+
+---
+
+## 다음 스프린트 큐
+
+- [ ] **화면 등급 3-tier 분리** — Level 1 smoke / Level 2 interaction / Level 3 forensic (의견서 미해결 #5)
+- [ ] **fixture 압축 최적화** — `Library/Caches` 제외 + zstd. 2.4GB → 800MB 목표
+- [ ] **smoke S2 idb 헬퍼 추출** — `wait-for-ui.sh` 신설 후보
+- [ ] **`/wt-branch` 검증 가드** — worktree 생성 직후 `branch --show-current` 자동 검증 + 폴백 감지 시 사용자 알림
