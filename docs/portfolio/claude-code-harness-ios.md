@@ -51,12 +51,18 @@ WO Brief는 파일화(`/tmp/wo-<slug>-brief.md`) — tmux 인라인 메시지는
 ### 도메인 에이전트 (10개)
 `ios-pr-shipper` / `ios-deployer` / `ios-bug-fixer` / `ios-feature-builder` / `ios-ui-tester` / `swift-reviewer` / `ios-architect` / `ios-explorer` / `ios-researcher` / `swiftui-specialist` — 트리거 키워드 감지 시 자동 spawn, 총 915 라인.
 
-### PreToolUse 훅 (5개)
-- `external-ref-guard.sh` — 외부 레퍼런스 인용 차단
-- `file-protection.sh` — Project.pbxproj / Podfile.lock 등 직접 편집 차단
-- `post-swift-edit.sh` — Swift 편집 직후 SwiftFormat + SwiftLint
-- `check-gstack.sh` — gstack(공통 스킬셋) 미설치 시 STOP
-- `session-start.sh` — 컨텍스트 자동 주입
+### 훅 아키텍처 — settings.json 풀 wiring
+| 시점 | matcher | 훅 |
+|------|---------|----|
+| SessionStart | — | `session-start.sh` (컨텍스트 자동 주입) |
+| PreToolUse | `Skill` | `check-gstack.sh` (gstack 미설치 STOP) |
+| PreToolUse | `Write\|Edit` | `file-protection.sh` + `external-ref-guard.sh` 체이닝 |
+| PreToolUse | `Bash` | 인라인 — `git commit` 감지 시 SwiftLint quiet 검사, 위반 5건 echo |
+| PostToolUse | `Write\|Edit` | `post-swift-edit.sh` (SwiftFormat + SwiftLint 자동) |
+| PostToolUse | `Bash` | 인라인 — `git push` 감지 시 `/compound` 리마인더 |
+
+### 보안 하드닝 — `permissions.deny`
+`*.pbxproj` / `*.xcworkspace/**` 편집 차단(머지 conflict 폭탄 방지) + `*.env` / `Secrets.swift` / `GoogleService-Info.plist` / `*.mobileprovision` / `*.p12` 읽기 차단. **AI 에이전트가 시크릿 / 코드사이닝 자산에 접근 불가.**
 
 ### 자동화 스크립트 (25개) — 하이라이트
 - `pick-default-sim.sh` — 설치된 최신 iOS 런타임의 가장 작은 디바이스 자동 선택 (구버전 OS 스플래시 hang 우회)
@@ -100,6 +106,13 @@ PR 직전 단일 커맨드로:
 ### 컨텍스트 윈도우 60% 임계값 룰
 60% 초과 시 의사결정 품질이 떨어진다는 관측 기반. 임계값 도달 시 `/compact` 자동 권고 + 태스크 분리.
 
+### 모든 스킬에 "🛑 실행 전 스킵 판단" 박제
+LLM은 호출되면 무조건 일하려는 경향이 있다 → 토큰 낭비. 모든 16개 스킬 첫 섹션에 **스킵 조건 체크**를 강제 박제.
+예시 (`/compound`): 직전 compound 이후 실전 커밋 0 / 학습 세션 / 비자명 문제 0건 / 직전 커밋이 `compound:` 시작 — 4 조건 중 하나라도 충족 시 즉시 STOP. `/gate-1`도 4단계 스킵 조건. **에이전트의 default behavior를 "일단 멈춰서 판단"으로 재배선.**
+
+### Experimental Agent Teams 운영
+`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` 플래그로 다중 에이전트 팀 모드 가동. 위 4-pane 구조와 결합 시 단일 명령으로 *팀 전체* 디스패치 가능.
+
 ---
 
 ## 측정 가능한 효과
@@ -118,6 +131,8 @@ PR 직전 단일 커맨드로:
 - "RIBs + RxSwift + SwiftUI 하이브리드 코드베이스에 레이어 위반 / SPM 사이클 / RIBs 패턴 위반을 PR 전에 자동 차단하는 Gate-1 품질 게이트 구축."
 - "Compound Engineering 패턴으로 모든 스프린트 종료 후 솔루션을 카테고리별로 자동 박제 → 차세대 스프린트에서 키워드 검색으로 재활용. 지식 자산화."
 - "AI 에이전트의 컨텍스트 폭발을 막기 위해 *오케스트레이터 코드 직접 read 금지* HARD RULE을 설계, ADVICE_REQUEST 핀포인트 어드바이저 프로토콜 운영."
+- "AI 에이전트의 시크릿 / 코드사이닝 자산 접근을 `permissions.deny`로 원천 차단(.env / Secrets.swift / .mobileprovision / .p12 / GoogleService-Info.plist) — 보안 하드닝 정책 직접 설계."
+- "SessionStart / PreToolUse / PostToolUse 3계층 7훅 아키텍처로 SwiftFormat·SwiftLint·gstack 의존성·외부 레퍼런스·git commit·git push까지 풀 wiring."
 
 ---
 
