@@ -1,0 +1,227 @@
+---
+title: "tmux 멀티 페인 오케스트레이터 — 워커 통신 5대 함정과 박제 룰"
+description: "메인 pane이 직접 코드 탐색 / Agent() 광역 spawn / Enter 미수신 오인 / WO Brief 평문 인라인 / 폴링 정규식 false-fail — 멀티 워커 사이클의 만성 인터럽트 5종을 박제 룰로 차단하는 패턴."
+date: "2026-04-30"
+category: harness-engineering
+tags: [orchestrator, multi-agent, tmux, ipc, work-order, dispatch, brief-template, harness-rules, queue-saturation, anti-pattern]
+confidence: 4
+last_verified: "2026-04-30"
+applicable_to: ["any"]
+generated_by: "claude"
+connections:
+  - harness-engineering/ai-orchestration-roi-negative-trivial-task-detection
+  - harness-engineering/orchestrator-fail-meta-verify-growth-axes
+  - harness-engineering/tmux-flush-automation-pattern
+  - harness-engineering/multi-agent-quality-sprint-pattern
+  - harness-engineering/worker-prompts-logging-pattern
+  - harness-engineering/aidy-journal-000-architect-worker-baseline
+status: complete
+type: entry
+quiz:
+  - question: "오케스트레이터(메인 pane)가 grep/Read/find로 소스를 직접 탐색할 때 가장 큰 문제는?"
+    choices:
+      - "토큰 비용 증가만"
+      - "토큰 낭비 + 워커 역할 침범 + 메인 컨텍스트 오염 (라우팅·상태 관리 attention 잠식)"
+      - "보안 위험"
+      - "Git diff가 깨진다"
+    answer: 1
+    explanation: "메인 pane은 라우팅·dispatch·상태 추적을 담당. 코드 직접 탐색은 (a) 토큰 낭비, (b) worker-1(분석 담당) 역할 침범, (c) 메인 컨텍스트가 raw source로 오염되어 오케스트레이션 attention budget 잠식. 'Advisor 모드' 예외 — 워커가 ADVICE_REQUEST로 특정 파일/라인을 가리키면 그것만 Read OK."
+  - question: "tmux send-keys Enter를 쳤는데 워커가 메시지를 안 받는 듯 보이는 가장 흔한 진짜 원인은?"
+    choices:
+      - "Enter 키가 실제로 미전송"
+      - "워커 busy 상태에서 메시지가 큐에 쌓이고 처리 지연이 발생 — Enter는 정상이지만 큐 적체가 'Enter 안 쳐짐'으로 오인됨. --wait-idle 옵션으로 우회"
+      - "tmux 버전 호환성 문제"
+      - "워커 모델이 Enter를 차단"
+    answer: 1
+    explanation: "Enter는 보통 정상 전달된다. 워커 busy 시 메시지가 큐에 진입하고 처리만 지연될 뿐. 대응은 (1) capture-pane으로 처리 신호(Generating/Thinking) 폴링 + 재송신, (2) `--wait-idle` 옵션으로 워커 idle 대기 후 송신. 같은 메시지를 여러 번 dispatch하면 dedup이 없을 경우 큐에 중복 누적."
+  - question: "dispatch.sh가 RUNNING 검증 정규식 화이트리스트(`Thinking|Working` 등)로 워커 작동 여부를 폴링한다. 이 방식의 본질적 약점은?"
+    choices:
+      - "정규식이 느려서"
+      - "Anthropic CLI verb('Kneading'/'Whirring' 등)가 자주 추가되며 화이트리스트 미매칭 시 false-fail → 재시도 루프 → 큐 적체. 화이트리스트 방식이 brittle"
+      - "정규식이 대소문자 구분 안 해서"
+      - "polling 주기가 너무 짧아서"
+    answer: 1
+    explanation: "Anthropic CLI는 verb를 자주 추가한다. 좁은 화이트리스트는 새 verb 출현 시 즉시 false-fail. 해법: (a) 정규식을 broad하게 (`'esc to in|⏵⏵ bypass|queued'` 등 작동/큐/idle 신호 모두 매칭), (b) 모르는 verb는 success로 fail-open, (c) 새 verb 발견 시 즉시 보강."
+---
+
+## 요약
+
+멀티 워커 오케스트레이션을 *처음 도입*하면 거의 항상 같은 5가지 인터럽트가 누적된다. 모두 *통신 프로토콜*이 명문화되지 않아 매 세션마다 재발견하는 패턴이다.
+
+| # | 함정 | 박제 룰 |
+|---|---|---|
+| 1 | 메인이 직접 코드 탐색 | "메인 pane은 grep/Read/find 금지" 절대 룰 + Advisor 예외 |
+| 2 | Agent() 광역 spawn | raw analysis 목적 단독 Agent 금지. 풀 사이클 워크플로 agent만 예외 |
+| 3 | Enter 미수신 오인 | paste-buffer + Enter 재시도 + capture-pane 검증 폴링 + `--wait-idle` |
+| 4 | WO Brief 평문 인라인 | 마크다운 표준 템플릿 → 파일 저장 → 경로만 dispatch |
+| 5 | 폴링 정규식 false-fail | 화이트리스트 broaden + 모르는 verb fail-open |
+
+이 글은 각 함정의 *진짜 원인*과 박제 룰 코드를 정리한다.
+
+## 함정 1 — 메인 pane이 직접 코드 탐색
+
+### 증상
+
+오케스트레이터(메인 pane)가 grep/Read/find로 소스를 직접 분석. 결과: 토큰 낭비 + worker-1 역할 침범 + 메인 컨텍스트가 raw source로 오염되어 *오케스트레이션 attention budget 잠식*.
+
+### 박제 룰 (CLAUDE.md 최상단)
+
+```
+메인 pane(project:1.1)은 소스 코드 직접 grep/Read/find 절대 금지.
+- 분석은 worker-1(project:1.2, /analysis-worker)에 tmux dispatch.
+- Agent() 단독 spawn 금지 (raw analysis 목적). 풀 사이클 워크플로 agent만 예외.
+- 화이트리스트: git status / ls .claude / cat 스크립트 / 시뮬레이터 list / 메모리 파일.
+- ⚡ Advisor 모드 예외: 워커가 'ADVICE_REQUEST: <상세>' 보내면
+  가리킨 특정 파일/라인만 직접 Read OK. 광역 탐색은 여전히 X.
+```
+
+### 핵심
+
+- **광역 탐색 vs Pin-point Read**를 분리. 광역은 워커, pin-point만 메인 OK.
+- "절대 금지"를 inline으로 박아두지 않으면 매번 재발. 본문 텍스트 박제는 무시된다.
+
+## 함정 2 — Agent() 광역 spawn
+
+### 증상
+
+raw analysis 목적으로 단독 `Agent()` 호출. subagent는 *메인 CLAUDE.md를 다시 안 읽기 때문에* 룰을 모름. 결과 파편화 + 컨텍스트 격리 + 토큰 중복.
+
+### 박제 룰
+
+- raw analysis는 항상 worker-1 (tmux pane) — *메인 CLAUDE.md 공유*
+- `Agent()` 단독 호출은 풀 사이클 워크플로 agent에 한정 (예: `/ios-ui-tester`, `/code-reviewer`)
+- subagent에는 항상 *full context*를 prompt로 명시 (메인 룰 미상속 가정)
+
+### 일반화
+
+이 함정은 다른 multi-process 모델에도 동일 — celery worker, k8s job, lambda invocation. *컨텍스트가 새로 시작되는 모든 boundary*에서 룰을 prompt로 다시 박아야 한다.
+
+## 함정 3 — Enter 미수신처럼 보이는 큐 적체
+
+### 증상
+
+메인이 워커 pane에 paste-buffer + Enter → 처리 안 됨. 사람 눈에는 "Enter가 안 쳐졌다"로 보인다.
+
+### 진짜 원인
+
+**Enter는 정상 전달된다.** 워커 busy 상태에서 메시지가 *큐에 쌓이고 처리만 지연*된다. 같은 메시지를 다시 dispatch하면 큐에 중복 누적된다.
+
+### 박제 룰
+
+```bash
+# 1. paste-buffer로 메시지 적재 (send-keys -l 보다 안전)
+tmux load-buffer -b "$BUF" - <<< "$MSG"
+tmux paste-buffer -d -b "$BUF" -t "$TARGET"
+
+# 2. Enter 재시도 (3회) + 검증 폴링
+for i in 1 2 3; do
+  tmux send-keys -t "$TARGET" Enter
+  sleep 0.3
+  # 3. 인풋박스 비었는지 확인 (sentinel 텍스트 사라졌는지)
+  if ! tmux capture-pane -p -t "$TARGET" | grep -qF "$SENTINEL"; then
+    break
+  fi
+done
+
+# 4. --wait-idle: 워커 idle 대기 후 송신 → 즉시 처리
+```
+
+**dedup 룰**: 같은 head 메시지가 큐에 있으면 skip. 중복 dispatch가 큐 적체의 주범.
+
+> 함정 3의 IPC 검증 패턴은 [AI 오케스트레이션이 사람보다 느려질 때 — 패턴 4](./ai-orchestration-roi-negative-trivial-task-detection)에서 capture-pane 폴링 코드 풀 버전을 참고.
+
+## 함정 4 — WO Brief 평문 인라인
+
+### 증상
+
+tmux 메시지에 brief 전체를 평문으로 붙여넣기. 워커마다 메타정보(담당/크기/의존/Gate 기준) 해석 편차 발생.
+
+### 박제 룰: 마크다운 표준 + 파일 dispatch
+
+`.claude/templates/wo-brief.md` 메타블록 8개 섹션:
+
+```markdown
+## 메타        # 담당/크기(S/M/L)/의존/브랜치/역할
+## 사전 확인    # 필수 Read 목록
+## 구현        # 변경 파일 + 핵심 로직
+## 제약        # 절대 금지 사항
+## 테스트       # 체크리스트
+## Gate 검증    # gate-1 통과 기준 (테스트와 분리)
+## 완료보고     # DONE:WO-N-<phase> 표준
+## ADVICE_REQUEST 프로토콜
+```
+
+**평문 인라인 brief 금지.** `/tmp/wo-N-brief.md` 저장 후 *경로만* dispatch:
+
+```bash
+notify-main.sh project:1.2 "WO-1234 브리프: /tmp/wo-1234-brief.md 읽고 시작"
+```
+
+### 핵심
+
+평문 prompt는 워커 LLM마다 핵심 섹션 인식 편차가 크다. 마크다운 헤딩 구조를 강제하면 워커가 *섹션 단위로 처리*하고, 메타블록(담당/크기/의존)을 일관되게 추출한다.
+
+## 함정 5 — 폴링 정규식 false-fail
+
+### 증상
+
+`dispatch.sh` 내부에서 워커 작동 여부를 정규식으로 폴링:
+
+```bash
+RUNNING_RE='(Thinking|Working|Generating)'  # 좁은 화이트리스트
+```
+
+워커는 작동 중인데 새 verb('Kneading'/'Whirring'/'Crunching') 출현 시 미매칭 → false-fail → 재시도 루프 → 큐 적체.
+
+### 진짜 원인
+
+Anthropic CLI는 verb를 자주 추가한다. 화이트리스트 방식은 *brittle*하다.
+
+### 박제 룰: broad 정규식 + fail-open
+
+```bash
+RUNNING_RE='(esc to in|Kneading|Thinking|Whirring|Crunching|Searching|Pondering|Working|queued|⏵⏵ bypass)'
+```
+
+작동 중 / 큐 진입 / idle 신호 모두 success로 판정. **fail-open** — 모르는 verb면 일단 작동 중으로 가정.
+
+### 운영 룰
+
+- 새 verb 발견 시 즉시 RUNNING_RE 보강
+- `dispatch.sh` / `notify-main.sh` 같은 *유사 폴링 사용처 모두 일괄 audit*
+- "단일 도입 + audit 누락"이 silent fail의 가장 흔한 함정
+
+## 4-pane 자동 역할 브리핑
+
+위 5개 룰은 *각 pane이 자기 역할을 알고 있어야* 작동한다. 매 세션마다 사람이 수동 prime하면 누락 발생. 자동 브리핑이 필요하다:
+
+```bash
+setup-tmux.sh                # 기본 25s 대기 후 자동 prime
+setup-tmux.sh --no-prime     # 수동 prime 옵션
+
+# pane별 brief
+pane 1.1: ORCHESTRATOR_RULE   — 코드 직접 탐색 금지, Advisor 예외
+pane 1.2: WORKER1_RULE        — analysis-worker, Brief 파일 경로 수신
+pane 1.3: WORKER2_RULE        — implementation-worker, notify-main.sh 강제
+pane 1.4: WORKER3_RULE        — verification-worker + 빌드 도구 ToolSearch + UI 영향 시 UI test
+```
+
+**WORKER_PUSH_RULE**: 워커는 `notify-main.sh` 헬퍼만 사용. `tmux send-keys` 직접 호출 금지. 헬퍼에 박제된 paste-buffer + Enter 재시도 + 검증 로직을 강제 경유시키기 위함.
+
+## 사이클 시작 전 자동 검증 체크리스트
+
+매 세션 첫 메시지 또는 session-start 훅에서:
+
+- [ ] `prime-tmux-roles.sh` 실행 확인 (4-pane 모두 brief 수신)
+- [ ] `notify-main.sh` / `dispatch.sh` 최신 버전 (RUNNING_RE 확장 포함)
+- [ ] 메인이 첫 응답에서 "코드 직접 탐색 금지" 룰 자체 확인
+- [ ] WO Brief는 템플릿 기반 *파일*로만 전달 (평문 인라인 금지)
+- [ ] CLI verb 추가 시 RUNNING_RE 즉시 보강
+
+## 핵심 요약
+
+> **멀티 워커 오케스트레이션의 만성 비효율 90%는 *통신 프로토콜이 명문화되지 않아서* 발생한다.**
+>
+> 5가지 룰을 CLAUDE.md inline + helper 스크립트로 강제 경유시키면 매 세션 재발견 비용을 0으로 줄일 수 있다.
+
+가장 비싼 학습은 *"Enter는 정상 전달된다, 큐 적체가 진짜 원인이다"* 라는 깨달음. 사람 눈에 보이는 증상(Enter 안 쳐짐)과 실제 원인(워커 busy + 큐 누적)이 다를 때, 잘못된 진단으로 retry 로직만 강화하면 큐가 더 적체된다. capture-pane으로 *처리 신호*를 폴링하고, `--wait-idle`로 우회하는 것이 근본 해법이다.
