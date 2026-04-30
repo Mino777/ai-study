@@ -1,0 +1,280 @@
+---
+title: "AI 오케스트레이션이 사람보다 느려질 때 — Trivial 작업 감지와 Brief 사이즈 분기"
+description: "멀티 워커 오케스트레이션이 사람 손작업보다 느려지는 4가지 만성 비효율 — 분석 step 자동화 함정, worktree 캐시 분리, 라벨당 폴링, send-keys timing — 과 WO 사이즈 분기로 ROI를 회복하는 룰. 실제 ROI 마이너스 사이클 회고에서 추출."
+date: "2026-04-30"
+category: harness-engineering
+tags: [orchestrator, multi-agent, work-order, brief-template, anti-pattern, roi, trivial-task, retrospective, harness-efficiency, tmux]
+confidence: 4
+last_verified: "2026-04-30"
+applicable_to: ["any"]
+generated_by: "claude"
+connections:
+  - harness-engineering/orchestrator-fail-meta-verify-growth-axes
+  - harness-engineering/multi-agent-quality-sprint-pattern
+  - harness-engineering/tmux-flush-automation-pattern
+  - harness-engineering/worker-prompts-logging-pattern
+  - harness-engineering/aidy-journal-012-multiagent-efficiency-optimization
+status: complete
+type: entry
+quiz:
+  - question: "fixture JSON 5개 정리 같은 trivial 작업에 worker → ios-explorer 3개 병렬 spawn → 60+ tool uses → 8분이 걸렸다. 사람이면 5분. 가장 정확한 진단은?"
+    choices:
+      - "워커 prompt가 부족해서 분석 step이 길어졌다"
+      - "WO Brief 표준 템플릿이 '분석 → 구현 → 검증' 파이프라인을 사이즈 무관하게 강제했다"
+      - "Agent 모델이 trivial 작업에 약하다"
+      - "토큰 캐시가 워커마다 분리되어 비용이 누적됐다"
+    answer: 1
+    explanation: "근본 원인은 prompt 품질이나 모델이 아니라 *Brief 템플릿이 모든 작업 사이즈에 풀 파이프라인을 강제*한 점. trivial 작업도 분석 step이 자동 발동하면서 grep 반복 + ios-explorer 다중 spawn으로 폭주. 해법은 WO 사이즈 분기(XS는 분석 step 없이 직접 처리)."
+  - question: "여러 worktree에서 동시 빌드 시 cold build가 매번 5분+ 걸리는 원인은?"
+    choices:
+      - "SPM 모듈이 너무 많아서"
+      - "xcodebuild가 project 절대경로를 hash해서 DerivedData 디렉토리를 결정하기 때문 (worktree마다 hash 다름 → 캐시 공유 X)"
+      - "Xcode IDE가 백그라운드 인덱싱 중이어서"
+      - "워커가 캐시 무효화 명령을 자동 실행해서"
+    answer: 1
+    explanation: "xcodebuild는 프로젝트 절대경로 hash로 DerivedData 디렉토리를 정한다. /Develop/app/App.xcodeproj와 /tmp/app-fixture/App.xcodeproj는 별도 hash → 별도 캐시. 해법은 IDE의 DerivedData root를 `xcodebuild -showBuildSettings -json`으로 추출 후 worker brief에 `derivedDataPath`로 명시 (단, DerivedData 락 충돌 회피로 동시 빌드 1개만)."
+  - question: "tmux paste-buffer + send-keys Enter로 워커에게 brief를 전달했는데 prompt에 텍스트만 남고 처리가 안 되는 이유와 옳은 대응은?"
+    choices:
+      - "tmux 버그 — 다른 멀티플렉서로 교체"
+      - "paste-buffer와 send-keys가 비동기여서 paste 완료 전 Enter가 송신될 수 있다. capture-pane으로 Generating/Thinking/⎿ 등 처리 신호를 폴링하고, 텍스트가 잔존하면 Enter 재송신"
+      - "사용자가 직접 Enter를 쳐야 한다"
+      - "워커 모델이 paste를 차단하고 있다"
+    answer: 1
+    explanation: "tmux paste-buffer + send-keys Enter는 비동기. paste 완료 전 Enter 송신되면 prompt에 텍스트 잔존. dispatch.sh 같은 곳엔 RUNNING_RE 폴링 검증이 있지만 prime/notify 등에 누락되면 무음 실패. 같은 패턴은 도입 시 *모든 사용처에 일괄 audit*해야 누락 함정 회피."
+---
+
+> **헤드라인 (실제 사이클 사용자 피드백)**
+>
+> *"솔직히 사람이 했으면 진작에 끝났을듯. AI를 활용하는 효용이 아예 없었던 사이클이었어"*
+
+이 회고의 출처는 ROI 마이너스로 인정한 한 사이클이다. 본 작업(JSON fixture 2개 + Repository 분기 + 테스트 8개) 1커밋. 메타 작업(harness 강화) 11커밋. **메타 작업이 본 작업보다 더 컸다.** 그게 비효율의 본질이었다.
+
+이 글은 추상적 감상 대신, 그 사이클에서 추출한 *4가지 만성 비효율 패턴*과 박제 룰을 정리한다.
+
+## 요약
+
+멀티 워커 오케스트레이션이 사람 손보다 느려지는 패턴은 거의 항상 같은 4가지 원인에서 나온다.
+
+1. **분석 step의 무조건 자동화** — Brief 템플릿이 모든 작업 사이즈에 "분석 → 구현 → 검증" 파이프라인을 강제
+2. **격리된 worktree마다 캐시 분리** — 빌드 도구가 절대경로 hash로 캐시 디렉토리 결정 → worktree 새로 만들 때마다 cold build
+3. **순차 폴링** — UI 자동화에서 라벨/요소마다 별도 폴링 함수 호출 → max_attempts × N 라벨 = 곱절 낭비
+4. **비동기 IPC 미검증** — tmux send-keys / paste-buffer / 큐잉 메시지의 처리 완료 신호 미확인 → silent fail
+
+해법은 모두 **"메타 작업의 자동 발동을 사이즈로 게이팅하라"** 는 한 줄로 압축된다.
+
+## 패턴 1 — 분석 step 자동화의 함정
+
+### 증상
+
+> fixture JSON 5건 정리 → worker-1이 ios-explorer 3개 병렬 spawn → 60+ tool uses → 8분+ thinking 루프
+>
+> 사람이면 grep 1번 + Edit 5번 = 5분
+
+이 격차는 모델 품질이 아니라 *템플릿 강제*에서 온다. WO Brief 표준 템플릿이 사이즈 무관하게 "분석 → 구현 → 검증"을 자동 발동시키면, 메모리에 이미 식별이 끝난 작업조차 워커가 grep을 반복하고 sub-agent를 다시 spawn한다.
+
+### 해법: WO 사이즈 분기 룰
+
+```markdown
+# WO-XXXX-FIX (XS)
+
+## 메타
+- size: XS — 분석 step 없음, 직접 처리
+- 🚫 Agent(ios-explorer/general-purpose) spawn 금지
+- 🚫 추가 grep/Read 금지 (메모리에 식별 끝)
+
+## 5건 처리
+
+| # | 파일 | 액션 |
+|---|------|------|
+| 1 | Resources/Mock/A.json | 빈 키 제거 |
+| ... | ... | ... |
+
+## 절차
+grep 1번 + Edit 5번 + commit
+```
+
+| 사이즈 | 조건 | 처리 방식 |
+|---|---|---|
+| **XS** | ≤5 파일, 메모리 식별 완료, 단일 grep+Edit | 워커 직행, brief에 액션 직접 명시. sub-agent spawn 금지 명문화 |
+| **S** | 단일 레이어, 이슈 명확 | 분석 cap(15분) → 구현 |
+| **M/L** | 복합 의존, 탐색 필요 | 기존 풀 파이프라인 |
+
+핵심은 *XS 명시 룰*이 brief 안에 inline으로 박혀있어야 한다는 점. 본문 텍스트로만 "trivial이면 빠르게"라고 적으면 워커가 무시한다. **금지 행동을 🚫로 명문화**해야 발동 차단된다.
+
+### 진단 체크리스트
+
+- [ ] 동일 작업을 사람이면 몇 분에 끝낼까? (5분 미만이면 XS 후보)
+- [ ] 메모리/이전 회고에 이미 식별된 패턴인가? (있으면 분석 step 스킵)
+- [ ] 단일 디렉토리/단일 grep으로 모든 대상이 잡히는가? (예 → XS)
+
+## 패턴 2 — Worktree 캐시 분리
+
+### 증상
+
+새 worktree에서 첫 빌드 → cold build 5분+. SPM 모듈 50+개 풀 컴파일.
+
+### 근본 원인
+
+빌드 도구가 *프로젝트 절대경로 hash*로 캐시 디렉토리를 결정하는 경우가 많다. Xcode를 예로 들면:
+
+```
+/Users/X/Develop/app/App.xcodeproj    → DerivedData/App-cfwxzxqv.../
+/tmp/app-fixture-cleanup/App.xcodeproj → DerivedData/App-jwzakemy.../
+```
+
+별도 디렉토리 → 캐시 공유 X. 같은 프로젝트인데 매번 처음부터 빌드.
+
+### 해법: 빌드 시스템의 캐시 root를 명시
+
+```bash
+# detect-derived-data.sh
+xcodebuild -project "${PROJECT}" -scheme "${SCHEME}" -configuration "${CONFIG}" \
+  -showBuildSettings -json 2>/dev/null \
+  | grep -E '"BUILT_PRODUCTS_DIR"' | head -1 \
+  | sed -E 's/.*"BUILT_PRODUCTS_DIR" : "([^"]+)".*/\1/' \
+  | sed -E 's|/Build/Products/.*$||'
+```
+
+24시간 캐시(`/tmp/derived-<scheme>-<config>.cache`)에 저장 후 워커 brief에:
+
+```
+build 호출 직전 wrapper 실행 → 출력 path를 derivedDataPath 파라미터로 명시.
+사용자 IDE 빌드 캐시 + 모든 worktree 빌드 캐시 공유.
+⚠️ 동시 빌드 1개만 (DerivedData 락 충돌 회피).
+```
+
+### 일반화
+
+이 패턴은 Xcode 외에도 적용된다 — Gradle 빌드 캐시, Bazel disk cache, Cargo target dir, esbuild metafile 등. **"도구가 어떤 키로 캐시를 분리하는지"** 를 먼저 확인하고, worker가 그 키를 통일해서 호출하도록 brief에 명시한다.
+
+## 패턴 3 — 순차 폴링의 곱셈 비용
+
+### 증상
+
+UI 자동화에서 권한 다이얼로그 처리 — 라벨 6개 × 3 attempts × 1초 = **18초 낭비**. 다이얼로그 없는 호출에서도 그대로 18초.
+
+### 해법: 단일 describe-all + 다중 라벨 매칭
+
+```bash
+tap_first_matching_label() {
+  local labels=("$@")
+  while [[ ${attempt} -lt ${MAX_ATTEMPTS:-3} ]]; do
+    local tree="$(idb ui describe-all --udid "${UDID}" 2>/dev/null)"
+    local matched="$(LABELS_JOINED=$(printf '%s\n' "${labels[@]}") python3 -c "
+import json, os, sys
+labels = [l for l in os.environ['LABELS_JOINED'].split('\n') if l]
+d = json.loads(sys.stdin.read())
+nodes = d if isinstance(d,list) else [d]
+def visit(n):
+    al = n.get('AXLabel')
+    if al in labels and n.get('type') == 'Button':
+        f = n.get('frame', {})
+        print(f'{al}|{f.get(\"x\",0)+f.get(\"width\",0)/2:.0f} {f.get(\"y\",0)+f.get(\"height\",0)/2:.0f}')
+        return True
+    for c in n.get('children', []) or []:
+        if visit(c): return True
+    return False
+for n in nodes:
+    if visit(n): break
+" <<< "${tree}")"
+    if [[ -n "${matched}" ]]; then
+      idb ui tap --udid "${UDID}" ${matched##*|}
+      _MATCHED_LABEL="${matched%%|*}"
+      return 0
+    fi
+    attempt=$((attempt + 1)); sleep 1
+  done
+  return 1
+}
+
+# 사용
+if MAX_ATTEMPTS=3 tap_first_matching_label \
+  "앱을 사용하는 동안 허용" "Allow While Using App" "허용" "Allow" "한 번 허용" "Allow Once"; then
+  echo "권한 통과 (${_MATCHED_LABEL})"
+fi
+```
+
+**18s → 3s cap**. 매칭 시 1초 미만. 한 번의 UI 트리 dump로 N개 라벨 동시 매칭이 핵심.
+
+### 일반화
+
+"라벨/조건이 N개" → "각각 폴링" 대신 → **"한 번 fetch + 다중 매칭"** 으로 뒤집으면 비용이 N배에서 1배로 줄어든다. SPA 셀렉터 폴링, 알림 채널 fan-out 검사, 멀티 endpoint health check 모두 같은 형태.
+
+## 패턴 4 — 비동기 IPC 미검증
+
+### 증상
+
+오케스트레이터가 워커 pane에 brief를 paste 후 Enter 송신 → 처리 안 됨. prompt에 텍스트만 잔존.
+
+### 근본 원인
+
+`tmux load-buffer + paste-buffer + send-keys Enter` 는 비동기. paste 완료 전 Enter가 송신되면 텍스트만 남고 commit 안 됨. dispatch 같은 곳에는 폴링 검증이 있지만 *유사 패턴(prime, notify)에 도입 누락*되면 silent fail.
+
+### 해법: capture-pane으로 처리 신호 폴링 + 재송신
+
+```bash
+prime_pane() {
+  tmux load-buffer -b prime_${pane} - <<< "${brief}"
+  tmux paste-buffer -d -b prime_${pane} -t "${SESSION}:1.${pane}"
+  sleep 0.5
+  tmux send-keys -t "${SESSION}:1.${pane}" Enter
+
+  for attempt in 1 2 3; do
+    sleep 1.5
+    local tail
+    tail=$(tmux capture-pane -t "${SESSION}:1.${pane}" -p | tail -5)
+    if echo "${tail}" | grep -qE 'esc to interrupt|Generating|⎿|Thinking|Pondering|Working'; then
+      return 0  # 처리됨
+    fi
+    local first_word="${brief%% *}"
+    if echo "${tail}" | grep -qF "${first_word}"; then
+      tmux send-keys -t "${SESSION}:1.${pane}" Enter  # 재송신
+    else
+      return 0  # 비어있음 — 처리됨
+    fi
+  done
+}
+```
+
+### 함정 회피 룰
+
+> 신규 helper 패턴은 **일괄 audit**: dispatch.sh에 도입한 검증 패턴은 *비슷한 paste-buffer 사용처(prime, notify) 모두에* 적용해야 함. 단일 도입 + audit 누락이 가장 흔한 silent fail 함정.
+
+## 메타 — "메타 작업 시간 분리" 룰
+
+이 사이클에서 가장 큰 비효율은 사실 **사용자 인터럽트 누적 시간 >> 실제 코드 변경 시간** 이었다. 매 인터럽트("메인이 코드 직접 봤어" / "Enter 안 쳐졌어" / "검증 너무 느려") 마다:
+
+1. 본 작업 중단
+2. 메모리 박제
+3. 도구 fix
+4. 룰 재서술
+5. 다시 시도
+
+이 5스텝이 본 작업 진행 중에 N회 발동하면, *메타 작업이 본 작업의 attention budget을 잠식*한다.
+
+### 다음 사이클 적용 룰
+
+- **메타 작업 시간 분리**: 본 작업 진행 중에는 *메모리 메모만* 하고, 룰/도구 박제는 사이클 종료 후 회고 단계에서 일괄 적용
+- **인터럽트 메트릭화**: 사이클당 인터럽트 횟수 + 누적 시간 측정. 본 작업 시간보다 크면 다음 사이클 P0는 harness 안정화
+- **박제 룰의 자동 적용**: 메모리에 박제된 룰을 dispatch 시점에 자동 grep/검사하는 hook 도입. 사람 기억 의존 X
+
+## 실전 적용 체크리스트
+
+새 작업을 워커에 dispatch하기 전:
+
+- [ ] **사이즈 판정** — 사람이면 5분 안에 끝나는가? (예 → XS, brief에 sub-agent spawn 🚫 명문화)
+- [ ] **메모리 hit 확인** — 같은 패턴이 박제되어 있는가? (있으면 분석 step 스킵)
+- [ ] **빌드 캐시 root 확인** — worktree에서 작업 중이면 캐시 공유 wrapper 호출
+- [ ] **폴링 비용 검토** — N개 라벨/조건을 순차 폴링 중인가? 단일 fetch + 다중 매칭으로 뒤집을 수 있는가?
+- [ ] **IPC 검증** — paste/send-keys/큐잉 후 처리 신호 폴링 + 재송신 logic 있는가?
+- [ ] **유사 패턴 audit** — 새 helper 도입 시 같은 패턴의 다른 사용처에 일괄 적용했는가?
+
+## 핵심 요약
+
+> **AI 오케스트레이션이 사람보다 느려지는 시점은 모델 품질이 아니라 *템플릿 강제*에서 온다.**
+>
+> XS 작업의 분석 step 차단, worktree 캐시 공유, 단일 fetch + 다중 매칭, IPC 검증 audit — 4가지 룰로 거의 모든 ROI 마이너스 사이클을 예방할 수 있다.
+
+가장 중요한 건 *메트릭*이다. "이론상 단축"으로 끝내지 말고 실측을 brief에 첨부한다. (예: "권한 폴링 28s → 7.5s 실측 / 라벨 매칭 18s → 3s cap")
+
+다음 사이클이 같은 회고를 쓰지 않으려면 박제된 자산이 **다음 사이클에서 동등 작업을 1/3~1/5 시간으로** 줄였는지를 정량 평가해야 한다. 그게 진짜 ROI 측정이다.
