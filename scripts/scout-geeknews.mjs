@@ -38,12 +38,17 @@ const PROJECTS = [
     repo: "Mino777/ai-study",
     name: "ai-study",
     direction: `AI 엔지니어링 학습 위키 + 포트폴리오.
-- 하네스/컨텍스트/프롬프트 엔지니어링 방법론
-- AI 에이전트, RAG, 토큰 최적화, LLM 활용 패턴
-- Compound Engineering (자동 회고 + 솔루션 박제)
-- JIT 검색 (로컬 임베딩 + 시맨틱 검색)
-- Next.js 15 + MDX + Tailwind, Gemini 파이프라인
-관심: AI 코딩 도구, 개발자 생산성, 에이전트 오케스트레이션, 토큰 경제학`,
+핵심 관심사 (HIGH PRIORITY):
+- 하네스 엔지니어링: AI 에이전트 오케스트레이션, 툴 체인, 컨텍스트 관리
+- 방법론/패턴: Compound Engineering, Spec-Driven Dev, 코드 게이트, 솔루션 박제
+- LLM 실용 기법: 프롬프트 엔지니어링, 토큰 최적화, 비용 절감, RAG, 임베딩
+- 에이전트 시스템: 멀티 에이전트 오케스트레이션, 자율 에이전트, tool use
+- 개발자 생산성: AI 코딩 도구, JIT 검색, 컨텍스트 압축, CI/CD 자동화
+
+비관심사 (LOW PRIORITY — 매칭 제외):
+- 프론트엔드 UI 프레임워크, CSS, 브라우저 API (예: Chrome Prompt API, WebGPU)
+- 모바일 앱 개발 (iOS/Android) — 별도 프로젝트에서 담당
+관심: AI 코딩 도구, 에이전트 오케스트레이션, 토큰 경제학, LLM 방법론, 하네스 패턴`,
   },
   {
     id: "moneyflow",
@@ -178,7 +183,9 @@ ${articleList}
 
 주의:
 - 단순 뉴스/발표 기사는 제외 (기술적 깊이가 있는 것만)
-- "흥미롭지만 적용할 곳이 없는" 기사는 제외`;
+- "흥미롭지만 적용할 곳이 없는" 기사는 제외
+- ai-study에는 프론트엔드 UI/CSS/브라우저 API/모바일 UI 기사를 절대 매칭하지 말 것
+- ai-study 매칭 시 하네스·방법론·에이전트·토큰 경제학 키워드가 없으면 제외`;
 
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
