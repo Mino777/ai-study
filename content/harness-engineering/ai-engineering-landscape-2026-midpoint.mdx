@@ -1,0 +1,251 @@
+---
+title: "2026 AI 엔지니어링 현황 총정리 — 용어·방법론·트렌드 한눈에"
+description: "AI 엔지니어링 핵심 용어 사전 + 방법론 비교(Prompt/Context/Harness/Compound) + 2026 트렌드 + 도구 생태계 + 실무 적용 기준을 한 페이지에 압축 정리"
+category: harness-engineering
+date: "2026-05-01"
+tags:
+  - ai-engineering
+  - trends-2026
+  - glossary
+  - methodology
+  - agentic-ai
+  - context-engineering
+  - mcp
+  - compound-ai
+confidence: 3
+last_verified: "2026-05-01"
+applicable_to: ["any"]
+connections:
+  - harness-engineering/harness-engineering-overview
+  - harness-engineering/five-levers-of-harness-engineering
+  - harness-engineering/compound-engineering-philosophy
+  - context-engineering/context-engineering-2026-paradigm-shift
+  - agents/tool-use
+  - agents/agent-architectures
+quiz:
+  - question: "Context Engineering과 Prompt Engineering의 핵심 차이는?"
+    choices:
+      - "프롬프트를 더 길게 쓰는 것"
+      - "AI에게 무엇을 보여주고 무엇을 숨길지 시스템 레벨에서 설계하는 것"
+      - "모델을 파인튜닝하는 것"
+      - "RAG를 사용하는 것"
+    answer: 1
+    explanation: "Prompt Engineering은 단일 프롬프트 최적화. Context Engineering은 CLAUDE.md, 메모리, 도구, 검색 결과 등 AI가 보는 전체 컨텍스트를 시스템적으로 설계하는 상위 개념."
+  - question: "MCP(Model Context Protocol)의 핵심 역할은?"
+    choices:
+      - "모델을 학습시키는 프로토콜"
+      - "AI와 외부 도구/데이터 소스를 연결하는 표준 인터페이스"
+      - "모델 간 통신 프로토콜"
+      - "프롬프트 암호화 프로토콜"
+    answer: 1
+    explanation: "MCP는 Anthropic이 제안한 표준. AI 모델이 파일시스템, DB, API 등 외부 리소스에 접근하는 방식을 통일. USB-C처럼 하나의 인터페이스로 다양한 도구 연결."
+  - question: "Compound AI System의 핵심 특징은?"
+    choices:
+      - "단일 LLM이 모든 것을 처리"
+      - "여러 AI 컴포넌트(LLM + 검색 + 코드 실행 + 검증)를 조합한 시스템"
+      - "모델을 여러 개 앙상블하는 것"
+      - "AI를 사용하지 않는 시스템"
+    answer: 1
+    explanation: "Berkeley AI Research(BAIR)가 정의. 단일 LLM 호출이 아닌, LLM + Retriever + Code Executor + Verifier 등을 파이프라인으로 조합. RAG, 에이전트 시스템이 모두 Compound AI."
+---
+
+## 왜 이 정리가 필요한가
+
+2026년 AI 엔지니어링은 6개월 전과 완전히 다른 세상이다. Prompt Engineering → Context Engineering → Harness Engineering으로 패러다임이 이동했고, 에이전트 시스템이 프로덕션에 진입했으며, 도구 생태계(MCP, Tool Use)가 폭발적으로 성장했다.
+
+이 글은 **현재 시점의 AI 엔지니어링 전체 지형도**를 한 페이지에 압축한다. 용어 정의 → 방법론 비교 → 트렌드 정리 → 실무 적용 기준 순서로.
+
+---
+
+## 1. 핵심 용어 사전
+
+### 모델 & 추론
+
+| 용어 | 정의 | 실무 맥락 |
+|------|------|-----------|
+| **LLM** | Large Language Model. 대규모 텍스트로 학습된 언어 모델 | GPT-4, Claude, Gemini 등 |
+| **SLM** | Small Language Model. 경량화된 온디바이스 모델 | Phi-3, Gemma, Apple Intelligence |
+| **Inference** | 학습된 모델에 입력을 넣어 출력을 생성하는 과정 | API 호출 1회 = Inference 1회 |
+| **Token** | 모델이 처리하는 텍스트 최소 단위 (~4 chars 영문, ~1.5 chars 한글) | 비용·속도의 기본 단위 |
+| **Context Window** | 모델이 한 번에 처리할 수 있는 최대 토큰 수 | Claude: 200K, GPT-4: 128K, Gemini: 1M+ |
+| **Temperature** | 출력의 무작위성 조절 (0=결정적, 1=창의적) | 코드 생성: 0~0.2, 브레인스토밍: 0.7~1.0 |
+| **Hallucination** | 모델이 사실이 아닌 내용을 확신있게 생성하는 현상 | RAG + 출력 검증으로 완화 |
+| **Chain-of-Thought (CoT)** | 단계별 추론을 유도하여 정확도를 높이는 기법 | "단계별로 생각해보세요" |
+| **Structured Output** | JSON Schema 등으로 출력 형식을 강제하는 기법 | API 응답 파싱 신뢰도 향상 |
+
+### 에이전트 & 도구
+
+| 용어 | 정의 | 실무 맥락 |
+|------|------|-----------|
+| **AI Agent** | 도구를 사용하여 목표를 자율적으로 달성하는 시스템 | Claude Code, Cursor, Devin |
+| **Tool Use / Function Calling** | LLM이 외부 함수/API를 호출하는 능력 | 파일 읽기, DB 쿼리, 웹 검색 |
+| **MCP (Model Context Protocol)** | AI-도구 연결 표준 프로토콜 (Anthropic 제안) | USB-C for AI. 서버/클라이언트 구조 |
+| **Agentic AI** | 에이전트가 자율적으로 계획→실행→검증하는 패러다임 | 단순 Q&A가 아닌 멀티스텝 작업 수행 |
+| **Multi-Agent System** | 여러 에이전트가 역할 분담하여 협업하는 시스템 | Architect-Worker, 허브-워커 패턴 |
+| **Orchestrator** | 여러 에이전트의 실행을 조율하는 상위 컴포넌트 | 작업 분배, 결과 취합, 폴백 처리 |
+| **Guardrail** | AI 출력의 안전성/정확성을 보장하는 제약 시스템 | 입력 검증, 출력 필터, 독성 탐지 |
+
+### 데이터 & 검색
+
+| 용어 | 정의 | 실무 맥락 |
+|------|------|-----------|
+| **RAG (Retrieval-Augmented Generation)** | 외부 데이터 검색 → LLM 컨텍스트에 삽입 → 생성 | 환각 감소, 최신 정보 반영 |
+| **Embedding** | 텍스트를 고차원 벡터로 변환하는 것 | 유사도 검색의 기반 기술 |
+| **Vector Database** | 임베딩 벡터를 저장하고 유사도 검색하는 DB | Pinecone, Chroma, pgvector |
+| **Chunking** | 긴 문서를 검색 가능한 단위로 분할하는 전략 | 크기·오버랩·의미 단위 선택 |
+| **Reranking** | 1차 검색 결과를 더 정밀한 모델로 재정렬 | Cross-Encoder로 정확도 향상 |
+| **Hybrid Search** | 벡터 검색 + 키워드(BM25) 검색 조합 | 한쪽의 약점을 보완 |
+
+### 학습 & 최적화
+
+| 용어 | 정의 | 실무 맥락 |
+|------|------|-----------|
+| **Fine-tuning** | 사전학습 모델을 특정 도메인 데이터로 추가 학습 | 응답 스타일 통일, 도메인 특화 |
+| **LoRA / QLoRA** | 파라미터 일부만 학습하는 효율적 파인튜닝 기법 | GPU 메모리 절약 (풀 파인튜닝 대비 1/10) |
+| **RLHF** | 인간 피드백으로 모델을 정렬하는 학습 방법 | ChatGPT의 핵심 기술 |
+| **Distillation** | 큰 모델의 지식을 작은 모델로 전이하는 기법 | 추론 비용 절감 |
+| **Quantization** | 모델 가중치를 낮은 정밀도(FP16→INT4)로 변환 | 온디바이스 배포용 |
+
+---
+
+## 2. 엔지니어링 방법론 비교
+
+### Prompt Engineering → Context Engineering → Harness Engineering
+
+```
+2023          2024-2025        2026
+Prompt Eng → Context Eng  → Harness Eng
+(단일 지시)   (환경 설계)     (안전 울타리)
+```
+
+| 방법론 | 핵심 질문 | 범위 | 대표 산출물 |
+|--------|-----------|------|-------------|
+| **Prompt Engineering** | "어떻게 지시할까?" | 단일 프롬프트 최적화 | 프롬프트 템플릿 |
+| **Context Engineering** | "무엇을 보여줄까?" | 시스템 전체 컨텍스트 설계 | CLAUDE.md, 메모리 시스템, 검색 파이프라인 |
+| **Harness Engineering** | "어떻게 안전하게 달리게 할까?" | 입력→실행→출력 전 과정의 안전 보장 | 검증기, 폴백 체인, 모니터링 |
+| **Compound Engineering** | "어떻게 복리로 성장시킬까?" | 매 사이클의 산출물이 다음 사이클 입력 | 회고 문서, 솔루션 DB, CHANGELOG |
+
+### Harness Engineering 5가지 레버
+
+1. **입력 검증** — 타입/범위/null 체크, 스키마 검증
+2. **출력 검증** — 구조 확인, 내부 모순 탐지, 사실 검증
+3. **Bounded Retry** — 실패 시 N회 재시도 → 다른 모델 폴백
+4. **LLM-as-a-Judge** — 별도 AI가 생성 AI의 출력을 채점
+5. **모니터링** — 비용·품질·속도 실시간 추적 + 알림
+
+### 에이전트 아키텍처 패턴
+
+| 패턴 | 구조 | 적합한 상황 |
+|------|------|-------------|
+| **Single Agent** | LLM + Tools | 단순 작업, 프로토타입 |
+| **Router** | 분류기 → 전문 에이전트 | 다양한 요청 타입 처리 |
+| **Orchestrator-Worker** | 상위가 계획 → 하위가 실행 | 복잡한 멀티스텝 작업 |
+| **Pipeline** | A → B → C 순차 처리 | ETL, 콘텐츠 생성 파이프라인 |
+| **Evaluator-Optimizer** | 생성 → 평가 → 개선 반복 | 품질 중시 작업 |
+
+---
+
+## 3. 2026 트렌드 키워드
+
+### 확정된 트렌드 (프로덕션 진입)
+
+- **Coding Agent 보편화** — Claude Code, Cursor, GitHub Copilot Workspace가 일상 도구화. 개발자의 70% 이상이 AI 코딩 도구 사용.
+- **MCP 생태계 폭발** — Anthropic의 MCP가 사실상 표준. 파일시스템, DB, Slack, GitHub 등 수백 개 서버 공개.
+- **Context Engineering as Discipline** — Prompt Engineering을 넘어 시스템 레벨 설계가 핵심 역량으로 인정. CLAUDE.md가 프로젝트 표준.
+- **Structured Output 의무화** — JSON Schema 기반 출력 강제가 API 기본 기능으로. 파싱 실패율 0%에 수렴.
+- **온디바이스 AI** — Apple Intelligence(iOS 18+), Chrome 내장 AI. 프라이버시 중시 작업은 클라우드 없이 처리.
+
+### 성장 중인 트렌드 (초기 프로덕션)
+
+- **Multi-Agent System** — 단일 에이전트의 한계를 여러 전문 에이전트 협업으로 극복. 아직 오케스트레이션 비용 높음.
+- **AI Testing/Eval** — LLM 출력의 자동 평가 프레임워크(RAGAS, DeepEval). 골든 셋 기반 회귀 테스트.
+- **Compound AI System** — 단일 LLM이 아닌 LLM+검색+코드+검증의 조합. Berkeley 정의.
+- **Voice/Multimodal Agent** — 텍스트 넘어 음성·이미지·비디오 처리 에이전트.
+
+### 주시해야 할 트렌드 (R&D 단계)
+
+- **Self-Improving Agent** — 자체 성능을 모니터링하고 프롬프트/도구를 자동 개선하는 에이전트.
+- **AI Agent Marketplace** — 에이전트를 조합·구매·배포하는 생태계 (아직 초기).
+- **Formal Verification for AI** — 수학적으로 AI 안전성을 증명하는 연구.
+
+---
+
+## 4. 도구 생태계 현황
+
+### AI 코딩 도구
+
+| 도구 | 특징 | 적합한 상황 |
+|------|------|-------------|
+| **Claude Code** | 터미널 기반, CLAUDE.md 컨텍스트, MCP 확장 | 풀스택 개발, 대규모 리팩토링 |
+| **Cursor** | VSCode 포크, 코드 편집 통합, Tab 자동완성 | 일상 코딩, 빠른 편집 |
+| **GitHub Copilot** | 에디터 내장, 자동완성 중심 | 보일러플레이트, 단순 구현 |
+| **Devin** | 자율 소프트웨어 엔지니어, 브라우저+터미널 | 독립적 태스크 위임 |
+| **Windsurf** | AI IDE, 에이전트 모드, 멀티파일 편집 | Cursor 대안 |
+
+### AI 프레임워크 & 인프라
+
+| 도구 | 용도 |
+|------|------|
+| **LangChain / LangGraph** | LLM 앱 개발 프레임워크, 에이전트 그래프 |
+| **LlamaIndex** | RAG 파이프라인 구축 |
+| **Vercel AI SDK** | 웹앱에 AI 스트리밍 통합 |
+| **Anthropic SDK** | Claude API 직접 호출 |
+| **OpenAI Agents SDK** | 에이전트 빌드 프레임워크 |
+| **CrewAI / AutoGen** | Multi-Agent 오케스트레이션 |
+
+### 평가 & 모니터링
+
+| 도구 | 용도 |
+|------|------|
+| **RAGAS** | RAG 품질 평가 (Faithfulness, Relevancy) |
+| **DeepEval** | LLM 출력 자동 평가 프레임워크 |
+| **Langfuse / Helicone** | LLM 호출 모니터링, 비용 추적 |
+| **Braintrust** | AI 제품 평가 + 프롬프트 관리 |
+
+---
+
+## 5. 실무 적용 기준
+
+### 언제 뭘 써야 하나?
+
+```
+단순 Q&A          → Prompt Engineering + Structured Output
+지식 기반 답변     → RAG (Vector Search + LLM)
+반복 작업 자동화   → Single Agent + Tool Use
+복잡한 워크플로우  → Multi-Agent + Orchestrator
+프로덕션 품질 보장 → Harness Engineering (입력·출력 검증 + 폴백)
+지속적 품질 개선   → Compound Engineering (회고 → 다음 입력)
+```
+
+### 모델 선택 기준 (2026.05 기준)
+
+| 요구사항 | 추천 모델 |
+|----------|-----------|
+| 최고 품질 코드 생성 | Claude Opus 4.6 |
+| 빠른 응답 + 적절 품질 | Claude Sonnet 4.6 |
+| 대용량 컨텍스트 | Gemini 2.5 Pro (1M+) |
+| 저비용 대량 처리 | Claude Haiku, GPT-4o-mini |
+| 온디바이스 | Apple Intelligence, Gemma, Phi |
+| 이미지 생성 | DALL-E 3, Midjourney, Stable Diffusion |
+
+### 비용 최적화 4원칙
+
+1. **캐싱** — 동일 요청은 캐시에서 반환 (prompt caching, semantic cache)
+2. **라우팅** — 쉬운 요청은 저렴한 모델로, 어려운 요청만 고급 모델로
+3. **컨텍스트 압축** — 불필요한 토큰 제거 (JIT 검색, 요약)
+4. **배치** — 실시간 불필요한 요청은 Batch API로 50% 할인
+
+---
+
+## 6. 체크리스트: "나는 2026 AI 엔지니어링을 이해하고 있는가?"
+
+- [ ] Context Engineering과 Prompt Engineering의 차이를 설명할 수 있다
+- [ ] MCP가 무엇이고 왜 필요한지 30초 내에 설명할 수 있다
+- [ ] RAG 파이프라인의 5단계(청킹→임베딩→저장→검색→생성)를 그릴 수 있다
+- [ ] Agentic AI에서 Tool Use가 왜 핵심인지 설명할 수 있다
+- [ ] Hallucination 대응 전략 3가지를 즉시 말할 수 있다
+- [ ] Harness Engineering의 5가지 레버를 열거할 수 있다
+- [ ] Compound AI System과 단일 LLM의 차이를 설명할 수 있다
+- [ ] AI 코딩 도구(Claude Code/Cursor)를 일상적으로 사용하고 있다
+- [ ] 모델 선택 시 품질/비용/속도 트레이드오프를 판단할 수 있다
+- [ ] Multi-Agent 시스템의 장단점과 적합한 상황을 설명할 수 있다
