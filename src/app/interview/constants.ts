@@ -2951,55 +2951,166 @@ export const TOSS_CORE_VALUES = [
 
 // 토스 iOS 직무 단골 기술 토픽 (SLASH 컨퍼런스 + 면접 후기 종합)
 // 출처: toss.tech, toss.im/slash-22~24, 합격 후기 블로그
-export const TOSS_IOS_TOPICS = [
+export interface TossTopicItem {
+  topic: string;
+  detail: string;
+  interviewTip: string;
+}
+
+export interface TossTopicCategory {
+  category: string;
+  items: TossTopicItem[];
+}
+
+export const TOSS_IOS_TOPICS: TossTopicCategory[] = [
   {
     category: "아키텍처 / 모듈화",
     items: [
-      "Tuist 기반 멀티 모듈 구조 (Feature/Core/Shared 레이어)",
-      "RIBs (Uber) 아키텍처 vs MVVM-C — 토스 iOS 도입 사례",
-      "Microfeatures 패턴 (모듈 단위 독립 빌드/테스트)",
-      "DI 컨테이너 설계 (Needle, Swinject) + 스코프 관리",
-      "서버 드리븐 UI (SDUI) — 송금/홈 화면 동적 구성",
+      {
+        topic: "Tuist 기반 멀티 모듈 구조 (Feature/Core/Shared 레이어)",
+        detail: "Tuist는 Xcode 프로젝트 생성 도구. Feature 모듈(화면 단위), Core 모듈(네트워크/DB 등 인프라), Shared 모듈(공통 유틸/모델)로 계층화. 각 모듈이 독립 빌드/테스트 가능 → 빌드 시간 단축(30개 모듈 기준 증분 빌드 80% 감소). 의존성 방향: Feature → Core → Shared (역방향 의존 금지).",
+        interviewTip: "본인 프로젝트에서 모듈 분리 기준을 '왜 이렇게 나눴는지' + 빌드 시간 Before/After 수치로 답하면 강력. '모듈화의 단점은?'이라는 꼬리질문에는 '초기 셋업 비용 + 모듈 간 API 설계 오버헤드'로.",
+      },
+      {
+        topic: "RIBs (Uber) 아키텍처 vs MVVM-C",
+        detail: "RIBs: Router(화면 전환) + Interactor(비즈니스 로직) + Builder(DI) + View(UI). 뷰 없는 로직 노드도 가능. 비즈니스 로직 기준으로 트리 구성. MVVM-C: ViewModel(상태+로직) + Coordinator(화면 전환). 뷰 기준 트리. 토스 iOS가 RIBs를 선택한 이유: 금융 앱의 복잡한 비즈니스 플로우(송금 → 인증 → 확인 → 완료)를 뷰와 독립적으로 테스트.",
+        interviewTip: "'왜 RIBs인가?'에 '비즈니스 로직 테스트 용이성 + 화면 없는 로직 노드' 답변. '단점은?'에는 '보일러플레이트 많음 + 러닝커브 높음 + 작은 프로젝트에선 과잉설계'. MVVM-C를 선택한 합리적 이유도 준비.",
+      },
+      {
+        topic: "Microfeatures 패턴 (모듈 단위 독립 빌드/테스트)",
+        detail: "각 Feature 모듈이 자체 Example App을 가짐. 전체 앱 빌드 없이 해당 Feature만 빌드/실행/테스트 가능. Tuist의 scaffold로 새 Feature 모듈 3분 내 생성. 팀원이 각자 다른 Feature를 병렬 개발해도 충돌 최소화. 토스처럼 송금/결제/투자가 각각 팀인 경우 필수.",
+        interviewTip: "'모듈 간 의존성 충돌은 어떻게 해결?'에 'Interface 모듈(프로토콜만 정의) 분리 → 구현체는 DI로 주입'으로 답변. 실무에서 겪은 순환 의존 사례가 있으면 최강.",
+      },
+      {
+        topic: "DI 컨테이너 설계 (Needle, Swinject) + 스코프 관리",
+        detail: "Needle(Uber): 컴파일 타임 DI. 코드 생성으로 타입 안전. RIBs와 궁합. Swinject: 런타임 DI. 유연하지만 타입 미스매치 시 런타임 크래시. 스코프: Singleton(앱 전체), Graph(화면 트리), Transient(매번 생성). 금융 앱에서 인증 토큰은 Singleton, 화면별 ViewModel은 Graph 스코프.",
+        interviewTip: "'DI를 왜 쓰나?'의 핵심 답: 테스트에서 Mock 주입. '프로토콜로 추상화 → 구현체를 외부에서 주입 → 테스트에서 Mock으로 교체'. 컴파일 타임 vs 런타임 DI의 트레이드오프도 준비.",
+      },
+      {
+        topic: "서버 드리븐 UI (SDUI) — 송금/홈 화면 동적 구성",
+        detail: "서버가 UI 구성 정보(컴포넌트 타입 + 데이터 + 액션)를 JSON으로 내려줌 → 클라이언트가 해석하여 렌더링. 앱 업데이트 없이 화면 변경 가능. 토스 홈 탭의 카드 순서, 송금 화면 레이아웃이 SDUI. 구현: ComponentRegistry(타입→뷰 매핑) + ActionHandler(탭→네비게이션 매핑) + FallbackView(미지원 타입 대응).",
+        interviewTip: "'SDUI의 단점은?'에 '초기 구현 복잡도 + 디버깅 어려움(서버 응답 봐야 함) + 오프라인 대응 필요'. '어디에 적용하면 안 되나?'에 '성능 크리티컬한 화면(복잡한 애니메이션)이나 OS 네이티브 기능 의존 화면'.",
+      },
     ],
   },
   {
     category: "Swift 언어 / 동시성",
     items: [
-      "Swift Concurrency (async/await, Actor) vs RxSwift/Combine 트레이드오프",
-      "@MainActor / @globalActor — 데이터 레이스 방지",
-      "Sendable / @Sendable 클로저 — Strict Concurrency 대응",
-      "메모리 그래프 디버거로 retain cycle 추적 사례",
-      "Value type vs Reference type 선택 기준",
+      {
+        topic: "Swift Concurrency (async/await, Actor) vs RxSwift/Combine",
+        detail: "async/await: 구조화된 동시성. 컴파일러가 데이터 레이스 검증. Task 트리로 취소 전파. Actor: 상태 접근 자동 직렬화. RxSwift: 런타임 스트림, 광범위한 연산자, iOS 9+. Combine: Apple 네이티브, SwiftUI 바인딩. 트레이드오프: async/await는 단발성 비동기에 최적, 스트림(실시간 검색/이벤트)은 Combine/RxSwift가 여전히 강력.",
+        interviewTip: "'기존 RxSwift 코드를 async/await로 마이그레이션한 경험?'에 'withCheckedContinuation으로 래핑 → 점진 전환'. '언제 아직도 Rx가 필요한가?'에 '복잡한 스트림 조합(combineLatest + debounce + retry) + iOS 13 이하 지원'.",
+      },
+      {
+        topic: "@MainActor / @globalActor — 데이터 레이스 방지",
+        detail: "@MainActor: 해당 코드가 반드시 메인 스레드에서 실행됨을 보장. UIViewController, UIView에 기본 적용(Swift 6). @globalActor: 커스텀 Actor로 특정 코드 그룹의 실행 컨텍스트 통일. nonisolated: Actor 격리에서 제외(동기 읽기 전용에 유용). 핵심: 컴파일 타임에 'UI 업데이트가 백그라운드에서 일어나는' 버그를 원천 차단.",
+        interviewTip: "'Swift 6 마이그레이션 시 가장 어려웠던 점?'에 '@MainActor 전파로 인한 대량 await 추가 + 기존 동기 API 호환성 문제'. 실제 마이그레이션 경험 없어도 '알려진 챌린지'로 답변 가능.",
+      },
+      {
+        topic: "Sendable / @Sendable 클로저 — Strict Concurrency 대응",
+        detail: "Sendable: 값이 동시성 경계(Task, Actor)를 넘어 안전하게 전달 가능함을 표시. 값 타입(struct/enum)은 자동 Sendable. class는 불변이거나 내부 동기화 필요. @Sendable 클로저: 캡처하는 값이 모두 Sendable이어야 함. Swift 6에서 위반 시 컴파일 에러. @unchecked Sendable: '나는 안전하다고 보장할게'라는 개발자 선언(위험).",
+        interviewTip: "'Sendable을 만족시키기 어려운 경우는?'에 '레거시 ObjC 클래스, UIKit 타입, 서드파티 라이브러리 타입'. 해결: @unchecked Sendable 래퍼 또는 @MainActor 격리로 전환.",
+      },
+      {
+        topic: "메모리 그래프 디버거로 retain cycle 추적",
+        detail: "Xcode Debug Memory Graph: 실행 중 객체 간 참조 관계를 시각화. 보라색 느낌표(!)가 누수 의심 객체. 사용법: ①앱 실행 → 의심 화면 진입/퇴장 ②Debug Memory Graph 클릭 ③deinit 안 된 객체 찾기 ④참조 경로 추적 → strong 참조 발견 ⑤weak/unowned로 수정. Instruments Leaks보다 직관적. 토스처럼 화면 전환 빈번한 앱에서 필수.",
+        interviewTip: "'실무에서 메모리 누수를 찾은 경험?'에 구체 사례 답변. 없으면: 'deinit 로그 미호출 → Memory Graph에서 순환 참조 확인 → [weak self] 추가로 해결'의 3단계 프로세스.",
+      },
+      {
+        topic: "Value type vs Reference type 선택 기준",
+        detail: "Value type(struct/enum): 복사 시맨틱, 스택 할당(작은 경우), 스레드 안전, COW 최적화. Reference type(class): 공유 상태, 힙 할당, ARC 오버헤드, 상속 가능. 선택 기준: ①identity가 중요한가?(같은 인스턴스를 여러 곳에서 참조) → class ②200 bytes 이하 + 변경 적은 데이터 → struct ③상속 필요 → class ④Actor 필요 → actor. Swift 스탠다드 라이브러리의 95%가 struct.",
+        interviewTip: "'struct 안에 class 프로퍼티가 있으면?'에 '복사 시 class 프로퍼티는 참조 공유됨 → 의도치 않은 공유 상태 발생 가능 → deep copy 또는 COW 패턴 필요'. 이 꼬리질문 빈출.",
+      },
     ],
   },
   {
     category: "성능 / 안정성",
     items: [
-      "앱 시작 시간 단축 (Pre-main vs Post-main 측정)",
-      "이미지 캐싱 / 다운샘플링 / 메모리 트래킹",
-      "Crash 대응 — Symbolication + Sentry/Firebase 분류",
-      "백그라운드 태스크 / Push Notification 신뢰성",
-      "송금 같은 금융 거래 트랜잭션의 idempotency 보장",
+      {
+        topic: "앱 시작 시간 단축 (Pre-main vs Post-main 측정)",
+        detail: "Pre-main: dyld 로딩(동적 라이브러리 링킹) + Rebase/Bind + ObjC 런타임(+load, +initialize). 측정: DYLD_PRINT_STATISTICS 환경변수. Post-main: didFinishLaunchingWithOptions ~ 첫 화면 표시. 최적화: ①동적 라이브러리 수 최소화(정적 링킹 전환) ②+load 제거 ③didFinishLaunching에서 lazy init ④불필요한 프레임워크 제거. 토스 목표: Cold Start 1.5초 이내.",
+        interviewTip: "'앱 시작 시간을 측정한 경험?'에 'Instruments App Launch + DYLD_PRINT_STATISTICS로 Pre-main/Post-main 분리 측정. 동적 라이브러리 X개→Y개로 줄여 Z초 단축'. 수치가 핵심.",
+      },
+      {
+        topic: "이미지 캐싱 / 다운샘플링 / 메모리 트래킹",
+        detail: "2단계 캐시: NSCache(메모리, 자동 퇴거) + FileManager(디스크, LRU). 다운샘플링: CGImageSource로 표시 크기에 맞게 축소 디코딩(4000×3000=48MB → 200×200=160KB). 메모리 트래킹: Instruments Allocations + VM Tracker. 프로파일링: 스크롤 중 메모리 그래프가 계속 상승하면 캐시 미해제 의심. Nuke/Kingfisher가 이 모든 것을 자동 처리하지만, 원리 이해 필수.",
+        interviewTip: "'직접 이미지 캐시를 구현한다면?'에 5가지 컴포넌트(Cache/Downloader/Processor/Prefetcher/Policy) 설명. 'Request Coalescing(같은 URL 중복 요청 방지)'을 언급하면 깊이 인정.",
+      },
+      {
+        topic: "Crash 대응 — Symbolication + Sentry/Firebase 분류",
+        detail: "Crash 발생 시: 기기에 crash log 저장(.ips) → dSYM으로 Symbolication(메모리 주소→함수명+라인번호 변환). Firebase Crashlytics / Sentry가 자동 수집+분류. 대응 프로세스: ①크래시율 모니터링(0.1% 이하 유지) ②Top 5 크래시 우선 수정 ③재현 시나리오 확인 ④수정 후 같은 시그니처 재발 감시. Non-fatal(예외 잡았지만 리포트)도 추적.",
+        interviewTip: "'크래시율을 어떻게 관리했나?'에 '주간 Top 5 리뷰 + 릴리스 후 24시간 모니터링 + 0.1% 초과 시 핫픽스'. 구체적 크래시 해결 사례 1개 준비.",
+      },
+      {
+        topic: "백그라운드 태스크 / Push Notification 신뢰성",
+        detail: "BGTaskScheduler(iOS 13+): BGAppRefreshTask(짧은 작업, 30초) + BGProcessingTask(긴 작업, 수 분). 등록: Info.plist BGTaskSchedulerPermittedIdentifiers. Silent Push: content-available:1 → 앱 wake → 백그라운드에서 데이터 동기화. 토스 활용: 새 거래 알림 → Silent Push → 로컬 DB 동기화 → 사용자가 앱 열면 즉시 표시. 제한: 시스템이 빈도/배터리 기반으로 throttle.",
+        interviewTip: "'푸시 알림이 안 오는 이슈 디버깅?'에 '①APNs 토큰 유효 확인 ②서버 전송 성공 여부 ③기기 설정(알림 허용) ④Low Power Mode/Focus Mode ⑤시스템 throttle(너무 많은 Silent Push)'. 단계별 체크리스트로 답변.",
+      },
+      {
+        topic: "금융 거래 트랜잭션의 idempotency 보장",
+        detail: "문제: 네트워크 타임아웃으로 사용자가 '송금' 버튼 재탭 → 2중 송금 위험. 해결: Idempotency Key — 클라이언트가 고유 키(UUID) 생성 → 서버가 동일 키 요청은 첫 번째 결과만 반환. 구현: ①버튼 탭 시 UUID 생성 ②API 요청 헤더에 포함 ③서버가 키 기반 중복 체크 ④성공/실패 결과 캐시(TTL 24시간). 추가: 버튼 disable + 로딩 UI로 UX 방어.",
+        interviewTip: "'금융 앱에서 안전하게 거래를 처리하는 방법?'에 'Idempotency Key + 버튼 disable + 서버 중복 체크 3중 방어'. 토스 면접에서 금융 도메인 이해도를 보는 대표 질문.",
+      },
     ],
   },
   {
     category: "테스트 / CI",
     items: [
-      "단위 테스트 + UI 테스트 비율 (피라미드 전략)",
-      "Snapshot 테스트 (iOSSnapshotTestCase / SwiftSnapshotTesting)",
-      "Tuist + Xcode Cloud / Bitrise CI 파이프라인",
-      "테스트 가능한 아키텍처 — Protocol Witness / Spy / Stub",
-      "Flaky test 디버깅 사례",
+      {
+        topic: "단위 테스트 + UI 테스트 비율 (테스트 피라미드)",
+        detail: "피라미드: Unit Test(70%) > Integration Test(20%) > UI/E2E Test(10%). Unit: 빠르고 저렴. 함수/클래스 단위. 의존성 Mock/Stub으로 격리. Integration: 여러 모듈 연동 검증(네트워크+파싱+저장). UI Test: XCUITest로 실제 사용자 시나리오. 느리고 Flaky하지만 회귀 방지에 필수. 토스: Unit 중심 + 핵심 플로우만 UI Test.",
+        interviewTip: "'테스트 비율을 어떻게 정했나?'에 'ViewModel 로직은 Unit Test 100% 커버. UI는 핵심 Happy Path만 E2E. 네트워크는 Mock 서버로 Integration'. 비율의 '근거'를 말해야 깊이.",
+      },
+      {
+        topic: "Snapshot 테스트 (iOSSnapshotTestCase / SwiftSnapshotTesting)",
+        detail: "UI 컴포넌트의 렌더링 결과를 이미지로 저장(레퍼런스) → 이후 변경 시 픽셀 단위 비교 → 차이 있으면 실패. 장점: 시각적 회귀 자동 감지, 리뷰어가 UI 변경 확인 용이. 단점: OS 버전/디바이스별 미세 차이로 False Positive, 레퍼런스 관리 비용. pointPerPixels(앱) vs swift-snapshot-testing(범용, ViewInspector 조합).",
+        interviewTip: "'Snapshot 테스트의 단점과 대응?'에 'False Positive → 허용 오차(perceptualPrecision 98%) 설정 + CI에서 고정 시뮬레이터 사용 + 레퍼런스 주기적 업데이트'. 실무 경험 없으면 '도입 시 고려할 점'으로.",
+      },
+      {
+        topic: "Tuist + Xcode Cloud / Bitrise CI 파이프라인",
+        detail: "Tuist: 프로젝트 생성 → CI에서 tuist generate → xcodebuild. Xcode Cloud: Apple 네이티브 CI, GitHub 연동, 무료 티어 있음. Bitrise: 모바일 특화 CI, 풍부한 Step 라이브러리. 파이프라인: PR → Lint → Unit Test → Build → Snapshot Test → 슬랙 알림. 토스: 모듈별 병렬 테스트로 CI 시간 단축(30분→8분).",
+        interviewTip: "'CI 시간을 줄인 경험?'에 '모듈별 병렬 테스트 + 캐시(DerivedData/SPM) + 불필요한 시뮬레이터 부팅 제거'. 수치(Before/After)가 핵심.",
+      },
+      {
+        topic: "테스트 가능한 아키텍처 — Protocol Witness / Spy / Stub",
+        detail: "Protocol Witness: 프로토콜 대신 struct에 클로저를 넣어 의존성 표현. 테스트에서 클로저만 교체. TCA/Composable Architecture가 활용. Spy: 호출 여부/횟수/인자를 기록하는 Mock. Stub: 미리 정해진 값을 반환하는 Mock. 핵심: 의존성을 프로토콜로 추상화 → DI로 주입 → 테스트에서 교체. 테스트 불가 코드 = 의존성이 내부에서 직접 생성됨.",
+        interviewTip: "'테스트하기 어려운 코드를 만났을 때?'에 '①의존성 추출(프로토콜) ②DI로 주입 ③테스트에서 Stub/Spy 주입'. 구체적으로 URLSession을 프로토콜로 감싼 예시 설명.",
+      },
+      {
+        topic: "Flaky test 디버깅 사례",
+        detail: "Flaky Test: 같은 코드인데 때때로 성공/실패. 원인: ①비동기 타이밍(sleep/expectation 부족) ②공유 상태(이전 테스트가 환경 오염) ③네트워크 의존 ④날짜/시간 의존(테스트 시점에 따라 결과 변동). 해결: ①XCTestExpectation + timeout 충분히 ②setUp/tearDown에서 상태 초기화 ③네트워크 Mock 필수 ④Date를 주입 가능하게 설계. CI에서 3회 재실행해도 근본 해결 아님.",
+        interviewTip: "'Flaky 테스트를 어떻게 해결했나?'에 구체 사례. 없으면 '비동기 테스트에서 waitForExpectation + Mock으로 타이밍 의존 제거'.",
+      },
     ],
   },
   {
     category: "보안 / 금융 도메인",
     items: [
-      "민감 데이터 보호: Keychain + Secure Enclave",
-      "Jailbreak / Hooking 탐지 + Anti-tampering",
-      "SSL Pinning + MITM 방어",
-      "App Attest / DeviceCheck 인증",
-      "PCI-DSS 관련 카드 정보 처리 흐름",
+      {
+        topic: "민감 데이터 보호: Keychain + Secure Enclave",
+        detail: "Keychain: iOS 보안 저장소. AES-256 암호화. kSecAttrAccessible로 잠금 해제 상태에서만 접근 가능하게 제한. Secure Enclave: 별도 하드웨어 보안 칩. 생체 인증 키, 암호화 키 저장. 키가 칩 밖으로 절대 나오지 않음. 토스 활용: 로그인 토큰→Keychain, 송금 인증 키→Secure Enclave(Face ID 연동).",
+        interviewTip: "'비밀번호를 어디에 저장하나?'에 'Keychain(UserDefaults 절대 X)'. 'Keychain과 Secure Enclave 차이?'에 'Keychain은 소프트웨어 암호화, Secure Enclave은 하드웨어 격리 — 키 추출 물리적 불가'.",
+      },
+      {
+        topic: "Jailbreak / Hooking 탐지 + Anti-tampering",
+        detail: "탈옥 탐지: ①Cydia/Sileo 존재 확인 ②/etc/apt 등 시스템 경로 쓰기 가능 여부 ③fork() 성공 여부(샌드박스 탈출 검증) ④dyld 이미지 리스트에서 의심 라이브러리 확인. Hooking 탐지: Frida/Substrate 존재 확인, dlsym로 특정 함수 후킹 여부 체크. Anti-tampering: 앱 바이너리 해시 검증, 코드 서명 검증. 금융 앱 필수: 탈옥 기기에서 앱 실행 차단.",
+        interviewTip: "'탈옥 탐지를 우회하는 방법도 있지 않나?'에 '네, 완벽 방어는 불가. 하지만 다층 방어(여러 탐지 조합 + 서버 사이드 검증 + App Attest)로 공격 비용을 높이는 것이 목표. 결국 서버에서 이상 거래 감지가 최후 방어선'.",
+      },
+      {
+        topic: "SSL Pinning + MITM 방어",
+        detail: "SSL Pinning: 서버 인증서(또는 공개키)를 앱에 내장 → URLSession delegate에서 서버 인증서와 비교 → 불일치 시 연결 거부. MITM(Man-in-the-Middle) 방어: 프록시 도구(Charles/Burp Suite)의 위조 인증서를 거부. 구현: URLSessionDelegate의 urlSession(_:didReceive:challenge:)에서 서버 인증서 체인 검증. 주의: 인증서 만료 시 앱 통신 불가 → 공개키 핀닝 권장(인증서 갱신에도 공개키 유지).",
+        interviewTip: "'SSL Pinning의 위험은?'에 '인증서 갱신 시 앱이 통신 불가 → 강제 업데이트 필요. 대안: 공개키 핀닝(인증서는 바뀌어도 공개키는 유지) + 백업 핀 준비'. 금융 앱 면접 단골.",
+      },
+      {
+        topic: "App Attest / DeviceCheck 인증",
+        detail: "App Attest(iOS 14+): Apple 서버가 '이 요청이 변조되지 않은 정품 앱에서 왔다'를 증명하는 토큰 발급. 서버가 이 토큰을 검증하여 탈옥/변조 앱 요청 차단. DeviceCheck: 기기별 2비트 플래그를 Apple 서버에 저장(앱 삭제/재설치해도 유지). 악용 기기 영구 차단에 사용. 토스 활용: 가입 시 App Attest로 정품 검증 + 부정 사용 기기 DeviceCheck 플래그.",
+        interviewTip: "'서버에서 요청이 정품 앱인지 어떻게 확인?'에 'App Attest의 attestation + assertion 2단계'. 기존의 커스텀 서명 방식보다 Apple 하드웨어 기반이라 위조 불가.",
+      },
+      {
+        topic: "PCI-DSS 관련 카드 정보 처리 흐름",
+        detail: "PCI-DSS: 카드 결제 보안 국제 표준. 핵심: 카드번호(PAN)를 앱에 절대 저장하지 않음. 토큰화: 입력된 카드 정보 → PG사 SDK(이니시스/KCP)가 암호화 → 토큰 반환 → 앱은 토큰만 저장. 화면 표시: 마지막 4자리만(****-****-****-1234). 클립보드 방지: UITextField의 canPerformAction 오버라이드로 복사/붙여넣기 차단. 스크린샷 방지: UITextField에 isSecureTextEntry.",
+        interviewTip: "'카드 정보를 앱에서 어떻게 처리?'에 '앱은 카드번호를 절대 저장 안 함. PG SDK로 토큰화 후 토큰만 서버 전송. 입력 UI에서 복사 차단 + 스크린샷 방지'. PCI-DSS 레벨(1~4)과 SAQ 설문 존재도 인지.",
+      },
     ],
   },
 ];

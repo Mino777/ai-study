@@ -2458,14 +2458,18 @@ export default function InterviewPage() {
                         <span className="text-xs font-code text-text/30 shrink-0">{cat.items.length}개</span>
                       </summary>
                       <div className="px-5 pb-5 border-t border-border/20 pt-3">
-                        <ol className="space-y-1.5">
+                        <div className="space-y-4">
                           {cat.items.map((item, j) => (
-                            <li key={j} className="flex items-start gap-2">
-                              <span className="text-xs font-code text-blue-400/40 mt-0.5 shrink-0">{j + 1}.</span>
-                              <p className="text-sm text-text/60 leading-relaxed">{item}</p>
-                            </li>
+                            <div key={j} className="border-l-2 border-blue-400/20 pl-4">
+                              <div className="flex items-start gap-2 mb-1">
+                                <span className="text-xs font-code text-blue-400/40 mt-0.5 shrink-0">{j + 1}.</span>
+                                <p className="text-sm font-semibold text-text/80">{item.topic}</p>
+                              </div>
+                              <p className="text-xs text-text/50 leading-relaxed ml-5 mb-1.5">{item.detail}</p>
+                              <p className="text-xs text-amber-400/70 leading-relaxed ml-5 italic">💡 {item.interviewTip}</p>
+                            </div>
                           ))}
-                        </ol>
+                        </div>
                       </div>
                     </details>
                   ))}
