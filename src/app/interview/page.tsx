@@ -1689,6 +1689,40 @@ export default function InterviewPage() {
             ))}
           </div>
         </section>
+
+        {/* 토스 iOS 단골 토픽 — CS 탭에서도 표시 */}
+        {track === "ios" && (
+          <section className="mb-12">
+            <h2 className="font-display text-base font-bold uppercase tracking-[0.15em] text-text/45 mb-4">
+              토스 iOS 단골 토픽
+              <span className="ml-2 text-text/25 normal-case tracking-normal font-normal">— 기술면접 깊이 준비</span>
+            </h2>
+            <div className="space-y-2">
+              {TOSS_IOS_TOPICS.map((cat, i) => (
+                <details key={i} className="rounded-xl border border-border/30 bg-surface/20 overflow-hidden">
+                  <summary className="px-5 py-4 cursor-pointer hover:bg-surface/50 transition-colors flex items-center gap-3">
+                    <span className="text-base font-bold flex-1">{cat.category}</span>
+                    <span className="text-xs font-code text-text/30 shrink-0">{cat.items.length}개</span>
+                  </summary>
+                  <div className="px-5 pb-5 border-t border-border/20 pt-3">
+                    <div className="space-y-4">
+                      {cat.items.map((item, j) => (
+                        <div key={j} className="border-l-2 border-blue-400/20 pl-4">
+                          <div className="flex items-start gap-2 mb-1">
+                            <span className="text-xs font-code text-blue-400/40 mt-0.5 shrink-0">{j + 1}.</span>
+                            <p className="text-sm font-semibold text-text/80">{item.topic}</p>
+                          </div>
+                          <p className="text-xs text-text/50 leading-relaxed ml-5 mb-1.5">{item.detail}</p>
+                          <p className="text-xs text-amber-400/70 leading-relaxed ml-5 italic">💡 {item.interviewTip}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </details>
+              ))}
+            </div>
+          </section>
+        )}
         </>)}
 
         {/* ═══════════ TAB: TECH INTERVIEW ═══════════ */}
@@ -1902,6 +1936,40 @@ export default function InterviewPage() {
             ))}
           </div>
         </section>
+
+        {/* 토스 iOS 단골 토픽 — 기술면접 탭에서도 표시 */}
+        {track === "ios" && (
+          <section className="mb-12">
+            <h2 className="font-display text-base font-bold uppercase tracking-[0.15em] text-text/45 mb-4">
+              토스 iOS 단골 토픽
+              <span className="ml-2 text-text/25 normal-case tracking-normal font-normal">— SLASH22~24 + 후기 종합</span>
+            </h2>
+            <div className="space-y-2">
+              {TOSS_IOS_TOPICS.map((cat, i) => (
+                <details key={i} className="rounded-xl border border-border/30 bg-surface/20 overflow-hidden">
+                  <summary className="px-5 py-4 cursor-pointer hover:bg-surface/50 transition-colors flex items-center gap-3">
+                    <span className="text-base font-bold flex-1">{cat.category}</span>
+                    <span className="text-xs font-code text-text/30 shrink-0">{cat.items.length}개</span>
+                  </summary>
+                  <div className="px-5 pb-5 border-t border-border/20 pt-3">
+                    <div className="space-y-4">
+                      {cat.items.map((item, j) => (
+                        <div key={j} className="border-l-2 border-blue-400/20 pl-4">
+                          <div className="flex items-start gap-2 mb-1">
+                            <span className="text-xs font-code text-blue-400/40 mt-0.5 shrink-0">{j + 1}.</span>
+                            <p className="text-sm font-semibold text-text/80">{item.topic}</p>
+                          </div>
+                          <p className="text-xs text-text/50 leading-relaxed ml-5 mb-1.5">{item.detail}</p>
+                          <p className="text-xs text-amber-400/70 leading-relaxed ml-5 italic">💡 {item.interviewTip}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </details>
+              ))}
+            </div>
+          </section>
+        )}
         </>)}
 
         {/* ═══════════ TAB: QUIZ ═══════════ */}
