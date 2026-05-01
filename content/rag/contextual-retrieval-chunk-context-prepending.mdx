@@ -71,7 +71,7 @@ graph TD
     A --> C[전체 문서 컨텍스트]
     B --> D{각 청크마다}
     C --> D
-    D --> E[Claude: 이 청크의 문서 내 역할 요약 생성]
+    D --> E["Claude: 이 청크의 문서 내 역할 요약 생성"]
     E --> F[컨텍스트 텍스트 prepend]
     F --> G[임베딩 생성]
     G --> H[Vector DB 인덱싱]
