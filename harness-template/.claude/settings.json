@@ -1,0 +1,70 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(**/.env*)",
+      "Read(**/secrets*)",
+      "Write(**/.env*)",
+      "Bash(rm -rf *)",
+      "Bash(git push --force*)",
+      "Bash(git reset --hard*)",
+      "Bash(DROP TABLE*)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$(git rev-parse --show-toplevel)/.claude/hooks/gc-drift.sh\"",
+            "timeout": 5000
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "REPO=$(git rev-parse --show-toplevel); CMD=$(echo \"$CLAUDE_TOOL_INPUT\" | python3 -c \"import sys,json; print(json.load(sys.stdin).get('command',''))\" 2>/dev/null); if echo \"$CMD\" | grep -qE 'git commit'; then cd \"$REPO\" && npm run build 2>&1 | tail -5; if [ $? -ne 0 ]; then echo '❌ QA_GATE FAILED: 빌드 실패. 커밋 차단.'; exit 1; fi; echo '✅ QA_GATE PASSED'; fi",
+            "timeout": 300000
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$(git rev-parse --show-toplevel)/.claude/hooks/secret-guard.sh\"",
+            "timeout": 5000
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "REPO=$(git rev-parse --show-toplevel); if [ -f \"$REPO/tsconfig.json\" ]; then cd \"$REPO\" && npx tsc --noEmit 2>&1 | grep -E '^src/|error TS' | head -10; if [ ${PIPESTATUS[0]} -ne 0 ]; then echo '❌ TypeScript 에러 — 수정 필요'; exit 2; fi; fi",
+            "timeout": 30000
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "CMD=$(echo \"$CLAUDE_TOOL_INPUT\" | python3 -c \"import sys,json; print(json.load(sys.stdin).get('command',''))\" 2>/dev/null); if echo \"$CMD\" | grep -qE 'git push'; then echo '📦 push 완료! /compound 실행하여 회고 + 솔루션 문서화하세요.'; fi",
+            "timeout": 3000
+          }
+        ]
+      }
+    ]
+  }
+}
