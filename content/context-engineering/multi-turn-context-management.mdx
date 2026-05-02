@@ -8,8 +8,8 @@ tags:
   - context
   - management
   - context-engineering
-confidence: 1
-last_verified: "2026-04-12"
+confidence: 2
+last_verified: "2026-05-03"
 applicable_to: ["any"]
 connections:
   - context-engineering/context-compression
@@ -245,6 +245,177 @@ class ConversationManager {
 2.  해당 부분을 LLM에 `summarize this conversation:`과 같은 프롬프트로 보내 요약을 요청합니다.
 3.  LLM이 반환한 요약을 `{ role: 'system', content: '이전 대화 요약: [요약 내용]' }`과 같은 형태로 대화 기록의 맨 앞에 추가하고, 요약된 원본 메시지들은 삭제합니다.
 4.  새로운 메시지가 추가될 때마다 이 과정 반복 또는 주기적으로 실행합니다.
+
+**코드 예시 (TypeScript — 요약 기반 컨텍스트 관리)**:
+
+```typescript
+interface SummarizedContext {
+  summary: string;
+  summarizedMessageCount: number;
+  createdAt: Date;
+}
+
+class SummarizationContextManager {
+  private history: Message[] = [];
+  private summarizationThreshold: number; // 요약을 트리거할 메시지 수 (예: 20개)
+  private summarizationRatio: number; // 압축 비율 (예: 0.7 = 70% 요약)
+  private summarizedContext: SummarizedContext | null = null;
+  private llmService: any; // LLM API 호출 서비스
+
+  constructor(
+    summarizationThreshold: number = 20,
+    summarizationRatio: number = 0.7,
+    llmService: any
+  ) {
+    this.summarizationThreshold = summarizationThreshold;
+    this.summarizationRatio = summarizationRatio;
+    this.llmService = llmService;
+  }
+
+  addMessage(message: Message): void {
+    this.history.push(message);
+
+    // 메시지가 임계값을 초과하면 요약 실행
+    if (this.shouldSummarize()) {
+      this.executeSummarization();
+    }
+  }
+
+  private shouldSummarize(): boolean {
+    // 시스템 메시지를 제외한 실제 대화 메시지 수 계산
+    const conversationMessages = this.history.filter(
+      (msg) => msg.role !== 'system'
+    );
+    return conversationMessages.length > this.summarizationThreshold;
+  }
+
+  private async executeSummarization(): Promise<void> {
+    const conversationMessages = this.history.filter(
+      (msg) => msg.role !== 'system'
+    );
+    
+    // 요약할 부분의 범위 계산
+    const cutoffIndex = Math.floor(
+      conversationMessages.length * this.summarizationRatio
+    );
+    const messagesToSummarize = conversationMessages.slice(0, cutoffIndex);
+
+    // 메시지를 텍스트로 변환
+    const conversationText = messagesToSummarize
+      .map((msg) => `${msg.role}: ${msg.content}`)
+      .join('\n\n');
+
+    // LLM을 통한 요약
+    const summaryPrompt = `다음 대화를 핵심 요점만 간결하게 요약해 주세요. 사용자의 주요 질문, 언급된 중요한 정보, 그리고 대화의 맥락을 포함해야 합니다:\n\n${conversationText}`;
+
+    try {
+      const summary = await this.llmService.generateCompletion(summaryPrompt);
+
+      // 요약된 컨텍스트 저장
+      this.summarizedContext = {
+        summary,
+        summarizedMessageCount: cutoffIndex,
+        createdAt: new Date(),
+      };
+
+      // 히스토리에서 요약된 메시지 제거하고 요약본 추가
+      const remainingMessages = this.history.filter(
+        (msg) =>
+          msg.role === 'system' ||
+          conversationMessages.indexOf(msg) >= cutoffIndex
+      );
+      
+      this.history = remainingMessages;
+    } catch (error) {
+      console.error('요약 생성 중 오류 발생:', error);
+    }
+  }
+
+  getPromptMessages(): Message[] {
+    const messagesToSend: Message[] = [];
+
+    // 1. 시스템 메시지 (있으면 추가)
+    const systemMessage = this.history.find((msg) => msg.role === 'system');
+    if (systemMessage) {
+      messagesToSend.push(systemMessage);
+    }
+
+    // 2. 요약된 컨텍스트 (있으면 추가)
+    if (this.summarizedContext) {
+      messagesToSend.push({
+        role: 'system',
+        content: `[대화 요약]\n${this.summarizedContext.summary}`,
+      });
+    }
+
+    // 3. 현재 대화 기록 (시스템 메시지 제외)
+    const currentMessages = this.history.filter(
+      (msg) => msg.role !== 'system'
+    );
+    messagesToSend.push(...currentMessages);
+
+    return messagesToSend;
+  }
+
+  // 현재 상태 정보 조회
+  getContextStats(): {
+    totalMessages: number;
+    summarizedMessages: number;
+    currentMessages: number;
+    totalContextLength: number;
+  } {
+    const totalMessages = this.history.length;
+    const summarizedMessages = this.summarizedContext
+      ?.summarizedMessageCount || 0;
+    const currentMessages = totalMessages - summarizedMessages;
+    const totalContextLength = this.getPromptMessages().reduce(
+      (sum, msg) => sum + msg.content.length,
+      0
+    );
+
+    return {
+      totalMessages,
+      summarizedMessages,
+      currentMessages,
+      totalContextLength,
+    };
+  }
+}
+```
+
+**실제 사용 예시**:
+
+```typescript
+const manager = new SummarizationContextManager(
+  15, // 15개 메시지 초과 시 요약 트리거
+  0.7, // 상위 70%를 요약
+  llmService
+);
+
+// 대화 추가
+for (let i = 0; i < 25; i++) {
+  manager.addMessage({
+    role: i % 2 === 0 ? 'user' : 'assistant',
+    content: `메시지 ${i + 1}의 내용입니다.`,
+  });
+}
+
+// 현재 상태 확인
+console.log(manager.getContextStats());
+// { totalMessages: 25, summarizedMessages: 15, currentMessages: 10, totalContextLength: 1234 }
+
+// LLM 호출용 메시지 준비
+const messagesToSend = manager.getPromptMessages();
+```
+
+**메모리 및 비용 절감 효과**:
+
+대화가 100개의 메시지로 구성되고, 평균 메시지 길이가 200자라고 가정할 때:
+- **슬라이딩 윈도우 (최근 10개만)**: ~2,000자 (약 500 토큰)
+- **요약 기반 (상위 70% 요약 + 하위 30%)**: ~7,000자 (약 1,750 토큰) — 하지만 정보 손실 최소화
+- **모든 메시지 전달**: ~20,000자 (약 5,000 토큰)
+
+요약 기반 방식은 슬라이딩 윈도우보다 더 많은 맥락을 유지하면서도, 전체 메시지 전달보다 **65% 토큰 절감**을 달성합니다.
 
 ### 3. 정보 추출 및 엔티티 저장 (Entity Extraction & Slot Filling)
 

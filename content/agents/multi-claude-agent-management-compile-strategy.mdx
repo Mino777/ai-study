@@ -3,8 +3,8 @@ title: "멀티 Claude 에이전트 관리: 설정 YAML을 넘어선 '컴파일' 
 category: agents
 date: "2026-04-19"
 tags: [agent-as-code, dynamic-prompting, agent-composition, claude-3, typescript, agents]
-confidence: 1
-last_verified: "2026-04-19"
+confidence: 2
+last_verified: "2026-05-03"
 applicable_to: ["any"]
 connections: [agents/agent-architectures, agents/hermes-agent-analysis, agents/multi-agent-orchestration-patterns-2026]
 status: draft
@@ -139,14 +139,34 @@ class AgentCompiler {
     this.components = components;
   }
 
-  compile(context: AgentContext): { systemPrompt: string; tools: AgentTool[] } {
-    const systemPrompt = this.components
+  // 시스템 프롬프트 생성
+  private renderSystemPrompt(context: AgentContext): string {
+    const promptParts = this.components
       .map(c => c.render(context))
-      .join('\n\n');
+      .filter(text => text.length > 0);
     
-    const tools = getToolsForContext(context);
+    return promptParts.join('\n\n');
+  }
 
-    return { systemPrompt, tools };
+  // 도구 스키마 생성
+  private renderToolSchemas(tools: AgentTool[]): string {
+    return tools
+      .map(t => `- **${t.name}**: ${t.description}`)
+      .join('\n');
+  }
+
+  // 최종 컴파일: 시스템 프롬프트 + 도구 정보
+  compile(context: AgentContext): { systemPrompt: string; tools: AgentTool[] } {
+    const systemPrompt = this.renderSystemPrompt(context);
+    const tools = getToolsForContext(context);
+    
+    // 도구 사용 지침 추가 (Premium 사용자만)
+    let enhancedPrompt = systemPrompt;
+    if (tools.length > 1) {
+      enhancedPrompt += '\n\n## 사용 가능한 도구\n' + this.renderToolSchemas(tools);
+    }
+
+    return { systemPrompt: enhancedPrompt, tools };
   }
 }
 
@@ -159,17 +179,46 @@ const compiler = new AgentCompiler([
 // Free 사용자용 에이전트 '컴파일'
 const freeUserContext: AgentContext = { userTier: 'free', userName: '김민준' };
 const freeAgentSpec = compiler.compile(freeUserContext);
-console.log('--- Free User Agent ---');
+console.log('=== Free User Agent ===');
+console.log('System Prompt:');
 console.log(freeAgentSpec.systemPrompt);
-console.log(freeAgentSpec.tools.map(t => t.name));
-
+console.log('\nAvailable Tools:');
+console.log(freeAgentSpec.tools.map(t => t.name).join(', '));
 
 // Premium 사용자용 에이전트 '컴파일'
 const premiumUserContext: AgentContext = { userTier: 'premium', userName: '이수현' };
 const premiumAgentSpec = compiler.compile(premiumUserContext);
-console.log('\n--- Premium User Agent ---');
+console.log('\n=== Premium User Agent ===');
+console.log('System Prompt:');
 console.log(premiumAgentSpec.systemPrompt);
-console.log(premiumAgentSpec.tools.map(t => t.name));
+console.log('\nAvailable Tools:');
+console.log(premiumAgentSpec.tools.map(t => t.name).join(', '));
+
+// 에이전트 호출 예시 (실제 Claude API 호출)
+async function callAgentWithCompiledConfig(context: AgentContext, userQuery: string) {
+  const agentSpec = compiler.compile(context);
+  
+  // Claude API 호출 (의사 코드)
+  const response = await anthropic.messages.create({
+    model: 'claude-3-5-sonnet-20241022',
+    max_tokens: 1024,
+    system: agentSpec.systemPrompt,
+    tools: agentSpec.tools.map(t => ({
+      name: t.name,
+      description: t.description,
+      input_schema: { type: 'object', properties: {} },
+    })),
+    messages: [
+      { role: 'user', content: userQuery }
+    ]
+  });
+  
+  return response;
+}
+
+// 실행
+callAgentWithCompiledConfig(premiumUserContext, '내 데이터를 분석해줄 수 있어?')
+  .then(response => console.log('Agent response:', response));
 ```
 
 **실행 결과:**

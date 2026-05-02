@@ -6,8 +6,8 @@ tags:
   - agent
   - architectures
   - agents
-confidence: 1
-last_verified: "2026-04-11"
+confidence: 2
+last_verified: "2026-05-03"
 applicable_to: ["any"]
 connections:
   - agents/multi-agent-pipeline
@@ -21,6 +21,31 @@ status: draft
 description: AI 시스템의 복잡한 작업을 자율적으로 처리하고 목표 지향적인 행동을 수행하는 에이전트 기반 아키텍처를 설계하고 구현하는 실전 가이드.
 type: entry
 generated_by: gemini
+quiz:
+  - question: 자율 에이전트의 Sense-Think-Act 루프 중 'Think' 단계의 핵심 역할은 무엇인가요?
+    choices:
+      - 사용자의 입력을 받아 에이전트의 메모리에 저장하는 것
+      - 인지된 정보와 기억을 바탕으로 목표 달성을 위한 행동 계획을 수립하는 것
+      - 계획된 행동을 실제 환경에서 실행하거나 외부 도구를 호출하는 것
+      - 에이전트의 모든 호출을 추적하고 토큰 사용량을 기록하는 것
+    answer: 1
+    explanation: Think 단계는 LLM을 사용하여 현재 상황을 분석하고 최적의 행동 계획을 수립하는 추론(Reasoning) 단계입니다. Sense는 정보 수집, Act는 행동 실행, Observability는 모니터링을 담당하므로, Think 단계가 추론과 계획의 중추입니다.
+  - question: 파이썬 예제의 ToolExecutor에서 execute_tool() 메서드가 하는 역할은 무엇인가요?
+    choices:
+      - 사용자의 자연어 입력을 LLM 프롬프트로 변환한다
+      - LLM이 요청한 도구를 찾아 해당 함수를 실행하고 결과를 반환한다
+      - 에이전트의 메모리를 관리하고 대화 이력을 저장한다
+      - 도구 호출의 응답 형식을 JSON으로 파싱한다
+    answer: 1
+    explanation: ToolExecutor는 LLM이 선택한 도구의 이름과 인자(arguments)를 받아, self.available_tools 딕셔너리에서 해당 함수를 찾아 실행하는 '행동 실행' 계층입니다. 이는 Act 단계의 구현입니다.
+  - question: 본 글에서 설명하는 2026년 트렌드 'Human-in-the-Loop Collaboration'의 핵심 목적은 무엇인가요?
+    choices:
+      - 에이전트의 자율성을 완전히 제거하고 모든 결정을 인간이 내리게 하는 것
+      - AI의 자율성과 인간의 통제 사이의 균형을 맞춰, 위험한 오작동을 방지하면서도 효율성을 유지하는 것
+      - 에이전트가 LLM을 더 효율적으로 활용하도록 프롬프트를 자동으로 최적화하는 것
+      - 인간 사용자의 행동 패턴을 학습하여 앞서 예측하고 제안하는 것
+    answer: 1
+    explanation: Human-in-the-Loop Collaboration은 에이전트가 복잡한 결정을 내리기 전에 인간의 검토나 승인을 요청하고, 피드백을 통해 학습하며 점차 자율성을 높여가는 패턴입니다. 이는 AI의 자율성(효율성)과 인간의 통제(안전성) 사이의 균형을 핵심으로 합니다.
 ---
 
 ---
@@ -95,29 +120,57 @@ class ToolExecutor:
         self.available_tools = {
             "search_flights": self._search_flights,
             "book_hotel": self._book_hotel,
-            "send_notification": self._send_notification
+            "send_notification": self._send_notification,
+            "get_flight_details": self._get_flight_details,
+            "cancel_booking": self._cancel_booking
         }
 
+    # 항공편 검색 도구
     def _search_flights(self, destination: str, date: str) -> str:
         print(f"  [Tool] Searching flights to {destination} on {date}...")
-        time.sleep(1) # Simulate network delay
+        time.sleep(1) # 네트워크 지연 시뮬레이션
         return f"제주행 {date} 항공편 검색 결과: 대한항공 10:00 (150,000원), 아시아나 11:00 (160,000원)."
 
+    # 호텔 예약 도구
     def _book_hotel(self, location: str, check_in: str, check_out: str) -> str:
         print(f"  [Tool] Booking hotel in {location} from {check_in} to {check_out}...")
         time.sleep(1)
-        return f"{location} 호텔 예약 완료."
+        return f"{location} 호텔 예약 완료. 예약번호: BK{hash(location)%10000:04d}"
     
+    # 알림 전송 도구
     def _send_notification(self, user_id: str, message: str) -> str:
         print(f"  [Tool] Sending notification to user {user_id}: {message}")
         return "알림 전송 성공."
 
+    # 항공편 상세 정보 조회 도구
+    def _get_flight_details(self, flight_code: str) -> str:
+        print(f"  [Tool] Fetching details for flight {flight_code}...")
+        time.sleep(0.5)
+        details = {
+            "KE001": "대한항공 - 인천→제주 (10:00-11:20) - 180분 소요",
+            "OZ002": "아시아나 - 인천→제주 (11:00-12:15) - 75분 소요"
+        }
+        return details.get(flight_code, "항공편 정보 없음")
+
+    # 예약 취소 도구
+    def _cancel_booking(self, booking_id: str) -> str:
+        print(f"  [Tool] Cancelling booking {booking_id}...")
+        time.sleep(0.5)
+        return f"예약 {booking_id} 취소되었습니다. 환불이 진행 중입니다."
+
+    # 도구 실행 메인 메서드
     def execute_tool(self, tool_call: Dict) -> Any:
+        """도구 호출을 실행하고 결과를 반환합니다."""
         function_name = tool_call["function"]["name"]
-        arguments = eval(tool_call["function"]["arguments"]) # WARNING: Use proper JSON parsing in real app
+        # 실제 앱에서는 json.loads() 사용 권장
+        arguments = eval(tool_call["function"]["arguments"])
         
         if function_name in self.available_tools:
-            return self.available_tools[function_name](**arguments)
+            try:
+                result = self.available_tools[function_name](**arguments)
+                return result
+            except TypeError as e:
+                raise ValueError(f"Tool '{function_name}' called with invalid arguments: {e}")
         else:
             raise ValueError(f"Unknown tool: {function_name}")
 
@@ -183,28 +236,47 @@ class AutonomousAgent:
         print(f"\n[Agent {self.name}] User input detected: '{user_input}'")
         self.memory.append({"role": "user", "content": user_input})
 
-    def _think_and_act(self) -> str:
+    def _think_and_act(self, max_iterations: int = 5, iteration: int = 0) -> str:
+        """
+        LLM을 사용하여 추론 및 행동을 반복 실행합니다.
+        
+        1. LLM이 현재 상황을 분석
+        2. 필요시 도구 호출 결정
+        3. 도구 실행 결과를 메모리에 저장
+        4. 최종 응답 또는 다음 행동 결정
+        """
+        # 무한 루프 방지
+        if iteration >= max_iterations:
+            return "최대 반복 횟수 도달. 작업을 마칩니다."
+        
         # LLM을 사용하여 추론 및 행동 계획
-        # LLM에 현재까지의 대화 내역(기억)과 사용 가능한 툴 스키마를 전달
         llm_response = self.llm.chat_completion(self.memory, self.tools_schema)
+        print(f"  [Agent {self.name}] LLM Response (Iteration {iteration+1}/{max_iterations})")
         
         # 툴 호출이 필요한 경우
         if "tool_calls" in llm_response and llm_response["tool_calls"]:
             for tool_call in llm_response["tool_calls"]:
                 try:
+                    # 도구 실행
                     tool_output = self.tool_executor.execute_tool(tool_call)
+                    
+                    # 실행 결과를 메모리에 저장 (피드백 루프)
                     self.memory.append({
                         "role": "tool",
                         "tool_call_id": tool_call["id"],
                         "name": tool_call["function"]["name"],
                         "content": str(tool_output)
                     })
-                    print(f"  [Agent {self.name}] Tool '{tool_call['function']['name']}' executed. Output: {tool_output}")
+                    print(f"  [Agent {self.name}] Tool '{tool_call['function']['name']}' executed.")
+                    print(f"    Output: {tool_output}")
                     
-                    # 툴 실행 결과를 다시 LLM에 전달하여 다음 행동 추론
-                    return self._think_and_act() # 재귀 호출하여 툴 실행 후 LLM이 다시 생각하도록 함
+                    # 도구 실행 결과를 LLM에 피드백하여 다음 행동 추론
+                    # 재귀 호출로 에이전트가 계속 사고하고 행동
+                    return self._think_and_act(max_iterations, iteration + 1)
+                    
                 except Exception as e:
-                    error_message = f"Error executing tool {tool_call['function']['name']}: {e}"
+                    # 도구 실행 실패 처리
+                    error_message = f"Error executing tool {tool_call['function']['name']}: {str(e)}"
                     self.memory.append({
                         "role": "tool",
                         "tool_call_id": tool_call["id"],
@@ -212,12 +284,15 @@ class AutonomousAgent:
                         "content": error_message
                     })
                     print(f"  [Agent {self.name}] {error_message}")
-                    return f"죄송합니다. 작업 중 오류가 발생했습니다: {error_message}"
-        # 툴 호출 없이 LLM이 직접 응답하는 경우
+                    
+                    # 에러를 메모리에 저장하고 LLM에 다시 물어보기
+                    return self._think_and_act(max_iterations, iteration + 1)
+        
+        # 툴 호출 없이 LLM이 직접 최종 응답하는 경우
         else:
             agent_response = llm_response.get("content", "처리할 수 없습니다.")
             self.memory.append({"role": "assistant", "content": agent_response})
-            print(f"  [Agent {self.name}] Responding: '{agent_response}'")
+            print(f"  [Agent {self.name}] Final Response: '{agent_response}'")
             return agent_response
 
     def run(self, user_input: str) -> str:
@@ -230,17 +305,36 @@ if __name__ == "__main__":
     tool_exec = ToolExecutor()
     travel_agent = AutonomousAgent("TravelBuddy", llm_model, tool_exec)
 
-    print("--- 1단계: 항공편 검색 요청 ---")
+    print("=" * 60)
+    print("자율 에이전트 실행 예시: Sense-Think-Act 루프")
+    print("=" * 60)
+    
+    # 사용 사례 1: 항공편 검색 (도구 호출 필요)
+    print("\n[사용 사례 1] 항공편 검색 요청")
+    print("-" * 60)
     response1 = travel_agent.run("제주도 2024년 12월 25일 항공편 찾아줘")
-    print(f"Final Agent Response: {response1}")
+    print(f"\n최종 응답: {response1}\n")
     
-    print("\n--- 2단계: 일반 질문 ---")
+    # 사용 사례 2: 일반 질문 (도구 호출 불필요)
+    print("[사용 사례 2] 일반 상담")
+    print("-" * 60)
     response2 = travel_agent.run("오늘 점심 뭐 먹지?")
-    print(f"Final Agent Response: {response2}")
+    print(f"\n최종 응답: {response2}\n")
     
-    print("\n--- 3단계: 알림 요청 ---")
+    # 사용 사례 3: 복합 작업 (알림 전송)
+    print("[사용 사례 3] 알림 요청")
+    print("-" * 60)
     response3 = travel_agent.run("나한테 '회의 10분 전'이라고 알림 보내줘 (내 ID는 user123)")
-    print(f"Final Agent Response: {response3}")
+    print(f"\n최종 응답: {response3}\n")
+    
+    # 에이전트의 메모리(대화 기록) 출력
+    print("=" * 60)
+    print("에이전트 메모리 (Sense-Think-Act 내역)")
+    print("=" * 60)
+    for i, msg in enumerate(travel_agent.memory, 1):
+        role = msg.get("role", "unknown")
+        content = msg.get("content", "")[:100]  # 처음 100자만 출력
+        print(f"[{i}] {role}: {content}...")
 
 ```
 
