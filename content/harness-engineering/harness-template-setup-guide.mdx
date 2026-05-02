@@ -1,0 +1,423 @@
+---
+title: "공통 하네스 템플릿 셋업 가이드 — 신규 프로젝트에 AI 코딩 에이전트 울타리를 5분 만에 이식하는 법"
+description: "harness-template/ 폴더를 새 프로젝트에 복사하고 setup.sh 한 번이면 deny-first 보안, 타입체크 자동수정, GC 드리프트 탐지, 스프린트 회고까지 동작하는 하네스가 완성된다. 설계 근거, 트레이드오프, 커스터마이징 가이드 포함."
+category: harness-engineering
+date: "2026-05-02"
+tags:
+  - harness-engineering
+  - harness-template
+  - setup-guide
+  - portable-harness
+  - deny-first
+  - computational-sensor
+  - compound-engineering
+  - onboarding
+confidence: 4
+last_verified: "2026-05-02"
+applicable_to: ["any"]
+connections:
+  - harness-engineering/martin-fowler-harness-engineering-framework
+  - harness-engineering/claude-code-architecture-arxiv-deep-dive
+  - agents/anthropic-three-agent-harness-pattern
+  - harness-engineering/openai-codex-harness-engineering-agent-first
+  - harness-engineering/ai-engineering-landscape-2026-midpoint
+  - harness-engineering/five-levers-of-harness-engineering
+  - harness-engineering/compound-engineering-philosophy
+status: complete
+type: entry
+quiz:
+  - question: "하네스 템플릿에서 경로를 하드코딩하지 않고 동적으로 탐지하는 방법은?"
+    choices:
+      - "환경변수 $HOME 사용"
+      - "git rev-parse --show-toplevel로 프로젝트 루트 동적 탐지"
+      - "setup.sh에서 sed로 치환"
+      - "심볼릭 링크 사용"
+    answer: 1
+    explanation: "git rev-parse --show-toplevel은 현재 git 레포의 루트 경로를 반환한다. 어떤 프로젝트에 이식해도 올바른 경로를 자동으로 찾는다. 하드코딩된 경로는 다른 머신, 다른 유저에서 깨진다."
+  - question: "PostToolUse 타입체크 Hook이 exit code 2를 반환하는 이유는?"
+    choices:
+      - "에러를 무시하기 위해"
+      - "세션을 종료하기 위해"
+      - "에이전트에게 에러를 수정하고 다시 시도하라고 지시하기 위해"
+      - "사용자에게 확인을 요청하기 위해"
+    answer: 2
+    explanation: "Claude Code에서 exit 0=성공(계속), exit 1=실패(중단), exit 2=재시도(에이전트가 에러를 읽고 수정 후 다시 시도). 이 자동수정 루프가 사람 개입 없이 타입 에러를 해결하게 해준다."
+  - question: "secret-guard.sh에서 .claude/ 내부 파일을 화이트리스트하는 이유는?"
+    choices:
+      - "성능 최적화"
+      - "훅 스크립트 자체를 수정할 때 금지 패턴에 걸리면 하네스 관리가 불가능하므로"
+      - "보안 규칙 예외"
+      - ".claude/ 파일은 중요하지 않아서"
+    answer: 1
+    explanation: "secret-guard.sh 자체에 API 키 패턴(sk-ant-...)이 정규식으로 들어있다. 화이트리스트 없이는 이 훅 파일을 수정할 때마다 자기 자신이 차단당하는 역설이 발생한다."
+---
+
+## 이 가이드의 목적
+
+이 문서는 **AI 에이전트가 읽고 바로 실행할 수 있는 하네스 셋업 가이드**다. 사람이 읽어도 되지만, 주 독자는 새 프로젝트에 투입된 Claude Code 세션이다.
+
+`harness-template/` 폴더를 새 프로젝트에 복사하면 다음이 **즉시 동작**한다:
+
+| 기능 | 동작 시점 | 효과 |
+|------|-----------|------|
+| 위험 명령어 차단 | rm -rf, force-push 시도 시 | 돌이킬 수 없는 실수 원천 차단 |
+| 빌드 검증 | git commit 전 | 깨진 코드 커밋 방지 |
+| 타입 에러 자동수정 | 파일 편집 후 | exit 2로 에이전트가 스스로 수정 |
+| 시크릿 차단 | 코드 작성 시 | API 키 유출 방지 |
+| 하네스 드리프트 감지 | 세션 시작 시 | 규칙 부패 조기 발견 |
+| 스프린트 회고 | push 후 /compound | 매 작업의 교훈이 다음 작업의 입력 |
+
+---
+
+## 왜 이 하네스가 필요한가
+
+### 하네스 없는 AI 코딩의 위험
+
+```
+에이전트에게 "이 버그 고쳐줘" 요청
+  → 에이전트가 rm -rf로 폴더 삭제 (복구 불가)
+  → 에이전트가 .env 파일을 읽고 API 키를 코드에 포함 (보안 사고)
+  → 에이전트가 타입 에러 있는 코드를 커밋 (빌드 실패 배포)
+  → 에이전트가 git push --force로 팀원 커밋 덮어씀 (작업 손실)
+```
+
+이 모든 것이 **실제로 발생한 사고**다. 하네스는 이런 사고를 **구조적으로 불가능**하게 만든다.
+
+### 근거가 되는 4편의 연구
+
+| 출처 | 핵심 원칙 | 템플릿에 적용된 형태 |
+|------|-----------|---------------------|
+| [Martin Fowler](/wiki/harness-engineering/martin-fowler-harness-engineering-framework) | Computational Sensor — 매 변경마다 결정론적 검증 | build-gate, type-check Hook |
+| [Claude Code arxiv](/wiki/harness-engineering/claude-code-architecture-arxiv-deep-dive) | Deny-First — 위험한 도구는 시야에서 제거 | settings.json deny 7개 |
+| [Anthropic 3-Agent](/wiki/agents/anthropic-three-agent-harness-pattern) | 생성과 평가 분리 + Few-shot calibration | /review 커맨드 |
+| [OpenAI Codex](/wiki/harness-engineering/openai-codex-harness-engineering-agent-first) | Garbage Collection — 지속적 드리프트 스캔 | gc-drift.sh Hook |
+
+---
+
+## 셋업 방법
+
+### 방법 1: setup.sh (권장)
+
+```bash
+bash /path/to/harness-template/setup.sh /path/to/new-project
+```
+
+이 한 줄이면:
+1. `.claude/` 디렉토리 복사 (기존 파일 덮어쓰기 안 함)
+2. CLAUDE.md 복사 (이미 있으면 건너뜀)
+3. harness-fitness 테스트 복사
+4. 훅 실행 권한 설정
+5. docs/retros, docs/solutions 디렉토리 생성
+
+### 방법 2: 수동 복사
+
+```bash
+cp -r harness-template/.claude /path/to/new-project/
+cp harness-template/CLAUDE.md /path/to/new-project/
+cp -r harness-template/scripts /path/to/new-project/
+chmod +x /path/to/new-project/.claude/hooks/*.sh
+```
+
+### 셋업 후 필수 커스터마이징 (3가지)
+
+**1. CLAUDE.md 변수 치환**
+
+```markdown
+# {{PROJECT_NAME}} → 실제 프로젝트명
+## Tech Stack
+- **Framework**: {{FRAMEWORK}} → Next.js 16 / Spring Boot / etc.
+- **Language**: {{LANGUAGE}} → TypeScript / Kotlin / Swift
+- **Deploy**: {{DEPLOY_TARGET}} → Vercel / AWS / etc.
+
+## Key Commands
+- `{{DEV_CMD}}` → npm run dev / ./gradlew bootRun
+- `{{BUILD_CMD}}` → npm run build / ./gradlew build
+- `{{TEST_CMD}}` → npm test / ./gradlew test
+```
+
+**2. secret-guard.sh 금지어 추가**
+
+```bash
+FORBIDDEN=(
+  # 공통 (이미 포함)
+  'sk-[a-zA-Z0-9]{20,}'         # OpenAI
+  'sk-ant-[a-zA-Z0-9]{20,}'     # Anthropic
+  'ghp_[a-zA-Z0-9]{36}'         # GitHub
+  'AKIA[0-9A-Z]{16}'            # AWS
+  'AIza[0-9A-Za-z_-]{35}'       # Google
+
+  # 프로젝트별 추가 ← 여기에
+  'MyCompanyName'
+  'internal-codename'
+)
+```
+
+**3. 프로젝트 고유 rules 추가 (선택)**
+
+프로젝트에 특화된 규칙이 있으면 `.claude/rules/`에 추가:
+
+```markdown
+<!-- .claude/rules/my-project.md -->
+---
+description: 프로젝트 고유 규칙
+globs: src/**/*.ts
+---
+# 규칙 내용
+```
+
+`globs` 패턴에 매칭되는 파일을 편집할 때만 자동 로딩되므로 **평소에는 토큰 0 소비**.
+
+---
+
+## 각 구성 요소 상세
+
+### settings.json — 보안 + 자동화의 뼈대
+
+```
+deny 규칙 (7개):
+├── Read(**/.env*)              ← 시크릿 파일 읽기 차단
+├── Read(**/secrets*)           ← secrets 디렉토리 차단
+├── Write(**/.env*)             ← 시크릿 파일 쓰기 차단
+├── Bash(rm -rf *)             ← 재귀 삭제 차단
+├── Bash(git push --force*)    ← 강제 푸시 차단
+├── Bash(git reset --hard*)    ← 하드 리셋 차단
+└── Bash(DROP TABLE*)          ← DB 테이블 삭제 차단
+
+hooks (4개):
+├── SessionStart: gc-drift.sh   ← 세션 시작 시 하네스 건강 체크
+├── PreToolUse(Bash): build-gate ← git commit 전 빌드 검증
+├── PreToolUse(Edit|Write): secret-guard.sh ← 시크릿 패턴 차단
+├── PostToolUse(Edit|Write): type-check    ← 타입체크 자동수정
+└── PostToolUse(Bash): compound reminder   ← push 후 /compound 안내
+```
+
+**설계 원칙: Deny-First with Human Escalation**
+
+deny 규칙은 항상 allow보다 우선. 인식 못하는 위험 액션은 사용자에게 확인 요청. Claude Code arxiv 논문에서 확인된 내부 설계와 동일한 원칙.
+
+### gc-drift.sh — 하네스가 썩지 않게
+
+OpenAI Codex 팀이 사용하는 "Garbage Collection" 패턴의 경량 버전.
+
+```
+세션 시작 시 4가지 체크:
+1. CLAUDE.md 줄 수 > 250? → 경고 (Skills로 분리 필요)
+2. settings.json에 deny 있나? → 없으면 보안 경고
+3. hooks/ 에 .sh 파일 있나? → 없으면 경고
+4. .claude/ 에 빈 .md 파일? → 있으면 정리 권장
+```
+
+**모두 경고만** — 차단하지 않음. Martin Fowler의 "Computational Sensor"로 드리프트를 **조기 발견**하는 것이 목적.
+
+### secret-guard.sh — 시크릿 유출 원천 차단
+
+5대 클라우드 서비스의 API 키 패턴을 정규식으로 감지:
+
+| 패턴 | 서비스 |
+|------|--------|
+| `sk-[a-zA-Z0-9]{20,}` | OpenAI |
+| `sk-ant-[a-zA-Z0-9]{20,}` | Anthropic |
+| `ghp_[a-zA-Z0-9]{36}` | GitHub |
+| `AKIA[0-9A-Z]{16}` | AWS |
+| `AIza[0-9A-Za-z_-]{35}` | Google |
+
+프로젝트별 금지어(회사명, 코드네임)도 `FORBIDDEN` 배열에 추가 가능.
+
+**화이트리스트**: `.claude/` 내부 파일은 검사 제외 — 훅 스크립트 자체에 정규식 패턴이 들어있으므로 자기 차단 역설 방지.
+
+### PostToolUse 타입체크 — 자동수정 루프의 핵심
+
+```
+에이전트가 파일 편집
+  → PostToolUse Hook 발동
+    → tsconfig.json 존재 확인
+      → 있으면: npx tsc --noEmit
+        → 성공: silent (출력 없음, 컨텍스트 오염 방지)
+        → 실패: 에러 10줄만 표시 + exit 2
+          → 에이전트가 에러를 읽고 자동 수정
+            → 다시 Hook 발동 → 성공할 때까지 반복
+      → 없으면: skip (JS 프로젝트에서도 동작)
+```
+
+**exit code 2**가 핵심. Claude Code에서 exit 2는 "에이전트에게 다시 시도하라"는 시그널. 사람 개입 없이 타입 에러가 자동 수정되는 루프.
+
+**"성공은 silent"**: OpenAI Codex 팀의 교훈 — 4,000줄 성공 테스트 출력이 컨텍스트를 오염시키면 에이전트가 본 작업을 잃어버린다. 실패만 표면화.
+
+### /review — Few-shot Calibration 리뷰
+
+Anthropic 3-Agent 패턴에서 배운 핵심: **평가에 점수 기준 예시를 제공하면 일관성이 올라간다.**
+
+```
+PASS 예시: 모든 항목 구현, 보안 이슈 0, 테스트 존재
+WARNING 예시: 사소한 누락 1-2건, any 타입 1-2건
+FAIL 예시: XSS 취약점, 빌드 실패, 하드코딩 시크릿
+```
+
+에이전트가 이 예시를 보고 자기 판정의 "기준점"을 잡을 수 있다.
+
+### /compound — 복리 성장 루프
+
+```
+push 완료
+  → /compound 실행
+    → Phase 1: CHANGELOG 업데이트
+    → Phase 2: 회고 작성 (잘된 것 / 아쉬운 것 / 다음에 적용)
+    → Phase 3: 솔루션 박제 (재발 방지 문서)
+    → Phase 4: 메모리 업데이트
+    → Phase 5: 커밋
+```
+
+이 루프가 돌 때마다 **하네스 자체가 개선**된다. 회고에서 발견된 패턴이 Hook이나 Rule로 승격되고, 다음 세션은 그 개선된 하네스 위에서 작업한다.
+
+---
+
+## 트레이드오프
+
+### 비용
+
+| 항목 | 오버헤드 | 이점 |
+|------|----------|------|
+| build-gate (PreToolUse) | commit마다 빌드 실행 (~30초) | 깨진 코드 커밋 0건 |
+| type-check (PostToolUse) | Edit마다 tsc 실행 (~5초) | 타입 에러 자동 수정 |
+| gc-drift (SessionStart) | 세션 시작 시 ~2초 | 하네스 드리프트 조기 발견 |
+| secret-guard (PreToolUse) | Edit마다 grep (~100ms) | API 키 유출 0건 |
+
+**총 세션당 추가 시간**: ~3초 (SessionStart) + Edit당 ~5초 (type-check)
+**총 토큰 오버헤드**: ~2% (성공 시 silent, 실패 시만 출력)
+
+### 하지 않기로 한 것
+
+| 결정 | 이유 |
+|------|------|
+| **MCP 서버 미포함** | 프로젝트마다 필요한 도구가 다름. 범용 템플릿에 넣으면 불필요한 토큰 소비 |
+| **Stop hook 미포함** | Claude Code API에서 안정적 지원 확인 안 됨. false completion 방지는 /review로 대체 |
+| **CI 연동 미포함** | CI 환경은 프로젝트마다 다름 (GitHub Actions / GitLab CI / Jenkins) |
+| **Language-specific linter 미포함** | TypeScript만 tsc 체크. Python/Go/Rust는 프로젝트에서 추가 |
+| **복잡한 rules 언어 미채택** | 마크다운 + glob이면 충분. YAML/DSL은 오버엔지니어링 |
+
+### 확장 포인트
+
+프로젝트가 성장하면서 추가할 수 있는 것들:
+
+```
+Day 1 (이 템플릿):
+  settings.json + hooks 4개 + rules 1개 + commands 3개
+
+Week 2+ (필요할 때 추가):
+  + 프로젝트 고유 rules (content-mdx.md, api-patterns.md 등)
+  + 프로젝트 고유 commands (/deploy, /migrate 등)
+  + MCP 서버 연결 (GitHub, Slack, DB 등)
+  + 추가 hooks (lint, format, coverage 등)
+
+Month 2+ (성숙기):
+  + harness-fitness 테스트 확장
+  + /compound Phase에 프로젝트 고유 메트릭 추가
+  + 멀티 에이전트 워크플로우 (/projects-sync 등)
+```
+
+**핵심**: Day 1에 모든 것을 세팅하지 마라. 에이전트가 **실제로 실패하는 지점**을 관찰한 후 그 실패에 맞는 Hook/Rule을 추가.
+
+---
+
+## 파일 구조 전체 맵
+
+```
+harness-template/
+├── setup.sh                          ← 원커맨드 이식
+├── CLAUDE.md                         ← 최소 템플릿 ({{변수}} 치환)
+│
+├── .claude/
+│   ├── settings.json                 ← 뼈대: deny 7개 + hooks 4개
+│   │
+│   ├── hooks/
+│   │   ├── gc-drift.sh               ← SessionStart: 드리프트 4항목 체크
+│   │   └── secret-guard.sh           ← PreToolUse: API키 + 금지어 차단
+│   │
+│   ├── rules/
+│   │   └── harness-meta.md           ← .claude/ 수정 시: 200줄 제한, deny 보존
+│   │
+│   └── commands/
+│       ├── review.md                 ← 2-Stage 리뷰 + Few-shot calibration
+│       ├── compound.md               ← 회고 + 솔루션 + CHANGELOG
+│       └── wt-branch.md              ← worktree 안전 브랜치
+│
+└── scripts/__tests__/
+    └── harness-fitness.test.mjs      ← 6개 기계적 검증 (vitest)
+```
+
+---
+
+## 기계적 검증: harness-fitness 테스트
+
+Martin Fowler의 "Computational Sensor"를 하네스 자체에 적용. `npm test`에 포함되어 매 커밋 시 하네스 건강 상태를 자동 검증.
+
+| 테스트 | 검증 내용 | 실패 시 의미 |
+|--------|-----------|-------------|
+| CLAUDE.md ≤ 250줄 | 모놀리식 매뉴얼 방지 | Skills/Rules로 분리 필요 |
+| deny 규칙 ≥ 4개 | 최소 보안 보장 | 보안 규칙 추가 필요 |
+| rm -rf deny 존재 | 재귀 삭제 차단 | 치명적 보안 갭 |
+| hooks ≥ 2개 | 자동화 최소 보장 | 빌드 검증/시크릿 차단 누락 |
+| rules 디렉토리 존재 | 스코프드 규칙 체계 | 규칙 체계 미수립 |
+| commands ≥ 2개 | 워크플로우 코드화 | 반복 작업 수동 처리 중 |
+
+---
+
+## 다른 에이전트를 위한 셋업 체크리스트
+
+이 섹션은 **새 프로젝트에 투입된 AI 에이전트가 하네스를 셋업할 때** 따라야 할 순서다.
+
+```
+□ Step 1: setup.sh 실행
+  bash /path/to/harness-template/setup.sh $(pwd)
+
+□ Step 2: CLAUDE.md 커스터마이징
+  - {{PROJECT_NAME}} → 실제 프로젝트명
+  - {{FRAMEWORK}} → 사용 중인 프레임워크
+  - {{DEV_CMD}}, {{BUILD_CMD}}, {{TEST_CMD}} → 실제 명령어
+  - 프로젝트 고유 규칙 추가
+
+□ Step 3: secret-guard.sh 커스터마이징
+  - FORBIDDEN 배열에 프로젝트별 금지어 추가
+  - 회사명, 프로젝트 코드네임 등
+
+□ Step 4: 검증
+  - npx vitest run scripts/__tests__/harness-fitness.test.mjs
+  - 6개 테스트 전부 PASS 확인
+
+□ Step 5: 첫 커밋
+  - git add .claude/ CLAUDE.md scripts/__tests__/harness-fitness.test.mjs
+  - git commit -m "harness: 공통 하네스 템플릿 이식"
+
+□ Step 6: 1주일 사용 후
+  - 에이전트가 실패한 패턴 관찰
+  - 해당 패턴에 맞는 Hook 또는 Rule 1개 추가
+  - harness-fitness 테스트에 새 검증 추가
+```
+
+---
+
+## 자기 점검
+
+1. 하네스 없이 AI 코딩을 하면 어떤 위험이 있는지 3가지를 말할 수 있는가?
+2. exit code 0, 1, 2의 차이를 Hook 맥락에서 설명할 수 있는가?
+3. "성공은 silent, 실패만 표면화"의 이유를 컨텍스트 윈도우 관점에서 설명할 수 있는가?
+4. 왜 Day 1에 모든 것을 세팅하면 안 되는가?
+5. (열린 질문) 이 템플릿을 Python/Go 프로젝트에 이식할 때 어떤 부분을 바꿔야 하나?
+
+### 실습 과제
+
+1. 본인의 사이드 프로젝트에 `setup.sh`를 실행해보라
+2. CLAUDE.md의 `{{변수}}`를 실제 값으로 채워라
+3. `secret-guard.sh`에 프로젝트별 금지어를 1개 이상 추가하라
+4. `npx vitest run`으로 6개 테스트 PASS를 확인하라
+5. 1주일 사용 후 에이전트가 실패한 패턴을 1개 찾아 Hook 또는 Rule로 추가하라
+
+---
+
+## 출처
+
+- [harness-template/ 소스코드](https://github.com/Mino777/ai-study/tree/main/harness-template) — 이 프로젝트의 이식용 템플릿
+- [Martin Fowler — Harness Engineering](https://martinfowler.com/articles/harness-engineering.html) — Guide/Sensor 프레임워크
+- [arxiv — Dive into Claude Code](https://arxiv.org/html/2604.14228v1) — 4개 확장 메커니즘 + Deny-First
+- [Anthropic — 3-Agent Harness](https://www.infoq.com/news/2026/04/anthropic-three-agent-harness-ai/) — Few-shot calibration
+- [OpenAI — Harness Engineering](https://openai.com/index/harness-engineering/) — Garbage Collection 패턴
