@@ -518,19 +518,23 @@ export default function InterviewPage() {
     return allQs.filter((q) => q.phase <= currentPhase.id);
   }, [track, currentPhase.id]);
 
+  // 랜덤 시드: 페이지 진입 시 1회 생성 (탭 전환으로는 변경 안 됨)
+  const [cardSeed] = useState(() => Math.random());
   const todayCards = useMemo(() => {
     const techQs = track === "ios" ? IOS_QUESTIONS : FDE_QUESTIONS;
     const allQs = [...techQs, ...CULTURE_QUESTIONS];
-    const phaseQs = allQs.filter((q) => q.phase === currentPhase.id);
+    const phaseQs = allQs.filter((q) => q.phase <= currentPhase.id);
     if (phaseQs.length === 0) return [];
-    // 5 unique cards per day, cycling through phase questions
-    const result: typeof phaseQs = [];
-    for (let i = 0; i < 5 && i < phaseQs.length; i++) {
-      const idx = ((selectedDay - 1) * 5 + i) % phaseQs.length;
-      result.push(phaseQs[idx]);
+    // Fisher-Yates shuffle with seed
+    const shuffled = [...phaseQs];
+    let seed = Math.floor(cardSeed * 2147483647);
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      seed = (seed * 16807) % 2147483647;
+      const j = seed % (i + 1);
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
-    return result;
-  }, [track, currentPhase.id, selectedDay]);
+    return shuffled.slice(0, 7);
+  }, [track, currentPhase.id, cardSeed]);
 
   const todayProblems = useMemo(() => {
     const problems = PHASE_PROBLEMS[currentPhase.id] ?? [];
