@@ -114,7 +114,7 @@ cat harness-template/ios/CLAUDE.md.ios-append >> CLAUDE.md
       "matcher": "Edit|Write",
       "hooks": [{
         "type": "command",
-        "command": "if echo \"$CLAUDE_FILE_PATH\" | grep -qE '\\.pbxproj$|\\.xcodeproj/'; then echo '❌ .pbxproj 직접 수정 금지. Xcode에서 Add Files 사용.'; exit 1; fi"
+        "command": "if echo \"$CLAUDE_FILE_PATH\" | grep -qE '\\.pbxproj$|\\.xcodeproj/'; then echo '❌ .pbxproj 직접 수정 금지. Xcode에서 Add Files 사용.' >&2; exit 2; fi"
       }]
     }
   ],
@@ -239,7 +239,7 @@ git commit 시도
   → xcodeproj?      → xcodebuild -project
   → 없음?           → 빌드 체크 skip
 
-빌드 실패 → exit 1 (커밋 차단)
+빌드 실패 → exit 2 (커밋 차단 — exit 1은 비차단이므로 반드시 2!)
 빌드 성공 → exit 0 (커밋 허용)
 ```
 
@@ -262,12 +262,14 @@ Swift 파일 편집
 ```bash
 # settings.json PreToolUse에 추가
 if echo "$CLAUDE_FILE_PATH" | grep -qE '\.pbxproj$|\.xcodeproj/'; then
-  echo '❌ .pbxproj 직접 수정 금지. Xcode에서 Add Files 사용.'
-  exit 1
+  echo '❌ .pbxproj 직접 수정 금지. Xcode에서 Add Files 사용.' >&2
+  exit 2  # 반드시 2! (exit 1은 비차단 — 파일이 수정됨)
 fi
 ```
 
 이 Hook이 있으면 에이전트가 pbxproj를 **시도조차 할 수 없다**. CLAUDE.md에 "금지"라고 적는 것보다 훨씬 안전 — Hook은 셸 레벨 차단이므로 AI가 무시할 수 없다.
+
+> **주의**: `exit 1`은 비차단 경고이므로 파일이 **그대로 수정된다**. 차단하려면 반드시 `exit 2`.
 
 ---
 

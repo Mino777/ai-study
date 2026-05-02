@@ -4,7 +4,8 @@
 # PreToolUse 가드 — Edit/Write에서 회사 프로젝트 식별자가 ai-study에 노출되는 것을 차단한다.
 #
 # 발동 시점: Edit / Write 툴 호출 직전
-# 차단 동작: 금지 패턴 발견 시 exit 1 → Claude가 도구 호출을 다시 시도하도록 강제
+# 차단 동작: 금지 패턴 발견 시 exit 2 → 도구 실행 차단 + stderr가 에이전트에게 전달
+# 주의: exit 1은 비차단(도구 실행 계속됨)이므로 반드시 exit 2 사용
 #
 # 입력: Claude Code 하네스가 JSON을 stdin으로 전달 (이전 스키마는 CLAUDE_TOOL_INPUT envvar였음).
 #      하위 호환을 위해 둘 다 처리한다.
@@ -43,7 +44,7 @@ if [ -z "$INPUT_JSON" ]; then
   echo "🚫 NO_COMPANY_NAMES: 훅 입력이 비어있음 (하네스 스키마 불일치 가능성) — 보수적 차단" >&2
   echo "이 메시지가 계속 나오면 훅 스크립트의 stdin 수집 경로 점검 필요." >&2
   echo "settings.json의 matcher가 Edit|Write로 한정돼 있는지 확인." >&2
-  exit 1
+  exit 2
 fi
 
 # file_path 추출 (화이트리스트 판정용)
@@ -95,7 +96,7 @@ if printf '%s' "$INPUT_JSON" | grep -qE "$FORBIDDEN"; then
   echo "  ~/.claude/projects/-Users-jominho-Develop-ai-study/memory/feedback_company_project_names.md" >&2
   echo "" >&2
   echo "차단 회피가 의도적이라면 훅 스크립트의 화이트리스트에 케이스 추가." >&2
-  exit 1
+  exit 2
 fi
 
 exit 0

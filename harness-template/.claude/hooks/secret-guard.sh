@@ -44,10 +44,10 @@ fi
 
 for pattern in "${FORBIDDEN[@]}"; do
   if echo "$CONTENT" | grep -qE "$pattern"; then
-    echo "❌ SECRET GUARD: 금지 패턴 감지 — '$pattern'"
-    echo "   파일: $FILE_PATH"
-    echo "   시크릿/금지어를 코드에 포함하지 마세요."
-    exit 1
+    echo "❌ SECRET GUARD: 금지 패턴 감지 — '$pattern'" >&2
+    echo "   파일: $FILE_PATH" >&2
+    echo "   시크릿/금지어를 코드에 포함하지 마세요." >&2
+    exit 2  # exit 1은 비차단! 반드시 2로 차단
   fi
 done
 

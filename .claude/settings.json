@@ -34,7 +34,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "if echo \"$CLAUDE_TOOL_INPUT\" | python3 -c \"import sys,json; d=json.load(sys.stdin); print(d.get('command',''))\" 2>/dev/null | grep -qE 'git commit'; then cd /Users/jominho/Develop/ai-study && npm run build 2>&1 | grep -E 'error|Error|✓|✅' | tail -5; if [ $? -ne 0 ]; then echo '❌ QA_GATE FAILED: 빌드 실패. 커밋 차단.'; exit 1; fi; echo '✅ QA_GATE PASSED'; fi",
+            "command": "if echo \"$CLAUDE_TOOL_INPUT\" | python3 -c \"import sys,json; d=json.load(sys.stdin); print(d.get('command',''))\" 2>/dev/null | grep -qE 'git commit'; then cd /Users/jominho/Develop/ai-study && npm run build 2>&1 | grep -E 'error|Error|✓|✅' | tail -5; if [ $? -ne 0 ]; then echo '❌ QA_GATE FAILED: 빌드 실패. 커밋 차단.' >&2; exit 2; fi; echo '✅ QA_GATE PASSED'; fi",
             "timeout": 300000
           }
         ]
