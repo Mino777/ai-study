@@ -684,6 +684,78 @@ MyApp/
 
 ---
 
+## .claudeignore — iOS 컨텍스트 폭발 방지
+
+iOS 프로젝트는 빌드 캐시가 **모듈당 6-7GB**. `.claudeignore` 없이 시작하면 컨텍스트가 130GB+ 폭발.
+
+```
+**/.build/          # SPM 모듈별 빌드 캐시 (모듈당 6-7GB!)
+Pods/               # CocoaPods dependencies
+DerivedData/        # Xcode derived data
+*.xcodeproj/        # Xcode XML (generated, 수천 줄)
+vendor/             # CocoaPods vendor
+.bundle/            # Ruby bundler
+external-spm/       # 외부 SPM 패키지 미러
+Gemfile.lock        # Ruby lockfile
+```
+
+**`**/.build/`가 `.build/`가 아닌 이유**: SPM multi-module 프로젝트에서는 각 모듈 디렉토리 안에 `.build/`가 생긴다. `**/.build/`는 **모든 깊이**에서 재귀적으로 제외. 모듈 20개면 `.build/`만으로는 120GB+ 유입.
+
+---
+
+## 훅 4레이어 진단 — "설정했는데 안 되는" 원인 찾기
+
+훅이 **무음으로 실패**하는 경우가 많다. 에러 메시지 없이 단순히 실행이 안 됨. 4레이어를 전부 확인해야:
+
+```bash
+# 1. 파일 존재
+ls -la .claude/hooks/*.sh .githooks/*
+
+# 2. 실행 권한
+stat -f "%Sp %N" .claude/hooks/*.sh .githooks/*
+
+# 3. settings.json wiring
+cat .claude/settings.json | grep -A2 "hooks"
+
+# 4. git core.hooksPath (githooks 사용 시)
+git config --get core.hooksPath
+```
+
+**4줄 전부 통과해야 훅이 작동.** 하나라도 빠지면 **무음 skip** — 에러 메시지 없이 수개월간 훅이 꺼져있는 상태가 됨.
+
+가장 흔한 원인:
+- `chmod +x` 누락 (파일은 있지만 실행 불가)
+- settings.json에 Hook 경로가 등록 안 됨
+- git core.hooksPath가 `.githooks/`로 설정 안 됨
+
+---
+
+## iOS 6대 함정 — 실전에서 검증된 것만
+
+| 함정 | 증상 | 해결 |
+|------|------|------|
+| **SPM `**/.build/` 누락** | 컨텍스트 130GB 폭발 | `.claudeignore`에 `**/.build/` |
+| **Xcode 타겟 멤버십 누락** | 파일 추가 후 빌드 성공, 테스트 타겟에서 실패 | pbxproj 타겟 멤버십 확인 |
+| **`@MainActor` 누락** | UI 업데이트 런타임 크래시 | ios-swift.md Rule로 강제 |
+| **prefix grep 미사용 import** | `Manager`/`State` 같은 공통 이름 놓침 | AST 분석 또는 빌드 후 경고 |
+| **Shell pipe exit code** | `$?`가 파이프 마지막만 반환, 빌드 실패 못 잡음 | `set -o pipefail` 또는 exit code 직접 검사 |
+| **훅 4중 wiring 무음 실패** | 훅이 한 번도 실행 안 됨 (에러 0) | 위 4레이어 진단 실행 |
+
+---
+
+## swift package show-dependencies — 1초 의존성 검증
+
+SPM 모듈 의존성 수정 후 빌드 없이 그래프를 즉시 확인:
+
+```bash
+cd Modules/Common
+swift package show-dependencies --format flatlist 2>/dev/null | sort -u
+```
+
+빌드는 수 분이지만 이 명령은 **1초**. 특히 transitive dependency 제거 시 대체 불가능한 검증 도구.
+
+---
+
 ## 에이전트를 위한 셋업 체크리스트
 
 ```

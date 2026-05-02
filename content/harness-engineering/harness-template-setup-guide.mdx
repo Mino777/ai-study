@@ -663,6 +663,64 @@ Month 2+ (성숙기):
 
 ---
 
+## .claudeignore — 컨텍스트 오염 차단
+
+`.claudeignore`는 AI의 자동 파일 탐색에서 제외하는 패턴. 프로젝트 루트에 생성:
+
+```
+node_modules/       # npm (수만 파일)
+.next/              # Next.js 빌드 캐시
+dist/               # 빌드 출력
+*.lock              # lockfile (거대)
+**/.build/          # SPM 빌드 캐시 (iOS, 모듈당 6-7GB)
+DerivedData/        # Xcode (iOS)
+```
+
+**`.claudeignore` vs `permissions.deny`**: claudeignore는 자동 탐색에서 제외하지만 명시적 접근은 가능. 진짜 민감한 파일(.env, secrets)은 `permissions.deny`로 **읽기 자체를 차단**.
+
+---
+
+## 훅 4레이어 진단 — "설정했는데 안 되는" 문제
+
+훅이 **무음으로 실패**하는 경우가 많다. 에러 메시지 없이 실행 안 됨. 4가지를 전부 확인:
+
+```bash
+# 1. 파일 존재
+ls -la .claude/hooks/*.sh
+
+# 2. 실행 권한 (chmod +x 필수)
+stat -f "%Sp %N" .claude/hooks/*.sh
+
+# 3. settings.json에 등록
+grep -A2 "hooks" .claude/settings.json
+
+# 4. 실제 실행 테스트
+echo '{"tool_name":"Bash","tool_input":{"command":"echo test"}}' | bash .claude/hooks/gc-drift.sh
+```
+
+**가장 흔한 원인**: `chmod +x` 누락. setup.sh가 자동으로 권한을 설정하지만, 수동 복사 시 빠지기 쉬움.
+
+---
+
+## Shell Pipe Exit Code 함정
+
+```bash
+# ❌ 위험 — 빌드 실패를 못 잡음
+npm run build | tee build.log
+echo $?  # tee의 exit code (항상 0)
+
+# ✅ 안전 — 빌드 exit code 직접 검사
+npm run build 2>&1 | tee build.log; exit ${PIPESTATUS[0]}
+
+# ✅ 또는 pipefail 설정
+set -o pipefail
+npm run build | tee build.log
+```
+
+**`$?`는 파이프의 마지막 명령만 반환.** `npm run build | grep error`에서 빌드가 실패해도 grep이 성공하면 `$?`는 0. Hook에서 이 함정에 빠지면 **깨진 코드가 커밋됨**.
+
+---
+
 ## 파일 구조 전체 맵
 
 ```
