@@ -8,8 +8,8 @@ tags:
   - retry
   - resilience
   - multi-provider
-confidence: 3
-last_verified: "2026-04-09"
+confidence: 4
+last_verified: "2026-05-03"
 applicable_to: ["moneyflow","any"]
 connections:
   - agents/multi-agent-pipeline
@@ -20,6 +20,31 @@ connections:
 status: complete
 description: 여러 LLM 프로바이더를 자동 전환하는 회복 탄력적 아키텍처. Circuit breaker + 지수 백오프.
 type: entry
+quiz:
+  - question: Circuit Breaker 3회 실패 후 2분 cooldown 설정 이유는?
+    choices:
+      - 사용자 요청 대기
+      - 복구 시간 제공 및 다른 프로바이더 우선 시도
+      - 프로바이더 경고
+      - 설정값
+    answer: 1
+    explanation: 장애 프로바이더로의 요청을 차단하여 리소스 낭비 방지 및 복구 기간 제공
+  - question: 지수 백오프와 프로바이더 fallback을 구분하는 이유는?
+    choices:
+      - 비용 vs 성능
+      - 일시적 오류는 재시도, 완전한 장애는 전환
+      - 구분 필요 없음
+      - 백오프만으로 충분
+    answer: 1
+    explanation: 429/503 등 일시적 오류는 재시도, 완전 장애는 다른 프로바이더로 즉시 전환
+  - question: Fallback chain을 비용 순으로 정렬하는 이유는?
+    choices:
+      - 고급 기능 우선
+      - 저가 프로바이더 우선 시도로 비용 절감
+      - 응답 속도
+      - 신뢰도 순
+    answer: 1
+    explanation: 실패는 기본. 저가부터 시작하면 장기적 비용 절감이 크다
 ---
 
 ## 핵심 개념
@@ -108,6 +133,164 @@ function buildFallbackChain(preferredProvider: string) {
 1. `JSON.parse()` 직접 시도
 2. ` ```json ... ``` ` 코드 블록에서 추출
 3. 정규식으로 첫 번째 `{...}` 추출
+
+## 실전 Code Recipe: TypeScript 3-프로바이더 Fallback 구현
+
+```typescript
+import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+
+type Provider = 'gemini' | 'claude' | 'openai';
+
+interface ProviderState {
+  failures: number;
+  lastFailure: number;
+}
+
+const CIRCUIT_BREAKER = {
+  maxFailures: 3,
+  cooldownMs: 120_000, // 2분
+};
+
+class MultiProviderLLM {
+  private circuitState: Map<Provider, ProviderState> = new Map([
+    ['gemini', { failures: 0, lastFailure: 0 }],
+    ['claude', { failures: 0, lastFailure: 0 }],
+    ['openai', { failures: 0, lastFailure: 0 }],
+  ]);
+
+  private anthropic = new Anthropic();
+  private openai = new OpenAI();
+  private gemini = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+
+  private isCircuitOpen(provider: Provider): boolean {
+    const state = this.circuitState.get(provider)!;
+    if (state.failures >= CIRCUIT_BREAKER.maxFailures) {
+      const elapsed = Date.now() - state.lastFailure;
+      return elapsed < CIRCUIT_BREAKER.cooldownMs;
+    }
+    return false;
+  }
+
+  private recordFailure(provider: Provider) {
+    const state = this.circuitState.get(provider)!;
+    state.failures += 1;
+    state.lastFailure = Date.now();
+    console.log(`[${provider}] Failure recorded (${state.failures}/${CIRCUIT_BREAKER.maxFailures})`);
+  }
+
+  private recordSuccess(provider: Provider) {
+    const state = this.circuitState.get(provider)!;
+    state.failures = 0;
+    console.log(`[${provider}] Success - circuit reset`);
+  }
+
+  private buildFallbackChain(preferred?: Provider): Provider[] {
+    const allProviders: Provider[] = ['gemini', 'claude', 'openai'];
+    const available = allProviders.filter((p) => !this.isCircuitOpen(p));
+
+    if (preferred && available.includes(preferred)) {
+      return [preferred, ...available.filter((p) => p !== preferred)];
+    }
+    return available;
+  }
+
+  async callWithFallback(
+    prompt: string,
+    options?: { preferred?: Provider; maxTokens?: number }
+  ): Promise<string> {
+    const fallbackChain = this.buildFallbackChain(options?.preferred);
+
+    if (fallbackChain.length === 0) {
+      throw new Error('All providers are in circuit breaker state');
+    }
+
+    for (const provider of fallbackChain) {
+      try {
+        const result = await this.callProvider(provider, prompt, options?.maxTokens);
+        this.recordSuccess(provider);
+        console.log(`[${provider}] Success`);
+        return result;
+      } catch (error) {
+        this.recordFailure(provider);
+        console.log(`[${provider}] Error: ${(error as Error).message}`);
+
+        if (provider === fallbackChain[fallbackChain.length - 1]) {
+          // 마지막 프로바이더도 실패
+          throw new Error(`All providers failed. Last error: ${(error as Error).message}`);
+        }
+      }
+    }
+
+    throw new Error('Unexpected error in fallback chain');
+  }
+
+  private async callProvider(
+    provider: Provider,
+    prompt: string,
+    maxTokens: number = 1024
+  ): Promise<string> {
+    switch (provider) {
+      case 'gemini':
+        return this.callGemini(prompt, maxTokens);
+      case 'claude':
+        return this.callClaude(prompt, maxTokens);
+      case 'openai':
+        return this.callOpenAI(prompt, maxTokens);
+    }
+  }
+
+  private async callClaude(prompt: string, maxTokens: number): Promise<string> {
+    const response = await this.anthropic.messages.create({
+      model: 'claude-3-5-sonnet-20241022',
+      max_tokens: maxTokens,
+      messages: [{ role: 'user', content: prompt }],
+    });
+
+    if (response.content[0].type === 'text') {
+      return response.content[0].text;
+    }
+    throw new Error('Unexpected response format from Claude');
+  }
+
+  private async callOpenAI(prompt: string, maxTokens: number): Promise<string> {
+    const response = await this.openai.chat.completions.create({
+      model: 'gpt-4-turbo',
+      max_tokens: maxTokens,
+      messages: [{ role: 'user', content: prompt }],
+    });
+
+    return response.choices[0].message.content || '';
+  }
+
+  private async callGemini(prompt: string, maxTokens: number): Promise<string> {
+    const model = this.gemini.getGenerativeModel({ model: 'gemini-2.0-flash' });
+    const response = await model.generateContent({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: {
+        maxOutputTokens: maxTokens,
+      },
+    });
+
+    return response.response.text();
+  }
+}
+
+// 사용 예
+const llm = new MultiProviderLLM();
+const result = await llm.callWithFallback(
+  '한글로 짧은 시를 써줘: 봄',
+  { preferred: 'gemini' } // 비용이 저렴하므로 먼저 시도
+);
+console.log(result);
+```
+
+**핵심:**
+- `buildFallbackChain()`: 현재 열린 circuit 제외하고 available 프로바이더만 사용
+- `recordFailure()` / `recordSuccess()`: 상태 추적으로 건강한 프로바이더 우선
+- `callWithFallback()`: 체인을 순회하며 첫 성공할 때까지 시도
+- 로깅: 모든 실패 이유를 추적하여 프로덕션 모니터링 가능
 
 ## 설계 원칙
 

@@ -9,8 +9,33 @@ tags:
   - ios18
   - spotlight
   - writing-tools
-confidence: 2
-last_verified: "2026-04-08"
+confidence: 3
+last_verified: "2026-05-03"
+quiz:
+  - question: "Apple Intelligence와 연동할 때 사용 불가능한 API는?"
+    choices:
+      - "App Intents"
+      - "CoreSpotlight"
+      - "IntelligenceKit"
+      - "Writing Tools"
+    answer: 2
+    explanation: "IntelligenceKit은 실제 존재하지 않는 가상 프레임워크다. Apple Intelligence는 App Intents, CoreSpotlight, UITextView Writing Tools, NSUserActivity를 통해 연동된다."
+  - question: "App Intents의 perform() 메서드에서 피해야 할 점은?"
+    choices:
+      - "async/await 사용하기"
+      - "네트워크 요청 수행"
+      - "무거운 작업을 메인 스레드에서 직접 수행하기 (MainActor.run으로 감싸지 않음)"
+      - "에러 처리하기"
+    answer: 2
+    explanation: "AppIntent의 perform()은 빠르게 응답해야 한다. 무거운 작업(네트워크, 복잡한 계산)은 비동기로 처리해야 하고, UI 업데이트는 MainActor.run으로 래핑해야 한다."
+  - question: "CoreSpotlight 인덱싱 후 항목을 삭제할 때 반드시 해야 할 일은?"
+    choices:
+      - "데이터베이스에서만 삭제하기"
+      - "앱을 재시작하기"
+      - "CSSearchableIndex에서도 동기 삭제하여 Spotlight 인덱스 유지"
+      - "사용자에게 알림 보내기"
+    answer: 2
+    explanation: "Spotlight 인덱싱한 항목을 삭제할 때 CSSearchableIndex.deleteSearchableItems()로 인덱스도 제거해야 한다. 그렇지 않으면 삭제된 항목이 Spotlight에서 여전히 검색되어 사용자 혼동을 초래한다."
 applicable_to: ["any"]
 connections:
   - harness-engineering/harness-engineering-overview

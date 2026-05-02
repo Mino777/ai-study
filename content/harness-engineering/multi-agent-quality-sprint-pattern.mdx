@@ -11,8 +11,33 @@ tags:
   - parallel-dispatch
 description: "기능 스프린트 사이에 테스트·린트·보안·성능 등 품질 부채를 Multi-Agent로 병렬 청산하는 패턴. Architect가 디스패치하고 Worker들이 독립 실행."
 confidence: 2
-last_verified: "2026-04-26"
+last_verified: "2026-05-03"
 applicable_to: ["multi-agent", "architect-worker"]
+quiz:
+  - question: "Multi-Agent Quality Sprint에서 품질 점검을 'haiku subagent로 격리'하는 이유는?"
+    choices:
+      - "haiku 모델이 더 정확하기 때문"
+      - "haiku로 탐색을 격리하면 architect 컨텍스트를 오염시키지 않으면서 3개 프로젝트를 동시에 수 분 내에 스캔할 수 있기 때문"
+      - "비용을 절감하기 위해"
+      - "haiku가 빌드를 더 빨리 검증하기 때문"
+    answer: 1
+    explanation: "Architect가 복잡한 의사결정을 해야 하는데, 3개 프로젝트의 모든 상세한 코드 분석을 직접 하면 context window가 오염된다. haiku를 병렬 worker처럼 사용하면 architect는 최종 판단(P1/P2 분류)에만 집중할 수 있다."
+  - question: "품질 WO(Work Order)가 기능 WO와 달리 '완전 병렬 실행'이 가능한 근본 이유는?"
+    choices:
+      - "품질 WO가 더 짧기 때문"
+      - "품질 WO는 워커 간 의존성이 없어서 (Server 테스트 ↔ iOS Force unwrap은 독립적), 순서 제약이 없기 때문"
+      - "기능 WO가 더 중요하기 때문"
+      - "품질 체크가 자동화되기 때문"
+    answer: 1
+    explanation: "기능 WO는 순서가 있다 (Server API 구현 → Client 구현). 하지만 Server 테스트 작업과 iOS Force unwrap 제거는 서로 영향이 없으므로, 3개 워커가 동시에 독립적으로 작업할 수 있다."
+  - question: "리팩터링 WO 완료 기준에 '테스트 실행 숫자'를 포함해야 하는 이유는?"
+    choices:
+      - "테스트 실행 속도를 측정하기 위해"
+      - "리팩터링이 기존 테스트를 깨뜨리지 않았는지 검증하기 위해, '빌드 통과'만으로는 부족하기 때문"
+      - "개발자가 충분히 일했는지 확인하기 위해"
+      - "코드 커버리지를 증가시키기 위해"
+    answer: 1
+    explanation: "WO-176에서 Repository 테스트가 3/43 → 43/43으로 증가했다는 것이 '완료'의 증거다. 빌드만 통과하면 겉으로는 성공했어 보이지만, 실제로 테스트가 실행되지 않거나 삭제되었을 수도 있다. 숫자로 검증해야 한다."
 connections:
   - spec-driven-development-for-ai-agents
   - skillify-failure-to-skill-practice

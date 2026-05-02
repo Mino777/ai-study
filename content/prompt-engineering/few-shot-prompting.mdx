@@ -7,8 +7,8 @@ tags:
   - few-shot
   - in-context-learning
   - examples
-confidence: 3
-last_verified: "2026-04-08"
+confidence: 4
+last_verified: "2026-05-03"
 applicable_to: ["any"]
 connections:
   - prompt-engineering/chain-of-thought
@@ -19,6 +19,31 @@ connections:
 status: complete
 description: 예시를 통해 LLM의 출력을 가이드하는 기법. 적절한 예시 선택이 성능을 좌우한다.
 type: entry
+quiz:
+  - question: Few-shot 예시의 개수가 정확도에 미치는 영향은?
+    choices:
+      - 예시가 많을수록 항상 정확도가 높아진다 (10개 이상 권장)
+      - 모델이 모든 예시를 다 읽으므로 예시 개수는 무관하다
+      - 2-5개가 최적이며, 너무 많으면 컨텍스트 오염과 비용 증가로 수익률이 떨어진다
+      - Zero-shot이 few-shot보다 더 정확하다
+    answer: 2
+    explanation: Few-shot의 황금 개수는 2-5개다. 너무 많으면 컨텍스트를 낭비하고, 예시 다양성이 떨어지면 모델이 하나의 패턴만 학습한다.
+  - question: Dynamic Few-shot의 핵심 장점은?
+    choices:
+      - 항상 같은 예시를 사용해 일관성을 높인다
+      - 입력과 유사한 예시를 벡터 검색으로 동적 선택하여 관련성을 극대화한다
+      - 예시를 미리 준비할 필요가 없어진다
+      - 모든 사용자에게 동일한 예시를 제공할 수 있다
+    answer: 1
+    explanation: Dynamic few-shot은 Vector DB에서 입력과 가장 유사한 예시를 검색하여 프롬프트에 주입한다. 맞춤형 예시가 더 나은 결과를 만든다.
+  - question: Few-shot에서 예시 순서가 정확도에 영향을 미치는 이유는?
+    choices:
+      - 모델이 첫 예시만 주로 학습한다 (recency bias)
+      - LLM이 순차적으로 패턴을 누적하므로, 간단한 예시부터 복잡한 예시로 배치하면 학습 효율이 높아진다
+      - 예시 순서는 정확도에 영향이 없다
+      - 가장 어려운 예시를 먼저 배치해야 모델이 최대한 신중하게 생각한다
+    answer: 1
+    explanation: 간단→복잡 순서는 "curriculum learning" 원리다. 모델이 단계적으로 패턴을 이해하고 더 복잡한 케이스에 적용할 수 있다.
 ---
 
 ## 핵심 개념

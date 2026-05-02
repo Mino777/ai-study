@@ -11,8 +11,33 @@ tags:
   - hardening
   - checklist
 confidence: 4
-last_verified: "2026-04-15"
+last_verified: "2026-05-03"
 applicable_to: ["moneyflow","tarosaju","any"]
+quiz:
+  - question: "Default Secret 제거 패턴에서 환경변수 검증이 모듈 최상위가 아닌 함수 내에서 이루어져야 하는 이유는?"
+    choices:
+      - "빌드 시점이 아닌 호출 시점에 검증하기 위해, Edge Middleware 호환성 보장"
+      - "코드를 더 간결하게 보이게 하기 위해"
+      - "함수 내부에서 검증이 더 빠르기 때문"
+      - "환경변수 값을 캐시하기 위해"
+    answer: 0
+    explanation: "Edge Middleware가 import하는 파일은 빌드 시점에 평가되므로, 모듈 최상위에서 throw가 발생하면 빌드 자체가 실패한다. 함수로 감싸면 호출 시점에만 검증되어 Edge Runtime에서도 안전하다."
+  - question: "Timing-Safe 문자열 비교에서 Web Crypto API를 사용하는 이유로 올바른 것은?"
+    choices:
+      - "암호화 강도가 더 강하기 때문"
+      - "Edge Runtime에서 Node.js 모듈(crypto)을 import할 수 없으므로"
+      - "더 빠른 성능을 위해"
+      - "보안 헤더와 통합하기 위해"
+    answer: 1
+    explanation: "Edge Runtime 환경에서는 Node.js built-in 모듈을 사용할 수 없다. Web Crypto API는 모든 런타임에서 지원되는 표준 API로, timingSafeEqual 기능을 HMAC 기반으로 구현할 수 있다."
+  - question: "다음 중 Rate Limiting 구현에서 Upstash Redis를 권장하는 상황은?"
+    choices:
+      - "로컬 인메모리 저장소면 충분한 모든 경우"
+      - "서버리스 환경에서 분산 rate limiting이 필요할 때"
+      - "rate limit 갯수가 10개 미만일 때"
+      - "빠른 응답 속도가 불필요할 때"
+    answer: 1
+    explanation: "서버리스 환경에서는 인스턴스별 메모리가 격리되어 있어 다중 인스턴스 간에 상태 공유가 불가능하다. 분산 환경에서 전역 rate limit을 적용하려면 Redis 같은 외부 저장소가 필수다."
 connections:
   - harness-engineering/dev-setup-tips-log
   - harness-engineering/compound-engineering-philosophy

@@ -8,8 +8,33 @@ tags:
   - streaming
   - ai-ux
   - vercel-ai-sdk
-confidence: 2
-last_verified: "2026-04-09"
+confidence: 3
+last_verified: "2026-05-03"
+quiz:
+  - question: "스트리밍 UI의 주요 장점은?"
+    choices:
+      - "서버 비용을 절감한다"
+      - "사용자가 AI 응답을 실시간으로 확인하여 체감 지연 시간을 줄인다"
+      - "모델의 정확도가 높아진다"
+      - "네트워크 대역폭이 절감된다"
+    answer: 1
+    explanation: "스트리밍을 사용하면 사용자는 '로딩...' 상태 대신 글자가 실시간으로 나타나는 것을 본다. 전체 응답 시간은 같지만, 체감 지연이 훨씬 짧아져서 UX가 크게 향상된다."
+  - question: "낙관적 UI (Optimistic UI) 패턴의 핵심 원칙은?"
+    choices:
+      - "항상 즉시 최종 결과를 보여주기"
+      - "AI 응답이 없으면 사용자에게 아무것도 보여주지 않기"
+      - "로컬에서 빠른 피드백을 먼저 보여주고, AI 결과가 오면 교체하되, 실패해도 로컬 결과는 유지하기"
+      - "모든 상태 변경을 즉시 반영하기"
+    answer: 2
+    explanation: "낙관적 UI는 '지금 무언가 일어나고 있다'는 피드백을 먼저 제공하여 사용자 만족도를 높인다. 예: '분석 중' → 로컬 빠른 분석 표시 → (느린 AI 분석 도착) → 교체 또는 (실패) → 로컬 결과 유지"
+  - question: "AI 에러 핸들링에서 rate_limit과 timeout의 차이는?"
+    choices:
+      - "rate_limit이 더 심각하다"
+      - "rate_limit은 요청이 많아서 거부됨, timeout은 응답이 너무 느림. 둘 다 재시도 권장하지만 대기 전략이 다르다"
+      - "timeout이 더 자주 발생한다"
+      - "rate_limit은 AI 특화 에러가 아니다"
+    answer: 1
+    explanation: "rate_limit: 요청이 너무 많으면 일정 시간 대기 후 재시도. timeout: 응답이 느리면 더 짧은 시간 대기 후 재시도 또는 폴백. 사용자에게 보여주는 메시지도 달라야 한다."
 applicable_to: ["any"]
 connections:
   - harness-engineering/harness-engineering-overview

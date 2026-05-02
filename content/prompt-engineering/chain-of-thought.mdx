@@ -7,8 +7,8 @@ tags:
   - chain-of-thought
   - reasoning
   - step-by-step
-confidence: 3
-last_verified: "2026-04-08"
+confidence: 4
+last_verified: "2026-05-03"
 applicable_to: ["any"]
 connections:
   - prompt-engineering/few-shot-prompting
@@ -77,6 +77,97 @@ Few-shot으로 추론 과정까지 포함된 예시를 제공.
 - 작은 모델에서는 효과가 제한적 (파라미터 100B+ 권장)
 - Few-shot + CoT 조합이 가장 강력
 - 출력 형식을 JSON으로 강제하면 CoT가 억제될 수 있음 — 추론은 별도 필드로 분리
+
+## 실전 Code Recipe: Self-Consistency 구현
+
+단일 CoT 경로보다 **다중 경로 샘플링** (Self-Consistency)이 더 안정적이다. TypeScript + Anthropic 예시:
+
+```typescript
+import Anthropic from '@anthropic-ai/sdk';
+
+interface AnalysisResult {
+  reasoning: string;
+  answer: string;
+  confidence: number;
+}
+
+async function selfConsistencyAnalysis(
+  question: string,
+  numPaths: number = 3
+): Promise<AnalysisResult> {
+  const client = new Anthropic();
+  const results: string[] = [];
+
+  // 다중 경로 생성 (온도를 높여 다양성 확보)
+  const pathPromises = Array.from({ length: numPaths }).map(() =>
+    client.messages.create({
+      model: 'claude-3-5-sonnet-20241022',
+      max_tokens: 1024,
+      temperature: 0.8, // 다양한 추론 경로 샘플링
+      system: `당신은 분석 전문가입니다. 단계별로 체계적으로 생각하세요:
+1. 주어진 정보를 분석
+2. 중간 결론 도출
+3. 최종 답 결정
+
+각 단계를 명시적으로 작성하고, 마지막에 한 줄 요약으로 결론을 명시하세요.`,
+      messages: [
+        {
+          role: 'user',
+          content: question,
+        },
+      ],
+    })
+  );
+
+  const responses = await Promise.all(pathPromises);
+  responses.forEach((res) => {
+    if (res.content[0].type === 'text') {
+      results.push(res.content[0].text);
+    }
+  });
+
+  // 최종 답변 추출 및 다수결 판정
+  const extractedAnswers = results.map((r) => extractFinalAnswer(r));
+  const mostCommon = getMostCommonAnswer(extractedAnswers);
+  const confidence = (extractedAnswers.filter((a) => a === mostCommon).length / numPaths) * 100;
+
+  return {
+    reasoning: results.join('\n\n---\n\n'),
+    answer: mostCommon,
+    confidence,
+  };
+}
+
+function extractFinalAnswer(text: string): string {
+  // "최종 답:" 또는 "결론:" 이후의 첫 문장 추출
+  const match = text.match(
+    /(?:최종 답|결론|답변)[:：]\s*(.+?)(?:\n|$)/i
+  );
+  return match ? match[1].trim() : text.split('\n').pop() || '';
+}
+
+function getMostCommonAnswer(answers: string[]): string {
+  const counts = new Map<string, number>();
+  answers.forEach((a) => {
+    counts.set(a, (counts.get(a) || 0) + 1);
+  });
+  return Array.from(counts.entries()).sort((a, b) => b[1] - a[1])[0][0];
+}
+
+// 사용 예
+const result = await selfConsistencyAnalysis(
+  '다음 데이터를 분석하세요: 매출이 15% 증가, 원가는 8% 증가, 환율이 2% 하락했습니다. 수익성이 개선되었나요?',
+  5
+);
+
+console.log('최종 답:', result.answer);
+console.log('신뢰도:', result.confidence.toFixed(1) + '%');
+```
+
+**핵심:**
+- `temperature: 0.8`로 충분한 다양성 확보 (높으면 노이즈, 낮으면 동일 경로)
+- 다수결이 confidence → 결과의 신뢰도 정량화
+- 추론 전 과정을 preserve하여 실패 시 디버깅 가능
 
 ## AI Agent Directive
 

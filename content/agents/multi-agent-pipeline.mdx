@@ -2,15 +2,10 @@
 title: Multi-Agent Pipeline 설계
 category: agents
 date: '2026-04-09'
-tags:
-  - multi-agent
-  - pipeline
-  - debate
-  - consensus
-  - orchestration
-confidence: 3
-last_verified: "2026-04-09"
-applicable_to: ["moneyflow","any"]
+tags: [multi-agent, pipeline, debate, consensus, orchestration]
+confidence: 4
+last_verified: '2026-05-03'
+applicable_to: [moneyflow, any]
 connections:
   - agents/tool-use
   - prompt-engineering/few-shot-prompting
@@ -23,8 +18,33 @@ connections:
   - prompt-engineering/quality-guards
   - prompt-engineering/structured-output
 status: complete
-description: 여러 AI 에이전트가 협업하여 하나의 결론을 도출하는 파이프라인 아키텍처. 실전 사례 포함.
+description: 여러 AI 에이전트가 협업하여 하나의 결론을 도출하는 파이프라인 아키텍처.
 type: entry
+quiz:
+  - question: Phase 1을 여러 에이전트로 나누는 핵심 이유는?
+    choices:
+      - 비용 절감
+      - 병렬 실행과 관점 다양성
+      - 사용자 만족도
+      - 특별한 이유 없음
+    answer: 1
+    explanation: 역할 분리로 시간 단축 및 편향 감소
+  - question: Devil's Advocate가 confidence > 80%에서 발동하는 이유는?
+    choices:
+      - 높은 확신도는 항상 정확
+      - 과신 편향이 강하므로 검증 필요
+      - 사용자 만족도
+      - 비용 절감
+    answer: 1
+    explanation: 높은 신뢰도일수록 놓친 위험이 있을 수 있음
+  - question: 타임아웃 시 부분 결과를 폐기하는 문제점은?
+    choices:
+      - 타임아웃은 없다
+      - 부분 결과는 신뢰 불가
+      - fallback으로 활용 가능하므로 폐기 시 실패
+      - 모든 에이전트 재실행 가능
+    answer: 2
+    explanation: 부분 결과를 recovery로 활용하는 resilience 필수
 ---
 
 ## 핵심 개념
@@ -80,6 +100,170 @@ Portfolio Manager(CIO)가 전체를 종합하되, confidence가 80% 이상이면
 | 토론 (Bull) | GPT | 0.7 | 창의적 논거 |
 | 토론 (Bear) | Claude | 0.7 | 비판적 분석 |
 | 종합 (CIO) | Claude | 0.3 | 추론 깊이 |
+
+## 실전 Code Recipe: Phase 1 병렬 분석 구현
+
+```typescript
+import Anthropic from '@anthropic-ai/sdk';
+import { z } from 'zod';
+
+const AnalysisSchema = z.object({
+  analyst: z.string(),
+  signal: z.enum(['BULLISH', 'BEARISH', 'NEUTRAL']),
+  confidence: z.number().min(0).max(100),
+  reasoning: z.string(),
+});
+
+type Analysis = z.infer<typeof AnalysisSchema>;
+
+interface MarketData {
+  symbol: string;
+  price: number;
+  rsi: number;
+  macd: number;
+  news: string[];
+  pe: number;
+  fcfGrowth: number;
+}
+
+class PhaseOneAnalyzer {
+  private client = new Anthropic();
+
+  // Phase 1: 4개 분석가 병렬 실행
+  async analyzeInParallel(data: MarketData): Promise<Analysis[]> {
+    const tasks = [
+      this.technicalAnalyst(data),
+      this.newsAnalyst(data),
+      this.fundamentalsAnalyst(data),
+      this.sentimentAnalyst(data),
+    ];
+
+    const results = await Promise.allSettled(tasks);
+
+    return results
+      .map((r) => (r.status === 'fulfilled' ? r.value : null))
+      .filter((r) => r !== null) as Analysis[];
+  }
+
+  private async technicalAnalyst(data: MarketData): Promise<Analysis> {
+    const response = await this.client.messages.create({
+      model: 'claude-3-5-sonnet-20241022',
+      max_tokens: 512,
+      messages: [
+        {
+          role: 'user',
+          content: `기술 지표 분석:
+RSI: ${data.rsi} (70 이상 과매수, 30 이하 과매도)
+MACD: ${data.macd} (0 이상 상승, 0 이하 하강)
+
+신호, 신뢰도(0-100), 이유를 간단히 JSON으로 답하세요:
+{ "signal": "BULLISH"|"BEARISH"|"NEUTRAL", "confidence": 0-100, "reasoning": "..." }`,
+        },
+      ],
+    });
+
+    return this.parseAnalysis(response.content[0], 'Technical Analyst');
+  }
+
+  private async newsAnalyst(data: MarketData): Promise<Analysis> {
+    const response = await this.client.messages.create({
+      model: 'claude-3-5-sonnet-20241022',
+      max_tokens: 512,
+      messages: [
+        {
+          role: 'user',
+          content: `뉴스 헤드라인 센티먼트 분석:
+${data.news.join('\n')}
+
+뉴스의 전체 톤을 분석하여 신호를 제시하세요:
+{ "signal": "BULLISH"|"BEARISH"|"NEUTRAL", "confidence": 0-100, "reasoning": "..." }`,
+        },
+      ],
+    });
+
+    return this.parseAnalysis(response.content[0], 'News Analyst');
+  }
+
+  private async fundamentalsAnalyst(data: MarketData): Promise<Analysis> {
+    const response = await this.client.messages.create({
+      model: 'claude-3-5-sonnet-20241022',
+      max_tokens: 512,
+      messages: [
+        {
+          role: 'user',
+          content: `펀더멘털 분석:
+PER: ${data.pe} (업계 평균 15-20)
+FCF 성장률: ${data.fcfGrowth}% (양수 = 현금 창출, 음수 = 현금 소진)
+
+재무 지표 기반 신호:
+{ "signal": "BULLISH"|"BEARISH"|"NEUTRAL", "confidence": 0-100, "reasoning": "..." }`,
+        },
+      ],
+    });
+
+    return this.parseAnalysis(response.content[0], 'Fundamentals Analyst');
+  }
+
+  private async sentimentAnalyst(data: MarketData): Promise<Analysis> {
+    const response = await this.client.messages.create({
+      model: 'claude-3-5-sonnet-20241022',
+      max_tokens: 512,
+      messages: [
+        {
+          role: 'user',
+          content: `시장 심리 분석:
+공포/탐욕지수, 소셜 미디어 버즈, 기관 매매 추이 등을 종합적으로 평가하여 신호 제시:
+{ "signal": "BULLISH"|"BEARISH"|"NEUTRAL", "confidence": 0-100, "reasoning": "..." }`,
+        },
+      ],
+    });
+
+    return this.parseAnalysis(response.content[0], 'Sentiment Analyst');
+  }
+
+  private parseAnalysis(content: any, analyst: string): Analysis {
+    try {
+      const text = content.type === 'text' ? content.text : '';
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error('No JSON found');
+
+      const parsed = JSON.parse(jsonMatch[0]);
+      return AnalysisSchema.parse({
+        ...parsed,
+        analyst,
+      });
+    } catch (error) {
+      console.error(`Failed to parse ${analyst}:`, error);
+      // Fallback: 안전한 기본값 반환
+      return {
+        analyst,
+        signal: 'NEUTRAL',
+        confidence: 0,
+        reasoning: 'Parse failed',
+      };
+    }
+  }
+}
+
+// 사용 예
+const analyzer = new PhaseOneAnalyzer();
+const analyses = await analyzer.analyzeInParallel({
+  symbol: 'AAPL',
+  price: 150,
+  rsi: 65,
+  macd: 0.5,
+  news: ['Apple 신상품 출시', 'iPhone 판매량 증가'],
+  pe: 28,
+  fcfGrowth: 12,
+});
+
+console.log('Phase 1 분석 결과 (병렬):', analyses);
+```
+
+**핵심:**
+- `Promise.allSettled()`: 한 분석가 실패가 전체를 막지 않음
+- 각 에이전트가 독립적으로 JSON 파싱 시도 + 실패 시 안전한 기본값
+- 실제 Phase 2는 이 4개의 결론을 Bull/Bear로 나누어 토론
 
 ## 핵심 설계 원칙
 

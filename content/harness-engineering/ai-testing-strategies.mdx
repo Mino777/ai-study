@@ -9,6 +9,31 @@ tags:
 confidence: 2
 last_verified: "2026-05-03"
 applicable_to: ["any"]
+quiz:
+  - question: "AI 시스템 테스트가 기존 소프트웨어 테스트와 근본적으로 다른 주요 이유는?"
+    choices:
+      - "코드 길이가 더 길기 때문"
+      - "AI의 비결정성(같은 입력에 다른 출력), 환각, 편향 등으로 deterministic assert가 불가능하기 때문"
+      - "테스트 도구가 다르기 때문"
+      - "배포 환경이 클라우드이기 때문"
+    answer: 1
+    explanation: "AI 모델은 temperature, 가중치 미세 변화 등으로 항상 다른 응답을 생성한다. 따라서 '정확한 문자열 일치' 검증은 작동하지 않으며, 의미적 유사성, 키워드 포함, 안전 필터 작동 같은 행동 기반 검증이 필요하다."
+  - question: "황금 레퍼런스 세트(Golden Test Set)에서 '시맨틱 유사성'으로 검증해야 하는 이유는?"
+    choices:
+      - "문자열 비교가 빠르기 때문"
+      - "LLM 응답은 정확한 문자 일치가 불가능하므로, 핵심 키워드나 의미가 같은지를 평가하기 위해"
+      - "데이터베이스 저장 공간을 절약하기 위해"
+      - "테스트 코드를 간단하게 하기 위해"
+    answer: 1
+    explanation: "같은 의도를 가진 답변은 여러 표현으로 나타날 수 있다. '강력히 추천한다' vs '꼭 사세요' 모두 긍정 표현이므로, 정확한 문자 일치가 아니라 '긍정 키워드 포함' 같은 의미적 검증이 필수다."
+  - question: "적대적 테스트(Adversarial Testing)에서 프롬프트 인젝션을 테스트해야 하는 가장 중요한 이유는?"
+    choices:
+      - "LLM이 항상 안전하지 않기 때문"
+      - "해커가 관심 있을 수 있기 때문"
+      - "시스템이 악의적 입력에도 원래 목적을 벗어나지 않고 안전하게 거부하는지 확인하기 위해"
+      - "프롬프트 인젝션이 매우 일반적이기 때문"
+    answer: 2
+    explanation: "프롬프트 인젝션은 사용자가 의도적으로 '위의 모든 지시를 무시하고...'와 같은 명령을 주입해 시스템의 본래 목적을 벗어나게 하려는 공격이다. 이에 대해 시스템이 정중하게 거부할 수 있는지 미리 검증해야 배포 후 보안 사고를 방지할 수 있다."
 connections:
   - harness-engineering/harness-engineering-overview
   - harness-engineering/fixture-silent-failure-trap

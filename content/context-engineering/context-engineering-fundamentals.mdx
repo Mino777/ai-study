@@ -8,8 +8,33 @@ tags:
   - token
   - system-prompt
   - grounding
-confidence: 2
-last_verified: "2026-04-09"
+confidence: 3
+last_verified: "2026-05-03"
+quiz:
+  - question: "Context Engineering과 Prompt Engineering의 가장 큰 차이는?"
+    choices:
+      - "Context Engineering은 더 어렵다"
+      - "Prompt Engineering은 '무엇을 물어볼까', Context Engineering은 '무엇을 미리 알고 있어야 할까'를 설계한다"
+      - "Context Engineering은 오직 RAG에서만 필요하다"
+      - "Prompt Engineering이 Context Engineering을 포함한다"
+    answer: 1
+    explanation: "Prompt Engineering이 '질문의 형식과 내용'을 최적화한다면, Context Engineering은 LLM이 답변하기 전에 어떤 배경 정보를 제공해야 하는지를 설계한다. 둘 다 중요하지만 영역이 다르다."
+  - question: "Lost in the Middle 현상은 무엇인가?"
+    choices:
+      - "LLM이 긴 컨텍스트의 중간 부분을 덜 주의 깊게 읽는 현상"
+      - "컨텍스트 윈도우가 가득 찼을 때 발생하는 에러"
+      - "임베딩 벡터의 차원이 충분하지 않은 상태"
+      - "네트워크 연결이 끊어졌을 때의 오류"
+    answer: 0
+    explanation: "LLM은 컨텍스트의 처음과 끝에 더 주의를 기울인다. 중간에 있는 중요한 정보는 간과될 수 있으므로, 가장 중요한 정보는 맨 앞 또는 맨 뒤에 배치해야 한다."
+  - question: "컨텍스트 압축(Compression)의 목표는?"
+    choices:
+      - "문서를 완벽하게 축약하기"
+      - "같은 정보를 더 적은 토큰으로 전달하여 컨텍스트 윈도우를 효율적으로 사용하기"
+      - "모든 문서를 한 문장으로 만들기"
+      - "토큰 사용량을 0에 가깝게 줄이기"
+    answer: 1
+    explanation: "컨텍스트 압축은 정보 손실을 최소화하면서 같은 내용을 더 적은 토큰으로 표현하는 것이다. 예: 2000 토큰의 문서를 200 토큰 요약본으로 축약하되, 핵심 정보는 유지한다."
 applicable_to: ["any"]
 connections:
   - prompt-engineering/structured-output

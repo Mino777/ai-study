@@ -9,6 +9,31 @@ tags:
 confidence: 2
 last_verified: "2026-05-03"
 applicable_to: ["any"]
+quiz:
+  - question: "Context Compression이 필요한 주요 이유 4가지 중, RAG 시스템에서 가장 직접적인 효과는?"
+    choices:
+      - "네트워크 대역폭 절감"
+      - "검색된 모든 문서를 LLM이 처리해야 하는 토큰 수를 획기적으로 감소"
+      - "데이터베이스 저장 공간 절감"
+      - "코드 복잡도 감소"
+    answer: 1
+    explanation: "RAG에서 retriever가 Top-K 문서를 많이 가져올수록 context가 커진다. Context Compression은 이 검색 결과를 LLM 투입 전에 핵심만 추출해 최종 LLM으로 가는 토큰을 50~75% 감소시킨다."
+  - question: "Post-Retrieval Compression 패턴에서 Compressor LLM을 별도로 사용하는 이유는?"
+    choices:
+      - "비용을 더 많이 써서 정확도를 높이기 위해"
+      - "검색된 여러 문서를 하나의 LLM이 압축하면 노이즈를 제거하고 최종 LLM의 컨텍스트를 최적화할 수 있기 때문"
+      - "병렬 처리를 위해"
+      - "모델 간 성능 비교를 위해"
+    answer: 1
+    explanation: "Compressor가 '이 질문과 가장 관련된 부분만 추출'하는 지능형 필터 역할을 한다. 결과적으로 최종 LLM은 수집된 전체 문서가 아닌 정제된 핵심 정보만 받아 토큰도 줄고 정확도도 높일 수 있다."
+  - question: "iOS/프론트엔드 개발에서 Context Compression이 특히 중요한 이유는?"
+    choices:
+      - "모바일 환경의 네트워크 제약, 배터리 소모, 응답 지연을 함께 해결할 수 있기 때문"
+      - "iOS 앱의 UI가 복잡하기 때문"
+      - "프론트엔드 성능이 최우선이기 때문"
+      - "클라이언트 사이드 캐싱 때문"
+    answer: 0
+    explanation: "모바일은 서버 환경과 달리 네트워크 대역폭 제한, 배터리 제약, 사용자가 느끼는 응답 지연이 모두 중요하다. Context Compression으로 네트워크 페이로드를 줄이고 처리 속도를 높이고 배터리 소모를 최소화할 수 있다."
 connections:
   - context-engineering/context-engineering-fundamentals
   - context-engineering/context-scaling-3-layer-architecture

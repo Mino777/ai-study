@@ -3,8 +3,33 @@ title: "Fine-tuning 기초 — 사전학습 모델을 내 데이터에 맞추기
 category: fine-tuning
 date: "2026-04-09"
 tags: [fine-tuning, lora, qlora, sft, training]
-confidence: 2
-last_verified: "2026-04-09"
+confidence: 3
+last_verified: "2026-05-03"
+quiz:
+  - question: "Fine-tuning이 프롬프트 엔지니어링보다 나은 상황은?"
+    choices:
+      - "항상 better이다"
+      - "프롬프트에 매번 10줄 이상의 반복적 지시가 필요하거나, 특정 톤/도메인 용어를 일관되게 학습해야 할 때"
+      - "빠른 프로토타입이 필요할 때"
+      - "데이터가 부족할 때"
+    answer: 1
+    explanation: "Fine-tuning은 한 번 학습하면 이후 프롬프트가 짧아지고 일관된 출력을 얻을 수 있다. 하지만 데이터 준비와 학습 비용이 크므로, 프롬프트만으로는 부족한 경우에만 고려해야 한다."
+  - question: "LoRA와 Full Fine-tuning의 가장 큰 차이는?"
+    choices:
+      - "LoRA가 더 정확하다"
+      - "LoRA는 원본 모델을 보존하고 작은 어댑터만 학습하여 메모리 효율이 훨씬 우수하다"
+      - "Full Fine-tuning이 더 빠르다"
+      - "LoRA는 프롬프트 엔지니어링이다"
+    answer: 1
+    explanation: "Full Fine-tuning은 모델의 모든 파라미터를 업데이트하므로 비용이 크다 (수백 GPU 시간, 수만 달러). LoRA는 원본 모델 가중치는 고정하고 작은 행렬(Rank 8~64)만 학습하므로 0.1~1% 파라미터만 훈련하면 된다."
+  - question: "Fine-tuning 성공의 가장 중요한 조건은?"
+    choices:
+      - "가장 강한 모델 선택하기"
+      - "고품질 데이터 + Eval 세트로 학습 전후 비교"
+      - "최대한 많은 데이터 수집하기"
+      - "복잡한 하이퍼파라미터 튜닝"
+    answer: 1
+    explanation: "Fine-tuning의 80%는 데이터 준비고 20%는 모델 학습이다. 100개의 잘못된 데이터가 1000개의 좋은 데이터를 망칠 수 있다. 또한 Eval 세트 없이는 개선 여부를 알 수 없으므로 도박이 된다."
 applicable_to: ["any"]
 connections: [evaluation/llm-evaluation-fundamentals, prompt-engineering/few-shot-prompting]
 status: complete

@@ -12,8 +12,33 @@ tags:
   - similarity
   - foundational
 confidence: 3
-last_verified: "2026-04-13"
+last_verified: "2026-05-03"
 applicable_to: ["any"]
+quiz:
+  - question: "RAG의 retrieval 단계에서 코사인 유사도를 주로 사용하는 이유는?"
+    choices:
+      - "계산 속도가 가장 빠르기 때문"
+      - "임베딩 공간에서는 방향이 의미를 담으므로, 벡터의 크기(문서 길이 등 부가 정보)보다 방향을 비교하기 위해"
+      - "라이브러리 지원이 가장 많기 때문"
+      - "벡터 차원이 높을수록 정확도가 좋기 때문"
+    answer: 1
+    explanation: "긴 문서와 짧은 문서를 비교할 때 벡터의 크기 차이가 유사도에 영향을 주는 것을 피하기 위해 방향만 비교한다. 코사인 유사도 = (a·b) / (‖a‖‖b‖)는 정규화된 벡터면 내적만으로도 계산 가능하다."
+  - question: "k-NN이 아니라 ANN(Approximate Nearest Neighbor)을 사용해야 하는 기본 기준은?"
+    choices:
+      - "모든 경우에 ANN이 더 정확하기 때문"
+      - "문서가 1,000개 이상일 때, O(N×D) 시간이 비현실적이므로 sub-linear ANN으로 빠르게 근사 검색하기 위해"
+      - "메모리가 부족할 때만"
+      - "벡터 차원이 높을 때만"
+    answer: 1
+    explanation: "100만 문서 × 1536차원이면 한 쿼리에 수십억 곱셈이 필요하다. ANN(HNSW)은 recall 95% 수준에서도 최종 답변 품질에 거의 영향이 없으므로, 속도를 O(log N)으로 줄이는 것이 합리적인 트레이드다."
+  - question: "벡터 DB 선택 시 HNSW가 기본 추천되는 이유는?"
+    choices:
+      - "가장 저렴한 알고리즘이기 때문"
+      - "recall/latency 밸런스가 가장 좋으며, 대부분의 1,000~백만 규모 프로젝트에 최적이기 때문"
+      - "모든 크기의 데이터에 최적이기 때문"
+      - "메모리 사용량이 가장 적기 때문"
+    answer: 1
+    explanation: "IVF는 수억 벡터 규모에, LSH는 이론적으로 깔끔하지만 실무 성능이 떨어진다. HNSW는 메모리를 사용하는 대신 균형 잡힌 성능을 제공하므로, 처음 설계할 때 고민 없이 HNSW로 시작하면 된다."
 connections:
   - context-engineering/context-engineering-fundamentals
   - rag/rag-overview

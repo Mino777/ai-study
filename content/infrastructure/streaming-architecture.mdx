@@ -3,13 +3,38 @@ title: "LLM 스트리밍 아키텍처"
 category: infrastructure
 date: "2026-04-09"
 tags: [streaming, sse, readablestream, ux, real-time]
-confidence: 3
-last_verified: "2026-04-09"
+confidence: 4
+last_verified: "2026-05-03"
 applicable_to: ["any"]
 connections: [infrastructure/multi-provider-fallback, agents/tool-use]
 status: complete
 description: "LLM 응답을 실시간으로 사용자에게 전달하는 스트리밍 아키텍처. Web Streams API 활용."
 type: entry
+quiz:
+  - question: 스트리밍 첫 토큰 시간은 일반 응답 대비 어떻게 다른가?
+    choices:
+      - 3-10배 느림
+      - 3-10배 빠름 (0.3-1초 vs 3-10초)
+      - 차이 없음
+      - 더 느림
+    answer: 1
+    explanation: 첫 토큰부터 즉시 전달되어 체감 응답 시간 극적 단축
+  - question: Cache-Control no-cache가 스트리밍에서 필수인 이유는?
+    choices:
+      - 보안
+      - 매번 새로운 응답이므로 캐시 활성화 시 이전 답변 반환
+      - 성능
+      - 선택사항
+    answer: 1
+    explanation: LLM 응답은 매번 다르다. 캐시하면 오류 발생
+  - question: 스트리밍 중 무한 대기를 방지하려면?
+    choices:
+      - 특별한 처리 불필요
+      - 클라이언트 타임아웃 + controller.error() 호출
+      - 서버 자동 대응
+      - 사용자 안내
+    answer: 1
+    explanation: 타임아웃과 에러 처리가 필수. 없으면 영구 대기
 ---
 
 ## 핵심 개념

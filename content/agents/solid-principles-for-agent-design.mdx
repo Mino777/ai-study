@@ -4,10 +4,35 @@ category: agents
 date: "2026-04-26"
 tags: [solid, agents, architecture, design-patterns, multi-agent]
 confidence: 2
+last_verified: "2026-05-03"
+quiz:
+  - question: "Single Responsibility (단일 책임) 원칙에서, 에이전트가 계획·검색·실행·검증을 모두 담당하면 안 되는 이유는?"
+    choices:
+      - "코드 길이가 너무 길어지기 때문"
+      - "예측 불가 행동과 비용 폭증이 발생하기 때문"
+      - "디버깅이 더 어려워지기 때문"
+      - "메모리 사용량이 증가하기 때문"
+    answer: 1
+    explanation: "책임이 많을수록 의존성이 증가하고, 어느 책임의 실패가 전체 에이전트를 다운시킬 수 있다. 비용도 한 에이전트가 모든 단계를 수행하려 하다 보니 불필요한 토큰 낭비가 발생한다."
+  - question: "Liskov Substitution 원칙에서 MoneyFlow의 Bounded Retry 패턴(Claude → Gemini → GPT)이 작동하는 근본 이유는?"
+    choices:
+      - "각 모델의 비용이 다르기 때문"
+      - "각 에이전트가 동일한 입출력 계약을 따르기 때문"
+      - "GPT가 가장 신뢰할 수 있기 때문"
+      - "여러 모델을 병렬로 실행하기 때문"
+    answer: 1
+    explanation: "Liskov Substitution은 같은 인터페이스를 따르는 구현체는 상호 교체 가능하다는 원칙이다. 추천 에이전트의 구현이 OpenAI든 로컬 ML이든 규칙 기반이든, 동일한 (input, output) 계약만 만족하면 서로 대체 가능하므로 폴백 패턴이 작동한다."
+  - question: "Dependency Inversion 원칙이 모델 교체(GPT → Claude → Gemini)를 오케스트레이터 코드 변경 없이 가능하게 하는 이유는?"
+    choices:
+      - "각 모델이 다운로드 시간이 다르기 때문"
+      - "오케스트레이터가 구체적 모델이 아닌 추상 계약에 의존하기 때문"
+      - "API 응답 속도가 일정하기 때문"
+      - "모델 업데이트가 자동으로 되기 때문"
+    answer: 1
+    explanation: "오케스트레이터가 '특정 모델 호출'이 아니라 '분석 에이전트라는 추상화'에만 의존하므로, 그 에이전트의 구체적 구현이 어떤 모델이든 상관없다. 모델을 바꿔도 오케스트레이터 코드는 그대로 유지된다."
 connections: [agents/agent-architectures, agents/ai-agent-fleet-governance-engineering-model-scalability]
 description: "객체지향의 SOLID 5원칙을 멀티 에이전트 시스템 설계에 매핑한다. 에이전트도 소프트웨어 컴포넌트이므로 동일한 설계 원칙이 적용된다."
 type: entry
-last_verified: "2026-04-26"
 applicable_to: ["any"]
 ---
 

@@ -8,8 +8,33 @@ tags:
   - embedding
   - vector-db
   - chunking
-confidence: 2
-last_verified: "2026-04-08"
+confidence: 3
+last_verified: "2026-05-03"
+quiz:
+  - question: "RAG가 필요한 주요 상황은?"
+    choices:
+      - "모든 LLM 애플리케이션에서 사용해야 한다"
+      - "LLM이 최신 정보나 외부 지식(학습 데이터 이외)에 접근해야 할 때"
+      - "프롬프트 엔지니어링이 충분하지 않을 때만"
+      - "비용을 절감하고 싶을 때"
+    answer: 1
+    explanation: "RAG는 LLM의 학습 데이터에 없는 정보(최신 뉴스, 내부 문서, 실시간 데이터)가 필요한 경우에 사용한다. 일반적인 QA에는 불필요하지만, 정확성과 신선도가 중요한 경우 매우 효과적이다."
+  - question: "Chunking 전략 중 의미 단위를 가장 잘 보존하는 방식은?"
+    choices:
+      - "Fixed size — 고정 토큰 수로 분할"
+      - "Recursive — 구분자 기반 재귀 분할"
+      - "Semantic — 임베딩 유사도로 분할"
+      - "Random — 무작위 분할"
+    answer: 2
+    explanation: "Semantic chunking은 의미 단위를 가장 잘 보존하지만 느리다(각 청크를 임베딩하여 유사도 계산). Fixed/Recursive는 빠르지만 의미를 고려하지 않는다. 대부분의 경우 Recursive가 균형잡힌 선택이다."
+  - question: "RAG의 '손실 중간' (Lost in the Middle) 문제는?"
+    choices:
+      - "검색된 문서가 없는 상태"
+      - "LLM이 검색된 문서의 중간 부분을 덜 주의 깊게 읽는 현상"
+      - "벡터 유사도 계산 실패"
+      - "네트워크 연결 끊김"
+    answer: 1
+    explanation: "LLM은 컨텍스트의 처음과 끝에 더 주의를 기울인다. RAG에서 검색된 문서가 많으면 가장 관련 있는 문서를 맨 앞 또는 맨 뒤에 배치해야 한다."
 applicable_to: ["any"]
 connections:
   - prompt-engineering/few-shot-prompting
@@ -59,6 +84,193 @@ graph LR
 | Fixed size | 고정 토큰 수로 분할 | 간단 | 의미 단위 무시 |
 | Recursive | 구분자 기반 재귀 분할 | 의미 보존 | 구현 복잡 |
 | Semantic | 임베딩 유사도로 분할 | 최고 품질 | 느림 |
+
+## 실전 RAG 구현 예시
+
+```typescript
+import Anthropic from "@anthropic-ai/sdk";
+import { CohereClient } from "cohere-ai";
+
+const anthropic = new Anthropic();
+const cohere = new CohereClient({ token: process.env.COHERE_API_KEY });
+
+// 1단계: 문서 인덱싱 (오프라인)
+interface Document {
+  id: string;
+  content: string;
+  source: string;
+}
+
+interface Chunk {
+  id: string;
+  text: string;
+  source: string;
+  embedding: number[];
+}
+
+// 간단한 Fixed-size chunking (실제로는 RecursiveCharacterTextSplitter 사용 권장)
+function chunkDocument(doc: Document, chunkSize = 500): string[] {
+  const chunks: string[] = [];
+  let current = "";
+
+  const words = doc.content.split(" ");
+  for (const word of words) {
+    if ((current + " " + word).length > chunkSize) {
+      chunks.push(current.trim());
+      current = word;
+    } else {
+      current += (current ? " " : "") + word;
+    }
+  }
+  if (current) chunks.push(current.trim());
+
+  return chunks;
+}
+
+// 임베딩 생성 (Cohere Embed API)
+async function embedChunks(documents: Document[]): Promise<Chunk[]> {
+  const chunks: Chunk[] = [];
+
+  for (const doc of documents) {
+    const docChunks = chunkDocument(doc);
+
+    // Cohere로 배치 임베딩
+    const result = await cohere.embed({
+      texts: docChunks,
+      model: "embed-english-v3.0",
+      inputType: "search_document",
+    });
+
+    for (let i = 0; i < docChunks.length; i++) {
+      chunks.push({
+        id: `${doc.id}-chunk-${i}`,
+        text: docChunks[i],
+        source: doc.source,
+        embedding: result.embeddings[i],
+      });
+    }
+  }
+
+  return chunks;
+}
+
+// 2단계: 검색 (온라인)
+async function retrieveRelevantChunks(
+  query: string,
+  allChunks: Chunk[],
+  topK = 5
+): Promise<Chunk[]> {
+  // 쿼리 임베딩
+  const queryResult = await cohere.embed({
+    texts: [query],
+    model: "embed-english-v3.0",
+    inputType: "search_query",
+  });
+  const queryEmbedding = queryResult.embeddings[0];
+
+  // 코사인 유사도 계산
+  function cosineSimilarity(a: number[], b: number[]): number {
+    const dotProduct = a.reduce((sum, x, i) => sum + x * b[i], 0);
+    const magA = Math.sqrt(a.reduce((sum, x) => sum + x * x, 0));
+    const magB = Math.sqrt(b.reduce((sum, x) => sum + x * x, 0));
+    return dotProduct / (magA * magB);
+  }
+
+  // 모든 청크와의 유사도 계산
+  const scored = allChunks.map((chunk) => ({
+    chunk,
+    score: cosineSimilarity(queryEmbedding, chunk.embedding),
+  }));
+
+  // 상위 K개 반환
+  return scored
+    .sort((a, b) => b.score - a.score)
+    .slice(0, topK)
+    .map((x) => x.chunk);
+}
+
+// 3단계: Reranking (선택)
+async function rerank(
+  query: string,
+  candidates: Chunk[],
+  topN = 3
+): Promise<Chunk[]> {
+  const result = await cohere.rerank({
+    model: "rerank-english-v3.0",
+    query: query,
+    documents: candidates.map((c) => ({ text: c.text })),
+    topN: topN,
+  });
+
+  return result.results.map((r) => candidates[r.index]);
+}
+
+// 4단계: 생성
+async function generateWithRAG(
+  query: string,
+  relevantChunks: Chunk[]
+): Promise<string> {
+  const context = relevantChunks.map((c) => `[${c.source}]\n${c.text}`).join("\n\n");
+
+  const message = await anthropic.messages.create({
+    model: "claude-opus-4-20250805",
+    max_tokens: 1024,
+    messages: [
+      {
+        role: "user",
+        content: `다음 컨텍스트를 기반으로 질문에 답하세요. 컨텍스트에 없는 정보는 만들지 마세요.
+
+[컨텍스트]
+${context}
+
+[질문]
+${query}`,
+      },
+    ],
+  });
+
+  return message.content[0].type === "text" ? message.content[0].text : "";
+}
+
+// 통합 RAG 파이프라인
+async function rag(query: string, documents: Document[]): Promise<string> {
+  // 1. 오프라인 인덱싱
+  console.log("Indexing documents...");
+  const chunks = await embedChunks(documents);
+
+  // 2. 온라인 검색
+  console.log("Retrieving relevant chunks...");
+  let retrieved = await retrieveRelevantChunks(query, chunks, 10);
+
+  // 3. Reranking (선택)
+  console.log("Reranking...");
+  retrieved = await rerank(query, retrieved, 3);
+
+  // 4. 생성
+  console.log("Generating response...");
+  const response = await generateWithRAG(query, retrieved);
+
+  return response;
+}
+
+// 사용 예시
+const documents: Document[] = [
+  {
+    id: "doc1",
+    source: "company-handbook.pdf",
+    content: "회사 복지 정책: 유연근무 가능, 재택근무 주 2회, 건강보험 100% 지원...",
+  },
+  {
+    id: "doc2",
+    source: "product-manual.pdf",
+    content: "제품 매뉴얼: TypeScript API 문서. 주요 기능은 타입 안전성...",
+  },
+];
+
+rag("우리 회사의 유연근무 정책은?", documents).then((response) => {
+  console.log("Response:", response);
+});
+```
 
 ## 평가 메트릭
 

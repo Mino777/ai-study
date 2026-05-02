@@ -8,8 +8,8 @@ tags:
   - parsing
   - validation
   - zod
-confidence: 3
-last_verified: "2026-04-09"
+confidence: 4
+last_verified: "2026-05-03"
 applicable_to: ["any"]
 connections:
   - prompt-engineering/few-shot-prompting
@@ -20,6 +20,31 @@ connections:
 status: complete
 description: LLM에서 JSON 등 구조화된 데이터를 안정적으로 추출하는 기법. 네이티브 스키마부터 프롬프트 기반까지.
 type: entry
+quiz:
+  - question: 네이티브 JSON Schema가 프롬프트 기반 강제보다 낫다고 할 수 없는 이유는?
+    choices:
+      - 모든 모델이 JSON Schema를 지원한다
+      - 파싱 실패율이 높다
+      - Claude, LLaMA 등 일부 모델은 네이티브를 지원하지 않아 프롬프트 기반 또는 Tool Use가 필요하다
+      - JSON Schema는 출력 형식만 강제하고 의미 검증은 못 한다
+    answer: 2
+    explanation: OpenAI/Gemini는 native JSON Schema를 지원하지만, Claude는 Tool Use나 프롬프트 강제를 씀. 각 모델 API의 capability를 먼저 확인해야 한다.
+  - question: 방어적 파싱의 3단계 fallback에서 2단계(코드 블록 추출)가 필요한 이유는?
+    choices:
+      - 모든 LLM이 JSON을 코드 블록으로 감싼다
+      - 일부 모델(특히 Claude)이 생각 과정을 포함한 후 ```json ... ``` 형태로 출력하기 때문
+      - JSON.parse()가 항상 실패하므로 대체 수단이 필요하다
+      - 이 단계는 불필요하고 1단계만으로 충분하다
+    answer: 1
+    explanation: Claude나 다른 모델들이 "먼저 생각한 후" JSON을 코드 블록으로 감싸는 경향이 있다. 3단 fallback이 대부분의 LLM 출력 변수를 커버한다.
+  - question: Zod를 사용한 런타임 검증이 중요한 이유는?
+    choices:
+      - TypeScript의 타입 체크로 충분하다
+      - LLM이 schema를 따르지 않을 수 있으므로, 런타임에 실제 값을 검증하여 타입 안전성을 보장해야 한다
+      - 프로덕션에서는 불필요하고 개발 중에만 필요하다
+      - JSON.parse()만으로 충분하다
+    answer: 1
+    explanation: TypeScript 타입은 정적 체크일 뿐, LLM은 절대 schema를 100% 따르지 않는다. Zod/yup 같은 런타임 validator가 프로덕션 필수다.
 ---
 
 ## 핵심 개념

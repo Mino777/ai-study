@@ -11,8 +11,33 @@ tags:
   - prompt-caching
   - live-document
 confidence: 4
-last_verified: "2026-04-13"
+last_verified: "2026-05-03"
 applicable_to: ["aidy", "any"]
+quiz:
+  - question: "토큰 레버 적용 가능 4 조건 중에서 '실측 수치 재현 가능'이 필수인 이유는?"
+    choices:
+      - "카탈로그의 신뢰도를 유지하고 경험칙만으로는 적용을 보류하기 위해"
+      - "레버를 문서화하기 위해"
+      - "프로젝트별로 다른 환경이기 때문"
+      - "CI/CD 자동화를 위해"
+    answer: 0
+    explanation: "카탈로그가 적용 로그의 신뢰도를 깎지 않기 위해, 공식 문서나 2+ 독립 소스 검증만으로는 부족하고, 실제 프로젝트에서 ccusage로 before/after를 측정해야만 의미 있는 레버로 간주된다."
+  - question: "2026-04-12의 Node 24 opt-in 적용이 '절감: 토큰 직접 절감은 아님'으로 분류된 이유는?"
+    choices:
+      - "Node 24가 더 느리기 때문"
+      - "런타임 안정화는 토큰 절감이 아니라 CI 안정성 향상이기 때문"
+      - "일부 프로젝트에서만 적용됐기 때문"
+      - "자동 머지가 실패했기 때문"
+    answer: 1
+    explanation: "이 변경은 직접적인 토큰 수 감소가 아니라 Node 20 제거 전에 선제적으로 CI 중단 리스크를 0으로 만드는 '예방' 목적이다. 4 조건의 '실측 수치'는 토큰/비용 감소를 측정하는 것인데, 이 레버는 그 외의 가치(CI 안정성)를 제공한다."
+  - question: "ai-study의 `.claudeignore` 적용 결과에서 ~194K tokens 절감이 달성된 주요 파일 3개는?"
+    choices:
+      - "package-lock.json, src/generated/, docs/* 각각 117K, 48K, 29K tokens"
+      - "node_modules, .next/, build/ 각각 폐기"
+      - ".git, dist/, coverage/ 각각"
+      - ".env, secrets, password 관련 파일"
+    answer: 0
+    explanation: "특히 package-lock.json 117K가 가장 큰 기여자. 매 턴마다 불필요하게 prefix에 포함되던 생성 파일들을 구조적으로 배제해 context를 약 50% 축소했다."
 connections:
   - tokenomics/claude-code-token-levers-catalog
   - harness-engineering/dev-setup-tips-log
