@@ -609,6 +609,79 @@ Interface Builder 파일(.xib, .storyboard)도 **바이너리 XML**이므로 LLM
 
 ---
 
+## LLDB 원격 디버깅 — MCP로 브레이크포인트 세팅
+
+XcodeBuildMCP는 빌드/테스트 외에 **LLDB 디버깅**도 MCP 도구로 제공한다.
+
+```
+1. debug_attach_sim   ← 시뮬레이터 앱에 디버거 연결
+2. debug_breakpoint   ← 특정 파일:줄에 브레이크포인트
+3. debug_variables    ← 로컬 변수 검사
+4. debug_stack        ← 콜스택 확인
+5. debug_continue     ← 실행 재개
+```
+
+에이전트가 자율적으로: 빌드 → 실행 → 크래시 → 디버거 연결 → 변수 검사 → 원인 파악 → 수정. **사람은 최종 확인만.**
+
+---
+
+## SwiftFormat PostToolUse Hook — SwiftLint와 역할 분담
+
+SwiftLint가 **규칙 위반 감지**(exit 2 차단)라면, SwiftFormat은 **자동 포맷팅**(silent 정리).
+
+```json
+{
+  "PostToolUse": [{
+    "matcher": "Edit|Write",
+    "hooks": [{
+      "type": "command",
+      "command": "FP=$(echo \"$CLAUDE_TOOL_INPUT\" | python3 -c \"import sys,json; print(json.load(sys.stdin).get('file_path',''))\" 2>/dev/null); if echo \"$FP\" | grep -qE '\\.swift$'; then swiftformat \"$FP\" --quiet 2>/dev/null; fi"
+    }]
+  }]
+}
+```
+
+**SwiftLint → error 차단 + warning 표시, SwiftFormat → 자동 정리.** 둘 다 PostToolUse에 걸되, SwiftFormat이 먼저 실행(정리 후 린트).
+
+---
+
+## .pbxproj 방어 — 확장 차단 목록
+
+기본: `.pbxproj`만 차단. **확장 권장**: .xib, .storyboard, .xcworkspace까지.
+
+```json
+{
+  "PreToolUse": [{
+    "matcher": "Edit|Write",
+    "hooks": [{
+      "type": "command",
+      "command": "FP=$(echo \"$CLAUDE_TOOL_INPUT\" | python3 -c \"import sys,json; print(json.load(sys.stdin).get('file_path',''))\" 2>/dev/null); if echo \"$FP\" | grep -qE '\\.(pbxproj|xcworkspace|xib|storyboard)$|xcodeproj/|xcworkspace/'; then echo '❌ BLOCKED: Xcode 프로젝트 파일 수정 금지' >&2; exit 2; fi"
+    }]
+  }]
+}
+```
+
+**exit 2 사용 필수** — exit 1은 비차단이므로 파일이 그대로 수정됨!
+
+---
+
+## Overnight 자율 실행 결과 (Blake Crosley)
+
+12개 PRD, 47개 스토리를 8개 야간 세션으로 처리한 비교:
+
+| 지표 | 최소 하네스 (4 PRD) | 풀 하네스 (8 PRD) | 변화 |
+|------|---------------------|-------------------|------|
+| Credential 유출 | 2건 git에 유출 | 7건 pre-commit 차단 | 사후→사전 |
+| 파괴적 명령어 | 1건 force-push | 4건 차단 | exit 2 강제 |
+| False completion | 35% 테스트 실패 | 4% | Evidence Gate + Stop Hook |
+| 리비전 라운드/스토리 | 2.1회 | 0.8회 | Skills + Quality Loop |
+| 컨텍스트 열화 | 6건 | 1건 | 파일시스템 메모리 |
+| Hook 시간/스토리 | 0초 | ~2.4초 | 무시 가능한 오버헤드 |
+
+> **"하네스 없는 야간 실행은 credential leak 2건 + force-push 1건이 기본."**
+
+---
+
 ## 자기 점검
 
 1. XcodeBuildMCP와 Apple Xcode MCP의 차이를 설명할 수 있는가? (headless vs 실행 중 Xcode)
