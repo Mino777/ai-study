@@ -88,6 +88,13 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: node scripts/curate-geeknews.mjs
 
+      - name: Validate + auto-fix Mermaid
+        if: steps.check.outputs.has_stale == 'true'
+        run: |
+          echo "🔍 생성된 MDX 검증 + Mermaid 자동 수정..."
+          node scripts/validate-content.mjs
+          echo "✅ MDX 검증 통과"
+
       - name: Create PR
         if: steps.check.outputs.has_stale == 'true'
         id: pr

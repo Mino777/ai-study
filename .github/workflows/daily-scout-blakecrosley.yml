@@ -1,0 +1,51 @@
+name: "📚 Daily Scout — Blake Crosley"
+
+# 매일 22:30 KST (13:30 UTC) — Blake Crosley 블로그 스캔 → 위키 엔트리 후보 Issue
+on:
+  schedule:
+    - cron: "30 13 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  scout:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Scout Blake Crosley
+        id: scout
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GH_TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+        run: node scripts/scout-blakecrosley.mjs
+
+      - name: Commit seen state
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if [ -f data/scout-blakecrosley-seen.json ]; then
+            git add data/scout-blakecrosley-seen.json
+            git diff --staged --quiet || git commit -m "chore: update blake-crosley seen state"
+            git push || true
+          fi
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### 📚 Blake Crosley Scout Results" >> $GITHUB_STEP_SUMMARY
+          echo "- Matches: ${{ steps.scout.outputs.match_count || '0' }}" >> $GITHUB_STEP_SUMMARY
