@@ -394,6 +394,221 @@ After (iOS 하네스 적용):
 
 ---
 
+## XcodeBuildMCP 도구 카테고리 상세 (59+도구)
+
+에이전트가 어떤 도구를 쓸 수 있는지 알아야 적절한 워크플로우를 설계할 수 있다.
+
+| 카테고리 | 주요 도구 | 용도 |
+|----------|-----------|------|
+| **프로젝트 탐색** | `discover_projs`, `list_schemes`, `list_targets` | 프로젝트 구조 자동 파악 |
+| **빌드** | `build_sim`, `build_device`, `build_mac` | 시뮬레이터/실기기/Mac 빌드 |
+| **테스트** | `test_sim`, `test_device` | 유닛/UI 테스트 실행 |
+| **시뮬레이터** | `list_sims`, `boot_sim`, `shutdown_sim` | 시뮬레이터 라이프사이클 관리 |
+| **디버깅** | `debug_attach_sim`, `debug_stack`, `debug_variables` | LLDB 원격 디버깅 |
+| **UI 자동화** | `tap`, `swipe`, `type_text`, `screenshot` | 시뮬레이터 UI 인터랙션 |
+
+### 자율 빌드-수정 루프
+
+에이전트가 MCP로 구현하는 자율 루프:
+
+```
+1. build_sim 호출 → 구조화된 에러 JSON 수신
+2. 에러의 file + line으로 이동
+3. 코드 수정
+4. 다시 build_sim → 성공할 때까지 반복
+5. test_sim으로 테스트 실행
+6. screenshot으로 UI 확인
+```
+
+이 전체 루프에 **사람 개입 0**. 기존 Bash xcodebuild에서는 3000줄 로그 파싱이 필요했지만, MCP에서는 JSON 에러 구조를 직접 읽는다.
+
+---
+
+## 에이전트 강약점 맵 — iOS 영역별
+
+Blake Crosley의 8개 프로덕션 앱(14~63파일) 운영 경험 기반.
+
+### 에이전트가 잘하는 것 (3-5x 생산성)
+
+| 영역 | 이유 |
+|------|------|
+| **SwiftUI 뷰 합성** | modifier 체인이 패턴화되어 있고 preview로 즉시 검증 |
+| **SwiftData 모델 + @Query** | 선언적 스키마, 관계 설정이 명확한 패턴 |
+| **유닛 테스트 생성** | given-when-then 패턴이 기계적으로 생성 가능 |
+| **대규모 리팩토링** | ObservableObject → @Observable 같은 기계적 변환 |
+| **빌드 에러 자율 수정** | MCP 구조화 에러 → 즉시 수정 가능 |
+| **NavigationStack 구현** | 타입 안전 라우팅이 패턴화됨 |
+| **@Bindable 폼 바인딩** | 반복적 구조, 에러 가능성 낮음 |
+
+### 에이전트가 못하는 것 (사람 필수)
+
+| 영역 | 이유 |
+|------|------|
+| **.pbxproj 수정** | 5000줄+ XML, 구문 에러 필연. 단일 최대 위험 |
+| **Interface Builder / Storyboard** | 바이너리 XML, LLM이 해석 불가 |
+| **코드 사이닝** | Provisioning Profile 에러가 비구조화 |
+| **성능 최적화** | Instruments 프로파일링 불가 |
+| **Metal 셰이더 검증** | GPU별 시각적 차이를 판단 못함 |
+| **시각적 레이아웃 정확성** | 스크린샷은 캡처 가능하지만 "올바른지" 판단 못함 |
+| **Core Data 마이그레이션** | 스키마 변경의 데이터 무결성을 보장 못함 |
+
+> **핵심 수치**: SwiftUI 프로젝트 = **60% 생산성 향상**, UIKit/SwiftUI 혼합 = **35-40%** (Medium, Osman Demiröz)
+
+### "골든 룰" — AI가 생성, 사람이 등록
+
+> **"AI generates files, but humans register them in Xcode GUI."** — DEV Community
+
+AI가 Swift 파일을 생성하면 사람이 Xcode에서 Add Files. 이 분업이 pbxproj 파손을 원천 차단한다.
+
+---
+
+## Swift 6.2 아키텍처 패턴 — 에이전트 친화적 코드
+
+Blake Crosley 가이드에서 에이전트가 가장 잘 생성하는 패턴들.
+
+### @Observable 패턴 (절대 ObservableObject 사용 금지)
+
+```swift
+@Observable @MainActor final class FeatureManager {
+  var items: [Item] = []
+  var isLoading = false
+
+  func load() async throws {
+    isLoading = true
+    defer { isLoading = false }
+    items = try await api.fetchItems()
+  }
+}
+
+struct FeatureView: View {
+  @State private var manager = FeatureManager()
+
+  var body: some View {
+    List(manager.items) { item in
+      ItemRow(item: item)
+    }
+    .task { try? await manager.load() }
+  }
+}
+```
+
+**금지 목록**: `ObservableObject`, `@Published`, `@StateObject`, `@ObservedObject` — 전부 deprecated.
+
+### NavigationStack 타입 안전 라우팅
+
+```swift
+NavigationStack {
+  List(items) { item in
+    NavigationLink(value: item) {
+      ItemRow(item: item)
+    }
+  }
+  .navigationDestination(for: Item.self) { item in
+    ItemDetailView(item: item)
+  }
+}
+```
+
+**금지**: `NavigationView`, 인라인 `destination` 파라미터.
+
+### SwiftData 관계 패턴
+
+```swift
+@Model final class Parent {
+  @Relationship(deleteRule: .cascade) var children: [Child]
+}
+
+@Model final class Child {
+  var parent: Parent?  // 양방향, nullify on delete
+}
+```
+
+**주의**: `@Model`에 `@Observable` 추가 금지 (중복, 경고 발생).
+
+---
+
+## 멀티 플랫폼 + 멀티 에이전트
+
+### 플랫폼 가드 패턴
+
+```swift
+#if canImport(HealthKit)
+import HealthKit
+// HealthKit (iOS, watchOS)
+#endif
+
+#if canImport(ActivityKit)
+import ActivityKit
+// Live Activities (iOS only)
+#endif
+
+#if os(watchOS)
+import WatchKit
+#endif
+```
+
+### 듀얼 모델 리뷰 (Claude + Codex)
+
+| 검출 강점 | Claude Code | Codex CLI |
+|-----------|-------------|-----------|
+| @MainActor 누락 | △ | ◎ |
+| Retain Cycle | △ | ◎ |
+| API Deprecation | ◎ | △ |
+| Metal 패턴 | ◎ | △ |
+| 구조적 리팩토링 | ◎ | △ |
+
+1. Claude Code가 구현
+2. Codex CLI가 리뷰 (`codex review`)
+3. 서로 다른 에러 클래스를 잡아내는 교차 검증
+
+---
+
+## pbxproj 방어 확장 — .xib/.storyboard까지
+
+기본 Hook은 `.pbxproj`만 차단하지만, 더 안전한 확장 버전:
+
+```bash
+# .pbxproj + .xcodeproj/ + .xcworkspace/ + .xib + .storyboard 전부 차단
+if echo "$FP" | grep -qE '\.(pbxproj|xcworkspace|xib|storyboard)$|xcodeproj/|xcworkspace/'; then
+  echo "❌ BLOCKED: Xcode 프로젝트 파일 직접 수정 금지."
+  exit 2
+fi
+```
+
+Interface Builder 파일(.xib, .storyboard)도 **바이너리 XML**이므로 LLM이 편집하면 깨진다. SwiftUI로 새 UI를 만들고, 레거시 xib는 사람이 관리.
+
+---
+
+## 생산성 수치 종합
+
+| 소스 | 지표 | 수치 |
+|------|------|------|
+| Osman Demiröz (Medium) | 순수 SwiftUI 프로젝트 시간 절감 | **60%** |
+| Osman Demiröz (Medium) | UIKit/SwiftUI 혼합 프로젝트 | **35-40%** |
+| Blake Crosley (8개 앱) | Well-configured 프로젝트 생산성 배수 | **3-5x** |
+| Osman Demiröz (Medium) | Feature scaffolding 시간 | 15-20분 → **30초** |
+| Osman Demiröz (Medium) | 인터럽션 감소 (permissions 설정 후) | **40%** |
+| Blake Crosley (블로그) | MCP 자율 빌드 루프 시간 | 8-10분 → **90초** |
+
+> **"에이전트 효과는 프로젝트 크기가 아니라 문서화 수준에 비례. 63파일 앱이 CLAUDE.md 잘 쓰면 14파일 앱보다 나은 출력."** — Blake Crosley
+
+---
+
+## CLAUDE.md 6대 필수 섹션 (Blake Crosley 권장)
+
+| 섹션 | 내용 | 핵심 |
+|------|------|------|
+| **1. Project Identity** | Bundle ID, Target, Architecture, Swift 버전 | 에이전트의 첫 컨텍스트 |
+| **2. File Structure** | 디렉토리 맵 + 인라인 주석 | "가장 높은 레버리지 문서" |
+| **3. Build & Test** | MCP 우선, xcodebuild fallback | 에이전트가 스스로 검증 |
+| **4. Key Patterns** | @Observable, NavigationStack, @MainActor | 양성 규칙 |
+| **5. Prohibitions** | pbxproj, force unwrap, ObservableObject | "에이전트는 음성 제약을 더 잘 따름" |
+| **6. Framework Context** | HealthKit 가드, SwiftData 관계, Metal 규칙 | 프레임워크별 함정 방지 |
+
+> **"에이전트는 긍정 제안보다 부정 제약(NEVER)을 더 신뢰성 있게 따른다."** — Blake Crosley
+
+---
+
 ## 자기 점검
 
 1. XcodeBuildMCP와 Apple Xcode MCP의 차이를 설명할 수 있는가? (headless vs 실행 중 Xcode)
@@ -413,9 +628,11 @@ After (iOS 하네스 적용):
 
 ## 출처
 
-- [Two MCP Servers Made Claude Code an iOS Build System](https://blakecrosley.com/blog/xcode-mcp-claude-code) — Blake Crosley
-- [Claude Code iOS Dev Guide](https://github.com/keskinonur/claude-code-ios-dev-guide) — keskinonur (GitHub)
-- [XcodeBuildMCP](https://github.com/getsentry/XcodeBuildMCP) — Sentry (GitHub)
-- [Building iOS Apps with AI Agents: The Practitioner's Guide](https://blakecrosley.com/guides/ios-agent-development) — Blake Crosley
-- [How to Automate iOS Development Without Breaking .pbxproj](https://dev.to/anicca_301094325e/how-to-automate-ios-development-without-breaking-pbxproj-files-2mpk) — DEV Community
-- [Apple's Xcode now supports the Claude Agent SDK](https://www.anthropic.com/news/apple-xcode-claude-agent-sdk) — Anthropic
+- [Building iOS Apps with AI Agents: The Practitioner's Guide](https://blakecrosley.com/guides/ios-agent-development) — Blake Crosley (8개 프로덕션 앱 기반, 에이전트 강약점 맵, 아키텍처 패턴, 멀티 에이전트)
+- [Two MCP Servers Made Claude Code an iOS Build System](https://blakecrosley.com/blog/xcode-mcp-claude-code) — Blake Crosley (XcodeBuildMCP + Apple MCP 조합, Before/After 비교)
+- [Reduce iOS Development Time by 60% with Claude Code](https://medium.com/@osmandemiroz/reduce-ios-development-time-by-60-with-claude-code-86a4e9d864ca) — Osman Demiröz (생산성 수치, SwiftUI vs UIKit 효과 차이)
+- [Claude Code iOS Dev Guide](https://github.com/keskinonur/claude-code-ios-dev-guide) — keskinonur (CLAUDE.md 구조, PRD 기반 워크플로우, Swift 6 패턴)
+- [XcodeBuildMCP](https://github.com/getsentry/XcodeBuildMCP) — Sentry (59+ 도구, 설치 방법, CLI 사용법)
+- [How to Automate iOS Development Without Breaking .pbxproj](https://dev.to/anicca_301094325e/how-to-automate-ios-development-without-breaking-pbxproj-files-2mpk) — DEV Community (AI 생성 + 사람 등록 골든 룰)
+- [Claude Code × Xcode iOS Development Guide](https://claudelab.net/en/articles/claude-code/claude-code-xcode-ios-swift-development-guide) — Claude Lab (SwiftUI-first 전략, Core Data 생성)
+- [Apple's Xcode now supports the Claude Agent SDK](https://www.anthropic.com/news/apple-xcode-claude-agent-sdk) — Anthropic (Xcode 26.3 네이티브 통합)
