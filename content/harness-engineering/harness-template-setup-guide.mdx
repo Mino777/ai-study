@@ -353,6 +353,113 @@ MS Research + Salesforce 연구 (15개 LLM, 200,000+ 시뮬레이션): 멀티턴
 
 ---
 
+## Permission Matcher 함정 — 옵션이 먼저 오면 매칭 실패
+
+```json
+// ✅ 작동 — 접두사 매칭
+"Bash(npm run test:*)"    // npm run test, npm run test:unit 매칭
+"Bash(git commit:*)"      // git commit -m "msg" 매칭
+
+// ❌ 실패 — 옵션이 명령어 앞에 오면
+"Bash(curl http:*)"       // curl -X GET http://... 매칭 안 됨!
+```
+
+**해법**: 옵션이 먼저 오는 명령어는 **전체 차단**:
+```json
+"deny": ["Bash(curl:*)", "Bash(docker:*)"]
+```
+
+**경로 3가지 표기법**:
+| 표기 | 의미 | 예시 |
+|------|------|------|
+| `Edit(src/**)` | 작업 디렉토리 기준 상대 | src/ 하위 전체 |
+| `Edit(/build/**)` | settings.json 위치 기준 | 프로젝트 루트의 build/ |
+| `Edit(//tmp/**)` | 파일시스템 절대 경로 | /tmp 디렉토리 |
+
+---
+
+## $defaults Sentinel — autoMode에서 빌트인 안전 규칙 보존
+
+Auto Mode 커스텀 규칙을 정의할 때 **$defaults 없이 쓰면 빌트인 안전 규칙이 전부 사라진다**:
+
+```json
+{
+  "autoMode": {
+    "allow": [
+      "Bash(npm test:*)",
+      "$defaults",                 // ← 빌트인 allow 규칙 보존
+      "Bash(git push:origin/feature/*)"
+    ]
+  }
+}
+```
+
+`$defaults`가 빌트인 규칙이 삽입되는 위치. 앞에 배치하면 커스텀 우선, 뒤에 배치하면 빌트인 우선.
+
+---
+
+## 토큰 오버헤드 수치 — 루프가 비싼 이유
+
+| 도구 호출 | 오버헤드/회 | 100회 루프 시 |
+|-----------|------------|--------------|
+| Bash | +245 입력 토큰 | 24,500 토큰 |
+| Text Editor (Edit) | +700 입력 토큰 | 70,000 토큰 |
+
+**100회 디버그 루프 = 응답 내용과 무관하게 24,500 토큰 오버헤드.** `--max-turns 10`으로 루프 제한 권장.
+
+**LSP 도구로 절감**:
+
+| 작업 | Grep/Read | LSP |
+|------|-----------|-----|
+| 함수 사용처 검색 | 수천 토큰 (전체 파일 읽기) | ~500 토큰 |
+| 정의로 이동 | 수천 토큰 | ~200 토큰 |
+
+LSP가 지원되면(TypeScript, Python, Go, Rust) Grep 대신 LSP 사용이 **5-10배 토큰 절감**.
+
+---
+
+## Prompt Caching 경제학 — 반복 컨텍스트의 90% 절감
+
+| 동작 | 비용 | TTL |
+|------|------|-----|
+| Cache write (기본) | 1.25× 기본 입력 | 5분 |
+| Cache write (1시간) | 2× 기본 입력 | 1시간 |
+| **Cache read** | **0.1× 기본 입력** | — |
+
+```bash
+# 1시간 캐시 활성화 (긴 세션에서 동일 컨텍스트 반복 시)
+export ENABLE_PROMPT_CACHING_1H=1
+```
+
+**RAG/코드 어시스턴트에서 88-95% 비용 절감** (첫 요청 이후). CLAUDE.md, 시스템 프롬프트, 프로젝트 구조 등 반복 컨텍스트가 캐시되기 때문.
+
+---
+
+## settings.local.json — 팀 프로젝트에서 개인 설정 분리
+
+```
+.claude/settings.json        ← git에 커밋 (팀 공유 규칙)
+.claude/settings.local.json  ← .gitignore (개인 오버라이드)
+```
+
+```json
+// settings.local.json (개인용 — git에 안 들어감)
+{
+  "permissions": {
+    "allow": ["Bash(rm:*)"]    // 개인적으로 허용
+  }
+}
+```
+
+`.gitignore`에 추가:
+```
+.claude/settings.local.json
+```
+
+**팀은 표준 규칙을 공유하면서, 개인은 자기 환경에 맞게 오버라이드.** 가장 흔한 용도: 특정 CLI 도구 자동 허용, 모델 오버라이드.
+
+---
+
 ## Subagent 비용 — Haiku가 95%의 일을 한다
 
 ```bash
