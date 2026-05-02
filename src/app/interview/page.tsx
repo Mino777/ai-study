@@ -619,7 +619,7 @@ export default function InterviewPage() {
         }}
       />
 
-      <main className="relative z-10 mx-auto max-w-[900px] px-6 pt-16 pb-32">
+      <main className="relative z-10 mx-auto max-w-[900px] px-4 sm:px-6 pt-12 sm:pt-16 pb-32">
         {/* ═══════════ HEADER ═══════════ */}
         <header className="mb-12">
           <div className="flex items-center gap-3 mb-2">
@@ -635,7 +635,7 @@ export default function InterviewPage() {
         </header>
 
         {/* ═══════════ D-DAY COUNTER ═══════════ */}
-        <div className="grid grid-cols-4 gap-3 mb-10">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-10">
           <div className="rounded-2xl border border-border/40 bg-surface/40 p-5 text-center">
             <p className="text-3xl font-display font-black" style={{ color: currentPhase.color }}>
               D-{daysRemaining}
@@ -711,7 +711,7 @@ export default function InterviewPage() {
         </div>
 
         {/* ═══════════ TRACK SWITCHER ═══════════ */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between gap-2 mb-8">
           <div className="flex rounded-full border border-border/50 bg-surface/30 p-1">
             {TRACKS.map((t) => (
               <button
@@ -787,31 +787,30 @@ export default function InterviewPage() {
 
         {/* ═══════════ STREAK + STATS (compact) ═══════════ */}
         <section className="mb-8">
-          <div className="flex items-center justify-between rounded-xl border border-border/30 bg-surface/20 px-6 py-4">
-            <div className="flex items-center gap-6">
-              <div className="text-center">
-                <p className={`text-2xl font-display font-black ${streak >= 7 ? "text-orange-400" : "text-text/50"}`}>{streak}</p>
-                <p className="text-xs text-text/25">연속</p>
+          <div className="rounded-xl border border-border/30 bg-surface/20 px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div className="grid grid-cols-4 gap-4 sm:gap-6 flex-1">
+                <div className="text-center">
+                  <p className={`text-xl sm:text-2xl font-display font-black ${streak >= 7 ? "text-orange-400" : "text-text/50"}`}>{streak}</p>
+                  <p className="text-xs text-text/25">연속</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-xl sm:text-2xl font-display font-black text-accent">{quizCorrectTotal}</p>
+                  <p className="text-xs text-text/25">퀴즈 정답</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-xl sm:text-2xl font-display font-black text-green-400">{Object.values(solvedProblems).filter(Boolean).length}</p>
+                  <p className="text-xs text-text/25">문제 풀이</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-xl sm:text-2xl font-display font-black text-text/60">{totalReviewed}</p>
+                  <p className="text-xs text-text/25">카드 리뷰</p>
+                </div>
               </div>
-              <div className="w-px h-8 bg-border/20" />
-              <div className="text-center">
-                <p className="text-2xl font-display font-black text-accent">{quizCorrectTotal}</p>
-                <p className="text-xs text-text/25">퀴즈 정답</p>
+              <div className="text-right hidden sm:block ml-4">
+                <p className="text-xs text-text/30 font-code">Week {currentWeek}</p>
+                <p className="text-xs text-text/20">Phase {currentPhase.id} · {currentPhase.title}</p>
               </div>
-              <div className="w-px h-8 bg-border/20" />
-              <div className="text-center">
-                <p className="text-2xl font-display font-black text-green-400">{Object.values(solvedProblems).filter(Boolean).length}</p>
-                <p className="text-xs text-text/25">문제 풀이</p>
-              </div>
-              <div className="w-px h-8 bg-border/20" />
-              <div className="text-center">
-                <p className="text-2xl font-display font-black text-text/60">{totalReviewed}</p>
-                <p className="text-xs text-text/25">카드 리뷰</p>
-              </div>
-            </div>
-            <div className="text-right">
-              <p className="text-xs text-text/30 font-code">Week {currentWeek}</p>
-              <p className="text-xs text-text/20">Phase {currentPhase.id} · {currentPhase.title}</p>
             </div>
           </div>
         </section>
@@ -932,7 +931,7 @@ export default function InterviewPage() {
           <summary className="px-5 py-3 cursor-pointer hover:bg-surface/30 transition-colors text-xs font-bold text-text/40 uppercase tracking-wider">
             4-Phase Roadmap
           </summary>
-          <div className="px-5 pb-4 grid grid-cols-2 gap-2">
+          <div className="px-5 pb-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
 
         {/* ═══════════ PHASE ROADMAP ═══════════ */}
         <section className="mb-12">
@@ -1383,7 +1382,7 @@ export default function InterviewPage() {
             Timebox Rules
             <span className="ml-2 text-text/25 normal-case tracking-normal font-normal">— 난이도별 시간 제한</span>
           </h2>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {TIMEBOX_RULES.map((r) => (
               <div key={r.level} className="rounded-xl border border-border/30 bg-surface/20 p-4">
                 <div className="flex items-center gap-2 mb-2">
@@ -1403,9 +1402,9 @@ export default function InterviewPage() {
             Level-Up Criteria
             <span className="ml-2 text-text/25 normal-case tracking-normal font-normal">— ZPD 기반 자동 레벨업</span>
           </h2>
-          <div className="flex gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {LEVEL_CRITERIA.map((lc, i) => (
-              <div key={i} className="flex-1 rounded-xl border border-border/30 bg-surface/20 p-4">
+              <div key={i} className="rounded-xl border border-border/30 bg-surface/20 p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-xs font-code px-2 py-0.5 rounded-full bg-accent/10 text-accent/70">{lc.from}</span>
                   <span className="text-text/20">&rarr;</span>
@@ -1430,7 +1429,7 @@ export default function InterviewPage() {
               <div className="bg-amber-400/70" style={{ width: "20%" }} />
               <div className="bg-green-400/70" style={{ width: "10%" }} />
             </div>
-            <div className="grid grid-cols-3 gap-4 text-center">
+            <div className="grid grid-cols-3 gap-2 sm:gap-4 text-center">
               <div>
                 <p className="text-2xl font-display font-black text-accent/70">70%</p>
                 <p className="text-xs text-text/50 mt-0.5">신규 문제</p>
@@ -1458,17 +1457,17 @@ export default function InterviewPage() {
           </h2>
           <div className="space-y-2">
             {todayProblems.map((p) => (
-              <div key={p.title} className={`rounded-xl border p-4 flex items-center gap-4 transition-all ${solvedProblems[p.title] ? "border-green-500/30 bg-green-500/5" : "border-border/40 bg-surface/30"}`}>
+              <div key={p.title} className={`rounded-xl border p-4 flex items-center gap-3 sm:gap-4 transition-all ${solvedProblems[p.title] ? "border-green-500/30 bg-green-500/5" : "border-border/40 bg-surface/30"}`}>
                 <input type="checkbox" checked={!!solvedProblems[p.title]} onChange={() => toggleProblem(p.title)} className="w-4 h-4 rounded accent-green-500 cursor-pointer shrink-0" />
                 <div className="flex-1 min-w-0">
                   <a href={p.url} target="_blank" rel="noopener noreferrer" className={`text-sm font-medium hover:text-accent transition-colors ${solvedProblems[p.title] ? "line-through text-text/30" : "text-text/80"}`}>{p.title}</a>
-                  <div className="flex items-center gap-2 mt-1">
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
                     <span className="text-xs font-code text-text/30">{p.platform}</span>
                     <span className="text-xs font-code text-accent/50">{p.difficulty}</span>
                     <span className="text-xs font-code text-text/20">{p.topic}</span>
                   </div>
                 </div>
-                <a href={p.url} target="_blank" rel="noopener noreferrer" className="shrink-0 text-xs text-accent/50 hover:text-accent transition-colors">풀러가기 &rarr;</a>
+                <a href={p.url} target="_blank" rel="noopener noreferrer" className="shrink-0 text-xs text-accent/50 hover:text-accent transition-colors hidden sm:inline">풀러가기 &rarr;</a>
               </div>
             ))}
           </div>
@@ -1887,7 +1886,7 @@ export default function InterviewPage() {
               API 프로토콜 비교 (REST vs GraphQL vs gRPC vs WebSocket)
             </summary>
             <div className="px-5 pb-4 border-t border-border/20 pt-3">
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {SD_API_COMPARISON.map((api) => (
                   <div key={api.name} className="rounded-lg bg-surface/40 p-3">
                     <p className="text-xs font-bold mb-1">{api.name}</p>
@@ -2359,7 +2358,7 @@ export default function InterviewPage() {
 
               {/* DAY SELECTOR */}
               <section className="mb-8">
-                <div className="grid grid-cols-7 gap-2">
+                <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
                   {TOSS_7DAY_PLAN.map((d) => {
                     const dDone = d.hours.filter((h) => toss7Tasks[h.checkId]).length;
                     const dProgress = Math.round((dDone / d.hours.length) * 100);
