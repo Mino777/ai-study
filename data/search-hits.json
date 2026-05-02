@@ -1,10 +1,10 @@
 {
-  "totalQueries": 25,
-  "lastUpdated": "2026-05-01T15:36:41.671Z",
+  "totalQueries": 30,
+  "lastUpdated": "2026-05-02T15:12:23.132Z",
   "hits": {
     "solutions/mdx/2026-04-16-mermaid-br-in-unquoted-node-labels": 2,
     "solutions/mdx/2026-04-16-mermaid-cylinder-nested-parens": 2,
-    "harness-engineering/ai-call-patterns-circuit-breaker-fallback": 3,
+    "harness-engineering/ai-call-patterns-circuit-breaker-fallback": 4,
     "context-engineering/context-scaling-3-layer-architecture": 2,
     "harness-engineering/harness-engineering-overview": 1,
     "harness-engineering/compound-engineering-philosophy": 3,
@@ -16,13 +16,13 @@
     "retros/2026-04-16": 1,
     "harness-engineering/aidy-journal-000-architect-worker-baseline": 3,
     "harness-engineering/llm-first-wiki-principles": 1,
-    "harness-engineering/ai-agent-start-here": 2,
+    "harness-engineering/ai-agent-start-here": 3,
     "harness-engineering/harness-journal-024-solution-to-validator-promotion": 1,
     "solutions/ai-pipeline/2026-04-12-runtime-shape-validation-type-guard-vs-zod": 1,
     "retros/2026-04-17-session-7-phase2": 1,
     "harness-engineering/compound-loop-break": 1,
-    "harness-engineering/five-levers-of-harness-engineering": 2,
-    "agents/hermes-agent-analysis": 2,
+    "harness-engineering/five-levers-of-harness-engineering": 6,
+    "agents/hermes-agent-analysis": 3,
     "evaluation/agent-self-evaluation-bias-countermeasures": 2,
     "agents/multi-agent-pipeline": 1,
     "harness-engineering/architect-flow-map-via-aidy-architect": 2,
@@ -43,6 +43,8 @@
     "harness-engineering/harness-journal-023-closed-loop-ai-quality": 1,
     "harness-engineering/ai-testing-strategies": 1,
     "agents/tool-use": 1,
-    "context-engineering/llm-wiki-swot-ai-study-vs-karpathy": 1
+    "context-engineering/llm-wiki-swot-ai-study-vs-karpathy": 1,
+    "ios-ai/ios-ai-journal-008-first-full-harness-setup-retro": 4,
+    "ios-ai/ios-ai-journal-009-ai-probe-dual-pipeline": 1
   }
 }

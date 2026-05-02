@@ -9,8 +9,8 @@
 
 ## 작성 시점
 
-- **작성 일시**: 2026-04-29 (Session 26 — iOS Harness Journal 012 엔트리화)
-- **작성 주체**: Claude (Session 26)
+- **작성 일시**: 2026-05-02 (Session 27 — 하네스 마스터클래스)
+- **작성 주체**: Claude (Session 27)
 - **이유**: 세션 핸드오프
 
 ---
@@ -18,40 +18,46 @@
 ## 현재 상태 스냅샷
 
 ### ai-study Wiki
-- **엔트리 수**: 180
+- **엔트리 수**: 194+
 - **Solutions**: workflow 16, mdx 9, ai-pipeline 6, github-actions 5, next-patterns 3, performance 1
-- **Resolver eval**: 48/48 = 100% 유지
-- **Weekly CI**: 허브 + 워커 6 = 7 repo ON
-- **AI 파이프라인 방어**: 3중 (자동이스케이프 + 빌드차단 + GHA게이트) — 2026-04-27 구축
-- **iOS 저널**: 000~012 (13편)
+- **테스트**: 71개 (mermaid-fix 34 + check-skills 23 + resolver-eval 7 + harness-fitness 7)
+- **하네스 구성**: deny 7, hooks 4+, rules 2, commands 13, harness-fitness 7개 자동검증
+- **하네스 템플릿**: harness-template/ (공통) + harness-template/ios/ (iOS)
+- **하네스 연구**: Fowler + arxiv + Anthropic + OpenAI 4편 종합 적용
+- **Flow Map**: 6편 (architect + ios + android + backend + moneyflow + tarosaju)
+
+### 워커 프로젝트 위키 접근
+- aidy-architect: ✅ additionalDirectories + CLAUDE.md 안내 (커밋 완료)
+- mino-moneyflow: ✅ 동일 (커밋 완료, 미푸시)
+- mino-tarosaju: ✅ 동일 (커밋 완료, 미푸시)
+- pre-assignment: ✅ 공통 하네스 + 위키 접근 (git init + 커밋 완료)
 
 ### /interview 히든 페이지
-- **규모**: constants.ts 3,039줄 + page.tsx 2,536줄 = 5,575줄
-- **구성**: 7탭 / 96퀴즈 / 47플래시카드 / 11알고리즘 / 20CS / 6시스템디자인
-- **iOS/FDE**: 듀얼트랙 완전 분리
-- **접근**: I키 5회 이스터에그 + URL 직접
+- **규모**: constants.ts 3,500+줄 + page.tsx 2,600+줄
+- **구성**: 7탭 / 118퀴즈 / 53플래시카드 / 11알고리즘 / 20CS / 6시스템디자인 / 토스 25토픽 상세
+- **플래시카드**: 랜덤 셔플 (페이지 진입 시마다 다른 7장)
 
 ---
 
 ## 다음 작업 큐 (우선순위순)
 
 ### P0 — 즉시
-1. **면접 페이지 테스트 추가**: 퀴즈 셔플 균등분포, localStorage 영속성, 트랙 전환 독립성 최소 테스트
-2. **Vercel 배포 확인**: 빌드 통과 확인
+1. **워커 프로젝트 위키 접근 검증**: 다음 moneyflow/tarosaju 세션에서 `cd ../ai-study && node scripts/search.mjs` 실제 동작 확인
+2. **moneyflow/tarosaju 커밋 push**: 위키 접근 설정 커밋이 아직 미푸시
 
 ### P1 — 이번 주
-3. **퀴즈 뱅크 100문제 달성**: 현재 96문제 → 100+ (AI 워크플로우 4문제 추가)
-4. **플래시카드 iOS 50장 목표**: 현재 35장 → 50장 (UIKit 성능, SwiftUI 실전, Combine 심화)
-5. **뉴스레터 엔트리 보강**: 딜라이트룸 사례 원문 재확인 + SwiftUI vs UIKit 벤치마크 엔트리
+3. **면접 페이지 모바일 반응형**: 현재 데스크탑 위주 — 모바일에서 탭/카드 레이아웃 확인
+4. **퀴즈 뱅크 120문제 달성**: 현재 118문제
+5. **플래시카드 iOS 55장 목표**: 현재 53장
 
 ### P2 — 다음 주
-6. **면접 페이지 모바일 반응형**: 현재 데스크탑 위주 — 모바일에서 탭/카드 레이아웃 확인
-7. **CS 토픽 30개 목표**: 현재 20개 → 분산시스템/캐싱/인증 심화 추가
+6. **하네스 템플릿을 다른 프로젝트에서 실전 검증**: pre-assignment에서 실제 사전과제 진행하며 하네스 효과 측정
+7. **CS 토픽 25개 목표**: 현재 20개 → 분산시스템/캐싱/인증 심화
 
 ### Backlog
 - SM-2 분산반복 알고리즘을 퀴즈에 적용 (틀린 문제 우선 출제)
-- 자소서 기반 맞춤 질문 생성 (AI 연동)
-- AI 역량검사 시뮬레이터
+- 하네스 템플릿 GitHub 공개 검토
+- 워커 프로젝트 위키 검색 히트 카운트 수집 구조 (필요 시)
 
 ---
 
@@ -61,13 +67,3 @@
 2. `git pull --rebase` (AI 파이프라인 자동 생성 엔트리 확인)
 3. 엔트리 수 실측: `cat src/generated/content-manifest.json | python3 -c "import json,sys; d=json.load(sys.stdin); print(len(d['entries']))"`
 4. P0 큐 착수
-
----
-
-## 참고: 워커 레포 저널화 팁
-
-gma-ios 등 워커 레포 작업을 ai-study 저널로 박제할 때:
-1. `git -C ~/Develop/<repo> log --since="3 days ago"` 로 커밋 파악
-2. `docs/retros/` + `docs/solutions/` 확인 (compound 문서가 원재료)
-3. 공개 금지 키워드 sanitize (`gma-ios`, `GreenCar` → "iOS 앱", "사내 iOS 프로젝트")
-4. 솔루션: `docs/solutions/workflow/2026-04-29-external-repo-journal-from-compound-docs.md`

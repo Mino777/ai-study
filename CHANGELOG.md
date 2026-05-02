@@ -2,6 +2,35 @@
 
 모든 주목할 만한 변경사항을 이 파일에 기록합니다.
 
+## [2026-05-02] 세션 27 — 하네스 마스터클래스
+
+### Added
+- 면접 부트캠프: 이미지 캐싱 6문항, CS 심화 8문항, Swift/디자인패턴 12문항, 퀴즈 18문항, 토스 25토픽 상세
+- AI 엔지니어링 현황 총정리 엔트리 (용어 40+, 방법론, 트렌드, 흔한 오해 6가지)
+- 하네스 연구 4편: Fowler 프레임워크, Claude Code arxiv, Anthropic 3-Agent, OpenAI Codex
+- 공통 하네스 이식 템플릿 (harness-template/ + setup.sh)
+- iOS 하네스 이식 템플릿 (harness-template/ios/ + XcodeBuildMCP)
+- 공통 하네스 셋업 가이드 엔트리 + iOS 하네스 셋업 가이드 엔트리
+- Flow Map 2편: MoneyFlow 13-Agent + Tarosaju 3단계 방어선
+- harness-fitness.test.mjs 7개 기계적 검증 (vitest)
+- .claude/rules/ 디렉토리 (content-mdx.md, harness-meta.md)
+- 워커 4개 프로젝트에 ai-study 위키 읽기 전용 접근 설정
+
+### Changed
+- 면접 플래시카드: Day 기반 고정 → 랜덤 셔플 (페이지 진입 시마다)
+- ai-agent-start-here: 하네스 템플릿 + 4편 연구 + 스냅샷 업데이트
+- Journal 018: TMA 도입 후 실무 성과 6가지 추가
+
+### Fixed
+- **critical**: 모든 보안 Hook exit 1 → exit 2 (exit 1은 비차단이라 실제 차단 안 됨)
+- Mermaid 렌더링 에러: persona-engineering 다이어그램 (따옴표 없는 괄호+콜론)
+- MoneyFlow flow map frontmatter 중복 description 제거
+
+### Metrics
+- 커밋 30+, 파일 44개, +5,194줄
+- 새 엔트리 8개, 테스트 34→71
+- 하네스: deny 4→7, rules 0→2, harness-fitness 7개 자동 검증
+
 ## [2026-04-29] 세션 26 — iOS Harness Journal 012 엔트리화 + 업데이트
 
 > gma-ios claude-setup 브랜치 2일치(18커밋) 작업을 iOS 저널 엔트리로 박제. 엔트리 177→180.
