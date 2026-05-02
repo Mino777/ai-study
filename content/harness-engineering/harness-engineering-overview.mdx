@@ -9,7 +9,7 @@ tags:
   - guardrails
   - pipeline
 confidence: 2
-last_verified: "2026-04-09"
+last_verified: "2026-05-03"
 applicable_to: ["aidy", "any"]
 connections:
   - context-engineering/context-engineering-fundamentals
@@ -38,6 +38,8 @@ connections:
   - tokenomics/claude-code-token-levers-catalog
   - harness-engineering/addy-osmani-agent-harness-engineering
   - tokenomics/prompt-caching-cost-reduction
+  - harness-engineering/ai-agent-persona-engineering-review-diversity-quality-strate
+  - harness-engineering/ai-agent-start-here
 status: complete
 description: 'LLM 하나로는 프로덕션 시스템을 만들 수 없다. 입출력 검증, 라우팅, 폴백, 캐싱을 포함하는 AI 하네스 설계의 기초.'
 type: entry
@@ -105,6 +107,78 @@ LLM API를 직접 호출하는 것은 프로토타입에서는 충분하지만, 
 | 불필요한 API 호출 = 비용 증가 | 시맨틱 캐싱으로 비용 절감 |
 | 느린 응답 그대로 전달 | 스트리밍 + 타임아웃 관리 |
 | 프롬프트 인젝션에 취약 | 입력 필터링 + 가드레일 |
+
+## 하네스 도입의 4가지 핵심 이점
+
+프로덕션 환경에서 LLM을 안정적으로 운영하기 위해서는 단순히 더 좋은 모델을 기다리는 것으로는 부족합니다. iOS/프론트엔드 개발자에게 특히 중요한 4가지 이점이 있습니다.
+
+### 1. 모델 교체 유연성(Model-Agnosticism)
+
+오늘 최고의 모델이 내일도 최고라는 보장은 없습니다. 더 저렴하고 빠른 로컬 SLM(경량 언어 모델)이 대세가 될 수도 있습니다. **하네스가 잘 설계되어 있다면, 우리는 API 엔드포인트와 요청/응답 형식만 바꾸는 최소한의 노력으로 모델을 교체할 수 있습니다.**
+
+```typescript
+// 추상화된 인터페이스를 통해 모델 교체 용이
+export interface LLMProvider {
+  generate(request: LLMRequest): Promise<LLMResponse>;
+}
+
+// OpenAI → Anthropic으로 교체할 때도 이 인터페이스만 구현 변경
+class OpenAIProvider implements LLMProvider { /* ... */ }
+class AnthropicProvider implements LLMProvider { /* ... */ }
+```
+
+### 2. 예측 가능성 및 안정성(Predictability & Stability)
+
+LLM은 본질적으로 비결정론적(non-deterministic)입니다. **하네스는 입력과 출력을 제어하고, 응답 형식을 강제하며(e.g., JSON 스키마), 실패 시 재시도나 대체(fallback) 로직을 수행함으로써 시스템 전체의 안정성을 확보합니다.** 즉, AI가 이상한 답변을 했어도 앱이 크래시되거나 데이터 무결성이 손상되지 않습니다.
+
+### 3. 관측 가능성(Observability)
+
+모든 AI 호출에 대한 비용, 지연 시간(latency), 토큰 사용량, 성공/실패 여부를 추적할 수 있는 환경은 필수적입니다. **"이번 달 API 비용이 왜 이렇게 많이 나왔지?"라는 질문에 답할 수 없다면, AI 기능을 운영할 수 없습니다.** 관측 계층은 모델의 성능 저하를 감지하고, 자주 실패하는 프롬프트를 개선하는 데 결정적인 데이터를 제공합니다.
+
+### 4. 테스트 용이성(Testability)
+
+비결정론적인 AI를 어떻게 테스트할까요? **하네스는 AI 모델 자체를 모킹(mocking)할 수 있는 추상화 계층을 제공합니다.** 이를 통해 우리는 AI의 응답을 예측 가능한 값으로 고정하고, 나머지 비즈니스 로직을 견고하게 테스트할 수 있습니다.
+
+```swift
+// Mock을 주입해 테스트
+let mockProvider = MockLLMProvider(cannedResponse: .success(testJSON))
+let service = ProfileSummaryService(llmProvider: mockProvider)
+let result = try await service.fetchSummary(for: "test")
+```
+
+아래 다이어그램은 하네스 도입 이전과 이후의 아키텍처 차이를 보여줍니다.
+
+```mermaid
+graph TD
+    subgraph id_before ["하네스 도입 이전: 위험한 직접 호출"]
+        direction LR
+        Client_A[iOS/Web Client] -->|Direct API Call| LLM_A["LLM API (e.g., OpenAI)"]
+        LLM_A -->|Raw Text/JSON · 환각, 형식 오류 처리 안 함| Client_A
+    end
+
+    subgraph id_after ["하네스 도입 이후: 안정적인 추상화"]
+        direction TB
+        Client_B[iOS/Web Client]
+        Harness["Harness Layer"]
+        Input["입력 계층 · 검증·라우팅"]
+        Context["컨텍스트 조립"]
+        LLM_B["LLM 호출"]
+        Fallback["폴백 + 재시도"]
+        Output["출력 계층 · 검증·파싱"]
+        
+        Client_B --> Harness
+        Harness --> Input
+        Input --> Context
+        Context --> LLM_B
+        LLM_B -->|성공| Output
+        LLM_B -->|실패| Fallback
+        Fallback --> Output
+        Output -->|구조화된 데이터| Client_B
+    end
+
+    style id_before fill:#f9f,stroke:#333,stroke-width:2px
+    style id_after fill:#ccf,stroke:#333,stroke-width:2px
+```
 
 ## 하네스의 5가지 핵심 계층
 
