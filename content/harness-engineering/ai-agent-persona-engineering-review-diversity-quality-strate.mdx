@@ -50,31 +50,31 @@ quiz:
 ```mermaid
 graph TD
     subgraph persona_pool ["1. Persona Pool"]
-        A["Persona DB  · (JSON/Vector DB)"]
+        A["Persona DB · JSON/Vector DB"]
     end
 
     subgraph team_composition ["2. Team Composition"]
-        B[Persona Mixer]
-        C{Task Requirements}
+        B["Persona Mixer"]
+        C{"Task Requirements"}
         C --> B
         A --> B
     end
 
     subgraph execution ["3. Task Execution"]
-        D["Agent Team (e.g., 5 agents)"]
+        D["Agent Team · 5 agents"]
         B --> D
-        E[Task: "새로운 사진 편집 앱 리뷰 작성"]
+        E["Task · 새로운 사진 편집 앱 리뷰 작성"]
         E --> D
     end
 
     subgraph quality_assurance ["4. Quality Assurance"]
-        F["Generated Reviews (Raw)"]
+        F["Generated Reviews · Raw"]
         D --> F
-        G["Quality Gate (LLM-as-Judge)"]
+        G["Quality Gate · LLM-as-Judge"]
         F --> G
-        H{Evaluation Rubric}
+        H{"Evaluation Rubric"}
         H --> G
-        G --> I[Final Curated Reviews]
+        G --> I["Final Curated Reviews"]
     end
 
     style persona_pool fill:#f9f,stroke:#333,stroke-width:2px
