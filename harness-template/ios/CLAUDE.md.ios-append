@@ -1,0 +1,19 @@
+
+## iOS 개발 환경
+
+### MCP (XcodeBuildMCP)
+- 빌드/테스트/시뮬레이터 작업은 **XcodeBuildMCP MCP 도구 우선** 사용
+- xcodebuild 직접 호출은 MCP 불가 시 fallback
+- `.mcp.json`에 설정 완료
+
+### iOS Rules
+- **.pbxproj 직접 수정 절대 금지** — Xcode 전용 파일
+- force unwrap (!) 금지 — guard let / if let 사용
+- 클로저 캡처 시 [weak self] 필수 (@escaping, Combine, 네트워크)
+- UI 업데이트는 @MainActor 필수
+- Sendable 프로토콜 준수 (Swift 6 Strict Concurrency)
+
+### iOS Commands
+- `/build` — XcodeBuildMCP로 빌드
+- `/test` — XcodeBuildMCP로 테스트
+- `/run` — 시뮬레이터에서 앱 실행
