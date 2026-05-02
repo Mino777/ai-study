@@ -5,7 +5,10 @@
       "Read(**/.env*)",
       "Read(**/secrets*)",
       "Read(**/ADMIN_SECRET*)",
-      "Write(**/.env*)"
+      "Write(**/.env*)",
+      "Bash(rm -rf *)",
+      "Bash(git push --force*)",
+      "Bash(git reset --hard*)"
     ]
   },
   "hooks": {
@@ -15,6 +18,11 @@
           {
             "type": "command",
             "command": "bash /Users/jominho/Develop/ai-study/.claude/hooks/session-start.sh",
+            "timeout": 5000
+          },
+          {
+            "type": "command",
+            "command": "bash /Users/jominho/Develop/ai-study/.claude/hooks/gc-drift-detector.sh",
             "timeout": 5000
           }
         ]
@@ -43,6 +51,16 @@
       }
     ],
     "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd /Users/jominho/Develop/ai-study && npx tsc --noEmit 2>&1 | grep -E '^src/|error TS' | head -10; if [ ${PIPESTATUS[0]} -ne 0 ]; then echo '❌ TypeScript 에러 감지 — 수정 필요'; exit 2; fi",
+            "timeout": 30000
+          }
+        ]
+      },
       {
         "matcher": "Bash",
         "hooks": [
