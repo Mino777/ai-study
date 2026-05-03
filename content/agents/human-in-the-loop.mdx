@@ -232,6 +232,92 @@ Claude: Done. Committed and pushed.
 
 ---
 
+## 업계 사례와 권위 자료
+
+### Anthropic의 HITL 가이드라인
+
+Anthropic은 에이전트 설계에서 "agents pause for human feedback at checkpoints or when encountering blockers"를 강조한다 ([Building Effective AI Agents](https://www.anthropic.com/research/building-effective-agents)). 이는 에이전트가 초기 입력 또는 최종 결과 확인 시점뿐만 아니라, **실행 중간 단계에서도 사람의 개입을 설계해야 함**을 의미한다.
+
+Anthropic의 연구에 따르면:
+- **Customer Support**: 복잡한 고객 데이터 조회 시 에이전트가 추천안을 제시하고 사람이 최종 대응을 결정한다.
+- **Coding Agents**: 에이전트가 GitHub Issue를 해결하더라도 "human review remains crucial for ensuring solutions align with broader system requirements"다.
+- **설계 원칙**: 개발자는 "the agent's planning steps"를 명시적으로 표현하여 사람이 언제든지 개입할 수 있도록 해야 한다.
+
+### LangGraph의 interrupt() — 프로덕션급 HITL 구현
+
+LangChain의 LangGraph는 `interrupt()` 함수로 에이전트 실행 중 어디서든 사람이 개입할 수 있도록 설계했다 ([Making it easier to build human-in-the-loop agents with interrupt](https://www.langchain.com/blog/making-it-easier-to-build-human-in-the-loop-agents-with-interrupt)):
+
+```python
+# 에이전트가 중단되어 대기
+result = await graph.invoke({"query": user_input})
+
+# 인터럽트 발생 시
+# → 그래프 상태 저장 (checkpointer)
+# → 사람의 입력 대기
+# → 사람이 Command(resume=value) 호출하면 재개
+```
+
+**4가지 주요 패턴**:
+1. **Approve or Reject** — 거액 거래, 이메일 발송 등 돌이킬 수 없는 작업 전에 승인 요청
+2. **Review & Edit State** — 사람이 에이전트의 내부 상태(context, 계획)을 수정한 후 재개
+3. **Review Tool Calls** — LLM이 요청한 도구 실행을 사람이 검증 후 승인
+4. **Multi-turn Conversations** — 멀티에이전트 시스템에서 인간-에이전트 간 다중 턴 대화
+
+### 5가지 프로덕션 HITL 패턴과 실측 데이터
+
+LLM 에이전트를 4.2M 태스크에 배포한 실무팀의 분석 ([Human-in-the-Loop (HITL) for AI Agents: Patterns and Best Practices](https://dev.to/taimoor__z/-human-in-the-loop-hitl-for-ai-agents-patterns-and-best-practices-5ep5))에 따르면:
+
+| 패턴 | 용도 | 효과 |
+|------|------|------|
+| **Approval Gate** | 돌이킬 수 없는 작업 (이메일, 삭제, 거래) | 비용 명확, 롤백 불가 |
+| **Escalation Ladder** | 복잡도/리스크 기반 계층적 라우팅 | 전문가 의견 필요시만 개입 |
+| **Confidence-Based Routing** | 복합 신호 기반 라우팅 (LLM confidence는 불신뢰) | 선택적 인간 개입 |
+| **Collaborative Drafting** | 에이전트가 안전도 마킹과 함께 드래프트 제시 | 사람이 승인/거절이 아니라 편집 |
+| **Audit Trail with Lazy Review** | 즉시 실행 후 로그 기반 사후 감시 | 리뷰 대기 오버헤드 제거 |
+
+**성과 (14개월, 4.2M 태스크)**:
+- **치명적 오류**: 23.4% → 5.1% (78% 감소)
+- **오류 감지 시간**: 3.2시간 → 18분
+- **인간 리뷰 비율**: 100%에서 23%로 최적화 (완전 자동화 불필요)
+- **연간 절감액**: ~$565K (HITL 인프라 비용 제외)
+
+**중요 발견**:
+- "LLM confidence 0.87은 실제로 실패한 작업에 대한 신뢰도"—언어 유창성과 정확성이 다르다
+- 초기 6개월: 규칙 기반 결정 트리 > ML 라우팅 분류기
+- **리뷰어 피로**: 2시간 후 품질 40% 저하 → 90분 주기로 교대 필수
+
+### Google Cloud의 HITL 분류체계
+
+Google Cloud는 HITL 패턴을 다음과 같이 분류한다 ([Human-in-the-Loop (HITL) in AI & ML](https://cloud.google.com/discover/human-in-the-loop)):
+
+1. **Data Labeling & Annotation** — 사람이 훈련 데이터에 라벨 제공
+2. **Model Validation** — 사람이 모델 예측 검증, edge case 발견
+3. **Active Learning** — 시스템이 불확실한 예측에 대해 인간에게 피드백 요청
+4. **Iterative Refinement** — 예측 → 검증 → 재훈련 → 개선 루프
+
+이러한 패턴은 의료 영상 분석, 금융 사기 탐지, 내용 심의(content moderation) 등에서 검증되었다.
+
+### 학술 분류: 3D Taxonomy (Loop Placement, Interaction Granularity, Temporal Characteristics)
+
+최신 학술 연구([Human-in-the-Loop Artificial Intelligence: A Systematic Review](https://www.mdpi.com/1099-4300/28/4/377))는 HITL을 다음 3개 축으로 분류한다:
+
+1. **Loop Placement** — 사람이 개입하는 위치
+   - 훈련 전 (사전 판단)
+   - 훈련 중 (피드백)
+   - 배포 후 (감시 및 조정)
+
+2. **Interaction Granularity** — 사람의 개입 수준
+   - Active Learning: 시스템이 제어, 인간이 필요할 때만 답변
+   - Interactive ML: 시스템 ↔ 인간 상호작용
+   - Machine Teaching: 인간 전문가가 제어
+
+3. **Temporal Characteristics** — 개입의 시간적 특성
+   - 동기식 (즉시 응답 필요)
+   - 비동기식 (지연 가능)
+   - 배치 처리 (누적 후 일괄 처리)
+
+---
+
 ## autoceo의 HITL 설계: Taste Decision만 사람에게
 
 autoceo (/autoceo 슬래시 커맨드)는 **풀 자동 스프린트 루프**다. 하지만 완전히 자동이 아니다:

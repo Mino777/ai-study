@@ -43,6 +43,61 @@ quiz:
     explanation: MoneyFlow는 각 에이전트가 JSON Schema로 구조화된 결과를 산출하고, 다음 에이전트가 그 JSON을 입력으로 받음. 빠른 응답과 명확한 인터페이스가 핵심.
 ---
 
+## 업계 사례와 권위 자료
+
+### Anthropic의 Orchestrator-Worker 패턴
+
+Anthropic의 공식 가이드 "[Building Effective AI Agents](https://resources.anthropic.com/hubfs/Building%20Effective%20AI%20Agents-%20Architecture%20Patterns%20and%20Implementation%20Frameworks.pdf)"에서는 **Orchestrator-Worker Pattern**을 표준 다중 에이전트 아키텍처로 권장한다. 주요 지침:
+
+- **중앙화된 오케스트레이터**: 주 에이전트가 워커들에게 작업을 분배하고 결과를 취합
+- **명확한 역할 정의**: 각 에이전트의 책임 범위를 문서화
+- **표준화된 통신 형식**: 에이전트 간 JSON Schema로 구조화된 입출력
+- **피드백 메커니즘**: 성공/실패 신호 및 에스컬레이션 경로
+
+특히 Anthropic은 Lead Agent Architecture에서 *"Context가 부족하면 기존 에이전트는 정결한 컨텍스트로 새 하위 에이전트를 소환하되, 외부 메모리로 연속성을 유지"*하는 패턴을 권장한다.
+
+### Google의 A2A (Agent-to-Agent) 프로토콜
+
+2025년 Google이 Linux Foundation에 기증한 "[Agent2Agent (A2A) Protocol](https://developers.googleblog.com/en/a2a-a-new-era-of-agent-interoperability/)"은 공식적인 에이전트 간 통신 표준이다:
+
+**통신 기술**:
+- **전송**: HTTPS (보안), JSON-RPC 2.0 (데이터 형식)
+- **Agent Discovery**: 각 에이전트가 `/.well-known/agent-card.json`에 이름, 능력, 엔드포인트 공시
+- **비동기 작업**: 장시간 실행 작업은 웹훅을 통한 푸시 알림 지원
+
+**특징**:
+- 150개 이상의 기술 조직(Salesforce, ServiceNow, MongoDB, Accenture 등) 지원
+- 실시간 피드백, 음성/비디오 스트리밍 지원
+- MCP(Model Context Protocol)와 상호보완
+
+이는 `ai-study messages/` 파일 기반 큐의 상위 개념으로, 프로덕션 환경에서 구현 시 JSON-RPC 기반 구조로 진화할 수 있다.
+
+### Microsoft AutoGen의 대화 패턴
+
+Microsoft 공식 문서 "[Conversation Patterns | AutoGen 0.2](https://microsoft.github.io/autogen/0.2/docs/tutorial/conversation-patterns/)"는 4가지 다중 에이전트 대화 패턴을 정의한다:
+
+1. **Two-Agent Chat**: 에이전트 2개 직접 통신 → `ChatResult` (히스토리, 요약, 토큰 비용)
+2. **Sequential Chat**: 이전 대화 요약(carryover)을 다음 대화에 전달 → 의존성 있는 sub-task 체인
+3. **Group Chat**: N개 에이전트 1개 스레드 공유 → `GroupChatManager`가 발화 순서 조정 (round_robin, auto, manual)
+4. **Nested Chats**: 워크플로우를 단일 에이전트로 캡슐화 → 재사용 가능한 컴포넌트
+
+AutoGen의 "Sequential Chat + carryover" 패턴은 `moneyflow Phase 1-3`의 "Direct Call + 이전 결과 전달" 패턴과 동일한 아키텍처다.
+
+### LangGraph의 Stateful 스트리밍
+
+LangChain의 "[LangGraph](https://www.langchain.com/langgraph)"는 상태 기반 다중 에이전트 오케스트레이션에 최적화된 프레임워크다:
+
+**통신 메커니즘**:
+- **Tool-based Handoff**: 에이전트 간 정보 교환을 구조화된 도구 호출로 관리
+- **Streaming Modes**:
+  - `stream_mode="updates"`: 매 스텝마다 에이전트 진행 상황 실시간 내보내기
+  - `stream_mode="messages"`: LLM이 생성하는 토큰 실시간 스트리밍
+  - 조합 가능: `["updates", "custom", "messages"]`
+
+LangGraph의 **단일 프레임워크로 단일/다중/계층적 제어 흐름 지원** 원칙은 통신 패턴 선택의 유연성을 제시한다.
+
+---
+
 ## 핵심 개념
 
 Multi-Agent Communication은 **2개 이상의 AI 에이전트가 정보를 주고받는 방식**을 정의한다. 에이전트 간 통신 패턴에 따라 응답성, 복잡성, 확장성이 크게 달라진다.
@@ -555,6 +610,24 @@ console.log('All analysts complete:', finalState);
 
 ---
 
+## 업계 패턴과의 매핑
+
+위의 3가지 기본 패턴(Direct Call, Async Queue, Shared State)이 업계 표준과 어떻게 대응되는지 정리:
+
+| ai-study 패턴 | Anthropic | Google A2A | Microsoft AutoGen | LangGraph |
+|---|---|---|---|---|
+| **Direct Call** | Lead Agent (순차 위임) | Agent Card (동기 호출) | Two-Agent / Sequential Chat | Tool-based Handoff |
+| **Async Queue** | Orchestrator의 워커 배치 | Task Management (푸시) | Group Chat (LLM 선택) | stream_mode="updates" |
+| **Shared State** | 외부 메모리(carryover 없음) | *(권장 안 함)* | Nested Chats (캡슐화) | Stateful Graph (노드) |
+
+**핵심 수렴점**:
+- 모든 업계 프레임워크가 **Orchestrator / Lead Agent 패턴을 강권장**
+- **구조화된 통신 (JSON Schema / Agent Card)** 필수
+- **비동기 + 비동기 타임아웃 처리** 현실적 요구사항
+- Anthropic/Google/Microsoft 모두 **장기 실행 작업 폴링 또는 콜백 지원** 필수 기능
+
+---
+
 ## 실전 아키텍처 결정 가이드
 
 ### moneyflow 13-agent 파이프라인
@@ -670,6 +743,25 @@ function selectCommunicationPattern(
 - 응답시간 vs 복잡도 trade-off를 무시
 - 에러 처리 없는 비동기 구현
 - 메시지 순서 보장 없이 순서 의존하는 로직
+
+---
+
+## 업계 표준 참고 자료
+
+프로덕션 환경에서는 다음 공식 자료를 기반으로 의사결정:
+
+1. **Anthropic** — "[Building Effective AI Agents](https://resources.anthropic.com/hubfs/Building%20Effective%20AI%20Agents-%20Architecture%20Patterns%20and%20Implementation%20Frameworks.pdf)" (2026): Orchestrator-Worker 표준화, Lead Agent 컨텍스트 관리, 외부 메모리 권장
+
+2. **Google** — "[Agent2Agent (A2A) Protocol](https://developers.googleblog.com/en/a2a-a-new-era-of-agent-interoperability/)" (2025): HTTPS + JSON-RPC 기반 표준 프로토콜, Agent Card 메타데이터, 비동기 작업 + 웹훅 콜백
+
+3. **Microsoft AutoGen** — "[Conversation Patterns](https://microsoft.github.io/autogen/0.2/docs/tutorial/conversation-patterns/)" (v0.2): Sequential Chat (carryover), Group Chat (LLM 스피커 선택), Nested Chats (캡슐화)
+
+4. **LangChain LangGraph** — "[LangGraph Streaming](https://www.langchain.com/langgraph)": Stateful 그래프 기반, 다중 스트리밍 모드 (updates/messages), Tool-based 에이전트 handoff
+
+**선택 기준**:
+- **프로토타입 (3-5 에이전트)**: ai-study Direct Call 충분
+- **배치 작업 (10+ 에이전트)**: Async Queue + 파일/A2A 기반 메시지 인프라
+- **프로덕션 (엔터프라이즈)**: A2A 또는 AutoGen Sequential Chat 권장
 
 ---
 
