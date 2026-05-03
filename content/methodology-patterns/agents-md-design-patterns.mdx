@@ -1,0 +1,177 @@
+---
+title: "AGENTS.md 패턴: 에이전트 시스템 명세 방법론"
+category: methodology-patterns
+date: "2026-05-03"
+tags:
+  - blake-crosley
+  - methodology-patterns
+confidence: 2
+last_verified: "2026-05-03"
+applicable_to: ["any"]
+connections: []
+description: "에이전트 시스템의 설계, 구현, 유지보수를 위한 구조화된 명세 방법론인 AGENTS.md 패턴을 소개합니다."
+generated_by: gemini
+quiz:
+  - question: "이 엔트리의 핵심 개념을 가장 잘 설명하는 것은?"
+    choices:
+      - "이론적 프레임워크만 제시"
+      - "실무 코드와 적용 사례 기반 패턴"
+      - "학술 논문 요약"
+      - "도구 사용법 튜토리얼"
+    answer: 1
+    explanation: "Blake Crosley 블로그는 실무 경험 기반 패턴을 중시한다."
+---
+
+> 이 엔트리는 Blake Crosley의 [AGENTS.md Patterns](https://blakecrosley.com/blog/agents-md-patterns)을 정독하고 핵심을 추출한 것이다.
+
+AI 에이전트는 인간의 문서(Documentation)를 이해하지 못한다. 모호한 지시, 장황한 설명, 암묵적인 우선순위는 대부분 무시된다. 에이전트의 행동을 실질적으로 바꾸는 것은 실행 가능한 **운영 정책(Operational Policy)**이다.
+
+이것이 `AGENTS.md`의 핵심 철학이다. 에이전트에게 "왜"를 설명하는 대신, "무엇을", "어떻게", 그리고 "언제 끝나는지"를 명확히 알려줘야 한다.
+
+### 왜 중요한가: 문서에서 운영 정책으로의 전환
+
+AI 에이전트가 코드를 작성하고, 테스트하고, 배포하는 시대에 개발자의 역할은 지시자(Director)로 변모하고 있다. `AGENTS.md`는 이 지시를 담는 표준 명세서다.
+
+대부분의 `AGENTS.md` 파일이 실패하는 이유는 인간을 위한 `README.md`처럼 작성되기 때문이다. 에이전트는 "깨끗한 코드를 지향한다"는 문장에서 어떤 행동도 추론하지 못한다. 그러나 `npm run lint` 명령어를 실행하고 종료 코드(exit code) `0`을 확인하라는 지시는 명확하게 수행할 수 있다.
+
+성공적인 `AGENTS.md`는 다음 질문에 답할 수 있어야 한다: **"이 지시가 올바르게 수행되었음을 증명하는 명령어는 무엇인가?"**
+
+### 핵심 패턴: 에이전트의 행동을 바꾸는 4가지 규칙
+
+에이전트의 행동에 일관되고 측정 가능한 변화를 가져오는 패턴은 다음과 같다.
+
+#### 1. 명령-우선 지침 (Command-first Instructions)
+
+추상적인 설명 대신 실행할 수 있는 정확한 명령어를 제공한다. 에이전트는 명령어의 성공 여부를 종료 코드로 판단한다.
+
+```typescript
+// BAD: 에이전트가 무시하는 설명
+// "모든 변경 사항은 제출 전에 적절히 테스트해주세요."
+
+// GOOD: 에이전트가 실행하는 명령어
+/**
+ * ## 빌드 및 테스트 명령어
+ *
+ * - 의존성 설치: `npm install`
+ * - 린트 검사 및 수정: `npx eslint . --fix`
+ * - 포맷팅: `npx prettier . --write`
+ * - 유닛 테스트: `npm test`
+ * - 타입 체크: `npx tsc --noEmit`
+ * - 전체 검증: `npm run lint && npm test && npm run type-check`
+ */
+```
+
+#### 2. 완료 조건 명시 (Closure Definitions)
+
+"완료"의 정의를 명확히 한다. 에이전트가 "다 한 것 같아요"라고 보고하는 가장 흔한 실패를 막는다.
+
+```typescript
+/**
+ * ## 완료의 정의 (Definition of Done)
+ *
+ * 태스크는 아래 모든 조건이 통과되었을 때 완료된 것으로 간주한다:
+ * 1. `npx eslint .`가 종료 코드 0으로 끝남
+ * 2. `npm test`가 실패 없이 종료 코드 0으로 끝남
+ * 3. `npx tsc --noEmit`가 종료 코드 0으로 끝남
+ * 4. 변경된 파일이 스테이징되고 커밋됨
+ * 5. 커밋 메시지가 conventional-commit 형식을 따름: `type(scope): description`
+ */
+```
+
+#### 3. 작업-단위 구성 (Task-organized Sections)
+
+에이전트가 현재 수행 중인 작업의 맥락에 맞는 지침을 쉽게 찾도록 구성한다. `When...` 접두사는 에이전트의 추론 방식과 직접적으로 연결된다.
+
+```typescript
+/**
+ * ## 코드를 작성할 때 (When Writing Code)
+ * - 모든 새 함수에 타입 힌트를 추가할 것
+ * - 파일 변경 시마다 `npx eslint .` 실행
+ * - 테스트 명령어: `npx jest tests/ -t "test_<module>"`
+ *
+ * ## 코드를 리뷰할 때 (When Reviewing Code)
+ * - 보안 취약점 검사: `npx snyk test`
+ * - 테스트 커버리지 확인: `npx jest --coverage --coverageReporters="json-summary"`
+ *
+ * ## 릴리즈할 때 (When Releasing)
+ * - `package.json`의 버전 업데이트
+ * - 전체 검증 스위트 실행: `npm run lint && npm test`
+ * - 태그 생성: `git tag -a v<version> -m "Release v<version>"`
+ */
+```
+
+#### 4. 에스컬레이션 규칙 (Escalation Rules)
+
+에이전트가 막혔을 때의 행동 방침을 지정한다. 예측 불가능한 창의적인 해결책(예: 파일 삭제, 테스트 건너뛰기)을 방지한다.
+
+```typescript
+/**
+ * ## 막혔을 때 (When Blocked)
+ * - 테스트가 3번 시도 후에도 실패하면, 중단하고 실패한 테스트의 전체 로그를 보고할 것
+ * - 의존성 문제 발생 시, `package.json`을 먼저 확인한 후 질문할 것
+ * - 병합 충돌 발생 시, 중단하고 충돌이 발생한 파일을 보여줄 것
+ *
+ * ## 절대 금지 (Never)
+ * - 에러 해결을 위해 파일을 삭제하는 행위
+ * - `git push --force` 사용
+ * - 테스트 건너뛰기
+ */
+```
+
+### 실전 적용: `tarosaju` 프로젝트의 PR 자동화
+
+`tarosaju` 프로젝트의 AI 에이전트가 PR 생성 및 리뷰 프로세스를 자동화하는 시나리오에 `AGENTS.md`를 적용할 수 있다. 에이전트의 작업 흐름은 아래 다이어그램과 같다.
+
+```mermaid
+graph TD
+    subgraph "tarosaju: AI Agent PR Workflow"
+        A[Agent: "타로 카드 해석 로직 버그 수정" 태스크 수신] --> B{"1. 코드 수정 후 `When Writing Code` 규칙 실행"};
+        B --> C["`npx eslint . --fix` 실행"];
+        C --> D["`npx jest tests/tarot-logic/` 실행"];
+        D --> E{테스트 통과?};
+        E -- No --> F["실패 로그와 함께 중단 (Escalation Rule)"];
+        E -- Yes --> G["커밋 생성: `fix(tarot): 해석 오류 수정`"];
+        G --> H{"2. `Definition of Done` 검증"};
+        subgraph "DoD Verification"
+            H1["`eslint` 통과?"]
+            H2["`jest` 전체 통과?"]
+            H3["`tsc` 통과?"]
+            H4["커밋 형식 준수?"]
+        end
+        H --> H1 & H2 & H3 & H4;
+        H4 --> I{모든 DoD 조건 충족?};
+        I -- No --> J["실패한 DoD 조건 보고 후 중단"];
+        I -- Yes --> K["PR 생성 및 리뷰 요청"];
+    end
+```
+
+이 시나리오를 위한 `tarosaju/AGENTS.md`의 일부는 다음과 같을 것이다.
+
+```markdown
+# AGENTS.md for tarosaju project
+
+## 완료의 정의 (Definition of Done)
+
+PR 제출 전, 태스크는 아래 모든 조건이 통과되었을 때 완료된 것으로 간주한다:
+1. `npm run lint`가 종료 코드 0으로 끝남
+2. `npm test`가 실패 없이 90% 이상의 커버리지로 종료 코드 0으로 끝남
+3. `npm run build`가 에러 없이 성공
+4. 커밋 메시지가 `conventional-commit` 형식을 따름
+
+## 코드를 작성할 때 (When Writing Code)
+
+- 테스트 명령어: `npm test -- --findRelatedTests <changed-file>`
+- 모든 `*.ts` 파일 변경 후 `npm run lint`를 실행할 것
+- 새로운 비즈니스 로직은 반드시 유닛 테스트와 함께 작성할 것
+
+## 막혔을 때 (When Blocked)
+
+- `npm test`가 3번 연속 실패하면, 중단하고 실패 로그를 GitHub 코멘트로 보고할 것
+- `npm install`에서 의존성 충돌이 발생하면, 중단하고 개발팀에 문의할 것
+- **절대 금지**: `tests/` 디렉토리 내 파일을 임의로 수정하거나 삭제하는 행위
+```
+
+이처럼 `AGENTS.md`에 명시된 운영 정책은 AI 에이전트가 `tarosaju` 프로젝트의 품질 기준을 일관되게 따르도록 강제하며, 개발자는 코드 로직에 더 집중할 수 있게 된다.
+
+---
+이 엔트리는 Blake Crosley의 [AGENTS.md Patterns: What Actually Changes Agent Behavior](https://www.latent.space/p/agents-md)를 정독하고 핵심을 추출한 것이다.

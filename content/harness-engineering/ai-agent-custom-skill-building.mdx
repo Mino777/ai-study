@@ -1,0 +1,119 @@
+---
+title: "AI 에이전트 커스텀 스킬 구축하기"
+category: harness-engineering
+date: "2026-05-03"
+tags:
+  - blake-crosley
+  - harness-engineering
+confidence: 2
+last_verified: "2026-05-03"
+applicable_to: ["any"]
+connections: []
+description: "AI 에이전트가 특정 작업을 수행하도록 돕는 '커스텀 스킬'을 구축하는 방법에 대한 실용적인 가이드입니다."
+generated_by: gemini
+quiz:
+  - question: "이 엔트리의 핵심 개념을 가장 잘 설명하는 것은?"
+    choices:
+      - "이론적 프레임워크만 제시"
+      - "실무 코드와 적용 사례 기반 패턴"
+      - "학술 논문 요약"
+      - "도구 사용법 튜토리얼"
+    answer: 1
+    explanation: "Blake Crosley 블로그는 실무 경험 기반 패턴을 중시한다."
+---
+
+> 이 엔트리는 Blake Crosley의 [Build Custom Skills](https://blakecrosley.com/blog/building-custom-skills)을 정독하고 핵심을 추출한 것이다.
+
+이 엔트리는 Blake Crosley의 [Claude Code Skills: Build Custom Auto-Activating Extensions](https://crosley.blake.ai/writing/claude-code-skills/)를 정독하고 핵심을 추출한 것이다.
+
+### 왜 중요한가: 반복적인 컨텍스트 주입의 자동화
+
+개발자는 매번 새로운 세션에서 동일한 보안 체크리스트, 팀의 코딩 스타일 가이드, API 설계 패턴 같은 '도메인 지식'을 LLM에게 반복적으로 설명한다. 이 과정은 비효율적이며, 사람이 매번 기억에 의존해야 하는 실수의 여지를 남긴다.
+
+Claude Code의 '스킬(Skill)'은 이 문제를 해결한다. 스킬은 사용자가 명시적으로 호출하지 않아도, LLM이 대화의 맥락을 이해하여 **자동으로 발견하고 적용하는(model-invoked)** 확장 기능이다. 이는 반복적인 프롬프트 엔지니어링을 넘어, LLM에게 영구적인 도메인 전문성을 부여하는 패러다임의 전환을 의미한다. "매번 알려주는" 방식에서 "알아서 알게 하는" 방식으로의 변화다.
+
+### 핵심 패턴
+
+#### 1. `description` 기반의 의미론적 활성화
+
+스킬의 핵심은 `SKILL.md` 파일의 YAML frontmatter에 있는 `description` 필드다. Claude는 단순한 키워드 매칭이 아니라, **LLM 추론**을 통해 사용자의 요청이 `description`의 의미와 일치하는지를 판단하여 스킬을 활성화한다.
+
+-   **잘못된 예시**: `"git rebase helper"` (너무 광범위하여 `git status` 같은 관련 없는 명령어에도 활성화될 수 있음)
+-   **좋은 예시**: `"Review code for security vulnerabilities, performance issues, and best practice violations. Use when examining code changes, reviewing PRs, analyzing code quality, or when asked to review, audit, or check code."` (구체적인 시나리오와 트리거 단어를 명시하여 활성화 시점을 명확히 함)
+
+이 `description`은 스킬의 'API' 역할을 하므로, 언제, 왜 이 스킬이 필요한지를 명확하고 상세하게 기술하는 것이 가장 중요하다.
+
+#### 2. 결정 프레임워크: Skill vs. Command vs. Subagent
+
+모든 반복 작업을 스킬로 만들면 안 된다. 저자의 `git-rebase-helper` 스킬 실패 사례처럼, 너무 자주 활성화되는 스킬은 오히려 컨텍스트를 오염시킨다. 올바른 도구를 선택하는 기준은 다음과 같다.
+
+| 상황 | 해결책 | 이유 |
+| :--- | :--- | :--- |
+| 세션마다 동일한 체크리스트/지식을 주입할 때 | **Skill** | 자동 활성화가 필요한 영구적인 도메인 전문성 |
+| 특정 명령어를 명시적으로 실행할 때 | **Slash Command** | 사용자가 직접 제어하는 예측 가능한 액션 (`/rebase`) |
+| 주 대화와 분리된 분석이 필요할 때 | **Subagent** | 컨텍스트 오염을 막기 위한 격리된 실행 환경 |
+
+"Claude가 자동으로 적용해야 하는가, 아니면 내가 직접 실행 시점을 결정해야 하는가?" 이 질문이 스킬과 슬래시 커맨드를 구분하는 핵심 기준이다.
+
+#### 3. 파일 시스템 기반의 모듈화 및 범위 관리
+
+스킬은 파일 시스템을 통해 구조화되며, 적용 범위를 명확히 제어할 수 있다.
+
+-   **구조**: `SKILL.md`가 핵심 진입점 역할을 하고, 더 상세한 내용은 `SECURITY_PATTERNS.md` 같은 별도 파일로 분리한 후 상대 경로 링크로 참조할 수 있다. 이는 `SKILL.md`를 500줄 미만으로 간결하게 유지하여 컨텍스트 주입 오버헤드를 줄인다.
+-   **범위**: 스킬은 `~/.claude/skills/` (개인 전역) 또는 `.claude/skills/` (프로젝트 한정)에 위치시켜 적용 범위를 제어한다. 프로젝트 레벨 스킬은 Git을 통해 팀원들과 쉽게 공유할 수 있어, 별도 설정 없이 팀 전체의 개발 컨텍스트를 동기화할 수 있다.
+
+```mermaid
+graph TD
+    A[User Prompt: "이 코드 리뷰해줘"] --> B{"Claude LLM Reasoning"};
+    B --> C{Skill Description Match?};
+    C -->|Yes| D["Activate Skill: 'code-reviewer'"];
+    D --> E["Read SKILL.md & · SECURITY_PATTERNS.md"];
+    E --> F["Inject Expertise into · Prompt Context"];
+    C -->|No| G[Standard Response];
+    F --> H[Generate Review based on Skill];
+    G --> I[Final Output];
+    H --> I;
+```
+
+### 실전 적용: `ai-study` 위키 기여 가이드라인 리뷰 스킬
+
+`ai-study` 프로젝트에 새로운 위키 엔트리를 기여하는 시나리오를 가정하자. 기여자는 MDX 형식, 출처 표기법, 품질 가드 등 `ai-study`만의 규칙을 준수해야 한다. 이 규칙을 매번 사람이 리뷰하는 대신, Claude Code 스킬로 자동화할 수 있다.
+
+#### 1. 스킬 파일 생성
+
+프로젝트 루트에 `.claude/skills/ai-study-wiki-reviewer/SKILL.md` 파일을 생성한다.
+
+#### 2. `SKILL.md` 작성
+
+```yaml
+---
+name: ai-study-wiki-reviewer
+description: >-
+  ai-study 위키 기여 문서를 리뷰할 때 사용. MDX 형식, 출처 표기법, Mermaid 다이어그램 규칙,
+  품질 가드 준수 여부를 검토. "리뷰", "검토", "수정", "피드백" 등의 요청 시 활성화.
+allowed-tools:
+  - Read
+  - Grep
+---
+# ai-study 위키 기여 가이드라인
+
+제출된 MDX 문서를 리뷰할 때 아래 항목을 반드시 확인하고 피드백을 생성합니다.
+
+## 1. 구조 (Structure)
+- **순서**: "왜 중요한가" → "핵심 패턴" → "실전 적용" 순서로 구성되었는가?
+- **출처 명시**: 글의 서두에 "이 엔트리는 [저자]의 [원문](URL)을 정독하고 핵심을 추출한 것이다." 형식이 포함되었는가?
+
+## 2. 품질 가드 (Quality Guards)
+- **실측 기반**: 내용이 원문에 기반하며, 추측성 표현("~할 수 있다")이 없는가?
+- **프로젝트 연결**: `ai-study`, `moneyflow` 등 특정 프로젝트에 적용하는 구체적인 시나리오가 포함되었는가? (일반론 금지)
+
+## 3. Mermaid 다이어그램 규칙
+- **<br/> 금지**: 노드 내부에 `<br/>` 태그 대신 줄바꿈 문자나 `·`를 사용했는가?
+- **특수문자 처리**: 콜론(:), 괄호()가 포함된 라벨은 따옴표 `""`로 감쌌는가? (예: `A["Deploy: Production"]`)
+- **화살표**: 유니코드 화살표(→) 대신 `-->` 또는 `==>`를 사용했는가?
+
+## 4. 코드 예시
+- TypeScript 또는 Swift 코드 예시가 포함되어 있는가? (필요 시)
+```
+
+이제 `ai-study` 프로젝트 내에서 Claude에게 "새로 작성한 위키 초안 리뷰해줘"라고 요청하면, 이 스킬이 자동으로 활성화되어 정의된 규칙에 따라 구체적이고 일관된 피드백을 제공할 것이다. 이는 팀의 지식 관리 품질을 자동화된 방식으로 유지하는 강력한 도구가 된다.
