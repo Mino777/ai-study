@@ -1,6 +1,6 @@
 {
-  "totalQueries": 30,
-  "lastUpdated": "2026-05-02T15:12:23.132Z",
+  "totalQueries": 31,
+  "lastUpdated": "2026-05-03T14:02:45.536Z",
   "hits": {
     "solutions/mdx/2026-04-16-mermaid-br-in-unquoted-node-labels": 2,
     "solutions/mdx/2026-04-16-mermaid-cylinder-nested-parens": 2,
@@ -45,6 +45,8 @@
     "agents/tool-use": 1,
     "context-engineering/llm-wiki-swot-ai-study-vs-karpathy": 1,
     "ios-ai/ios-ai-journal-008-first-full-harness-setup-retro": 4,
-    "ios-ai/ios-ai-journal-009-ai-probe-dual-pipeline": 1
+    "ios-ai/ios-ai-journal-009-ai-probe-dual-pipeline": 1,
+    "prompt-engineering/quality-guards": 1,
+    "retros/2026-04-11": 1
   }
 }
