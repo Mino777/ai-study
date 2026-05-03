@@ -59,25 +59,24 @@ AI 코딩 에이전트는 강력하지만, 동시에 엄청난 '토큰 대식가
 
 ```mermaid
 flowchart TD
-    subgraph traditional ["전통적 방식 (전체 파일 반복)"]
+    subgraph traditional ["전통적 방식 - 전체 파일 반복"]
         direction LR
-        A[User: "로그인 버튼 색상 변경해줘"] --> B{LLM}
-        B --> C["Agent: `LoginView.swift` (2000 토큰) 읽기"]
+        A["User: 로그인 버튼 색상 변경해줘"] --> B{LLM}
+        B --> C["Agent: LoginView.swift 2000 토큰 읽기"]
         C --> D["Agent: 파일 수정"]
-        D --> E[User: "이제 애니메이션 추가해줘"]
+        D --> E["User: 이제 애니메이션 추가해줘"]
         E --> F{LLM}
-        F --> G["Agent: `LoginView.swift` (2000 토큰) 다시 읽기"]
+        F --> G["Agent: LoginView.swift 2000 토큰 다시 읽기"]
     end
 
-    subgraph mcp_sandbox ["샌드박스 격리 방식 (Diff 주입)"]
+    subgraph mcp_sandbox ["샌드박스 격리 방식 - Diff 주입"]
         direction LR
-        H[User: "로그인 버튼 색상 변경해줘"] --> I[MCP 서버]
+        H["User: 로그인 버튼 색상 변경해줘"] --> I["MCP 서버"]
         I --> J{LLM}
-        J --> K["Agent: 샌드박스 내 `LoginView.swift` 수정"]
-        K -- "파일 변경 감지" --> L[MCP 서버]
-        L -- "Diff 생성 (50 토큰)" --> L
-        M[User: "이제 애니메이션 추가해줘"] --> L
-        L -- "`LoginView.swift`에 대한 이전 변경사항 Diff + 새 요청" --> N{LLM}
+        J --> K["Agent: 샌드박스 내 LoginView.swift 수정"]
+        K -- "파일 변경 감지" --> L["MCP 서버 - Diff 생성 50 토큰"]
+        M["User: 이제 애니메이션 추가해줘"] --> L
+        L -- "이전 변경사항 Diff + 새 요청" --> N{LLM}
         N --> O["Agent: Diff 기반으로 추가 작업 수행"]
     end
 
