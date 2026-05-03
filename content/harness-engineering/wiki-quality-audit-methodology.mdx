@@ -1,0 +1,146 @@
+---
+title: "위키 품질 감사 방법론 — 194개 엔트리 전수 조사에서 배운 5단계 프로세스"
+category: harness-engineering
+date: "2026-04-28"
+tags:
+  - quality-audit
+  - content-management
+  - compound-engineering
+  - methodology
+confidence: 4
+last_verified: "2026-05-03"
+applicable_to: ["any"]
+connections:
+  - evaluation/ai-generated-content-quality-gate
+  - harness-engineering/compound-engineering-philosophy
+  - harness-engineering/llm-first-wiki-principles
+  - evaluation/llm-as-judge-pattern
+description: "194개 위키 엔트리를 전수 조사하여 confidence 1 전량 해소, 미완성 7건 보강, 저품질 3건 삭제한 실전 프로세스. Compound Engineering의 '사이클을 자산으로' 원칙 적용."
+quiz:
+  - question: "위키 품질 감사에서 가장 먼저 해야 할 것은?"
+    choices:
+      - "모든 엔트리를 처음부터 다시 읽기"
+      - "메타데이터(confidence, verified, generated_by) 기반 정량 분류"
+      - "최신 엔트리부터 역순으로 검토"
+      - "AI에게 전체 감사를 맡기기"
+    answer: 1
+    explanation: "194개를 전부 읽는 것은 비효율적이다. confidence 분포, verified 상태, 생성 출처(human/gemini) 같은 메타데이터로 먼저 분류하면 문제 후보를 18개(confidence 1) + 11개(verified:none)로 즉시 좁힐 수 있다."
+  - question: "자동 생성 엔트리의 삭제 판정에서 가장 중요한 기준은?"
+    choices:
+      - "분량이 짧은가"
+      - "실측 데이터 없이 과장된 수치를 주장하는가"
+      - "이미지가 없는가"
+      - "최신 기술을 다루지 않는가"
+    answer: 1
+    explanation: "'98% 절감'처럼 출처 없는 수치를 사실처럼 제시하는 것이 가장 위험하다. 분량이 짧아도 실측이 있으면 가치 있고, 길어도 추측뿐이면 삭제 대상이다."
+  - question: "중복 엔트리를 합칠 때 기준이 되는 엔트리를 고르는 원칙은?"
+    choices:
+      - "가장 최근에 작성된 것"
+      - "가장 분량이 많은 것"
+      - "confidence가 높고, 실전 경험이 반영된 것"
+      - "AI가 생성한 것"
+    answer: 2
+    explanation: "confidence가 높다는 것은 직접 적용해본 경험이 반영됐다는 뜻이다. 분량이 많아도 이론뿐이면 기준이 될 수 없고, 최신이라고 반드시 좋은 것도 아니다."
+---
+
+이 엔트리는 2026-05-03 세션에서 194개 위키 엔트리를 전수 조사한 실전 프로세스를 방법론으로 박제한 것이다.
+
+## 왜 필요한가
+
+위키가 190개를 넘어가면서 품질 관리가 필수가 됐다. 특히:
+
+- **자동 생성 콘텐츠(25건)**가 검증 없이 쌓이고 있었음
+- **confidence 1이 18건** — "들어봤다" 수준이 위키에 남아있으면 신뢰도 하락
+- **verified:none이 11건** — 한 번도 검증 안 된 엔트리
+- **초기 엔트리(15건)**가 한 달간 업데이트 없이 방치
+
+## 5단계 품질 감사 프로세스
+
+```mermaid
+flowchart TD
+    A["1. 메타데이터 정량 분류"] --> B["2. 병렬 에이전트 심층 분석"]
+    B --> C["3. 삭제/흡수/승격 판정"]
+    C --> D["4. 일괄 실행 + 빌드 검증"]
+    D --> E["5. 파이프라인 가드 강화"]
+    A -- "confidence/verified/generated_by" --> A1["문제 후보 29건 추출"]
+    B -- "3개 에이전트 병렬" --> B1["중복 분석 + 품질 검증 + 전수 조사"]
+    C -- "엄격 기준 적용" --> C1["삭제 3건 + 흡수 1건 + 승격 18건"]
+```
+
+### 1단계: 메타데이터 정량 분류
+
+content-manifest.json에서 3가지 축으로 분류:
+
+```typescript
+// 문제 후보 추출 쿼리
+const problems = entries.filter(e =>
+  e.confidence === 1 ||              // 18건
+  !e.last_verified ||                // 11건 (중복 있음)
+  e.generated_by === 'gemini'        // 25건 (중복 있음)
+);
+// → 합집합 29건이 심층 분석 대상
+```
+
+전체 194개를 읽지 않고 29건으로 즉시 범위를 좁혔다.
+
+### 2단계: 병렬 에이전트 심층 분석
+
+3개 에이전트를 동시에 띄워서 각각 다른 관점으로 분석:
+
+| 에이전트 | 역할 | 분석 대상 |
+|---------|------|----------|
+| 중복 분석 | 유사 엔트리 그룹 4개 비교 | 14건 |
+| 품질 검증 | verified:none 전수 검토 | 11건 |
+| 전수 조사 | confidence 1 전량 평가 | 18건 |
+
+**병렬 실행 이점**: 순차 실행 대비 3배 속도. 각 에이전트가 독립적으로 파일을 읽고 판정하므로 충돌 없음.
+
+### 3단계: 삭제/흡수/승격 판정
+
+5가지 삭제 기준을 적용:
+
+1. **실측 없는 이론** — "~할 수 있다" 수준의 추측
+2. **80%+ 내용 중복** — 더 좋은 엔트리가 이미 있음
+3. **프로젝트 무관 일반론** — 교과서 요약 수준
+4. **SEO 스팸 제목** — 과장된 수치, 미검증 주장
+5. **적용 대상 불명확** — "iOS를 위한"이면서 iOS에 적용 불가
+
+결과:
+
+| 판정 | 건수 | 세부 |
+|------|------|------|
+| 삭제 | 3건 | sandbox-diff(실측 0), persona-engineering(미검증), tenet-harness(의사코드만) |
+| 흡수 | 1건 | ai-environment-design → overview에 통합 |
+| confidence 승격 | 18건 | 1→2 (내용 충분 확인 후) |
+| 미완성 보강 | 7건 | 코드 예시 + quiz 추가 |
+
+### 4단계: 일괄 실행 + 빌드 검증
+
+모든 수정 후 반드시:
+- `npm run build` — Mermaid/MDX 에러 체크
+- `npm test` — 71개 테스트 통과 확인
+- dangling connections 확인 — 삭제한 엔트리를 참조하는 곳 정리
+
+### 5단계: 파이프라인 가드 강화
+
+삭제가 필요했다는 것은 생성 단계에서 품질 관리가 부족했다는 뜻. Gemini 프롬프트에 6중 가드를 추가하여 재발 방지:
+
+→ 상세: [AI 생성 콘텐츠 품질 게이트](/wiki/evaluation/ai-generated-content-quality-gate)
+
+## 실측 결과
+
+| 지표 | Before | After |
+|------|--------|-------|
+| confidence 1 | 18개 | **0개** |
+| verified:none | 11개 | **0개** |
+| 퀴즈 없는 비저널 엔트리 | ~22개 | **0개** |
+| 오래된 verified (≤04/09) | 15개 | **0개** |
+| 자동생성 삭제 대상 | 3개 | 삭제 완료 + 가드 추가 |
+
+## 재사용 가능한 원칙
+
+1. **전체를 읽지 말고 메타데이터로 분류** — 정량 지표가 있으면 범위를 90% 줄일 수 있다
+2. **병렬 에이전트로 관점 분리** — 중복/품질/완성도를 한 에이전트가 다 보면 편향됨
+3. **삭제 기준은 사전에 명문화** — 감정이 아닌 체크리스트로 판정
+4. **삭제보다 가드가 중요** — 사후 삭제 3건보다 사전 차단 가드 6종이 장기적 ROI가 높다
+5. **감사 자체를 엔트리로 박제** — Compound Engineering: 이 사이클이 다음 감사의 입력이 된다
