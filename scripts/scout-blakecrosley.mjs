@@ -122,6 +122,12 @@ ${postList}
 - ai-study 위키의 카테고리에 매칭되는가 (harness-engineering, ios-ai, agents, context-engineering, prompt-engineering 등)
 - 이미 위키에 있을 법한 일반론이 아닌 새로운 관점/패턴인가
 
+## 품질 가드 (중요)
+1. **실측 기반**: 원문이 실제 코드/사례를 기반으로 하는가. 추측만 있으면 제외.
+2. **프로젝트 적용 가능성**: ai-study/moneyflow/tarosaju/aidy 중 하나에 실제로 적용할 수 있는 내용인가.
+3. **중복 방지**: 기존 위키에 이미 있는 주제를 반복하지 않는가.
+4. **Slug 규칙**: suggested_slug는 영문 kebab-case, 40자 이내, SEO용 키워드 나열 금지.
+
 ## 응답 형식 (JSON만, 마크다운 없이)
 [
   {
@@ -140,7 +146,7 @@ ${postList}
 - 매칭 없으면 빈 배열 []
 - 최대 5개까지
 - 에세이/비기술 글은 제외
-- suggested_slug는 영문 kebab-case (한글 금지)`;
+- 실측 기반이 아니거나 이미 위키에 있는 주제는 제외`;
 
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
@@ -201,8 +207,19 @@ ${pageText}
 - "왜 중요한가" → "핵심 패턴" → "실전 적용" 순서
 - 코드 예시가 있으면 포함 (TypeScript 또는 Swift)
 - 출처 명시: "이 엔트리는 Blake Crosley의 [원제목](URL)을 정독하고 핵심을 추출한 것이다."
-- Mermaid 다이어그램 1개 포함 (괄호 안 특수문자는 "..."로 감싸기, <br/> 금지, 유니코드 화살표 금지)
+- Mermaid 다이어그램 1개 포함
 - 분량: 본문 80~150줄
+
+**품질 가드 (필수):**
+1. **실측 기반**: 원문의 실제 코드/사례만 포함. 추측("~할 수 있다", "기대된다")이면 "이론적으로" 명시.
+2. **프로젝트 연결**: ai-study/moneyflow/tarosaju/aidy 중 하나에 실제 적용 가능한 시나리오 포함. 일반론 금지.
+3. **Mermaid 5대 함정 준수**:
+   - 괄호/특수문자: F{"Check Rate (Firestore)"} (따옴표로 감싸기)
+   - <br/> 금지: 대신 줄바꿈 문자 또는 · 사용
+   - 콜론: D["Deploy: Production"] (따옴표로 감싸기)
+   - subgraph/node ID 충돌 금지
+   - 유니코드 화살표(→) 금지: Mermaid는 --> 사용
+   - 라벨 내 특수 문자 직접 사용 금지
 
 ## 응답 형식
 MDX 본문만 반환 (frontmatter 제외, 코드 펜스 없이 그냥 MDX 텍스트)`;
