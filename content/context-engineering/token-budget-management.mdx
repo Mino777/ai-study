@@ -53,24 +53,24 @@ AI 에이전트의 토큰 비용을 제어하려면 단순히 "전체 비용을 
 
 ```mermaid
 graph TD
-    A["프로젝트 Annual Budget · (전사 정책)"] --> B["프로젝트 Monthly Budget · (비용 운영)"]
-    B --> C["세션 Session Budget · (컨텍스트 윈도우 60%)"]
-    C --> D["작업 Task Budget · (태스크별 토큰 쿼터)"]
-    D --> E["에이전트 Agent Budget · (API 호출 당 스펙)"]
-    
-    F["RTK · Command 레이어 · 30-40% 절감"] --> G["Prompt Caching · 90% 절감"]
-    G --> H["Context Pruning · 중복/불필요 제거"]
-    H --> I["Task Splitting · 새 세션 격리"]
-    
-    style A fill:"#1a1a2e"
-    style B fill:"#16213e"
-    style C fill:"#0f3460"
-    style D fill:"#0f3460"
-    style E fill:"#0f3460"
-    style F fill:"#e94560"
-    style G fill:"#e94560"
-    style H fill:"#e94560"
-    style I fill:"#e94560"
+    A["프로젝트 Annual Budget"] --> B["Monthly Budget"]
+    B --> C["Session Budget - 60% 임계값"]
+    C --> D["Task Budget - 태스크별 쿼터"]
+    D --> E["Agent Budget - API 호출 단위"]
+
+    F["RTK - 30-40% 절감"] --> G["Prompt Caching - 90% 절감"]
+    G --> H["Context Pruning"]
+    H --> I["Task Splitting"]
+
+    style A fill:#1a1a2e,color:#fff
+    style B fill:#16213e,color:#fff
+    style C fill:#0f3460,color:#fff
+    style D fill:#0f3460,color:#fff
+    style E fill:#0f3460,color:#fff
+    style F fill:#e94560,color:#fff
+    style G fill:#e94560,color:#fff
+    style H fill:#e94560,color:#fff
+    style I fill:#e94560,color:#fff
 ```
 
 이 3계층은 **정책 → 운영 → 실시간**으로 내려가며, 각 레벨에서 다른 대응 전략을 써야 한다.
