@@ -275,10 +275,15 @@ ${draft ? `### 초안 (Gemini 생성)\n\n<details>\n<summary>초안 펼치기</s
   }
 
   try {
+    // body를 임시 파일로 전달 — Gemini 초안에 백틱/따옴표/$가 있어도 shell escape 문제 회피
+    const tmpBody = path.resolve(`/tmp/scout-body-${Date.now()}.md`);
+    fs.writeFileSync(tmpBody, body);
+    const safeTitle = title.replace(/"/g, '\\"').replace(/`/g, "'");
     const result = execSync(
-      `gh issue create --repo "${REPO}" --title "${title.replace(/"/g, '\\"')}" --body "${body.replace(/"/g, '\\"').replace(/\n/g, "\\n")}" --label "hub-dispatch,blake-crosley"`,
+      `gh issue create --repo "${REPO}" --title "${safeTitle}" --body-file "${tmpBody}" --label "hub-dispatch,blake-crosley"`,
       { encoding: "utf-8", timeout: 30000 }
     );
+    fs.unlinkSync(tmpBody);
     console.log(`   ✅ Issue created: ${result.trim()}`);
   } catch (err) {
     console.error(`   ❌ Issue creation failed: ${err.message}`);
