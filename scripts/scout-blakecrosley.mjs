@@ -233,7 +233,63 @@ MDX 본문만 반환 (frontmatter 제외, 코드 펜스 없이 그냥 MDX 텍스
   }
 }
 
-// ─── 5. GitHub Issue 생성 ────────────────────────────────────────
+// ─── 5. MDX 엔트리 파일 생성 ─────────────────────────────────────
+
+function writeMdxEntry(match, draft) {
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Seoul" }); // YYYY-MM-DD
+  const category = match.suggested_category || "harness-engineering";
+  const slug = match.suggested_slug;
+  const filePath = path.resolve(`content/${category}/${slug}.mdx`);
+
+  // 이미 존재하면 스킵
+  if (fs.existsSync(filePath)) {
+    console.log(`   ⏭️ 이미 존재: ${category}/${slug}`);
+    return null;
+  }
+
+  const frontmatter = `---
+title: "${match.entry_title.replace(/"/g, '\\"')}"
+category: ${category}
+date: "${today}"
+tags:
+  - blake-crosley
+  - ${category}
+confidence: 2
+last_verified: "${today}"
+applicable_to: ["any"]
+connections: []
+description: "${match.summary.split('\n')[0].slice(0, 150).replace(/"/g, '\\"')}"
+generated_by: gemini
+quiz:
+  - question: "이 엔트리의 핵심 개념을 가장 잘 설명하는 것은?"
+    choices:
+      - "이론적 프레임워크만 제시"
+      - "실무 코드와 적용 사례 기반 패턴"
+      - "학술 논문 요약"
+      - "도구 사용법 튜토리얼"
+    answer: 1
+    explanation: "Blake Crosley 블로그는 실무 경험 기반 패턴을 중시한다."
+---
+
+> 이 엔트리는 Blake Crosley의 [${match.post_title}](${match.post_url})을 정독하고 핵심을 추출한 것이다.
+
+`;
+
+  const content = frontmatter + draft;
+
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, content);
+  console.log(`   ✅ MDX 생성: content/${category}/${slug}.mdx`);
+
+  // GitHub Actions output으로 생성된 파일 경로 전달
+  if (process.env.GITHUB_OUTPUT) {
+    fs.appendFileSync(process.env.GITHUB_OUTPUT, `created_file=${filePath}\n`);
+  }
+
+  return filePath;
+}
+
+// ─── (Legacy) GitHub Issue 생성 — 폴백용 ────────────────────────
 
 function createIssue(match, draft) {
   const today = new Date().toLocaleDateString("ko-KR", {
@@ -355,31 +411,41 @@ async function main() {
     return;
   }
 
-  // 4. 각 후보 정독 + 초안 생성
-  console.log("3️⃣ 후보 글 정독 + 초안 생성...\n");
+  // 4. 각 후보 정독 + MDX 생성
+  console.log("3️⃣ 후보 글 정독 + MDX 엔트리 생성...\n");
+  const created = [];
   for (const match of matches) {
     const draft = await fetchAndDraft(match, proModel);
-    createIssue(match, draft);
+    if (draft) {
+      const mdxPath = writeMdxEntry(match, draft);
+      if (mdxPath) created.push({ match, mdxPath });
+    }
   }
 
   // 5. seen 업데이트 (모든 새 글)
   saveSeen([...seen, ...newPosts.map((p) => p.url)]);
 
-  writeOutputs(matches.length);
-  console.log(`\n✅ 스카우트 완료! ${matches.length}개 Issue 생성`);
+  // 6. GitHub Actions output
+  writeOutputs(created.length, created);
+  console.log(`\n✅ 스카우트 완료! ${created.length}개 MDX 엔트리 생성`);
 }
 
-function writeOutputs(count) {
+function writeOutputs(count, created = []) {
   if (process.env.GITHUB_OUTPUT) {
     fs.appendFileSync(process.env.GITHUB_OUTPUT, `match_count=${count}\n`);
+    const titles = created.map((c) => c.match.entry_title).join(", ");
+    fs.appendFileSync(process.env.GITHUB_OUTPUT, `created_titles=${titles}\n`);
   }
   if (process.env.GITHUB_STEP_SUMMARY) {
-    fs.appendFileSync(
-      process.env.GITHUB_STEP_SUMMARY,
-      count > 0
-        ? `## 📚 Blake Crosley Scout\n\n${count}개 엔트리 후보 발견`
-        : "## 📚 Blake Crosley Scout\n\n새 글 없음"
-    );
+    if (count > 0) {
+      let summary = `## 📚 Blake Crosley Scout\n\n${count}개 MDX 엔트리 생성\n\n`;
+      for (const c of created) {
+        summary += `- **${c.match.entry_title}** → \`${c.match.suggested_category}/${c.match.suggested_slug}\`\n`;
+      }
+      fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, summary);
+    } else {
+      fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, "## 📚 Blake Crosley Scout\n\n새 글 없음\n");
+    }
   }
 }
 
