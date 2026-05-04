@@ -1,0 +1,172 @@
+---
+title: "AGENTS.md 패턴: AI 에이전트 상호작용 표준"
+category: methodology-patterns
+date: "2026-05-05"
+tags:
+  - blake-crosley
+  - methodology-patterns
+confidence: 2
+last_verified: "2026-05-05"
+applicable_to: ["any"]
+connections: []
+description: "이 글은 AI 에이전트 간의 상호작용을 위한 구조화된 패턴인 AGENTS.md에 대해 설명합니다. 이는 에이전트 오케스트레이션 및 컨텍스트 관리에 중요한 표준화된 접근 방식을 제공합니다. 효과적인 에이전트 시스템 설계를 위한 방법론적 지침을 제공합니다."
+generated_by: gemini
+quiz:
+  - question: "이 엔트리의 핵심 개념을 가장 잘 설명하는 것은?"
+    choices:
+      - "이론적 프레임워크만 제시"
+      - "실무 코드와 적용 사례 기반 패턴"
+      - "학술 논문 요약"
+      - "도구 사용법 튜토리얼"
+    answer: 1
+    explanation: "Blake Crosley 블로그는 실무 경험 기반 패턴을 중시한다."
+---
+
+> 이 엔트리는 Blake Crosley의 [AGENTS.md Patterns](https://blakecrosley.com/blog/agents-md-patterns)을 정독하고 핵심을 추출한 것이다.
+
+이 엔트리는 Blake Crosley의 블로그 글 [AGENTS.md Patterns: What Actually Changes Agent Behavior](https://www.blakecrosley.com/blog/agents-md-patterns-what-actually-changes-agent-behavior/)를 정독하고 핵심을 추출한 것이다.
+
+### 왜 중요한가: AI 에이전트를 위한 운영 정책
+
+AI 코드 에이전트의 성능은 프롬프트만큼이나 `AGENTS.md` 같은 컨텍스트 파일에 의해 좌우된다. 하지만 대부분의 `AGENTS.md` 파일은 **"인간을 위한 문서(documentation)"**처럼 작성되어 에이전트가 무시하는 경우가 많다. 에이전트는 산문 형태의 가이드라인이나 "신중하게 처리하세요" 같은 모호한 지시를 해석하지 못한다.
+
+`AGENTS.md`는 `README.md`가 아니다. 에이전트가 따라야 할 **"기계가 읽는 운영 정책(operational policy)"**이다. GitHub가 2,500개 이상의 저장소를 분석한 결과, "대부분의 에이전트 파일은 기술적 한계가 아니라 너무 모호해서 실패한다"고 결론 내렸다. ICLR 2026의 `AMBIG-SWE` 연구에서도 모호한 지시는 에이전트가 질문 없이 임의로 작업을 진행하게 만들어 해결률을 48.8%에서 28%로 떨어뜨린다는 사실을 발견했다.
+
+효과적인 `AGENTS.md`는 에이전트의 행동을 실질적으로 바꾸는, 측정 가능한 명령어로 구성되어야 한다.
+
+### 핵심 패턴: 무엇이 에이전트의 행동을 바꾸는가
+
+에이전트의 행동에 일관되고 측정 가능한 변화를 가져오는 패턴은 다음과 같다. 핵심은 **"이 작업이 올바르게 완료되었음을 어떤 명령어로 증명할 수 있는가?"**라는 질문에 답하는 것이다.
+
+#### 1. 명령어 우선 (Command-First)
+
+에이전트에게 무엇을 해야 하는지 설명하지 말고, 실행할 정확한 명령어를 제공해야 한다.
+
+- **Bad:** "코드를 제출하기 전에 린트를 실행하고 포맷을 맞춰주세요."
+- **Good:**
+
+```typescript
+// AGENTS.md
+
+## Build and Test Commands
+// 설치
+- Install: `npm install`
+// 린트 및 수정
+- Lint: `npm run lint -- --fix`
+// 포맷팅
+- Format: `npm run format`
+// 타입 체크
+- Type check: `npx tsc --noEmit`
+// 테스트
+- Test: `npm test`
+// 전체 검증
+- Full verify: `npm run lint && npx tsc --noEmit && npm test`
+```
+
+명령어는 모호하지 않다. 에이전트는 무엇을 실행하고, 어떤 인자를 전달하며, 종료 코드(exit code)로 성공 여부를 확인할 수 있다.
+
+#### 2. 완료 조건 정의 (Definition of Done)
+
+에이전트가 "완료"를 스스로 판단하게 두면 버그가 발생하기 쉽다. "완료"의 정의를 명시적인 명령어 성공 여부로 규정해야 한다.
+
+```typescript
+// AGENTS.md
+
+## Definition of Done
+A task is complete when ALL of the following commands exit with code 0:
+1. `npm run lint`
+2. `npx tsc --noEmit`
+3. `npm test`
+4. Changed files have been staged (`git add .`)
+5. Commit message follows conventional format: `type(scope): description`
+```
+
+이렇게 하면 에이전트는 "내가 끝냈다고 생각한다"가 아니라, 모든 검증 절차를 통과했을 때만 작업을 완료했다고 보고한다.
+
+#### 3. 작업별 섹션 구성 (Task-Organized Sections)
+
+모든 명령어를 나열하기보다, 에이전트가 현재 수행하는 작업의 맥락에 맞는 지침을 찾을 수 있도록 섹션을 구성한다. `When...` 접두사는 에이전트의 추론 방식과 직접적으로 연결된다.
+
+```swift
+// AGENTS.md
+
+## When Writing Code
+- Run `swiftlint --fix` after every file change.
+- Add documentation comments to all new public methods.
+- Test command: `swift test --filter "TestTarget.test_NewFeature"`
+
+## When Reviewing Code
+- Check for security issues with the appropriate tool.
+- Verify test coverage is above 80%.
+
+## When Releasing
+- Update version in `Package.swift`.
+- Run full suite: `swift test && swiftlint`
+- Tag: `git tag -a v<version> -m "Release v<version>"`
+```
+
+#### 4. 에스컬레이션 규칙 (Escalation Rules)
+
+에이전트가 막혔을 때 어떻게 행동해야 할지, 그리고 절대 해서는 안 될 행동이 무엇인지 명시해야 한다. 이를 통해 에이전트가 잠금 파일을 삭제하거나 테스트를 건너뛰는 등 파괴적인 방식으로 문제를 해결하려는 시도를 막을 수 있다.
+
+```typescript
+// AGENTS.md
+
+## When Blocked
+- If tests fail after 3 attempts: stop and report the failing test with full output.
+- If a dependency is missing: check `package.json` first, then ask.
+- If you encounter merge conflicts: stop and show the conflicting files.
+
+## Never
+- Never force push to `main` or `develop`.
+- Never delete `package-lock.json` to resolve dependency issues.
+- Never disable or skip tests to make a commit pass.
+```
+
+### Mermaid: 효과적인 AGENTS.md 기반 작업 흐름
+
+```mermaid
+graph TD
+    A[Task: "새 기능 구현"] --> B{"AGENTS.md 파싱"};
+    B --> C["`When Writing Code` 섹션 확인"];
+    C --> D["실행: `npm run lint -- --fix`"];
+    D --> E["실행: `npm test`"];
+    E --> F{"테스트 통과?"};
+    F -- Yes --> G["`Definition of Done` 확인"];
+    G -- "모든 조건 충족 (exit 0)" --> H[✅ Task Complete];
+    F -- No --> I{"`When Blocked` 규칙 확인"};
+    I -- "3회 실패 시 중단" --> J["❌ Report to User: 테스트 실패"];
+```
+
+### 실전 적용: `ai-study` 프로젝트
+
+`ai-study` 프로젝트에 새로운 위키 엔트리를 작성하는 AI 에이전트를 도입한다고 가정해보자. 이 에이전트가 일관된 품질의 문서를 생성하도록 `AGENTS.md`를 구성할 수 있다.
+
+```markdown
+# AGENTS.md for ai-study Wiki Agent
+
+## Definition of Done
+An entry is ready for PR when ALL of the following pass:
+1. Markdown lint command exits 0: `npx markdownlint-cli2 "**/*.md"`
+2. Spell check command exits 0: `npx cspell "**/*.md"`
+3. Internal link validator exits 0: `npm run validate-links`
+4. All quality guardrails are met (verified by `npm run check-guardrails`):
+   - Cites external authority
+   - Includes a Mermaid diagram
+   - Connects to a specific project
+
+## When Writing a New Entry
+- Use MDX format.
+- Add frontmatter: `title`, `date`, `tags`.
+- After writing, run full verification: `npm run lint && npm run spell-check && npm run validate-links && npm run check-guardrails`
+
+## When Blocked
+- If `validate-links` fails: stop and ask the user for a correct link.
+- If `check-guardrails` fails: stop, report which guardrail is missing, and ask for more information.
+
+## Never
+- Never use placeholder text like "[coming soon]" or "TBD".
+- Never commit an entry with broken internal links.
+```
+
+이 `AGENTS.md`는 에이전트에게 추상적인 "좋은 글"을 요구하는 대신, 구체적이고 검증 가능한 명령어를 통해 `ai-study` 위키의 품질 기준을 강제한다.
