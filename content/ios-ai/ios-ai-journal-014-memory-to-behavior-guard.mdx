@@ -308,13 +308,15 @@ Claude가 차단되면 즉시 우회 시도(--no-verify, --force 등)를 *자동
 
 ## 수치
 
-| 룰 | 메모리만 | 메모리 + 행동가드 |
-|----|----------|-------------------|
-| 식별자 노출 | 2회 위반 (4/13, 4/23) | 0회 (훅 도입 후) |
-| protected 브랜치 직접 커밋 | 발생 시점마다 인지 | 0회 (이중 게이트) |
-| --no-verify 자동 우회 | 차단 시 자동 재시도 | 0회 (CLAUDE_ALLOW_NO_VERIFY 외 차단) |
-| API 키 커밋 | 사후 git history scrub | 0회 (Write/Edit에서 사전 차단) |
-| 가드 자체 무력화 | 발견까지 미정 | 세션 시작 시 즉시 경고 |
+> 표본 한계: 가드 도입 후 관측 기간이 짧다 (4/29~5/6, ~1주). "0회"는 "이번 스프린트 중 트리거 0회 + 차단 발동 N회로 우회 시도 자체는 잡혔다"는 뜻이지 영구 0을 보장하지 않는다. 다음 스키마 변경 / 새 회피 패턴 등장 시 회귀 가능.
+
+| 룰 | 메모리만 (~3주 관측) | 메모리 + 행동가드 (~1주 관측) |
+|----|----------------------|-------------------------------|
+| 식별자 노출 | 2회 위반 (4/13, 4/23) | publish 0회 / 가드 차단 1회 (이 저널 작성 중) |
+| protected 브랜치 직접 커밋 | 비정기 발생 (계측 안 됨) | publish 0회 / pre-commit 차단 N회 |
+| --no-verify 자동 우회 | 차단 시 자동 재시도 패턴 발견 | publish 0회 / PreToolUse 차단 발동 (수치 미계측) |
+| API 키 커밋 | 사후 git history scrub | publish 0회 / 차단 발동 0회 (트리거 자체 없음 — 잠재 가드) |
+| 가드 자체 무력화 | 발견까지 미정 | 세션 시작 시 1회 경고 (이 세션 통과 ✅) |
 
 ---
 
@@ -322,13 +324,13 @@ Claude가 차단되면 즉시 우회 시도(--no-verify, --force 등)를 *자동
 
 | 가드 | iOS 워커 | ai-study | 패턴 |
 |------|----------|----------|------|
-| protected branch 차단 | ✅ branch-commit-guard.sh | (n/a — main만) | Bash PreToolUse |
-| --no-verify 차단 | ✅ shlex 토큰화 | ✅ 동일 패턴 적용 예정 | Bash PreToolUse |
-| secret-guard | ✅ 6 패턴 | ✅ jit-search-first 같은 결로 | Write/Edit PreToolUse |
-| 식별자 노출 차단 | (역방향 — 워커는 자기 도메인) | ✅ 4.1KB | Write/Edit PreToolUse |
+| protected branch 차단 | ✅ branch-commit-guard.sh | n/a (main만 운영, PR 워크플로 대신) | Bash PreToolUse |
+| --no-verify 차단 | ✅ shlex 토큰화 | ⏳ 미적용 (다음 스텝) | Bash PreToolUse |
+| secret-guard (API 키) | ✅ 6 패턴 | ⏳ 미적용 (env 분리만 있음) | Write/Edit PreToolUse |
+| 식별자 노출 차단 | n/a (워커는 자기 도메인) | ✅ no-company-names.sh (4.1KB) | Write/Edit PreToolUse |
 | GC drift detector | ✅ session-start.sh | ✅ gc-drift-detector.sh | SessionStart |
 
-같은 룰이 두 저장소에서 동일한 exit 2 패턴으로 굳어졌다 — dogfood 완료.
+> 정직하게: 매트릭스 절반은 아직 빈 칸이다. iOS 워커에서 굳힌 패턴이 ai-study에 *동일 코드*로 이식된 건 GC drift 1개뿐. 식별자 노출 가드는 ai-study 고유, secret-guard / --no-verify는 이식 대기. **dogfood는 패턴(exit 2 + stdin/envvar fallback + 화이트리스트) 레벨에서 공유됐고, 코드 레벨 이식은 아직.**
 
 ---
 
