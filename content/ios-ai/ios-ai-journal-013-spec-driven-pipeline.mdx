@@ -1,0 +1,296 @@
+---
+title: "iOS Harness Journal 013 — Spec-Driven Engineering: 기획서 이미지 → SPEC → UI 테스트 자동화 (OCR 60%→95%, AC 매트릭스)"
+category: ios-ai
+series: ios-ai-journal
+date: "2026-05-06"
+tags: [ios-harness-journal, ios, spec-driven, spec-extractor, spec-qa, ocr, figma, ui-test, ac-matrix, validate-ai-output, ground-truth]
+confidence: 4
+last_verified: "2026-05-06"
+applicable_to: ["ios-study"]
+connections: [ios-ai/ios-ai-journal-012-ui-test-smoke-forensic-split, ios-ai/ios-ai-journal-009-ai-probe-dual-pipeline, harness-engineering/ai-agent-start-here, evaluation/ai-output-5-layer-defense]
+status: complete
+type: entry
+description: >-
+  기획서 PPT 이미지 → 구조화된 SPEC.md → ios-ui-tester 시나리오 → AC-X.Y 매트릭스 보고로 이어지는
+  spec-driven 파이프라인. spec-extractor 스킬/에이전트, spec-qa 스킬, crop-spec-region.sh로
+  OCR 60→95% 끌어올린 사례, "코드를 ground truth로 OCR 정정"한 validate-ai-output 실전 적용까지.
+quiz:
+  - question: "spec-extractor에서 AC(수용기준) 옆에 🟢/🟡/🔴 신뢰도 마커를 박는 핵심 이유는?"
+    choices:
+      - "사용자에게 색상 구분으로 가독성을 높이기 위해"
+      - "AI가 추론한 항목과 사용자가 명시한 항목을 구분해 후속 에이전트가 미해결 항목만 surface하도록"
+      - "Figma 링크 매핑 정확도를 시각화하기 위한 부가 정보"
+      - "OCR 신뢰도와 동일한 의미 — 중복 박제"
+    answer: 1
+    explanation: >-
+      🟢 = 사용자/코드 명시(확정), 🟡 = 추정(검증 필요), 🔴 = 미해결(질문 필수). 마커가 없으면 후속
+      에이전트(spec-qa, ios-feature-builder)가 모든 항목을 동급으로 취급해 환각 위에 환각이 쌓인다.
+      spec-extractor가 자기 확신 수준을 명시함으로써 다음 단계가 어디서 멈춰야 할지 안다.
+  - question: "OCR로 추출한 SPEC을 코드(CustomerValidator) 기반으로 재정의하면서 박제한 핵심 교훈은?"
+    choices:
+      - "OCR 도구를 더 비싼 모델로 교체해야 한다"
+      - "AI가 추출한 텍스트는 코드라는 ground truth와 대조 검증해야 한다 — 이미지만으론 50%가 틀린다"
+      - "PPT 캡처 해상도를 4K로 올리면 OCR이 100% 정확해진다"
+      - "Figma 링크가 있으면 OCR이 불필요하다"
+    answer: 1
+    explanation: >-
+      이전 SPEC은 OCR로 만든 CM 매핑이 50% 오류였다. 코드(CustomerValidator + MemberServiceCondition enum)를
+      읽고 재정의하니 정확해졌다. validate-ai-output 메모리룰의 살아있는 사례 — AI 출력은 항상 ground truth와
+      대조 검증해야 한다.
+  - question: "spec-qa 스킬이 새로운 풀 에이전트를 만들지 않고 ios-ui-tester를 재사용한 이유는?"
+    choices:
+      - "에이전트 추가 비용이 비싸기 때문"
+      - "얇은 스킬(파싱+위임)과 두꺼운 에이전트(실행) 분리 — 스킬은 SPEC을 시나리오로 변환하는 데만 집중하고 실행은 검증된 에이전트에 위임"
+      - "ios-ui-tester가 이미 SPEC 파싱 기능을 내장하고 있기 때문"
+      - "Anthropic 가이드라인이 에이전트 수를 제한해서"
+    answer: 1
+    explanation: >-
+      에이전트는 컨텍스트/도구를 무겁게 들고 다닌다. 새 도메인(SPEC) 추가는 얇은 스킬이 SPEC frontmatter +
+      AC-X.Y를 파싱해 fixture/deeplink/labels 시나리오 yaml로 변환하고, 실행은 이미 검증된 ios-ui-tester에
+      위임하는 게 정답이다. 같은 패턴이 spec-extractor → ios-feature-builder, ios-bug-fixer로 확장된다.
+---
+
+## 배경 — 기획서 PPT는 SPEC이 아니다
+
+iOS 워커 프로젝트에서 새 기능 개발(FR-01)이 들어왔다. 기획자가 준 산출물은 PPT 5장. 다이어그램, 화면 캡처, 분기 설명, 수용기준이 슬라이드마다 흩어져 있다.
+
+문제: **AI 에이전트가 PPT를 읽지 못한다.** Claude Code의 ios-feature-builder 에이전트한테 "이 PPT대로 구현해줘"가 안 통한다. 사람이 PPT를 읽고 자연어 brief로 풀어 옮겨야 했고, 그 과정에서:
+
+- 슬라이드 5장이 brief로 옮겨지면서 분기 조건 2개 누락
+- 화면 매핑이 모호해 deeplink 등록 단계에서 다시 PPT로 돌아감
+- 5명이 같은 PPT를 봐도 SPEC을 5가지 버전으로 받아 옴
+
+핵심 깨달음: **기획서 ↔ 구현 사이에 "AI가 읽을 수 있는 단일 진실"이 필요하다.** 자연어 brief가 아닌 구조화된 SPEC.md.
+
+이게 이번 스프린트의 spec-driven engineering 가설이다 — 기획서를 SPEC으로 박제하고, 그 SPEC을 ios-feature-builder/ios-ui-tester/ios-bug-fixer 모두가 source-of-truth로 참조한다.
+
+```
+기존:  PPT 5장 → (사람) → 자연어 brief → ios-feature-builder
+                      ↓
+                  매번 다른 해석, 누락, 환각
+
+목표:  PPT 5장 → spec-extractor → SPEC.md → spec-qa → ios-ui-tester
+                                         → ios-feature-builder
+                                         → ios-bug-fixer
+```
+
+---
+
+## 해결 1: spec-extractor 스킬 — 이미지 → 구조화 SPEC
+
+`.claude/skills/spec-extractor/SKILL.md`. 입력은 PPT export 이미지(p05~p09), 출력은 `docs/specs/FR-01-.../SPEC.md`.
+
+### 출력 구조
+
+```yaml
+---
+id: FR-01
+status: draft
+source_pages: [p05, p06, p07, p08, p09]
+related_fr: []
+target_layers: [Repository, UseCase, Presentation]
+common_modules: [CustomerValidator, MemberServiceCondition]
+---
+
+## 흐름 (mermaid flowchart)
+## 화면별 UI 명세
+## 수용기준 (AC-X.Y)
+## 미해결 항목 (🔴 4건 / 🟡 3건)
+## 구현 체크리스트 (Repository/UseCase/Presentation/Test)
+```
+
+### 신뢰도 마커 — 환각 방지의 핵심
+
+각 AC와 매핑 옆에 마커를 박는다:
+
+| 마커 | 의미 | 후속 처리 |
+|------|------|-----------|
+| 🟢 | 사용자 명시 또는 코드 ground truth로 검증됨 | 그대로 사용 |
+| 🟡 | AI 추정 (페이지 순서, Figma 매핑 등) | spec-qa가 검증 시도 |
+| 🔴 | 미해결 — 사용자 답변 필수 | 미해결 항목 표에 등록 |
+
+이 마커가 없으면 후속 에이전트(ios-feature-builder)가 추정과 명시를 동급으로 취급해 환각 위에 환각이 쌓인다. spec-extractor가 자기 확신 수준을 명시해야 다음 단계가 어디서 멈춰야 할지 안다.
+
+### 도그푸드 결과 (1차)
+
+5장 입력 → SPEC 1개 + 미해결 7건(🔴 4건/🟡 3건) surface. 사람이 PPT 다시 안 봐도 되는 단일 진실 확보.
+
+---
+
+## 해결 2: Figma 링크 매핑 (frontmatter 확장)
+
+PPT만으로는 화면의 정확한 컴포넌트 트리/spec을 못 본다. Figma 링크를 frontmatter에 박아 SPEC 본문 각 UI 섹션에서 inline으로 참조한다.
+
+```yaml
+figma_file: "iOS Worker FR-01"
+figma_links:
+  - { screen: "시작 화면", url: "https://figma.com/...", node_id: "1:234", confidence: "🟢" }
+  - { screen: "결제 분기", url: "https://figma.com/...", node_id: "2:567", confidence: "🟡" }
+```
+
+매핑이 명시면 🟢, 페이지 순서로 추정이면 🟡. 🟡인 항목은 미해결 표에 자동 등록되어 figma MCP 또는 사용자가 검증.
+
+---
+
+## 해결 3: spec-qa 스킬 — SPEC AC → 시나리오 → ios-ui-tester
+
+여기가 spec-driven 파이프라인의 핵심 연결고리다. SPEC.md가 있어도 그걸 사람이 읽고 테스트 시나리오로 옮기면 다시 손번역 단계가 살아난다. spec-qa 스킬은 그 연결을 자동화한다.
+
+### 동작
+
+1. SPEC frontmatter 파싱 (id, target_layers, common_modules)
+2. 본문에서 `AC-X.Y` 파싱 — 각 AC를 Given/When/Then으로 분해
+3. 변환 룰:
+    - **Given** = fixture/seed (로그인 상태, 결제수단 등록 등)
+    - **When** = deeplink + tap 시나리오
+    - **Then** = label 매칭 + screenshot diff
+4. AC가 코드 레벨(UseCase 단위)이면 XCTest로 위임 (UI test 영역 외)
+5. 시나리오 yaml을 ios-ui-tester에 brief로 전달
+6. AC 단위 매트릭스 보고:
+
+```
+AC-1.1 ✅ (label 매칭, 0.8s)
+AC-1.2 ❌ (expected="결제하기", got="진행하기") + screenshot
+AC-2.1 ⏭ (deeplink 미등록 — spec-extractor 재호출 필요)
+```
+
+### 풀 에이전트를 만들지 않은 이유
+
+새 풀 에이전트(spec-qa-runner) 만들고 싶었지만 안 했다. 이유:
+
+- 에이전트는 컨텍스트/도구를 무겁게 들고 다닌다 (~5KB 시스템 프롬프트)
+- spec-qa의 핵심 작업은 **파싱 + 변환 + 위임** — 얇다
+- 실행은 이미 검증된 ios-ui-tester가 한다
+
+→ 얇은 스킬(파싱) + 두꺼운 에이전트(실행) 분리. 같은 패턴이 spec-extractor → ios-feature-builder, ios-bug-fixer로 확장된다.
+
+### 후속 워크플로
+
+```
+spec-qa 결과
+├── ✅ 전부 통과 → PR 본문에 매트릭스 첨부
+├── ❌ 일부 실패 → ios-bug-fixer 에이전트 호출 (실패 AC ID + screenshot 전달)
+└── ⏭ skip 다수 → spec-extractor 재호출 (deeplink 미등록 화면 명시 보강)
+```
+
+---
+
+## 해결 4: OCR 60% → 95% — crop-spec-region.sh
+
+1차 도그푸드에서 발견한 함정: **OCR로 추출한 description column이 60% 정확도**. PPT의 작은 텍스트(p06/p07 우측 description)가 자주 틀렸다. 신뢰도 🟢로 박힌 항목인데 사실은 OCR 환각이었다.
+
+해결: 이미지를 그대로 Read 하지 말고 region을 crop + upscale해서 다시 Read.
+
+`.claude/scripts/crop-spec-region.sh` (Python PIL):
+
+```bash
+crop-spec-region.sh ppt_p06.png description_column
+# → ppt_p06_description.png (3x upscale, 우측 column만)
+```
+
+spec-extractor SKILL.md에 step 추가:
+
+> 🔴 영역 자동 보정 — description/header-right 등 정밀 영역은 crop-spec-region.sh로
+> 한 번 더 Read 후 결과를 비교. 차이 발생 시 🟡로 강등 + 미해결 표 등록.
+
+도그푸드 재실행: description column OCR 60% → 95%+. 환각 4건 → 0건.
+
+---
+
+## 해결 5: 코드를 Ground Truth로 — FR-01 SPEC 재정의
+
+OCR 95%까지 올려도 한계가 있었다. PPT에 적힌 분기 흐름이 **이미 구현된 도메인 Validator의 실제 흐름과 달랐다**. 이전 SPEC은 PPT를 신뢰해 작성됐고, 그 결과 CM(Common Module) 매핑 50%가 오류였다.
+
+### 재정의 절차
+
+1. `CustomerValidator.startValidation()` 코드를 Read (실제 분기 트리)
+2. `MemberServiceCondition` enum 케이스를 Read
+3. PPT의 분기 설명과 코드 흐름을 대조 — 차이 발견 시 코드 우선
+
+### 결과
+
+```
+이전 SPEC (PPT 기반):
+  CM-02-01 결제수단 / CM-02-02 운전면허 / CM-02-03 기기인증
+
+재정의 (코드 기반):
+  CM-02-01 비 로그인 / CM-02-02 결제수단(WebView!) / CM-02-03 운전면허
+  CM-02-05 기기·본인인증 / CM-03-01~05 enum 매핑
+```
+
+CM-02-02가 native 화면이 아니라 **WebView**라는 사실은 PPT에 없었다. 코드만 알고 있었다. SPEC 본문에:
+
+> 구현 타입: CM-02-02/FAQ = WebView 🟡, 그 외 native
+
+이게 박혀야 ios-feature-builder가 "여긴 WKWebView로 깔아야 함"을 안다.
+
+### 박제된 root cause — `#if DEBUG → #if DEBUG || QA`
+
+mock 비활성화 사례도 SPEC 하단 "박제된 함정" 섹션에 굳혀 넣었다:
+
+```swift
+// 이전 — QA 빌드에서 mock이 살아있어 실제 검증이 누락
+#if DEBUG
+  enableMockValidator()
+#endif
+
+// 수정 — QA 빌드에서도 mock 비활성화 보장
+#if DEBUG || QA
+  // (mock 비활성화)
+#endif
+```
+
+QA 빌드에서 환각이 통과되는 사례를 SPEC에 박제 → 다음 FR에서도 자동 회피.
+
+---
+
+## 패턴 — Spec-Driven Engineering 5법칙
+
+이번 스프린트에서 굳어진 법칙:
+
+### 1. AI가 읽을 수 있는 단일 진실을 만든다
+
+PPT/Figma/Slack 메시지는 사람용. AI가 source-of-truth로 쓸 SPEC.md를 한 단계 추가한다. 자연어 brief는 매번 다른 해석을 낳는다.
+
+### 2. 신뢰도를 명시한다 (🟢/🟡/🔴)
+
+AI가 자기 확신 수준을 박지 않으면 후속 에이전트는 추정과 명시를 동급으로 취급한다. 마커가 환각을 격리한다.
+
+### 3. 코드를 ground truth로 — AI 출력은 항상 코드와 대조
+
+이미지/PPT/문서로 추출한 모든 SPEC은 실제 코드(Validator/enum/Repository)와 대조 검증한다. 50% 오류가 30분 만에 정정된다. validate-ai-output 메모리룰의 실전 적용이다.
+
+### 4. 얇은 스킬 + 두꺼운 에이전트
+
+도메인 진입은 얇은 스킬(파싱/변환/위임)로, 실행은 검증된 에이전트로. 새 도메인마다 풀 에이전트 만들면 컨텍스트가 폭발한다.
+
+### 5. 함정을 SPEC에 박제
+
+mock 비활성화, WebView 분기, OCR 미해결 — 한 번 발견된 함정은 SPEC 본문 "박제된 함정" 섹션에 넣어 다음 FR이 자동 회피.
+
+---
+
+## 수치
+
+| 지표 | 이전 | 이후 |
+|------|------|------|
+| PPT → 구현 brief 작성 시간 | ~30분 (사람) | ~5분 (spec-extractor) |
+| OCR 정확도 (description) | 60% | 95%+ |
+| CM 매핑 정확도 | 50% (PPT) | 100% (코드 ground truth) |
+| AC당 테스트 시나리오 작성 | ~10분 (사람) | `<1분` (spec-qa) |
+| 미해결 항목 surface | 사후 발견 | 사전 surface (🔴/🟡) |
+
+---
+
+## 다음 스텝
+
+- **spec-extractor 에이전트** — 10+ 페이지 일괄 처리, FR 경계 자동 감지, FR별 분할, `docs/specs/INDEX.md` 통합 인덱스 (이미 박제, 다음 스프린트에서 도그푸드)
+- **figma MCP 통합** — 🟡 매핑을 figma MCP가 자동 검증해 🟢로 승격
+- **spec-qa 매트릭스 → PR 본문 자동 첨부** — `/ship` 워크플로에 끼워넣기
+- **ios-bug-fixer 통합** — 실패 AC ID + screenshot을 brief로 받아 자동 패치 시도
+
+## 박제된 메모리룰 강화
+
+- `feedback_partial_fix_recurrence_signal` — CM 매핑 50% 오류는 SPEC 1개에서 발견됐지만 **PPT 기반 SPEC 전부**에 같은 패턴이 잠재. fix는 grep 식으로 다른 SPEC도 일괄 재정의해야 한다.
+- `feedback_self_modifying_tools` — spec-extractor가 idempotent해야. 같은 PPT를 두 번 돌리면 같은 SPEC이 나와야 한다 (timestamp/random ID 금지).
+- `feedback_measure_before_lever` — OCR "체감 정확도"가 아닌 실측치(60% / 95%)로 효과 검증.
