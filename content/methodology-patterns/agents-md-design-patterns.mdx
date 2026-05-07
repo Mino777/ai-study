@@ -1,0 +1,130 @@
+---
+title: "AGENTS.md 패턴: 에이전트 설계 및 관리 방법론"
+category: methodology-patterns
+date: "2026-05-08"
+tags:
+  - blake-crosley
+  - methodology-patterns
+confidence: 2
+last_verified: "2026-05-08"
+applicable_to: ["any"]
+connections: []
+description: "AGENTS.md 파일을 사용하여 AI 에이전트를 정의하고 관리하는 패턴을 소개합니다. 에이전트의 목적, 컨텍스트, 스킬 등을 명확하게 구조화하는 방법론입니다. Compound Engineering 및 Spec-Driven Dev와 유사한 접근 방식을 제안합니다."
+generated_by: gemini
+quiz:
+  - question: "이 엔트리의 핵심 개념을 가장 잘 설명하는 것은?"
+    choices:
+      - "이론적 프레임워크만 제시"
+      - "실무 코드와 적용 사례 기반 패턴"
+      - "학술 논문 요약"
+      - "도구 사용법 튜토리얼"
+    answer: 1
+    explanation: "Blake Crosley 블로그는 실무 경험 기반 패턴을 중시한다."
+---
+
+> 이 엔트리는 Blake Crosley의 [AGENTS.md Patterns](https://blakecrosley.com/blog/agents-md-patterns)을 정독하고 핵심을 추출한 것이다.
+
+AI 에이전트의 행동을 실질적으로 바꾸는 `AGENTS.md` 작성법은 인간을 위한 문서(documentation)가 아닌, 에이전트를 위한 운영 정책(operational policy)을 작성하는 데서 출발합니다. 에이전트는 지시의 '이유'를 이해할 필요 없이, 실행할 '명령어'와 '완료'의 기준을 명확히 알아야 합니다.
+
+### 왜 중요한가: 모호함은 실패를 부른다
+
+Blake Crosley는 대부분의 `AGENTS.md`가 실패하는 원인이 기술적 한계가 아니라, 인간에게 익숙한 모호한 서술 방식 때문이라고 지적합니다. 이는 여러 외부 자료를 통해 뒷받침됩니다.
+
+- **GitHub의 실증 분석**: 2,500개 이상의 저장소를 분석한 결과, "대부분의 에이전트 파일은 너무 모호해서 실패한다"고 결론 내렸습니다.
+- **ICLR 2026 (AMBIG-SWE) 논문**: 모호한 지시를 받은 에이전트는 명확한 질문을 하기보다 조용히 작업을 진행하며, 이로 인해 문제 해결률이 48.8%에서 28%로 급락했다고 보고합니다.
+
+결국, 에이전트에게 '잘', '신중하게'와 같은 표현은 무의미하며, 측정 가능한 명령과 명확한 성공/실패 기준을 제공해야만 예측 가능한 결과를 얻을 수 있습니다.
+
+### 핵심 패턴: 실패와 성공을 가르는 기준
+
+에이전트의 행동에 실질적인 변화를 가져오는 패턴과 그렇지 않은 패턴은 명확히 구분됩니다.
+
+#### 실패하는 패턴 (Anti-patterns)
+
+이 패턴들은 에이전트가 사실상 무시합니다.
+
+1.  **명령어 없는 서술형 문단**: "우리는 깨끗하고 잘 테스트된 코드를 지향합니다."와 같은 문장은 실행할 명령이 없어 무시됩니다.
+2.  **모호한 지시**: "데이터베이스 마이그레이션 시 신중하게 작업하세요"와 같은 지시는 에이전트가 해석할 수 없는 제약 조건입니다. '신중하게'는 측정 불가합니다.
+3.  **우선순위 없는 모순된 목표**: "빠르게 배포"와 "완벽한 테스트 커버리지 확보"가 동시에 주어지면, 에이전트는 검증 단계를 건너뛰고 코드 생성에 집중하는 경향을 보입니다.
+4.  **강제성 없는 스타일 가이드**: "Google Python 스타일 가이드를 따르세요"라고만 명시하면, 에이전트는 준수 여부를 검증할 방법(예: 린터 실행 명령어)이 없어 이를 제안으로만 받아들입니다.
+
+#### 성공하는 패턴 (Effective Patterns)
+
+이 패턴들은 측정 가능하고 일관된 행동 변화를 유도합니다.
+
+1.  **명령어 우선 (Command-first)**: 모든 지침은 "이 작업이 올바르게 완료되었음을 어떤 명령어로 증명할 수 있는가?"라는 질문에 답해야 합니다.
+    ```
+    ## 빌드 및 테스트 명령어
+    - 설치: `pip install -r requirements.txt`
+    - 린트: `ruff check . --fix`
+    - 테스트: `pytest -v --tb=short`
+    - 전체 검증: `ruff check . && pytest -v`
+    ```
+2.  **완료 조건 정의 (Closure Definitions)**: '완료'의 의미를 명확한 명령어 종료 코드(exit code)로 정의합니다. 이는 에이전트가 자의적으로 "완료되었다"고 보고하는 가장 흔한 실패를 방지합니다.
+    ```
+    ## 완료의 정의 (Definition of Done)
+    아래 모든 조건이 충족될 때 태스크는 완료된 것으로 간주한다:
+    1. `ruff check .`가 종료 코드 0으로 성공
+    2. `pytest -v`가 실패 없이 종료 코드 0으로 성공
+    3. 변경된 파일이 스테이징되고 커밋됨
+    4. 커밋 메시지가 conventional format을 따름: `type(scope): description`
+    ```
+3.  **작업별 섹션화 (Task-organized Sections)**: `When Writing Code`, `When Reviewing Code`와 같이 에이전트의 현재 컨텍스트에 맞는 지침을 그룹화하여 제공합니다.
+4.  **에스컬레이션 규칙 (Escalation Rules)**: 에이전트가 막혔을 때의 행동 방침을 명시합니다. 특히 "절대 하지 말아야 할 것(Never)" 목록은 파괴적인 복구 패턴을 방지하는 데 매우 중요합니다.
+    ```
+    ## 막혔을 때 (When Blocked)
+    - 만약 테스트가 3번 시도 후에도 실패하면: 중단하고 실패한 테스트의 전체 출력을 보고하라.
+    - 절대 금지: 오류 해결을 위해 파일 삭제, 강제 푸시, 테스트 건너뛰기.
+    ```
+
+### Mermaid: 성공적인 AGENTS.md 기반 워크플로우
+
+```mermaid
+graph TD
+    A[Task Start] --> B{"Agent reads AGENTS.md"};
+    B --> C{Context?};
+    C -- "Writing Code" --> D["Run: `npx prettier --write .`"];
+    C -- "Reviewing Code" --> E["Run: `npm test`"];
+    D --> F{Check "Definition of Done"};
+    E --> F;
+    F -- "All checks pass (exit 0)?" --> G[Commit & Report Done];
+    F -- "A check fails" --> H["Escalate: Report failing test output"];
+    G --> I[Task Complete];
+    H --> I;
+```
+
+### 실전 적용: `ai-study` 프로젝트 시나리오
+
+`ai-study` 프로젝트(TypeScript, Next.js, Jest, Prettier 기반)에 AI 에이전트를 도입하여 "새로운 위키 엔트리 초안 작성 및 테스트" 작업을 맡긴다고 가정해봅시다. 아래와 같이 `AGENTS.md`를 작성하여 에이전트의 행동을 구체적으로 제어할 수 있습니다.
+
+```typescript
+// ai-study/AGENTS.md
+
+## 기본 명령어
+- 의존성 설치: `npm install`
+- 포맷팅 검사: `npx prettier --check .`
+- 린트 검사: `npx eslint .`
+- 테스트 실행: `npm test`
+- 전체 검증: `npm run lint && npm run test`
+
+## 완료의 정의 (Definition of Done)
+새로운 위키 엔트리 작성 태스크는 아래 모두를 만족해야 완료된다:
+1. `npx prettier --check .`가 종료 코드 0으로 성공.
+2. `npm test`가 새로운 테스트를 포함하여 실패 없이 종료 코드 0으로 성공.
+3. 생성된 `.mdx` 파일이 `content/` 디렉토리에 위치.
+4. 변경 사항이 스테이징되고, 커밋 메시지는 `feat(wiki): add [Entry Name]` 형식을 따름.
+
+## 코드 작성 시 (When Writing Code)
+- 새로운 컴포넌트나 로직 추가 시, 관련된 테스트 파일을 `__tests__/` 디렉토리에 반드시 생성.
+- 테스트 파일 이름은 `<component>.test.tsx` 형식을 따름.
+- 파일 저장 전 항상 `npx prettier --write <changed_file>`를 실행하여 포맷팅을 맞춤.
+
+## 막혔을 때 (When Blocked)
+- 만약 `npm test`가 2번 시도 후에도 실패하면: 작업을 중단하고, 실패한 테스트의 전체 로그와 함께 도움을 요청하라.
+- 절대 금지: 기존 테스트 코드(`.test.tsx` 파일)를 임의로 삭제하거나 `test.skip`을 추가하여 테스트를 건너뛰는 행위.
+```
+
+이 `AGENTS.md`는 에이전트에게 "좋은 문서를 작성하라"고 말하는 대신, 포맷팅, 테스트, 커밋 컨벤션 준수 여부를 명령어로 검증하고, 실패 시의 행동까지 명확히 규정하여 작업의 질과 일관성을 보장합니다.
+
+---
+이 엔트리는 Blake Crosley의 [AGENTS.md Patterns: What Actually Changes Agent Behavior](https://blakecrosley.com/blog/agents-md-patterns/)를 정독하고 핵심을 추출한 것이다.
