@@ -2,11 +2,13 @@
 title: "AI 에이전트 상호작용 비용 모델: Computer Use와 구조화 API의 전략적 선택"
 category: agents
 date: "2026-05-07"
+last_verified: "2026-05-07"
+applicable_to: ["any"]
 tags: [cost-optimization, agent-interaction, computer-use, structured-api, llm-economics, agents]
-confidence: 1
-connections: [agents/agent-architectures, agents/agent-compiler-dynamic-routing, agents/ai-agent-fleet-governance-engineering-model-scalability]
+confidence: 2
+connections: [agents/agent-architectures, agents/agent-compiler-dynamic-routing, agents/ai-agent-fleet-governance-engineering-model-scalability, context-engineering/hydrallm-multi-llm-orchestration]
 status: draft
-description: "에이전트의 작업 수행 방식을 UI 조작(Computer Use)과 API 호출 사이에서 비용 효율적으로 선택하는 기준과 패턴을 제시합니다."
+description: "Reflex 벤치마크가 측정한 45배 비용 차이를 출발점으로, UI 조작과 API 호출 사이의 선택 기준 · 폴백 패턴 · iOS App Intents 통합을 정리합니다."
 type: entry
 generated_by: gemini
 quiz:
@@ -17,7 +19,7 @@ quiz:
       - 화면의 시각적 정보를 이미지 토큰으로 변환하고, 다음 행동을 결정하기 위한 복잡한 추론 과정을 거치기 때문이다.
       - API 방식과 달리 모든 앱에서 작동하는 범용성 때문에 높은 라이선스 비용이 부과되기 때문이다.
     answer: 2
-    explanation: 정답입니다. 본문에서는 Computer Use 방식이 '스크린샷 이미지를 토큰으로 변환하고, 복잡한 추론을 거치므로 막대한 비용과 지연 시간을 발생시킨다'고 명시하고 있습니다. 이는 Vision 토큰 사용과 다단계 추론으로 인한 비용 증가를 의미합니다. 1번은 본문에서 Computer Use가 더 '느리다'고 했으므로 사실과 다릅니다. 2번은 개발 오버헤드와 운영 비용을 혼동한 설명입니다. 4번은 본문에 언급되지 않은 내용입니다.
+    explanation: 정답입니다. Reflex 벤치마크는 vision agent가 53 단계에 걸쳐 약 55만 input 토큰을 소비한 반면 API agent는 8번의 호출로 1.2만 토큰을 사용했음을 보여줍니다. 모든 단계마다 스크린샷을 LLM에 입력해야 하므로 "보기 위한 비용"이 누적됩니다. 더 좋은 비전 모델은 단계당 오류율을 낮출 뿐, 필요한 스크린샷 개수를 줄이지 못합니다.
   - question: 본문에서 제안하는 'API-First, UI-Fallback' 전략을 채택했을 때 얻을 수 있는 가장 큰 이점은 무엇입니까?
     choices:
       - 초기 API 개발에 드는 모든 비용과 시간을 완전히 제거할 수 있다.
@@ -25,143 +27,182 @@ quiz:
       - 모든 자동화 로직을 UI 조작으로 통일하여 에이전트의 내부 코드를 단순하게 유지할 수 있다.
       - UI가 변경되더라도 에이전트가 전혀 영향을 받지 않는 완벽하게 안정적인 시스템을 구축할 수 있다.
     answer: 1
-    explanation: 정답입니다. 이 패턴의 핵심은 API를 통해 비용과 안정성을 확보하고(API-First), API가 없을 때만 차선책으로 Computer Use를 사용해 유연성을 확보(UI-Fallback)하는 것입니다. 즉, 비용 효율성과 작업 성공률 사이의 균형을 맞추는 것이 가장 큰 장점입니다. 1번은 API 개발이 필요하므로 틀렸습니다. 3번은 오히려 로직이 더 복잡해지므로 틀렸습니다. 4번은 UI-Fallback 부분이 여전히 UI 변경에 취약하기 때문에 '완벽하게 안정적'이라는 설명은 틀렸습니다.
-  - question: 본문의 결론에 따라, 미래의 AI 에이전트 트렌드에 대비하기 위해 앱 개발자가 우선적으로 고려해야 할 사항으로 가장 적절한 것은 무엇입니까?
+    explanation: 정답입니다. 이 패턴의 핵심은 통제 가능한 시스템에는 API를, 통제 불가능한 외부 SaaS/레거시에만 Computer Use를 쓰는 것입니다. Reflex 저자도 "applications you do not control" 즉 변경할 수 없는 시스템에서만 vision agent가 옳다고 명시합니다.
+  - question: Reflex 벤치마크에서 vision agent가 처음에 작업을 완료하지 못한 이유는 무엇입니까?
     choices:
-      - 에이전트가 화면을 더 잘 분석할 수 있도록 앱의 UI 디자인을 최대한 단순하게 만든다.
-      - 자체적으로 API 명세 변경을 감지하고 코드를 수정하는 '자기 수정' AI 에이전트를 직접 개발한다.
-      - 모든 앱 기능을 외부에서 제어할 수 있도록 Playwright나 Puppeteer와의 호환성을 강화한다.
-      - 자신의 앱이 제공하는 기능들을 에이전트가 저렴하게 호출할 수 있도록 구조화된 API나 시스템 인텐트(Intent) 형태로 노출시킨다.
-    answer: 3
-    explanation: 정답입니다. 본문은 결론에서 'OS 레벨에서 앱의 의도(Intents)를 구조화된 데이터로 제공'하는 기능의 중요성을 언급하며, '개발자들은 자신의 앱이 에이전트에게 'API처럼' 보이도록 만드는 데 더 집중해야 한다'고 강조합니다. 이는 비싼 Computer Use 대신 저렴하고 안정적인 API 호출을 유도하기 위함입니다. 1번은 좋은 접근일 수 있으나 근본적인 해결책은 아닙니다. 2번은 AI 에이전트 자체의 발전 방향이며, 앱 개발자의 직접적인 과제라기보다는 미래 기술 트렌드에 해당합니다. 3번은 비싼 UI-Fallback 방식에 대한 대비이므로, 우선적으로 권장되는 'API-First' 철학과는 거리가 멉니다.
+      - 모델이 너무 작아서(Haiku) 추론 능력이 부족했기 때문이다.
+      - 페이지네이션을 인지하지 못해 4개의 pending review 중 1개만 발견했기 때문이다.
+      - HTTP 엔드포인트가 응답하지 않았기 때문이다.
+      - 토큰 한도를 초과해 응답이 잘렸기 때문이다.
+    answer: 1
+    explanation: 정답입니다. 벤치마크 보고서는 "vision agent가 렌더된 페이지에 대해 추론하면서, 페이지가 모든 항목을 보여주지 않는다는 신호를 받지 못했다"고 적습니다. 결국 14단계의 명시적 UI 워크스루 프롬프트를 추가해야 작업이 완료됐습니다 — 이는 vision agent가 "보이지 않는 상태(off-screen state)"를 추론하지 못한다는 본질적 한계를 보여줍니다.
 
 ---
 
-AI 에이전트가 사용자를 대신해 작업을 수행하는 방식은 크게 두 가지로 나뉩니다. 하나는 인간처럼 UI를 직접 조작하는 'Computer Use'이고, 다른 하나는 개발자가 제공한 명세대로 API를 호출하는 '구조화된 API 호출(Function Calling)'입니다. 최근 Imbue의 연구에 따르면, Computer Use 기능은 구조화된 API 호출보다 평균 45배 더 많은 비용을 소모하는 것으로 나타났습니다. (출처: GeekNews). 프론트엔드/iOS 개발자가 AI 기능을 제품에 통합할 때, 이 비용 차이는 서비스의 수익성과 직결되는 중요한 문제입니다.
+## 출발점: 45배라는 실측 수치
 
-## 핵심 트레이드오프: 유연성 vs. 비용
+2026년 5월, Reflex 팀은 같은 어드민 패널 작업을 두 가지 방식으로 풀어보는 벤치마크를 공개했습니다 ([reflex.dev/blog/computer-use-is-45x-more-expensive-than-structured-apis](https://reflex.dev/blog/computer-use-is-45x-more-expensive-than-structured-apis/)). 결과는 단순했습니다 — vision agent는 API agent보다 **약 45배 많은 입력 토큰**을 소비했습니다.
 
-두 접근 방식의 차이는 명확합니다.
+이 글은 그 벤치마크의 정확한 숫자를 출발점으로, *언제 Computer Use를 써야 하고 언제 쓰지 말아야 하는지*, 그리고 ai-study/moneyflow/tarosaju 같은 실 프로덕트에 어떤 결정 규칙으로 박제할지를 정리합니다.
+
+### 벤치마크 셋업 (재현 가능한 사실)
+
+- **앱**: react-admin Posters Galore 데모 기반의 어드민 패널
+- **데이터**: 고객 900명, 주문 600건, 리뷰 324건
+- **작업**: "Smith"라는 고객 중 주문이 가장 많은 사람을 찾아, 가장 최근 pending 주문을 찾고, 모든 pending 리뷰를 승인한 뒤, 주문 상태를 delivered로 바꿔라
+- **Path A (Vision)**: Claude Sonnet + browser-use 0.12, 스크린샷+클릭 (n=3)
+- **Path B (API)**: Claude Sonnet + tool-use, 앱 핸들러에서 자동 생성된 HTTP 엔드포인트 호출 (n=5)
+
+### 결과 (출처: Reflex 벤치마크)
+
+| 지표 | Vision Agent | API Agent | 비율 |
+| :--- | ---: | ---: | ---: |
+| 단계 수 | 53 ± 13 | 8 ± 0 | ~6.6× |
+| Wall-clock 시간 | 1003s ± 254s (~17분) | 19.7s ± 2.8s | ~51× |
+| Input 토큰 | 550,976 ± 178,849 | 12,151 ± 27 | **~45×** |
+| Output 토큰 | 37,962 ± 10,850 | 934 ± 41 | ~41× |
+
+추가로 의미 있는 메모: **Claude Haiku는 vision path에서 browser-use 0.12의 structured-output 스키마와 호환되지 않아 실패**했고, API path에서는 7.7s/9,478 input 토큰으로 멀쩡히 완료했습니다. 라우터/오케스트레이터 관점에서 *"작은 모델은 vision-mode에서 사용 불가"* 라는 운영 제약을 시사합니다.
+
+### 핵심 통찰
+
+Reflex 저자의 한 줄 정리: *"보기 위해서는 비용을 내야 하는 아키텍처에서, 모델이 좋아지면 단계당 오류율은 줄어들지만 필요한 스크린샷 개수는 줄지 않는다."* 즉 **45배 차이는 모델 발전으로 좁혀지지 않는 구조적 비용**입니다.
+
+또 하나의 한계: vision agent는 첫 시도에서 4개의 pending review 중 1개만 찾아냈습니다 — 페이지네이션을 인지하지 못한 것입니다. 14단계의 명시적 UI 워크스루 프롬프트를 추가한 뒤에야 통과했는데, 이는 *off-screen 상태에 대한 추론 불가*라는 vision agent의 또 다른 본질적 약점입니다.
+
+## 핵심 트레이드오프: 유연성 vs. 비용 vs. 보이지 않는 상태
 
 | 기준 | Computer Use (UI 조작) | 구조화된 API 호출 |
 | :--- | :--- | :--- |
-| **비용** | 높음 (Vision 토큰, 다단계 추론) | 낮음 (텍스트 토큰, 단일 호출) |
-| **유연성** | 매우 높음 (API 없는 모든 앱/웹 조작 가능) | 낮음 (미리 정의된 API만 사용 가능) |
-| **신뢰성** | 낮음 (UI 변경에 취약) | 높음 (API 명세가 바뀌지 않는 한 안정적) |
-| **개발 오버헤드** | 낮음 (별도 API 개발 불필요) | 높음 (API 설계, 개발, 문서화 필요) |
-| **실행 속도** | 느림 | 빠름 |
+| **비용** | 매우 높음 (Vision 토큰, 다단계 추론) | 낮음 (텍스트 토큰, 단일 호출) |
+| **유연성** | 매우 높음 (외부 SaaS/레거시 가능) | 낮음 (사전 정의된 API만 가능) |
+| **신뢰성** | 낮음 (UI 변경/페이지네이션에 취약) | 높음 (계약이 안정적인 한 안정) |
+| **개발 오버헤드** | 낮음 (API 설계 불필요) | 높음 (API 설계·문서화 필요) |
+| **실행 속도** | 매우 느림 (분 단위) | 빠름 (초 단위) |
+| **off-screen 추론** | 불가 (보이는 것만 안다) | N/A |
 
-Computer Use는 GPT-4o와 같은 멀티모달 모델이 화면을 '보고' 인간처럼 클릭할 위치, 입력할 텍스트를 추론하는 방식입니다. 이 과정은 스크린샷 이미지를 토큰으로 변환하고, 복잡한 추론을 거치므로 막대한 비용과 지연 시간을 발생시킵니다. 반면, API 호출은 명확한 요청과 응답 구조를 가지므로 토큰 사용량이 적고 안정적입니다.
+## 결정 규칙: "API-First, UI-Fallback"
 
-결국 선택의 문제는 'API가 존재하지 않는 작업을 자동화하기 위해 45배의 비용을 지불할 가치가 있는가?'로 귀결됩니다.
+> Reflex 저자가 명시한 정당한 use case: *"Vision agents remain the right tool for applications you do not control: third-party SaaS products, legacy systems, anything you cannot modify."*
 
-## "API-First, UI-Fallback" 패턴
+이걸 결정 규칙으로 박제하면:
 
-실무적인 해답은 두 가지를 모두 사용하는 하이브리드 전략에 있습니다. 에이전트가 특정 작업을 요청받았을 때, 항상 API를 먼저 시도하고, API가 없거나 실패했을 때만 차선책으로 Computer Use를 사용하도록 설계하는 것입니다.
+1. **통제 가능한 시스템(자체 백엔드, 자체 앱)** → 무조건 API. UI 자동화는 안티패턴.
+2. **통제 불가 + API/RSS/MCP 존재** → API.
+3. **통제 불가 + API 없음** → Computer Use. 단, 비용 상한·재시도 정책·UI 워크스루 프롬프트를 함께 설계.
 
-이 패턴은 비용 효율성과 작업 성공률 사이의 균형을 맞추는 최적의 방법입니다.
+### 다이어그램
 
 ```mermaid
 graph TD
-    A[Agent Receives Task: "GitHub 이슈 요약"] --> B{Decision Point};
-    B -- "Attempt 1: Cost-Effective" --> C["Strategy: Structured API"];
-    C --> D{"`get_github_issue()` API Available?"};
-    D -- Yes --> E[Execute API Call];
-    E --> F([Success: Low-cost, structured data]);
-    D -- No --> G["Strategy: Computer Use (Fallback)"];
-    G --> H[Open github.com in Browser];
-    H --> I[Visually Identify & Click Issue Link];
-    I --> J[Extract Title & Body Text from UI];
-    J --> K([Success: High-cost, potentially fragile]);
+    A[Agent Receives Task] --> B{시스템을 우리가 통제하나?}
+    B -- "Yes" --> C[Structured API only]
+    B -- "No" --> D{공식/비공식 API/MCP 존재?}
+    D -- "Yes" --> E[API Strategy]
+    D -- "No" --> F[Computer Use Fallback]
+    E --> G([Low cost, structured])
+    C --> G
+    F --> H([High cost · 비용 상한 · UI walkthrough prompt 필요])
 ```
 
 ### 코드 예제 (TypeScript)
 
-프론트엔드 환경에서 이 패턴을 구현하는 가상 시나리오입니다. 특정 작업을 수행하는 `TaskExecutor`는 API 전략을 먼저 시도하고, 실패 시 UI 조작 전략으로 넘어갑니다.
-
 ```typescript
 // strategies/apiStrategy.ts
 export async function fetchWithApi(taskId: string): Promise<string | null> {
-  console.log(`[API Strategy] Attempting to fetch data for task: ${taskId}`);
   try {
-    // 가상의 API 호출
     const response = await fetch(`https://api.internal.com/tasks/${taskId}`);
-    if (!response.ok) {
-      throw new Error('API endpoint not found or failed.');
-    }
+    if (!response.ok) throw new Error(`API ${response.status}`);
     const data = await response.json();
-    return `API Result: ${data.summary}`;
+    return data.summary;
   } catch (error) {
-    console.warn('[API Strategy] Failed:', error.message);
-    return null; // 실패 시 null 반환하여 다음 전략 시도 유도
+    console.warn('[API] Failed:', error);
+    return null;
   }
 }
 
 // strategies/uiStrategy.ts
-// Playwright나 Puppeteer와 같은 도구를 사용한다고 가정
 import { computerVisionControl } from './computerVisionControl';
 
-export async function fetchWithUi(taskUrl: string): Promise<string> {
-  console.log(`[UI Strategy] Falling back to UI interaction for URL: ${taskUrl}`);
-  // 1. 브라우저 실행 및 페이지 이동
+export async function fetchWithUi(
+  taskUrl: string,
+  opts: { maxSteps: number; walkthrough: string[] }
+): Promise<string> {
   await computerVisionControl.launchBrowserAndGoTo(taskUrl);
-  // 2. 화면을 보고 '본문' 영역을 찾아 텍스트 추출 (멀티모달 LLM 호출)
-  const content = await computerVisionControl.extractTextFromMainContent();
-  return `UI Scraped Result: ${content.slice(0, 100)}...`;
+  // 페이지네이션 같은 off-screen 상태를 명시적으로 알려야 함 (Reflex 14-step 교훈)
+  for (const step of opts.walkthrough) {
+    await computerVisionControl.followInstruction(step);
+  }
+  return computerVisionControl.extractTextFromMainContent();
 }
 
-// TaskExecutor.ts
-import { fetchWithApi } from './strategies/apiStrategy';
-import { fetchWithUi } from './strategies/uiStrategy';
-
+// TaskExecutor.ts — API-First, UI-Fallback + 비용 상한
 class TaskExecutor {
   async execute(task: { id: string; url: string }): Promise<string> {
-    // 1. API-First
     const apiResult = await fetchWithApi(task.id);
-    if (apiResult) {
-      return apiResult;
-    }
+    if (apiResult !== null) return apiResult;
 
-    // 2. UI-Fallback
-    const uiResult = await fetchWithUi(task.url);
-    return uiResult;
+    // UI fallback은 비용 상한과 명시적 walkthrough가 필수
+    return fetchWithUi(task.url, {
+      maxSteps: 60,
+      walkthrough: [
+        '페이지 하단의 다음 페이지 버튼을 확인하라',
+        '모든 페이지를 순회하며 pending 항목을 누락 없이 수집하라',
+      ],
+    });
   }
 }
-
-// 사용 예시
-const executor = new TaskExecutor();
-executor.execute({ id: '123', url: 'https://example.com/some-article' })
-  .then(console.log);
 ```
 
-이 코드는 `fetchWithApi`가 성공하면 즉시 결과를 반환하여 비용과 시간을 절약합니다. API 호출이 실패(e.g., 404 Not Found)해야만 비싼 `fetchWithUi` 함수가 실행됩니다.
+핵심: vision fallback에 그냥 던져두면 페이지네이션을 놓칩니다. **walkthrough prompt를 코드에 박제**하는 것이 Reflex 사례의 운영 교훈입니다.
 
-## 프로젝트 적용 사례: `tarosaju`의 운세 콘텐츠 파싱
+## iOS 관점: App Intents가 "API-First"의 OS 레벨 구현
 
-`tarosaju` 프로젝트는 다양한 외부 웹사이트에서 운세 콘텐츠를 가져와 사용자에게 제공해야 합니다.
+iOS 26+의 [App Intents](https://developer.apple.com/documentation/appintents) 프레임워크는 사실상 *"앱 개발자가 자기 앱에 대한 구조화 API를 OS 레벨에서 노출하는 방법"*입니다. 시스템 에이전트(Apple Intelligence, Shortcuts)가 앱 UI를 vision으로 분석하지 않고 직접 호출하도록 만드는 게 목적입니다.
 
-- **기존 방식 (UI-Fallback Only):** 초기 버전에서는 모든 외부 사이트를 대상으로 Playwright를 이용해 UI를 스크래핑했습니다. 이는 개발 속도는 빨랐지만, 사이트 리디자인 시 파서가 깨지는 일이 잦았고, 실행 비용도 높았습니다.
-- **"API-First" 패턴 적용:**
-    1. **API 탐색:** 먼저 대상 웹사이트들이 콘텐츠 제공을 위한 RSS 피드나 숨겨진 JSON API를 제공하는지 분석합니다. 많은 뉴스/콘텐츠 사이트는 모바일 앱을 위해 비공식 API를 열어두는 경우가 있습니다.
-    2. **API 전략 구현:** API가 존재하는 사이트에 대해서는 `fetch`를 사용한 직접적인 API 클라이언트를 구현합니다. 이는 훨씬 안정적이고 비용이 저렴합니다.
-    3. **UI-Fallback 유지:** API가 없는 레거시 웹사이트에 대해서만 기존의 Playwright 기반 UI 스크래핑 로직을 유지합니다.
+iOS 앱에서 AI 통합을 준비한다면 우선순위는:
+1. **`AppIntent` 정의** — 앱의 핵심 기능 5–10개를 Intent로 노출
+2. **`AppEntity` 도메인 모델 노출** — 에이전트가 데이터를 이해할 수 있게
+3. **Spotlight/Shortcuts 동작 검증** — 시스템이 vision fallback 없이 호출 가능한지
 
-이러한 전환을 통해 `tarosaju` 프로젝트는 콘텐츠 수집 비용의 약 80%를 절감하고, 주요 콘텐츠 소스의 파싱 안정성을 크게 향상시킬 수 있었습니다. (이론적 추정치)
+이렇게 만들어 두면 미래의 시스템 에이전트가 우리 앱을 "45배 비싼 vision path"로 들어오지 않게 됩니다.
 
-## 2026년 트렌드: 자기 수정 에이전트와 OS 통합
+## 프로젝트 적용
 
-이러한 비용 모델은 앞으로 더욱 중요해질 것입니다. 미래의 에이전트는 API 호출이 실패했을 때 단순히 UI로 넘어가는 것을 넘어, UI를 관찰하여 변경된 API 명세를 추론하고 스스로 API 클라이언트 코드를 수정하는 '자기 수정(Self-healing)' 능력을 갖추게 될 것입니다.
+### moneyflow (가계부)
+- 외부 카드사/은행 데이터 수집 → 모두 통제 불가. **공식 Open Banking API/RSS 우선**, 없는 곳만 vision (현실적으로 비추천: 회당 비용·금융 UI 변경 빈도). 계좌 연결은 PDS(Personal Data Store) 경로를 우선 검토.
+- 자체 백엔드 → API only. 자동화 테스트용 vision 금지.
 
-또한 Apple의 Private Cloud Compute나 온디바이스 AI처럼, OS 레벨에서 앱의 의도(Intents)를 구조화된 데이터로 제공하는 기능이 보편화되면, 비싼 화면 분석(Computer Use) 대신 저렴한 시스템 API 호출로 대부분의 작업을 처리할 수 있게 될 것입니다. 개발자들은 자신의 앱이 에이전트에게 'API처럼' 보이도록 만드는 데 더 집중해야 합니다.
+### tarosaju (운세 콘텐츠)
+- 외부 운세 사이트 → 1차로 RSS/JSON 엔드포인트 확인, 없으면 vision은 *비용 상한 + 캐시 24h*로만 허용.
+- "이론적으로 80% 절감" 같은 추정은 위 Reflex 수치(~45×)로 대체: API 경로가 가능한 도메인 비율 × 45 ≈ 실제 절감.
 
-결론적으로, 지금은 무조건적인 UI 자동화의 환상에서 벗어나, 비용과 안정성을 고려한 영리한 상호작용 전략을 설계해야 할 때입니다. "API-First, UI-Fallback" 패턴은 그 시작을 위한 훌륭한 청사진입니다.
+### ai-study (이 위키)
+- 위키는 통제 가능 → 모든 자동화는 manifest/API. browser-use는 회피.
+- 외부 출처 인덱싱(긱뉴스 스카우트)은 RSS·웹훅·MCP 우선, 마지막에만 fetch+parse.
+
+## 산업 트렌드 (2026)
+
+1. **Tool-use 표준화**: Anthropic [Model Context Protocol](https://modelcontextprotocol.io)이 "앱이 에이전트에게 API처럼 보이게 하는" 표준 인터페이스로 자리 잡고 있습니다.
+2. **OS 레벨 인텐트**: Apple App Intents, Android App Actions가 vision fallback을 줄이는 OS 인프라.
+3. **자기 수정 에이전트**: API 명세가 바뀌면 vision으로 한 번 학습 → API 클라이언트를 자동 보정하는 패턴이 연구되고 있습니다 (현재는 paper-stage; 프로덕션 적용 시 비용 상한 필수).
+
+결론: 무조건 vision agent에 매혹되지 말 것. **45×는 구조적 비용**이며, 우리가 통제할 수 있는 시스템에는 절대 vision을 쓰지 않는다 — 이것이 단 하나의 결정 규칙입니다.
 
 ---
 
+## 출처
+
+- Reflex, "Computer use is 45x More Expensive Than Structured APIs" (2026-05): https://reflex.dev/blog/computer-use-is-45x-more-expensive-than-structured-apis/
+- Hacker News 토론: https://news.ycombinator.com/item?id=48024859
+- The Register, "AI vision agents use 45x more tokens than APIs in benchmark" (2026-05-07)
+- Apple, App Intents 문서: https://developer.apple.com/documentation/appintents
+- Anthropic, Model Context Protocol: https://modelcontextprotocol.io
+
 ## 자기 점검
 
-1.  Computer Use 방식이 구조화된 API 호출보다 비용이 훨씬 비싼 주된 이유는 무엇인가요? (2가지 이상)
-2.  "API-First, UI-Fallback" 패턴을 적용했을 때 얻을 수 있는 가장 큰 이점은 무엇이며, 어떤 단점이 있을 수 있나요?
-3.  우리 팀이 개발하는 iOS 앱에 AI 에이전트 연동을 고려하고 있습니다. 에이전트가 우리 앱의 기능을 효율적으로 사용하게 하려면 어떤 기술적 준비(e.g., App Intents)를 해야 할까요?
-4.  동료에게 "API-First, UI-Fallback" 패턴을 언제, 왜 사용해야 하는지 1분 안에 설명해보세요.
-5.  **실습 과제:** 특정 뉴스 웹사이트(예: a-news-site.com)의 최신 기사 제목 5개를 가져오는 스크립트를 작성해보세요. 먼저 브라우저의 개발자 도구(네트워크 탭)를 사용해 기사 목록을 가져오는 API 호출이 있는지 확인하고, 있다면 해당 API를 직접 호출하는 코드를 작성하세요. 만약 API가 없다면, Playwright나 Puppeteer 같은 브라우저 자동화 도구를 사용해 UI에서 직접 제목 텍스트를 스크래핑하는 코드를 fallback으로 구현해보세요.
+1. Reflex 벤치마크에서 vision agent의 비용이 API agent의 ~45배가 된 *구조적* 이유는 무엇이며, 모델이 좋아지면 이 차이가 좁혀지지 않는 이유는 무엇인가요?
+2. "API-First, UI-Fallback" 패턴에서 UI fallback에 walkthrough prompt를 명시적으로 코드에 박제해야 하는 이유는 무엇인가요? (Reflex 14-step 사례)
+3. iOS 앱에 AI 에이전트 호환성을 추가하려면 App Intents 외에 어떤 보완이 필요한가요?
+4. 동료에게 "왜 우리 자체 어드민 패널 자동화는 절대 vision으로 만들지 말아야 하나"를 1분 안에 설명해보세요.
+5. **실습**: 임의의 외부 사이트를 골라 (a) 공식 API 존재 여부, (b) 비공식 JSON 엔드포인트(브라우저 Network 탭), (c) RSS 존재 여부를 차례로 확인하고, 셋 다 없을 때만 Playwright fallback을 쓰는 스크립트를 작성하세요. 비용 상한(`maxSteps`)과 walkthrough prompt를 반드시 포함하세요.
