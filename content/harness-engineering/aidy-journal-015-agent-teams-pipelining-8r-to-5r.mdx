@@ -1,48 +1,72 @@
 ---
-title: "Aidy Journal 015 — Agent Teams 도입 + 파이프라이닝으로 8R→5R 압축 (s30~s31)"
+title: Aidy Journal 015 — Agent Teams 도입 + 파이프라이닝으로 8R→5R 압축 (s30~s31)
 category: harness-engineering
 series: aidy-journal
-date: "2026-04-22"
-tags: [aidy-journal, agent-teams, pipelining, parallel-dispatch, h2-compatibility, gradlew, swap-memory, 5r-sprint]
+date: '2026-04-22'
+tags:
+  - aidy-journal
+  - agent-teams
+  - pipelining
+  - parallel-dispatch
+  - h2-compatibility
+  - gradlew
+  - swap-memory
+  - 5r-sprint
 confidence: 4
-last_verified: "2026-04-22"
-applicable_to: ["aidy", "any"]
+last_verified: '2026-04-22'
+applicable_to:
+  - aidy
+  - any
 connections:
-  - harness-engineering/aidy-journal-014-shared-memories-memory-tags-ai-chat-suggestions
-  - harness-engineering/aidy-journal-009-stall-detection-3way-dispatch-feature-sprint
+  - >-
+    harness-engineering/aidy-journal-014-shared-memories-memory-tags-ai-chat-suggestions
+  - >-
+    harness-engineering/aidy-journal-009-stall-detection-3way-dispatch-feature-sprint
   - harness-engineering/aidy-journal-003-parallel-dispatch-token-economics
   - agents/multi-agent-orchestration-patterns-2026
   - evaluation/test-strategy-3-client-via-aidy
   - context-engineering/api-contract-as-3-client-source-of-truth
   - harness-engineering/compound-engineering-philosophy
+  - harness-engineering/aidy-journal-016-ui-smoke-test-robot-pattern-preflight
+  - >-
+    harness-engineering/aidy-journal-017-dispatch-consolidation-s34-3feature-parallel
 status: complete
-description: "s30~s31(10R): Agent Teams 도입으로 워커 내부 병렬화 달성. 파이프라이닝으로 8R→5R 압축. v3.5~v4.2 (8피처, 24 WO). 서버 H2 빌드 병목 40분→해결. Advisor 자문 프로토콜 미사용 교훈."
+description: >-
+  s30~s31(10R): Agent Teams 도입으로 워커 내부 병렬화 달성. 파이프라이닝으로 8R→5R 압축. v3.5~v4.2
+  (8피처, 24 WO). 서버 H2 빌드 병목 40분→해결. Advisor 자문 프로토콜 미사용 교훈.
 type: entry
 quiz:
-  - question: "Agent Teams 도입으로 얻은 가장 큰 효과는?"
+  - question: Agent Teams 도입으로 얻은 가장 큰 효과는?
     choices:
-      - "코드 품질이 높아짐"
-      - "워커 내부 태스크 병렬화 — Entity/View/Tests 동시 진행으로 완료 시간 단축"
-      - "테스트 커버리지가 증가함"
-      - "API 명세 변경이 줄어듦"
+      - 코드 품질이 높아짐
+      - 워커 내부 태스크 병렬화 — Entity/View/Tests 동시 진행으로 완료 시간 단축
+      - 테스트 커버리지가 증가함
+      - API 명세 변경이 줄어듦
     answer: 1
-    explanation: "Agent Teams는 하나의 WO를 여러 서브태스크로 분해해 병렬 처리한다. 서버는 Entity/Migration/Repo 병렬 + Service/Controller 순차, iOS는 Feature/View/Tests 병렬, Android는 5분대 완료를 달성했다."
-  - question: "파이프라이닝 최적화의 핵심 원리는?"
+    explanation: >-
+      Agent Teams는 하나의 WO를 여러 서브태스크로 분해해 병렬 처리한다. 서버는 Entity/Migration/Repo 병렬 +
+      Service/Controller 순차, iOS는 Feature/View/Tests 병렬, Android는 5분대 완료를 달성했다.
+  - question: 파이프라이닝 최적화의 핵심 원리는?
     choices:
-      - "모든 워커가 동시에 같은 피처를 작업"
-      - "서버 완료 즉시 다음 라운드 dispatch + 클라이언트에 선행 dispatch — idle 최소화"
-      - "워커 수를 2배로 늘림"
-      - "Gate 검증을 생략"
+      - 모든 워커가 동시에 같은 피처를 작업
+      - 서버 완료 즉시 다음 라운드 dispatch + 클라이언트에 선행 dispatch — idle 최소화
+      - 워커 수를 2배로 늘림
+      - Gate 검증을 생략
     answer: 1
-    explanation: "R2에서 서버 완료 즉시 R3 dispatch, 동시에 클라이언트에 v3.5 선행 dispatch. R4에서 Gate-1을 백그라운드 병렬 실행. Architect idle 시간 30% 이하 달성. 워커 수 증가 없이 순서 최적화만으로 8R→5R 압축."
-  - question: "s31에서 서버 빌드가 40분 걸린 원인과 해결책은?"
+    explanation: >-
+      R2에서 서버 완료 즉시 R3 dispatch, 동시에 클라이언트에 v3.5 선행 dispatch. R4에서 Gate-1을 백그라운드
+      병렬 실행. Architect idle 시간 30% 이하 달성. 워커 수 증가 없이 순서 최적화만으로 8R→5R 압축.
+  - question: s31에서 서버 빌드가 40분 걸린 원인과 해결책은?
     choices:
-      - "네트워크 지연 — VPN 변경"
-      - "Flyway migration + H2 DDL 차이 — ddl-auto: create 설정으로 H2 스키마 자동 생성"
-      - "Gradle 버전 문제 — 업그레이드"
-      - "테스트 수 과다 — 테스트 삭제"
+      - 네트워크 지연 — VPN 변경
+      - 'Flyway migration + H2 DDL 차이 — ddl-auto: create 설정으로 H2 스키마 자동 생성'
+      - Gradle 버전 문제 — 업그레이드
+      - 테스트 수 과다 — 테스트 삭제
     answer: 1
-    explanation: "Flyway migration SQL이 H2 문법과 호환되지 않아 테스트가 반복 실패. gradlew clean test + Swap 48% 환경에서 매우 느렸다. ddl-auto: create로 H2가 엔티티 기반 스키마를 자동 생성하게 하고, gradlew clean 없이 gradlew test만 실행(증분 빌드)으로 해결."
+    explanation: >-
+      Flyway migration SQL이 H2 문법과 호환되지 않아 테스트가 반복 실패. gradlew clean test + Swap
+      48% 환경에서 매우 느렸다. ddl-auto: create로 H2가 엔티티 기반 스키마를 자동 생성하게 하고, gradlew
+      clean 없이 gradlew test만 실행(증분 빌드)으로 해결.
 ---
 
 ## Before — 순차 라운드의 한계

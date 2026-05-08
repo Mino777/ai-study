@@ -1,53 +1,82 @@
 ---
-title: "iOS Harness Journal 011 — 토스 SLASH23 Microfeatures 전면 이식: Interface 분리 + Tuist 46모듈 전환 + 빌드 체인 자동 복구"
+title: >-
+  iOS Harness Journal 011 — 토스 SLASH23 Microfeatures 전면 이식: Interface 분리 + Tuist
+  46모듈 전환 + 빌드 체인 자동 복구
 category: ios-ai
 series: ios-ai-journal
-date: "2026-04-24"
-tags: [ios-harness-journal, ios, tuist, microfeatures, toss, interface-module, spm-migration, dependency-graph, build-automation, ribs, scan-imports, example-app]
+date: '2026-04-24'
+tags:
+  - ios-harness-journal
+  - ios
+  - tuist
+  - microfeatures
+  - toss
+  - interface-module
+  - spm-migration
+  - dependency-graph
+  - build-automation
+  - ribs
+  - scan-imports
+  - example-app
 confidence: 4
-last_verified: "2026-04-25"
-applicable_to: ["ios-study"]
-connections: [ios-ai/ios-ai-journal-010-ai-orchestration-tmux-worker-pool, ios-ai/ios-ai-journal-006-spm-cycle-break, ios-ai/ios-ai-journal-005-ios-compound, ios-ai/ios-ai-journal-003-claudeignore-spm, harness-engineering/ai-agent-start-here]
+last_verified: '2026-04-25'
+applicable_to:
+  - ios-study
+connections:
+  - ios-ai/ios-ai-journal-010-ai-orchestration-tmux-worker-pool
+  - ios-ai/ios-ai-journal-006-spm-cycle-break
+  - ios-ai/ios-ai-journal-005-ios-compound
+  - ios-ai/ios-ai-journal-003-claudeignore-spm
+  - harness-engineering/ai-agent-start-here
+  - >-
+    harness-engineering/aidy-journal-018-tma-aidy-ios-microfeatures-modularization
 status: complete
 type: entry
 description: >-
-  토스 SLASH23 Microfeatures 패턴을 ios-study 46모듈에 전면 이식한 기록. Interface 모듈 분리(WO-005) →
-  Tuist 마이그레이션(WO-006) → Example 앱 scaffold(WO-007) → Routing Interface 확장(WO-008).
-  scan-imports 자동화 스캐너로 28모듈 transitive dep 일괄 해소, 멀티타겟 7모듈 수동 정복, 그림자 의존성 감사.
-  3세션 44커밋 198파일 +7,407줄. 빌드 체인 전체 Presentation 레이어 확장. 함정 7종 박제.
+  토스 SLASH23 Microfeatures 패턴을 ios-study 46모듈에 전면 이식한 기록. Interface 모듈
+  분리(WO-005) → Tuist 마이그레이션(WO-006) → Example 앱 scaffold(WO-007) → Routing
+  Interface 확장(WO-008). scan-imports 자동화 스캐너로 28모듈 transitive dep 일괄 해소, 멀티타겟
+  7모듈 수동 정복, 그림자 의존성 감사. 3세션 44커밋 198파일 +7,407줄. 빌드 체인 전체 Presentation 레이어 확장.
+  함정 7종 박제.
 quiz:
-  - question: "토스 Microfeatures 5계층 구조에서 Interface 모듈의 역할은?"
+  - question: 토스 Microfeatures 5계층 구조에서 Interface 모듈의 역할은?
     choices:
-      - "UI 컴포넌트를 모아놓는 공유 라이브러리"
-      - "Feature 간 참조 시 구현체 대신 프로토콜 계약만 제공해 순환 의존을 끊는 타겟"
-      - "네트워크 요청을 추상화하는 레이어"
-      - "테스트 Mock을 자동 생성하는 코드젠 타겟"
+      - UI 컴포넌트를 모아놓는 공유 라이브러리
+      - Feature 간 참조 시 구현체 대신 프로토콜 계약만 제공해 순환 의존을 끊는 타겟
+      - 네트워크 요청을 추상화하는 레이어
+      - 테스트 Mock을 자동 생성하는 코드젠 타겟
     answer: 1
     explanation: >-
       Interface 모듈은 Buildable/Listener 프로토콜과 순수 enum만 담는다. 소비자 Feature는 구현체가 아닌
       이 프로토콜만 import하므로, Feature↔Feature 직접 참조(순환 위험)를 원천 차단한다.
-  - question: "Tuist의 `productTypes`로 외부 SPM을 전부 dynamic framework로 강제하면 Kakao/Firebase 같은 SDK에서 링크 실패가 나는 이유는?"
+  - question: >-
+      Tuist의 `productTypes`로 외부 SPM을 전부 dynamic framework로 강제하면 Kakao/Firebase
+      같은 SDK에서 링크 실패가 나는 이유는?
     choices:
-      - "dynamic framework가 iOS 14를 지원하지 않아서"
-      - "productTypes 지정이 패키지 단위인데, 복합 SDK 내부의 여러 sub-target이 서로 statically linked로 가정해 설계됐기 때문"
-      - "Kakao SDK가 Tuist를 공식 지원하지 않아서"
-      - "dynamic framework는 시뮬레이터에서만 동작하기 때문"
+      - dynamic framework가 iOS 14를 지원하지 않아서
+      - >-
+        productTypes 지정이 패키지 단위인데, 복합 SDK 내부의 여러 sub-target이 서로 statically
+        linked로 가정해 설계됐기 때문
+      - Kakao SDK가 Tuist를 공식 지원하지 않아서
+      - dynamic framework는 시뮬레이터에서만 동작하기 때문
     answer: 1
     explanation: >-
-      productTypes의 granularity는 패키지 단위이지만 실제 문제는 타겟 단위에서 발생한다.
-      KakaoSDK를 .framework로 지정하면 내부 Common/Auth/User 각각이 별개 framework로 쪼개지고,
-      static linking 전제 설계가 깨지면서 상호 참조 심볼이 누락된다.
-  - question: "scan-imports.py가 Domain 레이어 7개 모듈의 누락 dependency를 못 잡은 이유는?"
+      productTypes의 granularity는 패키지 단위이지만 실제 문제는 타겟 단위에서 발생한다. KakaoSDK를
+      .framework로 지정하면 내부 Common/Auth/User 각각이 별개 framework로 쪼개지고, static
+      linking 전제 설계가 깨지면서 상호 참조 심볼이 누락된다.
+  - question: scan-imports.py가 Domain 레이어 7개 모듈의 누락 dependency를 못 잡은 이유는?
     choices:
-      - "Domain 레이어가 너무 크기 때문"
-      - "스캐너가 Domain 디렉토리를 제외했기 때문"
-      - "Swift의 implicit extension — `import CoreUtil` 없이 CoreUtil extension을 쓰는 코드는 소스에 import 문이 없어 스캐너 감지 불가"
-      - "Domain 모듈이 Tuist가 아니라 SPM으로만 빌드되기 때문"
+      - Domain 레이어가 너무 크기 때문
+      - 스캐너가 Domain 디렉토리를 제외했기 때문
+      - >-
+        Swift의 implicit extension — `import CoreUtil` 없이 CoreUtil extension을 쓰는
+        코드는 소스에 import 문이 없어 스캐너 감지 불가
+      - Domain 모듈이 Tuist가 아니라 SPM으로만 빌드되기 때문
     answer: 2
     explanation: >-
-      scan-imports.py는 소스의 import 구문과 Project.swift의 declared deps를 비교해 차집합을 계산한다.
-      SPM transitive로 보이던 extension이 Tuist 전환 후 끊기면서 undefined symbol이 발생하지만,
-      소스에 import가 없으니 스캐너가 잡을 수 없다.
+      scan-imports.py는 소스의 import 구문과 Project.swift의 declared deps를 비교해 차집합을
+      계산한다. SPM transitive로 보이던 extension이 Tuist 전환 후 끊기면서 undefined symbol이
+      발생하지만, 소스에 import가 없으니 스캐너가 잡을 수 없다.
 ---
 
 ## 배경 — 왜 토스 아키텍처인가

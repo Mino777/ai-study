@@ -1,40 +1,67 @@
 ---
-title: "bash 워처 패턴 — AI 폴링 토큰 0 달성: tmux pane 상태 감지로 완전 대체"
+title: 'bash 워처 패턴 — AI 폴링 토큰 0 달성: tmux pane 상태 감지로 완전 대체'
 category: harness-engineering
-date: "2026-04-20"
-tags: [tokenomics, multi-agent, tmux, polling, bash, aidy, orchestration, zero-token]
+date: '2026-04-20'
+tags:
+  - tokenomics
+  - multi-agent
+  - tmux
+  - polling
+  - bash
+  - aidy
+  - orchestration
+  - zero-token
 confidence: 3
-last_verified: "2026-04-20"
-applicable_to: ["aidy", "any"]
-connections: [harness-engineering/aidy-journal-000-architect-worker-baseline, harness-engineering/multi-session-ai-ops-patterns, harness-engineering/compound-engineering-philosophy]
+last_verified: '2026-04-20'
+applicable_to:
+  - aidy
+  - any
+connections:
+  - harness-engineering/aidy-journal-000-architect-worker-baseline
+  - harness-engineering/multi-session-ai-ops-patterns
+  - harness-engineering/compound-engineering-philosophy
+  - harness-engineering/aidy-journal-012-multiagent-efficiency-optimization
+  - harness-engineering/dispatch-state-idle-false-positive
 status: complete
-description: "멀티 에이전트 오케스트레이션에서 워커 완료 여부를 AI가 직접 폴링하는 대신, bash가 tmux pane 텍스트 패턴으로 idle 상태를 감지해 폴링 토큰을 100% 제거한 실전 패턴."
+description: >-
+  멀티 에이전트 오케스트레이션에서 워커 완료 여부를 AI가 직접 폴링하는 대신, bash가 tmux pane 텍스트 패턴으로 idle 상태를
+  감지해 폴링 토큰을 100% 제거한 실전 패턴.
 type: entry
 quiz:
-  - question: "bash 워처 패턴에서 Claude Code가 '작업 중'임을 판단하는 tmux pane 텍스트 시그니처는?"
+  - question: bash 워처 패턴에서 Claude Code가 '작업 중'임을 판단하는 tmux pane 텍스트 시그니처는?
     choices:
       - '"Running..." 또는 "Please wait..."'
       - '"esc to interrupt" 또는 "ctrl+t"'
       - '"Thinking..." 또는 "Generating..."'
       - '"[tool use]" 또는 "[bash]"'
     answer: 1
-    explanation: 'Claude Code가 작업 중일 때는 하단에 "esc to interrupt"가 표시된다. bash는 tmux capture-pane으로 마지막 5줄을 캡처해서 이 패턴을 감지한다. 반대로 "? for shortcuts" 같은 프롬프트 시그니처가 보이면 idle로 판단한다.'
-  - question: "5분 폴링 → 20분 폴링 → bash 워처 순서로 최적화된 이유를 가장 잘 설명한 것은?"
+    explanation: >-
+      Claude Code가 작업 중일 때는 하단에 "esc to interrupt"가 표시된다. bash는 tmux
+      capture-pane으로 마지막 5줄을 캡처해서 이 패턴을 감지한다. 반대로 "? for shortcuts" 같은 프롬프트
+      시그니처가 보이면 idle로 판단한다.
+  - question: 5분 폴링 → 20분 폴링 → bash 워처 순서로 최적화된 이유를 가장 잘 설명한 것은?
     choices:
-      - "bash가 LLM보다 정확하게 idle 상태를 감지할 수 있어서"
-      - "워커 작업 시간이 평균 20분이라 5분 폴링은 낭비이고, 결국 폴링 자체가 AI 호출을 소모하는 구조적 문제를 bash 감시로 해결"
-      - "tmux가 5분 간격 타이머를 지원하지 않아서"
-      - "LLM 폴링은 rate limit에 걸리기 때문에"
+      - bash가 LLM보다 정확하게 idle 상태를 감지할 수 있어서
+      - >-
+        워커 작업 시간이 평균 20분이라 5분 폴링은 낭비이고, 결국 폴링 자체가 AI 호출을 소모하는 구조적 문제를 bash 감시로
+        해결
+      - tmux가 5분 간격 타이머를 지원하지 않아서
+      - LLM 폴링은 rate limit에 걸리기 때문에
     answer: 1
-    explanation: "5분 폴링은 60분짜리 워커 작업에서 12번 LLM 호출을 낭비(토큰 60% 낭비, s26 실측). 20분으로 줄이면 3번으로 개선되지만 여전히 폴링 자체가 AI 호출을 소모한다. bash는 LLM 호출 없이 30초마다 상태를 체크하므로 폴링 비용이 구조적으로 0이 된다."
-  - question: "bash 워처 패턴이 단순한 토큰 절약을 넘어서 제공하는 추가 이점은?"
+    explanation: >-
+      5분 폴링은 60분짜리 워커 작업에서 12번 LLM 호출을 낭비(토큰 60% 낭비, s26 실측). 20분으로 줄이면 3번으로
+      개선되지만 여전히 폴링 자체가 AI 호출을 소모한다. bash는 LLM 호출 없이 30초마다 상태를 체크하므로 폴링 비용이 구조적으로
+      0이 된다.
+  - question: bash 워처 패턴이 단순한 토큰 절약을 넘어서 제공하는 추가 이점은?
     choices:
-      - "워커 에이전트의 오류를 자동으로 수정해준다"
-      - "Architect가 대기 중에 다음 스펙/WO를 작성할 수 있는 파이프라이닝이 가능해진다"
-      - "워커 간 통신 지연을 줄여준다"
-      - "tmux 세션이 재시작되어도 작업이 유지된다"
+      - 워커 에이전트의 오류를 자동으로 수정해준다
+      - Architect가 대기 중에 다음 스펙/WO를 작성할 수 있는 파이프라이닝이 가능해진다
+      - 워커 간 통신 지연을 줄여준다
+      - tmux 세션이 재시작되어도 작업이 유지된다
     answer: 1
-    explanation: "bash가 백그라운드에서 감시를 담당하므로, Architect Claude는 워커 완료를 기다리는 동안 다음 라운드 스펙 작성이나 WO 준비를 할 수 있다. 이 파이프라이닝이 실제 스프린트 처리량을 높인다. 단순 토큰 절약보다 큰 가치다."
+    explanation: >-
+      bash가 백그라운드에서 감시를 담당하므로, Architect Claude는 워커 완료를 기다리는 동안 다음 라운드 스펙 작성이나
+      WO 준비를 할 수 있다. 이 파이프라이닝이 실제 스프린트 처리량을 높인다. 단순 토큰 절약보다 큰 가치다.
 ---
 
 ## 왜 지금 이 주제인가

@@ -10,8 +10,11 @@ tags:
   - ai-client
   - transferable-pattern
 confidence: 4
-last_verified: "2026-04-12"
-applicable_to: ["moneyflow","tarosaju","any"]
+last_verified: '2026-04-12'
+applicable_to:
+  - moneyflow
+  - tarosaju
+  - any
 connections:
   - harness-engineering/ai-call-patterns-circuit-breaker-fallback
   - harness-engineering/harness-journal-000-baseline
@@ -26,6 +29,9 @@ connections:
   - harness-engineering/harness-journal-020-promise-timeout-wrapper
   - harness-engineering/harness-journal-023-closed-loop-ai-quality
   - ios-ai/ios-ai-code-quality-test-strategy
+  - harness-engineering/harness-journal-026-midpoint-ai-engineering-review
+  - harness-engineering/spec-driven-development-for-ai-agents
+  - harness-engineering/tarosaju-flow-map-ai-hardening-3layer
 status: complete
 description: >-
   Journal 000 갭 #2 회피 메커니즘. 양쪽 프로젝트 모두 *입력*은 Zod로 검증하지만 *LLM 응답*은 그대로 사용 → 환각이

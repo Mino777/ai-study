@@ -1,46 +1,72 @@
 ---
-title: "Aidy Journal 013 — Smart Notifications + Relationship Map + Interaction Log (s28)"
+title: >-
+  Aidy Journal 013 — Smart Notifications + Relationship Map + Interaction Log
+  (s28)
 category: harness-engineering
 series: aidy-journal
-date: "2026-04-21"
-tags: [aidy-journal, smart-notifications, relationship-map, interaction-log, crash-log, gate-1, 5r-sprint, baseongsaeng, feature-sprint]
+date: '2026-04-21'
+tags:
+  - aidy-journal
+  - smart-notifications
+  - relationship-map
+  - interaction-log
+  - crash-log
+  - gate-1
+  - 5r-sprint
+  - baseongsaeng
+  - feature-sprint
 confidence: 4
-last_verified: "2026-04-21"
-applicable_to: ["aidy", "any"]
+last_verified: '2026-04-21'
+applicable_to:
+  - aidy
+  - any
 connections:
-  - harness-engineering/aidy-journal-009-stall-detection-3way-dispatch-feature-sprint
-  - harness-engineering/aidy-journal-014-shared-memories-memory-tags-ai-chat-suggestions
+  - >-
+    harness-engineering/aidy-journal-009-stall-detection-3way-dispatch-feature-sprint
+  - >-
+    harness-engineering/aidy-journal-014-shared-memories-memory-tags-ai-chat-suggestions
   - agents/multi-agent-sprint-optimization-patterns
   - evaluation/test-strategy-3-client-via-aidy
   - context-engineering/api-contract-as-3-client-source-of-truth
+  - harness-engineering/aidy-journal-012-multiagent-efficiency-optimization
+  - harness-engineering/orchestrator-fail-meta-verify-growth-axes
 status: complete
-description: "s28(5R): v2.9 Smart Notifications + v3.0 Relationship Map + v3.1 Interaction Log 3연타. WO-103~111 done. iOS 554→577 tests. 바선생 L5.5→L6.0: crash-log 명령 + FAIL/META/VERIFY 3축 개선."
+description: >-
+  s28(5R): v2.9 Smart Notifications + v3.0 Relationship Map + v3.1 Interaction
+  Log 3연타. WO-103~111 done. iOS 554→577 tests. 바선생 L5.5→L6.0: crash-log 명령 +
+  FAIL/META/VERIFY 3축 개선.
 type: entry
 quiz:
-  - question: "v3.0 Relationship Map의 strength 자동 산출 기준은?"
+  - question: v3.0 Relationship Map의 strength 자동 산출 기준은?
     choices:
-      - "사용자가 직접 1~5 숫자를 입력"
-      - "두 인물이 공동 등장한 메모리 수 기반으로 Architect가 계산"
-      - "두 인물이 공동 등장한 메모리 수 기반 — 코드 자동 산출"
-      - "AI가 메모리 감정 분석 후 점수 부여"
+      - 사용자가 직접 1~5 숫자를 입력
+      - 두 인물이 공동 등장한 메모리 수 기반으로 Architect가 계산
+      - 두 인물이 공동 등장한 메모리 수 기반 — 코드 자동 산출
+      - AI가 메모리 감정 분석 후 점수 부여
     answer: 2
-    explanation: "PersonLink 엔티티의 strength(1~5)는 서버가 두 인물이 함께 등장하는 메모리 수를 쿼리해서 자동 산출한다. 사용자 입력 없음, AI 추론 없음 — 순수 데이터 집계."
-  - question: "바선생 L5.5→L6.0에서 crash-log 명령이 분류하는 원인 유형 중 포함되지 않는 것은?"
+    explanation: >-
+      PersonLink 엔티티의 strength(1~5)는 서버가 두 인물이 함께 등장하는 메모리 수를 쿼리해서 자동 산출한다. 사용자
+      입력 없음, AI 추론 없음 — 순수 데이터 집계.
+  - question: 바선생 L5.5→L6.0에서 crash-log 명령이 분류하는 원인 유형 중 포함되지 않는 것은?
     choices:
-      - "OOM (메모리 부족)"
-      - "TOKEN_OVERFLOW (컨텍스트 초과)"
-      - "RATE_LIMIT (429 오류)"
-      - "USER_CANCEL (사용자 중단)"
+      - OOM (메모리 부족)
+      - TOKEN_OVERFLOW (컨텍스트 초과)
+      - RATE_LIMIT (429 오류)
+      - USER_CANCEL (사용자 중단)
     answer: 3
-    explanation: "crash-log 명령의 원인 분류: OOM, TOKEN_OVERFLOW, RATE_LIMIT, NETWORK, ERROR, SESSION_END, UNKNOWN 7가지. USER_CANCEL은 없다 — 워커가 자체 종료할 때는 이미 다른 원인이 감지된다."
-  - question: "s28의 서버 우선 → 클라 병렬 패턴에서 '클라 병렬'이 가능한 조건은?"
+    explanation: >-
+      crash-log 명령의 원인 분류: OOM, TOKEN_OVERFLOW, RATE_LIMIT, NETWORK, ERROR,
+      SESSION_END, UNKNOWN 7가지. USER_CANCEL은 없다 — 워커가 자체 종료할 때는 이미 다른 원인이 감지된다.
+  - question: s28의 서버 우선 → 클라 병렬 패턴에서 '클라 병렬'이 가능한 조건은?
     choices:
-      - "서버 WO가 Gate-1 PASS를 받은 후 iOS/Android WO를 동시 dispatch"
-      - "서버와 iOS가 동시에 작업을 시작하되 서버가 1시간 앞서 시작"
-      - "API 변경이 없을 때만 가능"
-      - "iOS와 Android가 같은 레이아웃을 구현할 때만 가능"
+      - 서버 WO가 Gate-1 PASS를 받은 후 iOS/Android WO를 동시 dispatch
+      - 서버와 iOS가 동시에 작업을 시작하되 서버가 1시간 앞서 시작
+      - API 변경이 없을 때만 가능
+      - iOS와 Android가 같은 레이아웃을 구현할 때만 가능
     answer: 0
-    explanation: "서버 Gate-1 PASS가 확인된 후 iOS/Android를 2-way 동시 dispatch. 이 시점에서 API 스펙이 검증 완료 상태이므로 클라이언트 둘이 독립적으로 구현 가능. API 변경이 없어도 서버 Gate-1 PASS 전에는 클라를 보내지 않는다."
+    explanation: >-
+      서버 Gate-1 PASS가 확인된 후 iOS/Android를 2-way 동시 dispatch. 이 시점에서 API 스펙이 검증 완료
+      상태이므로 클라이언트 둘이 독립적으로 구현 가능. API 변경이 없어도 서버 Gate-1 PASS 전에는 클라를 보내지 않는다.
 ---
 
 ## Before — Journal 009 이후 상태

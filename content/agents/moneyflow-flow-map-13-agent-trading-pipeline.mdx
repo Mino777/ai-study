@@ -1,8 +1,8 @@
 ---
-title: "MoneyFlow 13-Agent 트레이딩 파이프라인 — 요청 한 번의 여정"
-description: "종목 분석 요청이 13개 AI 에이전트를 거쳐 Signal Strength Score로 변환되는 전 과정을 관통하는 Flow Map"
+title: MoneyFlow 13-Agent 트레이딩 파이프라인 — 요청 한 번의 여정
+description: 종목 분석 요청이 13개 AI 에이전트를 거쳐 Signal Strength Score로 변환되는 전 과정을 관통하는 Flow Map
 category: agents
-date: "2026-05-01"
+date: '2026-05-01'
 tags:
   - moneyflow
   - flow-map-series
@@ -12,40 +12,50 @@ tags:
   - bounded-retry
   - llm-as-a-judge
 confidence: 3
-last_verified: "2026-05-01"
-applicable_to: ["moneyflow"]
+last_verified: '2026-05-01'
+applicable_to:
+  - moneyflow
 connections:
   - harness-engineering/architect-flow-map-via-aidy-architect
   - harness-engineering/five-levers-of-harness-engineering
   - harness-engineering/compound-engineering-philosophy
   - harness-engineering/ai-engineering-landscape-2026-midpoint
+  - agents/anthropic-three-agent-harness-pattern
+  - agents/multi-agent-communication
+  - harness-engineering/tarosaju-flow-map-ai-hardening-3layer
 status: complete
 type: entry
 quiz:
-  - question: "MoneyFlow에서 분석 에이전트가 실패하면 어떤 패턴으로 대응하나?"
+  - question: MoneyFlow에서 분석 에이전트가 실패하면 어떤 패턴으로 대응하나?
     choices:
-      - "무한 재시도"
-      - "Bounded Retry — N회 실패 시 다른 모델로 폴백"
-      - "에러 무시하고 다음 단계 진행"
-      - "전체 분석 취소"
+      - 무한 재시도
+      - Bounded Retry — N회 실패 시 다른 모델로 폴백
+      - 에러 무시하고 다음 단계 진행
+      - 전체 분석 취소
     answer: 1
-    explanation: "Bounded Retry: Claude 2회 실패 → Gemini 전환 → GPT 폴백. 무한 재시도는 비용 폭증 + 사용자 대기. 같은 인터페이스(LSP)라 모델 교체가 투명."
-  - question: "13개 에이전트가 각각 한 가지 분석만 담당하는 설계 원칙은?"
+    explanation: >-
+      Bounded Retry: Claude 2회 실패 → Gemini 전환 → GPT 폴백. 무한 재시도는 비용 폭증 + 사용자 대기.
+      같은 인터페이스(LSP)라 모델 교체가 투명.
+  - question: 13개 에이전트가 각각 한 가지 분석만 담당하는 설계 원칙은?
     choices:
-      - "DRY 원칙"
-      - "단일 책임 원칙 (SRP)"
-      - "개방-폐쇄 원칙"
-      - "리스코프 치환 원칙"
+      - DRY 원칙
+      - 단일 책임 원칙 (SRP)
+      - 개방-폐쇄 원칙
+      - 리스코프 치환 원칙
     answer: 1
-    explanation: "SOLID의 SRP를 에이전트에 적용. 하나의 에이전트가 기술분석+펀더멘털+뉴스를 다 하면 예측 불가 행동 + 비용 폭증. 13개로 분리하면 개별 테스트·교체·모니터링 가능."
-  - question: "분석 비용 제한을 해제(#163)한 이유는?"
+    explanation: >-
+      SOLID의 SRP를 에이전트에 적용. 하나의 에이전트가 기술분석+펀더멘털+뉴스를 다 하면 예측 불가 행동 + 비용 폭증. 13개로
+      분리하면 개별 테스트·교체·모니터링 가능.
+  - question: 분석 비용 제한을 해제(#163)한 이유는?
     choices:
-      - "비용이 충분히 저렴해서"
-      - "제한으로 인해 분석 품질이 저하되고 있었기 때문"
-      - "사용자 요청이 있어서"
-      - "모델이 업그레이드되어서"
+      - 비용이 충분히 저렴해서
+      - 제한으로 인해 분석 품질이 저하되고 있었기 때문
+      - 사용자 요청이 있어서
+      - 모델이 업그레이드되어서
     answer: 1
-    explanation: "13개 에이전트 중 비용 제한이 걸린 에이전트는 토큰을 아끼려고 분석을 축약 → 결과 품질 하락. '풀스로틀'로 전환하여 품질 우선 + 비용은 Prompt Caching으로 최적화."
+    explanation: >-
+      13개 에이전트 중 비용 제한이 걸린 에이전트는 토큰을 아끼려고 분석을 축약 → 결과 품질 하락. '풀스로틀'로 전환하여 품질 우선
+      + 비용은 Prompt Caching으로 최적화.
 ---
 
 ## 왜 이 Flow Map인가

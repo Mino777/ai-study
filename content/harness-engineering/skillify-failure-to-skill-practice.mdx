@@ -1,7 +1,7 @@
 ---
-title: "Skillify — 실패를 영구 구조 수정으로 박제하는 Garry Tan의 관례"
+title: Skillify — 실패를 영구 구조 수정으로 박제하는 Garry Tan의 관례
 category: harness-engineering
-date: "2026-04-23"
+date: '2026-04-23'
 tags:
   - skills
   - skillify
@@ -18,36 +18,51 @@ connections:
   - harness-engineering/ai-native-system-deterministic-control
   - harness-engineering/skill-system-introduction
   - harness-engineering/harness-journal-027-skillify-resolver-backfill
+  - harness-engineering/harness-journal-028-skillify-100-playbook
+  - harness-engineering/harness-journal-029-skillify-6of6-rollout
 status: complete
-description: "Garry Tan의 'skillify' 관례 — 모든 에이전트 실패를 10단계 체크리스트(SKILL.md → 결정론적 코드 → 단위/통합/LLM 평가 → 리졸버 + 라우팅 평가 → DRY 감사 → E2E 스모크 → 브레인 파일링)로 전환해 재발을 구조적으로 불가능하게 만든다. LangChain이 주는 '조각(pieces)'과 박혀있는 '관례(practice)'의 차이."
+description: >-
+  Garry Tan의 'skillify' 관례 — 모든 에이전트 실패를 10단계 체크리스트(SKILL.md → 결정론적 코드 →
+  단위/통합/LLM 평가 → 리졸버 + 라우팅 평가 → DRY 감사 → E2E 스모크 → 브레인 파일링)로 전환해 재발을 구조적으로 불가능하게
+  만든다. LangChain이 주는 '조각(pieces)'과 박혀있는 '관례(practice)'의 차이.
 type: entry
-last_verified: "2026-04-23"
-applicable_to: ["any"]
+last_verified: '2026-04-23'
+applicable_to:
+  - any
 quiz:
-  - question: "Garry Tan이 구분하는 'latent 작업'과 'deterministic 작업'의 핵심 차이는?"
+  - question: Garry Tan이 구분하는 'latent 작업'과 'deterministic 작업'의 핵심 차이는?
     choices:
-      - "모델 크기 — latent은 대형, deterministic은 소형 모델"
-      - "latent은 판단이 필요하고, deterministic은 같은 입력에 같은 출력이 나오는 정밀 작업. 캘린더 grep 같은 건 deterministic인데 에이전트가 latent space에서 처리하면 버그"
-      - "latent은 캐시되고 deterministic은 캐시 안 됨"
-      - "latent은 프로덕션용, deterministic은 테스트용"
+      - '모델 크기 — latent은 대형, deterministic은 소형 모델'
+      - >-
+        latent은 판단이 필요하고, deterministic은 같은 입력에 같은 출력이 나오는 정밀 작업. 캘린더 grep 같은 건
+        deterministic인데 에이전트가 latent space에서 처리하면 버그
+      - latent은 캐시되고 deterministic은 캐시 안 됨
+      - 'latent은 프로덕션용, deterministic은 테스트용'
     answer: 1
-    explanation: "Garry Tan이 말하는 버그는 '틀린 답'이 아니라 '틀린 쪽(wrong side)'에서 처리한 것. 3줄 스크립트로 끝날 결정론적 작업을 에이전트가 latent에서 추론하면 느리고, 틀리고, 재현 안 된다."
-  - question: "Skillify 10단계 중 Hermes Agent의 skill_manage 도구가 '누락하는 부분'에 해당하는 것은?"
+    explanation: >-
+      Garry Tan이 말하는 버그는 '틀린 답'이 아니라 '틀린 쪽(wrong side)'에서 처리한 것. 3줄 스크립트로 끝날
+      결정론적 작업을 에이전트가 latent에서 추론하면 느리고, 틀리고, 재현 안 된다.
+  - question: Skillify 10단계 중 Hermes Agent의 skill_manage 도구가 '누락하는 부분'에 해당하는 것은?
     choices:
-      - "SKILL.md 작성 (Hermes는 자동 생성함)"
-      - "결정론적 스크립트 생성"
-      - "단위/통합/LLM 평가 + 리졸버 evaluation + DRY 감사 — Hermes는 skill 생성은 하지만 테스트하지 않음"
-      - "MEMORY.md 관리"
+      - SKILL.md 작성 (Hermes는 자동 생성함)
+      - 결정론적 스크립트 생성
+      - 단위/통합/LLM 평가 + 리졸버 evaluation + DRY 감사 — Hermes는 skill 생성은 하지만 테스트하지 않음
+      - MEMORY.md 관리
     answer: 2
-    explanation: "기사가 지적하는 Hermes의 갭은 '생성은 되나 검증이 없다' — 같은 도메인에 유사 skill 2개가 생겨 ambiguous routing이 되어도 못 잡는다. GBrain의 `gbrain doctor`가 check-resolvable + DRY audit을 맡는 이유."
-  - question: "Skillify의 '재발 구조적 불가능'이 의미하는 바는?"
+    explanation: >-
+      기사가 지적하는 Hermes의 갭은 '생성은 되나 검증이 없다' — 같은 도메인에 유사 skill 2개가 생겨 ambiguous
+      routing이 되어도 못 잡는다. GBrain의 `gbrain doctor`가 check-resolvable + DRY audit을
+      맡는 이유.
+  - question: Skillify의 '재발 구조적 불가능'이 의미하는 바는?
     choices:
-      - "에이전트가 사과문을 더 잘 쓰게 만든다"
-      - "프롬프트에 '제발 환각하지 마' 같은 주문을 추가한다"
-      - "실패를 SKILL.md + 결정론적 코드 + 매일 돌아가는 eval로 박제해서, 같은 실수가 기계적으로 막히게 만든다"
-      - "context window를 늘려서 과거 실패를 기억하게 한다"
+      - 에이전트가 사과문을 더 잘 쓰게 만든다
+      - 프롬프트에 '제발 환각하지 마' 같은 주문을 추가한다
+      - '실패를 SKILL.md + 결정론적 코드 + 매일 돌아가는 eval로 박제해서, 같은 실수가 기계적으로 막히게 만든다'
+      - context window를 늘려서 과거 실패를 기억하게 한다
     answer: 2
-    explanation: "소프트웨어 엔지니어링이 2005년에 푼 문제 — '버그마다 테스트, 테스트는 영원히 산다'의 에이전트 버전. 프롬프트 튜닝은 컨텍스트가 복잡해지는 순간 decay하지만, 구조적 gate는 안 decay한다."
+    explanation: >-
+      소프트웨어 엔지니어링이 2005년에 푼 문제 — '버그마다 테스트, 테스트는 영원히 산다'의 에이전트 버전. 프롬프트 튜닝은
+      컨텍스트가 복잡해지는 순간 decay하지만, 구조적 gate는 안 decay한다.
 ---
 
 ## 왜 지금 이 주제인가

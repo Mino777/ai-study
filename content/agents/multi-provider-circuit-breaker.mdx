@@ -9,13 +9,16 @@ tags:
   - fallback
   - moneyflow
 confidence: 4
-last_verified: "2026-04-16"
-applicable_to: ["moneyflow","any"]
+last_verified: '2026-04-16'
+applicable_to:
+  - moneyflow
+  - any
 connections:
   - harness-engineering/harness-engineering-overview
   - agents/multi-agent-pipeline
   - agents/trading-agent-9phase-pipeline
   - backend-ai/spring-boot-ai-circuit-breaker
+  - agents/agent-compiler-dynamic-routing
 status: complete
 description: >-
   Gemini/Claude/OpenAI 3사 프로바이더에 독립 Circuit Breaker를 적용하여 장애 전파 차단 + 자동 복구하는 패턴.

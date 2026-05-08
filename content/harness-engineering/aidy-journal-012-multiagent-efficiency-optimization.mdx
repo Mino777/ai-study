@@ -1,46 +1,78 @@
 ---
-title: "Aidy Journal 012 — 멀티에이전트 효율화 — 폴링·파이프라이닝·Swap 관리 (s24~s27)"
+title: Aidy Journal 012 — 멀티에이전트 효율화 — 폴링·파이프라이닝·Swap 관리 (s24~s27)
 category: harness-engineering
 series: aidy-journal
-date: "2026-04-21"
-tags: [aidy-journal, polling-optimization, pipelining, swap-management, autoceo-efficiency, gate-1-automation, health-score, daily-digest, conversation-starters]
+date: '2026-04-21'
+tags:
+  - aidy-journal
+  - polling-optimization
+  - pipelining
+  - swap-management
+  - autoceo-efficiency
+  - gate-1-automation
+  - health-score
+  - daily-digest
+  - conversation-starters
 confidence: 4
-last_verified: "2026-04-21"
-applicable_to: ["aidy", "any"]
+last_verified: '2026-04-21'
+applicable_to:
+  - aidy
+  - any
 connections:
   - harness-engineering/aidy-journal-011-gate1-enforcement-turning-point
-  - harness-engineering/aidy-journal-013-smart-notifications-relationship-map-interaction-log
+  - >-
+    harness-engineering/aidy-journal-013-smart-notifications-relationship-map-interaction-log
   - harness-engineering/worker-memory-pressure-crash-recovery
   - harness-engineering/bash-watcher-zero-token-polling
   - agents/multi-agent-sprint-optimization-patterns
+  - harness-engineering/ai-orchestration-roi-negative-trivial-task-detection
+  - >-
+    harness-engineering/aidy-journal-017-dispatch-consolidation-s34-3feature-parallel
 status: complete
-description: "s24~s27(4세션): Swap 90% 경고, 폴링 60% 토큰 소비, iOS 빌드 병목 3가지 문제를 차례로 해결. 폴링 5분→20분, 파이프라이닝, 스펙 4개/라운드, /compact 2라운드 주기. API v1.5→v2.8(Conversation Starters/Health Score/Daily Digest/Timeline/QuickNotes)."
+description: >-
+  s24~s27(4세션): Swap 90% 경고, 폴링 60% 토큰 소비, iOS 빌드 병목 3가지 문제를 차례로 해결. 폴링 5분→20분,
+  파이프라이닝, 스펙 4개/라운드, /compact 2라운드 주기. API v1.5→v2.8(Conversation
+  Starters/Health Score/Daily Digest/Timeline/QuickNotes).
 type: entry
 quiz:
-  - question: "autoceo 폴링 간격을 5분에서 20분으로 늘렸을 때 토큰 절감이 가능한 이유는?"
+  - question: autoceo 폴링 간격을 5분에서 20분으로 늘렸을 때 토큰 절감이 가능한 이유는?
     choices:
-      - "20분 폴링은 워커 결과를 더 늦게 확인하므로 Architect가 더 적게 깨어남"
-      - "워커 평균 완료 시간이 10~15분이므로, 5분 간격 폴링은 완료 전 6~10회 확인(tmux 캡처 누적)을 만들지만, 20분 간격은 대부분 1회 확인에 결과를 얻음"
-      - "20분 폴링은 토큰 사용량에 직접 영향을 주지 않음"
-      - "폴링 자체가 토큰을 소비하지 않음"
+      - 20분 폴링은 워커 결과를 더 늦게 확인하므로 Architect가 더 적게 깨어남
+      - >-
+        워커 평균 완료 시간이 10~15분이므로, 5분 간격 폴링은 완료 전 6~10회 확인(tmux 캡처 누적)을 만들지만, 20분
+        간격은 대부분 1회 확인에 결과를 얻음
+      - 20분 폴링은 토큰 사용량에 직접 영향을 주지 않음
+      - 폴링 자체가 토큰을 소비하지 않음
     answer: 1
-    explanation: "tmux capture-pane 결과가 매번 컨텍스트에 누적된다. 10분 작업을 5분 간격으로 폴링하면 완료 전에 1회, 완료 후 1회 = 최소 2회. 실제로는 워커 응답을 기다리며 3~5회 이상 폴링이 발생. 20분 간격이면 대부분 1회 폴링에 완료 여부 확인 가능."
-  - question: "s25에서 'Swap 80%+ autoceo 금지' 규칙을 Claude 메모리에 기록한 이유는?"
+    explanation: >-
+      tmux capture-pane 결과가 매번 컨텍스트에 누적된다. 10분 작업을 5분 간격으로 폴링하면 완료 전에 1회, 완료 후
+      1회 = 최소 2회. 실제로는 워커 응답을 기다리며 3~5회 이상 폴링이 발생. 20분 간격이면 대부분 1회 폴링에 완료 여부 확인
+      가능.
+  - question: s25에서 'Swap 80%+ autoceo 금지' 규칙을 Claude 메모리에 기록한 이유는?
     choices:
-      - "규칙을 CLAUDE.md에 추가하기보다 쉬워서"
-      - "임시 규칙이라서"
-      - "Swap 90% 상태에서 autoceo를 시작해 스프린트가 조기 종료되는 사고를 겪은 직후, 다음 세션에서 동일 실수를 방지하기 위해 즉각 메모리에 기록"
-      - "메모리가 CLAUDE.md보다 더 강력한 규칙이어서"
+      - 규칙을 CLAUDE.md에 추가하기보다 쉬워서
+      - 임시 규칙이라서
+      - >-
+        Swap 90% 상태에서 autoceo를 시작해 스프린트가 조기 종료되는 사고를 겪은 직후, 다음 세션에서 동일 실수를 방지하기
+        위해 즉각 메모리에 기록
+      - 메모리가 CLAUDE.md보다 더 강력한 규칙이어서
     answer: 2
-    explanation: "s25에서 Swap 90% 상태에서 autoceo를 시작 → 서버 R2에서 3.5시간 stall → 조기 종료. 사고 직후 메모리에 'Swap 80%+ = autoceo 금지' 규칙을 기록. 이 패턴은 FAIL→META→VERIFY 3축의 META 축 사례다."
-  - question: "Architect 라운드 파이프라이닝에서 '워커 대기 중 Architect가 다음 스펙을 작성한다'는 것의 핵심 가정은?"
+    explanation: >-
+      s25에서 Swap 90% 상태에서 autoceo를 시작 → 서버 R2에서 3.5시간 stall → 조기 종료. 사고 직후 메모리에
+      'Swap 80%+ = autoceo 금지' 규칙을 기록. 이 패턴은 FAIL→META→VERIFY 3축의 META 축 사례다.
+  - question: Architect 라운드 파이프라이닝에서 '워커 대기 중 Architect가 다음 스펙을 작성한다'는 것의 핵심 가정은?
     choices:
-      - "워커가 빠르게 완료해야 함"
-      - "워커 구현 작업이 Architect의 스펙 작성 작업과 독립적 — 워커가 현재 WO를 구현하는 동안 다음 WO 스펙을 병렬로 정의할 수 있음"
-      - "Architect가 멀티태스킹이 가능함"
-      - "스펙 작성이 구현보다 빠름"
+      - 워커가 빠르게 완료해야 함
+      - >-
+        워커 구현 작업이 Architect의 스펙 작성 작업과 독립적 — 워커가 현재 WO를 구현하는 동안 다음 WO 스펙을 병렬로
+        정의할 수 있음
+      - Architect가 멀티태스킹이 가능함
+      - 스펙 작성이 구현보다 빠름
     answer: 1
-    explanation: "파이프라이닝의 핵심 전제: 워커가 WO-103을 구현하는 동안 Architect가 WO-104/105를 정의해도 서로 간섭하지 않는다. 의존성이 없을 때만 병렬화 가능. API 변경이 있는 경우 서버 구현 완료 전에 클라이언트 WO를 작성하면 스펙 불일치가 생길 수 있으므로 서버 Gate-1 PASS 후 클라이언트 WO 확정."
+    explanation: >-
+      파이프라이닝의 핵심 전제: 워커가 WO-103을 구현하는 동안 Architect가 WO-104/105를 정의해도 서로 간섭하지
+      않는다. 의존성이 없을 때만 병렬화 가능. API 변경이 있는 경우 서버 구현 완료 전에 클라이언트 WO를 작성하면 스펙 불일치가
+      생길 수 있으므로 서버 Gate-1 PASS 후 클라이언트 WO 확정.
 ---
 
 ## Before — s23 종료 후 상태

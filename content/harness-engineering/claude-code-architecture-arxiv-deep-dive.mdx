@@ -1,8 +1,10 @@
 ---
-title: "Claude Code 아키텍처 해부 — arxiv 논문 + 소스 유출로 본 하네스의 내부 구조"
-description: "arxiv 논문 'Dive into Claude Code'와 2026.03 소스 유출 분석으로 밝혀진 Claude Code 내부 아키텍처: 5단계 컨텍스트 압축, 27개 Hook 이벤트, auto mode classifier, 서브에이전트 격리 패턴"
+title: Claude Code 아키텍처 해부 — arxiv 논문 + 소스 유출로 본 하네스의 내부 구조
+description: >-
+  arxiv 논문 'Dive into Claude Code'와 2026.03 소스 유출 분석으로 밝혀진 Claude Code 내부 아키텍처:
+  5단계 컨텍스트 압축, 27개 Hook 이벤트, auto mode classifier, 서브에이전트 격리 패턴
 category: harness-engineering
-date: "2026-05-02"
+date: '2026-05-02'
 tags:
   - claude-code
   - harness-architecture
@@ -13,40 +15,48 @@ tags:
   - arxiv
   - source-leak
 confidence: 3
-last_verified: "2026-05-02"
-applicable_to: ["any"]
+last_verified: '2026-05-02'
+applicable_to:
+  - any
 connections:
   - harness-engineering/ai-engineering-landscape-2026-midpoint
   - harness-engineering/martin-fowler-harness-engineering-framework
   - harness-engineering/five-levers-of-harness-engineering
   - agents/agent-architectures
+  - harness-engineering/harness-template-setup-guide
+  - harness-engineering/openai-codex-harness-engineering-agent-first
+  - ios-ai/ios-harness-setup-xcodebuildmcp
 status: complete
 type: entry
 quiz:
-  - question: "Claude Code의 5단계 컨텍스트 압축에서 가장 마지막에 실행되는 단계는?"
+  - question: Claude Code의 5단계 컨텍스트 압축에서 가장 마지막에 실행되는 단계는?
     choices:
-      - "Budget Reduction (토큰 크기 제한)"
-      - "Snip (오래된 히스토리 제거)"
-      - "Auto-compact (모델이 의미 요약 생성)"
-      - "Context Collapse (읽기 전용 프로젝션)"
+      - Budget Reduction (토큰 크기 제한)
+      - Snip (오래된 히스토리 제거)
+      - Auto-compact (모델이 의미 요약 생성)
+      - Context Collapse (읽기 전용 프로젝션)
     answer: 2
-    explanation: "5단계: Budget Reduction → Snip → Microcompact → Context Collapse → Auto-compact. 앞 단계가 충분하면 뒤 단계는 실행 안 됨. Auto-compact는 가장 비싸고 마지막 수단."
-  - question: "Auto mode에서 Sonnet 4.6 classifier가 모델의 prose(자연어 설명)를 보지 않는 이유는?"
+    explanation: >-
+      5단계: Budget Reduction → Snip → Microcompact → Context Collapse →
+      Auto-compact. 앞 단계가 충분하면 뒤 단계는 실행 안 됨. Auto-compact는 가장 비싸고 마지막 수단.
+  - question: Auto mode에서 Sonnet 4.6 classifier가 모델의 prose(자연어 설명)를 보지 않는 이유는?
     choices:
-      - "성능 최적화"
-      - "모델이 자연어로 classifier를 설득하여 권한을 우회하는 것을 방지"
-      - "토큰 절약"
-      - "프라이버시 보호"
+      - 성능 최적화
+      - 모델이 자연어로 classifier를 설득하여 권한을 우회하는 것을 방지
+      - 토큰 절약
+      - 프라이버시 보호
     answer: 1
-    explanation: "모델이 'This is a safe operation because...'식으로 classifier를 sweet-talk하는 것을 원천 차단. classifier는 사용자 요청 + 도구 호출만 보고 판단."
-  - question: "서브에이전트가 부모에게 전체 대화 대신 요약만 반환하는 이유는?"
+    explanation: >-
+      모델이 'This is a safe operation because...'식으로 classifier를 sweet-talk하는 것을
+      원천 차단. classifier는 사용자 요청 + 도구 호출만 보고 판단.
+  - question: 서브에이전트가 부모에게 전체 대화 대신 요약만 반환하는 이유는?
     choices:
-      - "보안"
-      - "부모 컨텍스트의 토큰 인플레이션 방지"
-      - "속도"
-      - "에러 방지"
+      - 보안
+      - 부모 컨텍스트의 토큰 인플레이션 방지
+      - 속도
+      - 에러 방지
     answer: 1
-    explanation: "서브에이전트의 전체 대화를 부모에 넣으면 부모 컨텍스트가 폭증. 요약만 반환하여 부모는 핵심 결과만 받고 컨텍스트를 보존."
+    explanation: 서브에이전트의 전체 대화를 부모에 넣으면 부모 컨텍스트가 폭증. 요약만 반환하여 부모는 핵심 결과만 받고 컨텍스트를 보존.
 ---
 
 ## 왜 이 분석이 중요한가

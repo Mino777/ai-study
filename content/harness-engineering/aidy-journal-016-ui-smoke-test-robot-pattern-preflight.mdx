@@ -1,47 +1,71 @@
 ---
-title: "Aidy Journal 016 — UI Smoke Test + Robot Pattern + Preflight 메모리 체크 (s32)"
+title: Aidy Journal 016 — UI Smoke Test + Robot Pattern + Preflight 메모리 체크 (s32)
 category: harness-engineering
 series: aidy-journal
-date: "2026-04-22"
-tags: [aidy-journal, ui-test, robot-pattern, smoke-test, preflight, swap-memory, compressor, crash-prevention, 3-way-dispatch]
+date: '2026-04-22'
+tags:
+  - aidy-journal
+  - ui-test
+  - robot-pattern
+  - smoke-test
+  - preflight
+  - swap-memory
+  - compressor
+  - crash-prevention
+  - 3-way-dispatch
 confidence: 4
-last_verified: "2026-04-22"
-applicable_to: ["aidy", "any"]
+last_verified: '2026-04-22'
+applicable_to:
+  - aidy
+  - any
 connections:
   - harness-engineering/aidy-journal-015-agent-teams-pipelining-8r-to-5r
-  - harness-engineering/aidy-journal-014-shared-memories-memory-tags-ai-chat-suggestions
+  - >-
+    harness-engineering/aidy-journal-014-shared-memories-memory-tags-ai-chat-suggestions
   - evaluation/test-strategy-3-client-via-aidy
   - context-engineering/api-contract-as-3-client-source-of-truth
   - ios-ai/ios-ai-code-quality-test-strategy
   - harness-engineering/compound-engineering-philosophy
+  - >-
+    harness-engineering/aidy-journal-017-dispatch-consolidation-s34-3feature-parallel
 status: complete
-description: "s32(2R): 3플랫폼 UI Smoke Test + Robot Pattern 동시 도입. preflight에 memory_pressure/compressor/고아 프로세스 체크 추가. restart_workers 프로세스 그룹 kill. watch-workers bash 3 호환 수정."
+description: >-
+  s32(2R): 3플랫폼 UI Smoke Test + Robot Pattern 동시 도입. preflight에
+  memory_pressure/compressor/고아 프로세스 체크 추가. restart_workers 프로세스 그룹 kill.
+  watch-workers bash 3 호환 수정.
 type: entry
 quiz:
-  - question: "Robot Pattern의 핵심 이점은?"
+  - question: Robot Pattern의 핵심 이점은?
     choices:
-      - "테스트 실행 속도가 빨라진다"
-      - "UI 변경 시 Robot 클래스만 수정하면 모든 테스트가 자동 적응 — 유지보수 비용 최소화"
-      - "테스트 커버리지가 자동으로 증가한다"
-      - "CI 비용이 줄어든다"
+      - 테스트 실행 속도가 빨라진다
+      - UI 변경 시 Robot 클래스만 수정하면 모든 테스트가 자동 적응 — 유지보수 비용 최소화
+      - 테스트 커버리지가 자동으로 증가한다
+      - CI 비용이 줄어든다
     answer: 1
-    explanation: "Robot Pattern은 UI 조작을 Robot 클래스에 캡슐화한다. 버튼 텍스트가 바뀌면 LoginRobot만 수정하면 되고, SmokeTest 코드는 그대로. 변경 전파가 1곳으로 집중된다."
-  - question: "preflight에 compressor 체크를 추가한 이유는?"
+    explanation: >-
+      Robot Pattern은 UI 조작을 Robot 클래스에 캡슐화한다. 버튼 텍스트가 바뀌면 LoginRobot만 수정하면 되고,
+      SmokeTest 코드는 그대로. 변경 전파가 1곳으로 집중된다.
+  - question: preflight에 compressor 체크를 추가한 이유는?
     choices:
-      - "compressor가 빌드 속도를 늦추기 때문"
-      - "compressor 4GB 이상 → swap 진입 임박 신호. swap 시작 전에 경고해서 워커 크래시를 사전 방지"
-      - "compressor가 디스크 공간을 차지하기 때문"
-      - "compressor가 테스트 결과에 영향을 주기 때문"
+      - compressor가 빌드 속도를 늦추기 때문
+      - compressor 4GB 이상 → swap 진입 임박 신호. swap 시작 전에 경고해서 워커 크래시를 사전 방지
+      - compressor가 디스크 공간을 차지하기 때문
+      - compressor가 테스트 결과에 영향을 주기 때문
     answer: 1
-    explanation: "macOS는 free memory 부족 시 compressor로 압축 → compressor도 포화되면 swap으로 전환. compressor 4GB 이상이면 swap 진입이 임박한 상태. s29에서 iOS가 4회 크래시한 원인이 Swap 48% + Claude 7 인스턴스였다."
-  - question: "restart_workers에서 프로세스 그룹 kill이 필요한 이유는?"
+    explanation: >-
+      macOS는 free memory 부족 시 compressor로 압축 → compressor도 포화되면 swap으로 전환.
+      compressor 4GB 이상이면 swap 진입이 임박한 상태. s29에서 iOS가 4회 크래시한 원인이 Swap 48% +
+      Claude 7 인스턴스였다.
+  - question: restart_workers에서 프로세스 그룹 kill이 필요한 이유는?
     choices:
-      - "tmux pane을 닫으면 자식 프로세스가 자동으로 죽기 때문"
-      - "tmux pane을 닫아도 Claude/Node 자식 프로세스가 고아로 남아 메모리를 계속 점유하기 때문"
-      - "프로세스 그룹 kill이 더 빠르기 때문"
-      - "보안상의 이유"
+      - tmux pane을 닫으면 자식 프로세스가 자동으로 죽기 때문
+      - tmux pane을 닫아도 Claude/Node 자식 프로세스가 고아로 남아 메모리를 계속 점유하기 때문
+      - 프로세스 그룹 kill이 더 빠르기 때문
+      - 보안상의 이유
     answer: 1
-    explanation: "tmux kill-pane은 foreground 프로세스만 종료한다. Claude Code의 MCP 서버나 서브에이전트 프로세스는 PPID=1로 재지정되어 고아로 생존. 메모리를 계속 점유하면서 다음 스프린트의 swap 압박 원인이 된다."
+    explanation: >-
+      tmux kill-pane은 foreground 프로세스만 종료한다. Claude Code의 MCP 서버나 서브에이전트 프로세스는
+      PPID=1로 재지정되어 고아로 생존. 메모리를 계속 점유하면서 다음 스프린트의 swap 압박 원인이 된다.
 ---
 
 ## Before — 수동 QA + 크래시 사후 대응

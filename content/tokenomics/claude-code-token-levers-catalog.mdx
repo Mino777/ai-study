@@ -12,8 +12,10 @@ tags:
   - tokenomics
   - rtk
 confidence: 4
-last_verified: "2026-04-12"
-applicable_to: ["aidy", "any"]
+last_verified: '2026-04-12'
+applicable_to:
+  - aidy
+  - any
 connections:
   - tokenomics/claude-code-token-levers-applied-log
   - harness-engineering/ai-api-cost-tracking-pattern
@@ -27,6 +29,12 @@ connections:
   - harness-engineering/aidy-journal-007-ci-infra-independence-hybrid-fallback
   - tokenomics/project-level-cost-analysis-pattern
   - tokenomics/prompt-caching-cost-reduction
+  - backend-ai/tier-based-ai-cost-cap
+  - context-engineering/context-engineering-2026-paradigm-shift
+  - context-engineering/token-budget-management
+  - harness-engineering/harness-journal-026-midpoint-ai-engineering-review
+  - prompt-engineering/json-vs-markdown-prompt-formatting
+  - rag/contextual-retrieval-chunk-context-prepending
 status: complete
 description: >-
   RTK가 bash output 레이어를 덮은 상태에서 그 위에 곱해 쌓는 15개 토큰 레버. A(prefix) / B(cache) /

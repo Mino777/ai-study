@@ -9,40 +9,48 @@ tags:
   - vector-db
   - chunking
 confidence: 3
-last_verified: "2026-05-03"
+last_verified: '2026-05-03'
 quiz:
-  - question: "RAG가 필요한 주요 상황은?"
+  - question: RAG가 필요한 주요 상황은?
     choices:
-      - "모든 LLM 애플리케이션에서 사용해야 한다"
-      - "LLM이 최신 정보나 외부 지식(학습 데이터 이외)에 접근해야 할 때"
-      - "프롬프트 엔지니어링이 충분하지 않을 때만"
-      - "비용을 절감하고 싶을 때"
+      - 모든 LLM 애플리케이션에서 사용해야 한다
+      - LLM이 최신 정보나 외부 지식(학습 데이터 이외)에 접근해야 할 때
+      - 프롬프트 엔지니어링이 충분하지 않을 때만
+      - 비용을 절감하고 싶을 때
     answer: 1
-    explanation: "RAG는 LLM의 학습 데이터에 없는 정보(최신 뉴스, 내부 문서, 실시간 데이터)가 필요한 경우에 사용한다. 일반적인 QA에는 불필요하지만, 정확성과 신선도가 중요한 경우 매우 효과적이다."
-  - question: "Chunking 전략 중 의미 단위를 가장 잘 보존하는 방식은?"
+    explanation: >-
+      RAG는 LLM의 학습 데이터에 없는 정보(최신 뉴스, 내부 문서, 실시간 데이터)가 필요한 경우에 사용한다. 일반적인 QA에는
+      불필요하지만, 정확성과 신선도가 중요한 경우 매우 효과적이다.
+  - question: Chunking 전략 중 의미 단위를 가장 잘 보존하는 방식은?
     choices:
-      - "Fixed size — 고정 토큰 수로 분할"
-      - "Recursive — 구분자 기반 재귀 분할"
-      - "Semantic — 임베딩 유사도로 분할"
-      - "Random — 무작위 분할"
+      - Fixed size — 고정 토큰 수로 분할
+      - Recursive — 구분자 기반 재귀 분할
+      - Semantic — 임베딩 유사도로 분할
+      - Random — 무작위 분할
     answer: 2
-    explanation: "Semantic chunking은 의미 단위를 가장 잘 보존하지만 느리다(각 청크를 임베딩하여 유사도 계산). Fixed/Recursive는 빠르지만 의미를 고려하지 않는다. 대부분의 경우 Recursive가 균형잡힌 선택이다."
-  - question: "RAG의 '손실 중간' (Lost in the Middle) 문제는?"
+    explanation: >-
+      Semantic chunking은 의미 단위를 가장 잘 보존하지만 느리다(각 청크를 임베딩하여 유사도 계산).
+      Fixed/Recursive는 빠르지만 의미를 고려하지 않는다. 대부분의 경우 Recursive가 균형잡힌 선택이다.
+  - question: RAG의 '손실 중간' (Lost in the Middle) 문제는?
     choices:
-      - "검색된 문서가 없는 상태"
-      - "LLM이 검색된 문서의 중간 부분을 덜 주의 깊게 읽는 현상"
-      - "벡터 유사도 계산 실패"
-      - "네트워크 연결 끊김"
+      - 검색된 문서가 없는 상태
+      - LLM이 검색된 문서의 중간 부분을 덜 주의 깊게 읽는 현상
+      - 벡터 유사도 계산 실패
+      - 네트워크 연결 끊김
     answer: 1
-    explanation: "LLM은 컨텍스트의 처음과 끝에 더 주의를 기울인다. RAG에서 검색된 문서가 많으면 가장 관련 있는 문서를 맨 앞 또는 맨 뒤에 배치해야 한다."
-applicable_to: ["any"]
+    explanation: >-
+      LLM은 컨텍스트의 처음과 끝에 더 주의를 기울인다. RAG에서 검색된 문서가 많으면 가장 관련 있는 문서를 맨 앞 또는 맨 뒤에
+      배치해야 한다.
+applicable_to:
+  - any
 connections:
   - prompt-engineering/few-shot-prompting
   - rag/vector-databases
   - context-engineering/context-scaling-3-layer-architecture
   - context-engineering/karpathy-llm-wiki-pattern-compilation-over-retrieval
   - rag/vector-search-basics
-status: in-progress
+  - rag/contextual-retrieval-chunk-context-prepending
+status: complete
 description: 검색 증강 생성의 핵심 아키텍처와 구현 패턴. Embedding에서 Reranking까지.
 type: entry
 ---

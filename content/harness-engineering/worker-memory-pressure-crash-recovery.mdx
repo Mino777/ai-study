@@ -1,44 +1,72 @@
 ---
-title: "워커 메모리 압박 크래시 — macOS SIGKILL 원인과 복구 프로토콜"
+title: 워커 메모리 압박 크래시 — macOS SIGKILL 원인과 복구 프로토콜
 category: harness-engineering
-date: "2026-04-21"
-tags: [memory-pressure, sigkill, jetsam, worker-crash, crash-recovery, multi-agent, autoceo, swap, instance-limit]
+date: '2026-04-21'
+tags:
+  - memory-pressure
+  - sigkill
+  - jetsam
+  - worker-crash
+  - crash-recovery
+  - multi-agent
+  - autoceo
+  - swap
+  - instance-limit
 confidence: 4
-last_verified: "2026-04-21"
-applicable_to: ["aidy", "any"]
+last_verified: '2026-04-21'
+applicable_to:
+  - aidy
+  - any
 connections:
-  - harness-engineering/aidy-journal-014-shared-memories-memory-tags-ai-chat-suggestions
-  - harness-engineering/aidy-journal-009-stall-detection-3way-dispatch-feature-sprint
+  - >-
+    harness-engineering/aidy-journal-014-shared-memories-memory-tags-ai-chat-suggestions
+  - >-
+    harness-engineering/aidy-journal-009-stall-detection-3way-dispatch-feature-sprint
   - harness-engineering/multi-session-ai-ops-patterns
   - harness-engineering/orchestrator-fail-meta-verify-growth-axes
+  - harness-engineering/aidy-journal-012-multiagent-efficiency-optimization
 status: complete
-description: "macOS 16GB 환경에서 autoceo 멀티에이전트 실행 중 워커가 반복 SIGKILL되는 근본 원인 분석. Swap 포화 → jetsam SIGKILL → 커밋 유실 패턴. /compact 무효, /exit만 유효. 사전 점검 + 복구 프로토콜 포함."
+description: >-
+  macOS 16GB 환경에서 autoceo 멀티에이전트 실행 중 워커가 반복 SIGKILL되는 근본 원인 분석. Swap 포화 →
+  jetsam SIGKILL → 커밋 유실 패턴. /compact 무효, /exit만 유효. 사전 점검 + 복구 프로토콜 포함.
 type: entry
 quiz:
-  - question: "워커 크래시 후 `/compact`로 이어가면 안 되는 이유는?"
+  - question: 워커 크래시 후 `/compact`로 이어가면 안 되는 이유는?
     choices:
-      - "compact 명령이 버그가 있어서"
-      - "compact는 context window를 줄이지만 프로세스 물리 메모리는 그대로 — 새 세션(새 프로세스)만이 실제 메모리 해제"
-      - "compact 후 작업 내역이 삭제되어서"
-      - "compact가 워커 세션에만 적용되어서"
+      - compact 명령이 버그가 있어서
+      - >-
+        compact는 context window를 줄이지만 프로세스 물리 메모리는 그대로 — 새 세션(새 프로세스)만이 실제 메모리
+        해제
+      - compact 후 작업 내역이 삭제되어서
+      - compact가 워커 세션에만 적용되어서
     answer: 1
-    explanation: "Architect 프로세스의 메모리는 context window 크기가 아닌 누적된 프로세스 메모리. /compact는 LLM 입력 토큰만 줄이고 OS가 할당한 heap을 해제하지 않는다. 해제는 /exit + 새 프로세스 시작으로만 가능."
-  - question: "macOS 16GB 환경에서 autoceo 실행 시 Claude 인스턴스를 최대 몇 개로 제한해야 안전한가?"
+    explanation: >-
+      Architect 프로세스의 메모리는 context window 크기가 아닌 누적된 프로세스 메모리. /compact는 LLM 입력
+      토큰만 줄이고 OS가 할당한 heap을 해제하지 않는다. 해제는 /exit + 새 프로세스 시작으로만 가능.
+  - question: macOS 16GB 환경에서 autoceo 실행 시 Claude 인스턴스를 최대 몇 개로 제한해야 안전한가?
     choices:
-      - "1개"
-      - "5개"
-      - "3개 (architect + 2 워커)"
-      - "6개 (architect + 5 워커)"
+      - 1개
+      - 5개
+      - 3개 (architect + 2 워커)
+      - 6개 (architect + 5 워커)
     answer: 2
-    explanation: "Claude Code 인스턴스 1개 = 200~400 MB. 3개면 최대 1.2 GB. 빌드 도구(gradlew 1GB+, xcodebuild 2GB+)까지 합산하면 16GB에서 Swap이 금방 80%를 돌파한다. 3개를 넘으면 jetsam SIGKILL 확률이 급등."
-  - question: "워커 크래시 후 코드 변경은 살아있지만 커밋이 없는 이유는?"
+    explanation: >-
+      Claude Code 인스턴스 1개 = 200~400 MB. 3개면 최대 1.2 GB. 빌드 도구(gradlew 1GB+,
+      xcodebuild 2GB+)까지 합산하면 16GB에서 Swap이 금방 80%를 돌파한다. 3개를 넘으면 jetsam SIGKILL
+      확률이 급등.
+  - question: 워커 크래시 후 코드 변경은 살아있지만 커밋이 없는 이유는?
     choices:
-      - "git 오류로 커밋 실패"
-      - "Claude가 커밋을 건너뜀"
-      - "SIGKILL은 프로세스를 즉시 종료 — Claude가 파일 편집 완료 후 커밋 전 단계에서 kill되면 working tree는 남고 commit 기록은 없음"
-      - "파일이 캐시에만 있어서"
+      - git 오류로 커밋 실패
+      - Claude가 커밋을 건너뜀
+      - >-
+        SIGKILL은 프로세스를 즉시 종료 — Claude가 파일 편집 완료 후 커밋 전 단계에서 kill되면 working tree는
+        남고 commit 기록은 없음
+      - 파일이 캐시에만 있어서
     answer: 2
-    explanation: "SIGKILL은 graceful shutdown 없이 즉시 종료. Claude의 작업 순서는 '파일 편집 → 빌드/테스트 → 커밋'. 빌드 실행 중(메모리 최대 소비 시점)에 kill되면 편집 완료 파일은 disk에 남고 commit은 없다. git status --short로 즉시 확인 가능."
+    explanation: >-
+      SIGKILL은 graceful shutdown 없이 즉시 종료. Claude의 작업 순서는 '파일 편집 → 빌드/테스트 → 커밋'.
+      빌드 실행 중(메모리 최대 소비 시점)에 kill되면 편집 완료 파일은 disk에 남고 commit은 없다. git status
+      --short로 즉시 확인 가능.
 ---
 
 ## 증상

@@ -10,13 +10,19 @@ tags:
   - tarosaju
   - observability
 confidence: 4
-last_verified: "2026-04-12"
-applicable_to: ["moneyflow","tarosaju","any"]
+last_verified: '2026-04-12'
+applicable_to:
+  - moneyflow
+  - tarosaju
+  - any
 connections:
   - harness-engineering/ai-output-zod-validation-pattern
   - harness-engineering/harness-journal-018-layer3-retry-augmentation
   - evaluation/ai-output-5-layer-defense
   - harness-engineering/cross-project-pattern-porting-methodology
+  - evaluation/ai-generated-content-quality-gate
+  - harness-engineering/wiki-quality-audit-methodology
+  - rag/contextual-retrieval-chunk-context-prepending
 status: complete
 description: >-
   AI 출력의 shape은 validator로 검증하지만, *내용의 품질*은 별도 LLM이 판정해야 한다. 저렴한 LLM(Gemini

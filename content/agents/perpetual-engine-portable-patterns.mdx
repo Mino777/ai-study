@@ -1,7 +1,7 @@
 ---
-title: "Perpetual Engine에서 추출한 3가지 이식 가능 패턴 — 지표 자동 판정, 온디맨드 전문가, 파일 기반 메시징"
+title: 'Perpetual Engine에서 추출한 3가지 이식 가능 패턴 — 지표 자동 판정, 온디맨드 전문가, 파일 기반 메시징'
 category: agents
-date: "2026-04-19"
+date: '2026-04-19'
 tags:
   - multi-agent
   - orchestration
@@ -11,29 +11,52 @@ tags:
   - file-based-state
   - perpetual-engine
 confidence: 2
-last_verified: "2026-04-19"
-applicable_to: ["aidy", "any"]
+last_verified: '2026-04-19'
+applicable_to:
+  - aidy
+  - any
 connections:
   - agents/multi-agent-orchestration-patterns-2026
   - agents/multi-agent-sprint-optimization-patterns
   - harness-engineering/compound-engineering-philosophy
   - agents/agent-architectures
+  - agents/multi-agent-communication
 status: complete
-description: "perpetual-engine 프레임워크에서 hub-worker 모델에 이식 가능한 3가지 패턴 — MetricsEvaluator 자동 판정, ConsultantFactory 임시 전문가, 파일 기반 MessageQueue"
+description: >-
+  perpetual-engine 프레임워크에서 hub-worker 모델에 이식 가능한 3가지 패턴 — MetricsEvaluator 자동
+  판정, ConsultantFactory 임시 전문가, 파일 기반 MessageQueue
 type: entry
 quiz:
-  - question: "MetricsEvaluator가 중간 체크포인트에서 달성률 25%일 때 내리는 판정은?"
-    choices: ["iterate — 한 번 더 기회", "pivot — 방향 전환", "kill — 즉시 중단", "maintain — 현재 유지"]
+  - question: MetricsEvaluator가 중간 체크포인트에서 달성률 25%일 때 내리는 판정은?
+    choices:
+      - iterate — 한 번 더 기회
+      - pivot — 방향 전환
+      - kill — 즉시 중단
+      - maintain — 현재 유지
     answer: 1
-    explanation: "중간 체크포인트에서는 최종보다 관대하게 판단합니다. 최종 평가에서 30% 미만은 kill이지만, 중간에서는 stagnant(≥30%)가 iterate, failed(<30%)가 pivot으로 한 단계씩 관대해집니다."
-  - question: "ConsultantFactory의 핵심 설계 원칙은?"
-    choices: ["사전 정의된 전문가 풀에서 선택", "expertise 자유 서술로 즉석 생성 + 자동 소멸", "상시 대기하는 전문가 에이전트 유지", "사용자가 수동으로 전문가 프로필 작성"]
+    explanation: >-
+      중간 체크포인트에서는 최종보다 관대하게 판단합니다. 최종 평가에서 30% 미만은 kill이지만, 중간에서는
+      stagnant(≥30%)가 iterate, failed(<30%)가 pivot으로 한 단계씩 관대해집니다.
+  - question: ConsultantFactory의 핵심 설계 원칙은?
+    choices:
+      - 사전 정의된 전문가 풀에서 선택
+      - expertise 자유 서술로 즉석 생성 + 자동 소멸
+      - 상시 대기하는 전문가 에이전트 유지
+      - 사용자가 수동으로 전문가 프로필 작성
     answer: 1
-    explanation: "ConsultantFactory는 고정된 도메인 목록 없이 요청의 expertise 필드 서술이 곧 에이전트의 정체성이 됩니다. 목적 완수 후 자동 소멸되는 에페메럴 패턴입니다."
-  - question: "파일 기반 MessageQueue가 DB/Redis 대비 갖는 가장 큰 장점은?"
-    choices: ["처리 속도가 빠르다", "동시성 문제가 없다", "인프라 의존성 제로 + git 추적 가능", "메시지 유실이 불가능하다"]
+    explanation: >-
+      ConsultantFactory는 고정된 도메인 목록 없이 요청의 expertise 필드 서술이 곧 에이전트의 정체성이 됩니다. 목적
+      완수 후 자동 소멸되는 에페메럴 패턴입니다.
+  - question: 파일 기반 MessageQueue가 DB/Redis 대비 갖는 가장 큰 장점은?
+    choices:
+      - 처리 속도가 빠르다
+      - 동시성 문제가 없다
+      - 인프라 의존성 제로 + git 추적 가능
+      - 메시지 유실이 불가능하다
     answer: 2
-    explanation: "JSON 파일 기반이라 별도 서버가 필요 없고, git으로 메시지 이력을 추적할 수 있습니다. 대신 동시 쓰기 시 race condition 가능성이 있어 역할 단위 직렬화(processingRoles)로 보완합니다."
+    explanation: >-
+      JSON 파일 기반이라 별도 서버가 필요 없고, git으로 메시지 이력을 추적할 수 있습니다. 대신 동시 쓰기 시 race
+      condition 가능성이 있어 역할 단위 직렬화(processingRoles)로 보완합니다.
 ---
 
 ## 왜 지금 이 주제인가

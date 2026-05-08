@@ -1,44 +1,61 @@
 ---
-title: "프로젝트별 비용 분석 패턴 — ccusage --instances로 ROI 타겟 식별"
+title: 프로젝트별 비용 분석 패턴 — ccusage --instances로 ROI 타겟 식별
 category: tokenomics
-date: "2026-04-17"
-tags: [tokenomics, ccusage, cost-analysis, project-breakdown, roi]
+date: '2026-04-17'
+tags:
+  - tokenomics
+  - ccusage
+  - cost-analysis
+  - project-breakdown
+  - roi
 confidence: 4
-last_verified: "2026-04-17"
-applicable_to: ["aidy", "any"]
+last_verified: '2026-04-17'
+applicable_to:
+  - aidy
+  - any
 connections:
   - tokenomics/claude-code-token-levers-applied-log
   - tokenomics/claude-code-token-levers-catalog
   - tokenomics/prompt-caching-cost-reduction
   - harness-engineering/ai-api-cost-tracking-pattern
+  - agents/multi-agent-orchestration-patterns-2026
+  - agents/multi-agent-sprint-optimization-patterns
+  - backend-ai/tier-based-ai-cost-cap
+  - context-engineering/token-budget-management
 status: complete
-description: "ccusage session --instances로 프로젝트별 API 비용을 분리 측정하는 패턴. 레버 적용 ROI가 가장 큰 프로젝트를 식별하여 최적화 우선순위를 정한다."
+description: >-
+  ccusage session --instances로 프로젝트별 API 비용을 분리 측정하는 패턴. 레버 적용 ROI가 가장 큰 프로젝트를
+  식별하여 최적화 우선순위를 정한다.
 type: entry
 quiz:
-  - question: "프로젝트별 비용 분석의 핵심 이유는?"
+  - question: 프로젝트별 비용 분석의 핵심 이유는?
     choices:
-      - "전체 비용만 줄이면 되기 때문에 분석 불필요"
-      - "비용이 집중된 프로젝트를 식별하여 레버 적용 ROI를 극대화하기 위해"
-      - "프로젝트별로 다른 모델을 사용하기 위해"
-      - "서브에이전트 비용을 줄이기 위해"
+      - 전체 비용만 줄이면 되기 때문에 분석 불필요
+      - 비용이 집중된 프로젝트를 식별하여 레버 적용 ROI를 극대화하기 위해
+      - 프로젝트별로 다른 모델을 사용하기 위해
+      - 서브에이전트 비용을 줄이기 위해
     answer: 1
-    explanation: "전체 평균만 보면 어디에 비용이 집중되는지 모른다. 프로젝트별 분리로 70%가 워커 프로젝트 2개에 집중됨을 발견 — 여기에 레버를 적용해야 ROI 최대."
-  - question: "ccusage session --instances의 한계는?"
+    explanation: >-
+      전체 평균만 보면 어디에 비용이 집중되는지 모른다. 프로젝트별 분리로 70%가 워커 프로젝트 2개에 집중됨을 발견 — 여기에 레버를
+      적용해야 ROI 최대.
+  - question: ccusage session --instances의 한계는?
     choices:
-      - "프로젝트별 분리가 불가능하다"
-      - "서브에이전트 비용이 별도 행으로 분리되어 정확한 프로젝트 귀속이 어렵다"
-      - "일일 비용만 보여준다"
-      - "cache read를 측정하지 못한다"
+      - 프로젝트별 분리가 불가능하다
+      - 서브에이전트 비용이 별도 행으로 분리되어 정확한 프로젝트 귀속이 어렵다
+      - 일일 비용만 보여준다
+      - cache read를 측정하지 못한다
     answer: 1
-    explanation: "서브에이전트 세션이 별도 행으로 나와서 어느 프로젝트에서 spawn된 건지 자동 매핑되지 않는다. 수동 추정 필요."
-  - question: "비용 분석 결과 ai-study가 15%로 가벼운 이유는?"
+    explanation: 서브에이전트 세션이 별도 행으로 나와서 어느 프로젝트에서 spawn된 건지 자동 매핑되지 않는다. 수동 추정 필요.
+  - question: 비용 분석 결과 ai-study가 15%로 가벼운 이유는?
     choices:
-      - "ai-study에서 AI를 사용하지 않기 때문"
-      - "박제 + 위키 작업 위주라 코드 생성/디버깅 세션 대비 토큰 소비가 적기 때문"
-      - "RTK가 ai-study에만 적용되어 있기 때문"
-      - ".claudeignore가 ai-study에만 있기 때문"
+      - ai-study에서 AI를 사용하지 않기 때문
+      - 박제 + 위키 작업 위주라 코드 생성/디버깅 세션 대비 토큰 소비가 적기 때문
+      - RTK가 ai-study에만 적용되어 있기 때문
+      - .claudeignore가 ai-study에만 있기 때문
     answer: 1
-    explanation: "ai-study는 MDX 작성, 문서 편집, 빌드 검증 위주. moneyflow/tarosaju는 코드 생성, 디버깅, 테스트 등 토큰 집약적 작업이 많다."
+    explanation: >-
+      ai-study는 MDX 작성, 문서 편집, 빌드 검증 위주. moneyflow/tarosaju는 코드 생성, 디버깅, 테스트 등
+      토큰 집약적 작업이 많다.
 ---
 
 ## 한 줄 요약

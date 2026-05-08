@@ -1,8 +1,10 @@
 ---
-title: "iOS 프로젝트 하네스 셋업 완전 가이드 — XcodeBuildMCP + Swift 6 + pbxproj 방어"
-description: "iOS/SwiftUI 프로젝트에 AI 코딩 에이전트 하네스를 처음부터 세팅하는 실전 가이드. XcodeBuildMCP 80개 도구 연결, pbxproj 절대 방어, SwiftLint 자동수정 루프, 시뮬레이터 자동 검증까지."
+title: iOS 프로젝트 하네스 셋업 완전 가이드 — XcodeBuildMCP + Swift 6 + pbxproj 방어
+description: >-
+  iOS/SwiftUI 프로젝트에 AI 코딩 에이전트 하네스를 처음부터 세팅하는 실전 가이드. XcodeBuildMCP 80개 도구 연결,
+  pbxproj 절대 방어, SwiftLint 자동수정 루프, 시뮬레이터 자동 검증까지.
 category: ios-ai
-date: "2026-05-02"
+date: '2026-05-02'
 tags:
   - ios
   - harness-engineering
@@ -14,41 +16,53 @@ tags:
   - mcp
   - xcode
 confidence: 3
-last_verified: "2026-05-02"
-applicable_to: ["any"]
+last_verified: '2026-05-02'
+applicable_to:
+  - any
 connections:
   - harness-engineering/harness-template-setup-guide
   - harness-engineering/martin-fowler-harness-engineering-framework
   - harness-engineering/claude-code-architecture-arxiv-deep-dive
   - ios-ai/ios-flow-map-via-aidy-ios
   - harness-engineering/ai-engineering-landscape-2026-midpoint
+  - harness-engineering/ai-agent-start-here
 status: complete
 type: entry
 quiz:
-  - question: "iOS 하네스에서 .pbxproj 직접 수정을 금지하는 이유는?"
+  - question: iOS 하네스에서 .pbxproj 직접 수정을 금지하는 이유는?
     choices:
-      - "파일이 너무 커서"
-      - "LLM이 5000줄+ XML 구조에서 구문 에러를 빈번히 발생시켜 프로젝트가 열리지 않게 됨"
-      - "Apple이 금지해서"
-      - "성능이 느려져서"
+      - 파일이 너무 커서
+      - LLM이 5000줄+ XML 구조에서 구문 에러를 빈번히 발생시켜 프로젝트가 열리지 않게 됨
+      - Apple이 금지해서
+      - 성능이 느려져서
     answer: 1
-    explanation: "pbxproj는 Xcode 전용 XML 포맷으로 작은 프로젝트도 5000줄+. LLM이 이 구조를 정확히 편집하는 건 거의 불가능하다. 한 줄만 잘못 수정해도 Xcode가 프로젝트를 열지 못한다. 대안: SPM Package.swift 구조 또는 Xcode에서 수동 Add Files."
-  - question: "XcodeBuildMCP가 xcodebuild Bash 호출보다 나은 핵심 이유는?"
+    explanation: >-
+      pbxproj는 Xcode 전용 XML 포맷으로 작은 프로젝트도 5000줄+. LLM이 이 구조를 정확히 편집하는 건 거의
+      불가능하다. 한 줄만 잘못 수정해도 Xcode가 프로젝트를 열지 못한다. 대안: SPM Package.swift 구조 또는
+      Xcode에서 수동 Add Files.
+  - question: XcodeBuildMCP가 xcodebuild Bash 호출보다 나은 핵심 이유는?
     choices:
-      - "속도가 빠르다"
-      - "비용이 저렴하다"
-      - "구조화된 JSON 응답으로 에러를 정확히 파싱 — 수천 줄 로그 파싱 불필요"
-      - "Apple 공식이라서"
+      - 속도가 빠르다
+      - 비용이 저렴하다
+      - 구조화된 JSON 응답으로 에러를 정확히 파싱 — 수천 줄 로그 파싱 불필요
+      - Apple 공식이라서
     answer: 2
-    explanation: "xcodebuild를 Bash로 실행하면 수천 줄의 비구조화된 로그가 쏟아진다. 에이전트가 이걸 파싱하려면 컨텍스트가 오염됨. XcodeBuildMCP는 구조화된 JSON(파일 경로, 줄 번호, 에러 카테고리)을 반환하여 즉시 수정 가능."
-  - question: "XcodeBuildMCP와 Apple Xcode MCP의 역할 차이는?"
+    explanation: >-
+      xcodebuild를 Bash로 실행하면 수천 줄의 비구조화된 로그가 쏟아진다. 에이전트가 이걸 파싱하려면 컨텍스트가 오염됨.
+      XcodeBuildMCP는 구조화된 JSON(파일 경로, 줄 번호, 에러 카테고리)을 반환하여 즉시 수정 가능.
+  - question: XcodeBuildMCP와 Apple Xcode MCP의 역할 차이는?
     choices:
-      - "동일한 도구의 다른 버전"
-      - "XcodeBuildMCP는 headless(Xcode 불필요), Apple MCP는 실행 중인 Xcode에 연결(Preview/문서)"
-      - "XcodeBuildMCP가 더 최신"
-      - "Apple MCP만 공식 지원"
+      - 동일한 도구의 다른 버전
+      - >-
+        XcodeBuildMCP는 headless(Xcode 불필요), Apple MCP는 실행 중인 Xcode에
+        연결(Preview/문서)
+      - XcodeBuildMCP가 더 최신
+      - Apple MCP만 공식 지원
     answer: 1
-    explanation: "XcodeBuildMCP(80도구): xcodebuild 래핑, Xcode 없이 동작, CI/headless에 적합. Apple xcrun mcpbridge(20도구): 실행 중인 Xcode에 XPC로 연결, SwiftUI Preview/문서 검색/REPL 지원. 둘을 함께 쓰면 최적."
+    explanation: >-
+      XcodeBuildMCP(80도구): xcodebuild 래핑, Xcode 없이 동작, CI/headless에 적합. Apple
+      xcrun mcpbridge(20도구): 실행 중인 Xcode에 XPC로 연결, SwiftUI Preview/문서 검색/REPL
+      지원. 둘을 함께 쓰면 최적.
 ---
 
 ## 왜 iOS에 특화된 하네스가 필요한가

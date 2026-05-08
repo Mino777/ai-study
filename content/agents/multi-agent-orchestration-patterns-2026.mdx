@@ -1,7 +1,7 @@
 ---
-title: "Multi-Agent Orchestration 패턴 2026 — Planner-Worker-Judge 3역할 모델"
+title: Multi-Agent Orchestration 패턴 2026 — Planner-Worker-Judge 3역할 모델
 category: agents
-date: "2026-04-18"
+date: '2026-04-18'
 tags:
   - multi-agent
   - orchestration
@@ -10,8 +10,10 @@ tags:
   - hub-worker
   - git-worktree
 confidence: 2
-last_verified: "2026-04-18"
-applicable_to: ["aidy", "any"]
+last_verified: '2026-04-18'
+applicable_to:
+  - aidy
+  - any
 connections:
   - agents/agent-architectures
   - agents/multi-agent-pipeline
@@ -25,34 +27,46 @@ connections:
   - context-engineering/context-engineering-2026-paradigm-shift
   - tokenomics/project-level-cost-analysis-pattern
   - agents/gbrain-openclaw-hermes-stack
+  - agents/agent-compiler-dynamic-routing
+  - agents/multi-agent-communication
+  - agents/multi-agent-sprint-optimization-patterns
+  - agents/multi-claude-agent-management-compile-strategy
+  - >-
+    harness-engineering/aidy-journal-014-shared-memories-memory-tags-ai-chat-suggestions
+  - harness-engineering/aidy-journal-015-agent-teams-pipelining-8r-to-5r
+  - harness-engineering/claude-design-visual-prototyping-workflow
 status: complete
-description: "2026년 2월, 주요 AI 코딩 플랫폼이 동시에 멀티 에이전트를 출시. Planner→Worker→Judge 3역할 모델, git worktree 격리, 모델 라우팅으로 40-60% 비용 절감."
+description: >-
+  2026년 2월, 주요 AI 코딩 플랫폼이 동시에 멀티 에이전트를 출시. Planner→Worker→Judge 3역할 모델, git
+  worktree 격리, 모델 라우팅으로 40-60% 비용 절감.
 type: entry
 quiz:
-  - question: "2026년 멀티 에이전트 오케스트레이션의 표준 3역할 모델은?"
+  - question: 2026년 멀티 에이전트 오케스트레이션의 표준 3역할 모델은?
     choices:
-      - "Reader → Writer → Publisher"
-      - "Planner → Worker → Judge"
-      - "Input → Process → Output"
-      - "Designer → Developer → Tester"
+      - Reader → Writer → Publisher
+      - Planner → Worker → Judge
+      - Input → Process → Output
+      - Designer → Developer → Tester
     answer: 1
-    explanation: "2026년 표준: Planner(태스크 생성), Worker(병렬 실행), Judge(진행 판정)의 3역할 모델."
-  - question: "멀티 에이전트에서 Worker 간 충돌을 방지하는 핵심 기술은?"
+    explanation: '2026년 표준: Planner(태스크 생성), Worker(병렬 실행), Judge(진행 판정)의 3역할 모델.'
+  - question: 멀티 에이전트에서 Worker 간 충돌을 방지하는 핵심 기술은?
     choices:
-      - "파일 락(file lock)"
-      - "git worktree 격리"
-      - "순차 실행"
-      - "공유 메모리"
+      - 파일 락(file lock)
+      - git worktree 격리
+      - 순차 실행
+      - 공유 메모리
     answer: 1
-    explanation: "각 Worker가 독립된 git worktree에서 작업하면 파일 충돌 없이 병렬 실행이 가능하다."
-  - question: "멀티 에이전트 모델 라우팅으로 달성 가능한 비용 절감은?"
+    explanation: 각 Worker가 독립된 git worktree에서 작업하면 파일 충돌 없이 병렬 실행이 가능하다.
+  - question: 멀티 에이전트 모델 라우팅으로 달성 가능한 비용 절감은?
     choices:
-      - "10-20%"
-      - "20-30%"
-      - "40-60%"
-      - "80-90%"
+      - 10-20%
+      - 20-30%
+      - 40-60%
+      - 80-90%
     answer: 2
-    explanation: "Worker에 Haiku/Sonnet 급 저가 모델을 사용하고, Planner/Judge에만 Opus를 사용하면 품질 손실 없이 40-60% 비용 절감 가능."
+    explanation: >-
+      Worker에 Haiku/Sonnet 급 저가 모델을 사용하고, Planner/Judge에만 Opus를 사용하면 품질 손실 없이
+      40-60% 비용 절감 가능.
 ---
 
 ## 갭 / 맥락

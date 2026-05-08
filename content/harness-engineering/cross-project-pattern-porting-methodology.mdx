@@ -1,5 +1,5 @@
 ---
-title: '크로스 프로젝트 패턴 이식 방법론 — 평가→이식→배포 3단계'
+title: 크로스 프로젝트 패턴 이식 방법론 — 평가→이식→배포 3단계
 category: harness-engineering
 date: '2026-04-17'
 tags:
@@ -11,44 +11,51 @@ tags:
   - superpowers
   - hermes-agent
 confidence: 4
-last_verified: "2026-04-17"
-applicable_to: ["aidy", "any"]
+last_verified: '2026-04-17'
+applicable_to:
+  - aidy
+  - any
 connections:
   - harness-engineering/compound-engineering-philosophy
   - harness-engineering/superpowers-framework-analysis
   - agents/hermes-agent-analysis
   - harness-engineering/skill-system-introduction
   - evaluation/llm-as-judge-pattern
+  - harness-engineering/harness-journal-026-midpoint-ai-engineering-review
 status: complete
 description: >-
-  외부 프레임워크(Superpowers, Hermes)와 자체 프로젝트(aidy)에서 패턴을 평가→이식→배포하는
-  3단계 방법론. 8개 패턴 평가, 7개 이식, 6개 프로젝트 배포 실적 포함.
+  외부 프레임워크(Superpowers, Hermes)와 자체 프로젝트(aidy)에서 패턴을 평가→이식→배포하는 3단계 방법론. 8개 패턴
+  평가, 7개 이식, 6개 프로젝트 배포 실적 포함.
 type: entry
 quiz:
-  - question: '패턴 이식의 3단계 순서는?'
+  - question: 패턴 이식의 3단계 순서는?
     choices:
-      - '이식→평가→배포'
-      - '평가→이식→배포'
-      - '배포→평가→이식'
-      - '평가→배포→이식'
+      - 이식→평가→배포
+      - 평가→이식→배포
+      - 배포→평가→이식
+      - 평가→배포→이식
     answer: 1
     explanation: '평가에서 갭 분석과 ROI 필터링을 먼저 하고, 이식에서 프로젝트 특성에 맞게 조정하고, 배포에서 원본→워커 순으로 확산한다.'
-  - question: '평가 단계에서 "이미 있음" 판정의 가치는?'
+  - question: 평가 단계에서 "이미 있음" 판정의 가치는?
     choices:
-      - '가치 없음 — 스킵할 뿐'
-      - '불필요한 작업을 방지하는 가장 중요한 판정'
-      - '이미 있는 것을 삭제하라는 신호'
-      - '외부 프레임워크가 열등하다는 증거'
+      - 가치 없음 — 스킵할 뿐
+      - 불필요한 작업을 방지하는 가장 중요한 판정
+      - 이미 있는 것을 삭제하라는 신호
+      - 외부 프레임워크가 열등하다는 증거
     answer: 1
-    explanation: 'Progressive Disclosure가 이미 구현되어 있다는 발견이 중복 구현을 방지했다. "이미 있음"은 자기 시스템에 대한 이해도를 높이는 판정.'
-  - question: '배포 시 프로젝트별 조정이 필요한 이유는?'
+    explanation: >-
+      Progressive Disclosure가 이미 구현되어 있다는 발견이 중복 구현을 방지했다. "이미 있음"은 자기 시스템에 대한
+      이해도를 높이는 판정.
+  - question: 배포 시 프로젝트별 조정이 필요한 이유는?
     choices:
-      - '각 프로젝트의 프로그래밍 언어가 다르기 때문'
-      - '각 프로젝트의 워크플로 구조가 다르기 때문 (WO vs Plan vs 자유형)'
-      - '배포 비용을 절감하기 위해'
-      - '보안 요구사항이 다르기 때문'
+      - 각 프로젝트의 프로그래밍 언어가 다르기 때문
+      - 각 프로젝트의 워크플로 구조가 다르기 때문 (WO vs Plan vs 자유형)
+      - 배포 비용을 절감하기 위해
+      - 보안 요구사항이 다르기 때문
     answer: 1
-    explanation: 'aidy-architect는 WO+api-contract 기반, moneyflow/tarosaju는 Plan 기반, aidy 워커는 WO 수신 구조. 같은 review.md도 대조 대상이 다르다.'
+    explanation: >-
+      aidy-architect는 WO+api-contract 기반, moneyflow/tarosaju는 Plan 기반, aidy 워커는
+      WO 수신 구조. 같은 review.md도 대조 대상이 다르다.
 ---
 
 ## 왜 지금 이 주제인가

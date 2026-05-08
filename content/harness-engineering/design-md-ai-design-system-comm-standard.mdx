@@ -6,7 +6,7 @@ tags: [design-system, ai-coding-assistant, standardization, json-schema, figma, 
 confidence: 2
 last_verified: "2026-05-03"
 connections: [harness-engineering/ai-agent-start-here, harness-engineering/ai-api-cost-tracking-pattern, harness-engineering/ai-call-patterns-circuit-breaker-fallback]
-status: draft
+status: complete
 description: "AI가 UI 컴포넌트를 정확하게 이해하고 생성하도록, 디자인 시스템을 단일 파일 포맷으로 명세화하여 AI와 개발자 간의 인터페이스를 정의하는 전략을 다룹니다."
 type: entry
 generated_by: gemini
@@ -131,89 +131,27 @@ graph TD
 3.  **컨텍스트 주입(Injection)**: 추출된 컴포넌트 명세(특히 `props`와 `examples`)를 원래 프롬프트와 함께 LLM의 컨텍스트 윈도우에 주입합니다.
 4.  **코드 생성(Generation)**: 보강된 컨텍스트를 기반으로 LLM은 디자인 시스템에 100% 부합하는 코드를 생성합니다.
 
-## 실전 예제: TypeScript와 AI 에이전트 연동
+## 실전 적용: CLAUDE.md에서의 DESIGN.md 참조
 
-실제 AI 에이전트의 일부가 될 수 있는 TypeScript 함수 예제입니다. 이 함수는 `DESIGN.md`를 읽고 시스템 프롬프트를 구성합니다.
+별도의 TypeScript 에이전트 코드를 작성할 필요 없이, **CLAUDE.md에 DESIGN.md 참조 규칙을 선언**하는 것만으로 에이전트가 디자인 시스템을 따르게 됩니다.
 
-```typescript
-import * as fs from 'fs/promises';
-import path from 'path';
+이 위키 프로젝트(`ai-study`)의 실제 CLAUDE.md 발췌:
 
-// DESIGN.md 파일의 타입을 정의 (실제로는 더 복잡할 것)
-interface DesignSystemSpec {
-  components: Array<{
-    name: string;
-    description: string;
-    props: Array<{ name: string; type: string; description: string }>;
-    examples: Array<{ description: string; code: string }>;
-  }>;
-}
-
-// AI 에이전트가 LLM 호출 전 컨텍스트를 보강하는 함수
-async function buildPromptWithDesignSystemContext(
-  userPrompt: string,
-  projectRoot: string
-): Promise<string> {
-  const designSpecPath = path.join(projectRoot, 'DESIGN.md');
-  let designSpec: DesignSystemSpec;
-
-  try {
-    const specContent = await fs.readFile(designSpecPath, 'utf-8');
-    // 실제 구현에서는 마크다운에서 JSON 블록을 파싱하는 로직이 필요
-    designSpec = JSON.parse(specContent); 
-  } catch (error) {
-    console.warn('DESIGN.md not found or failed to parse. Proceeding without design context.');
-    return userPrompt;
-  }
-  
-  // 간단한 키워드 매칭으로 관련 컴포넌트 찾기 (실제로는 embedding 기반 검색이 더 효과적)
-  const relevantComponents = designSpec.components.filter(c =>
-    userPrompt.toLowerCase().includes(c.name.toLowerCase())
-  );
-
-  if (relevantComponents.length === 0) {
-    return userPrompt;
-  }
-
-  const contextHeader = `
-You are a frontend developer working on a project with a specific design system.
-Adhere to the following component specifications. Do NOT invent props or component names.
-
---- DESIGN SYSTEM CONTEXT ---
-`;
-
-  const contextBody = relevantComponents.map(c => `
-Component: <${c.name}>
-Description: ${c.description}
-Props:
-${c.props.map(p => `- ${p.name} (${p.type}): ${p.description}`).join('\n')}
-Examples:
-${c.examples.map(e => `// ${e.description}\n${e.code}`).join('\n')}
-`).join('\n---\n');
-
-  const finalPrompt = `
-${contextHeader}
-${contextBody}
---- END OF CONTEXT ---
-
-User Request: "${userPrompt}"
-
-Generate the code now.
-`;
-
-  return finalPrompt;
-}
-
-// 사용 예시
-async function main() {
-    const userPrompt = "Add a loading button for the checkout page.";
-    const finalPromptForLLM = await buildPromptWithDesignSystemContext(userPrompt, process.cwd());
-    console.log(finalPromptForLLM);
-    // 이 finalPromptForLLM을 OpenAI, Anthropic 등의 API로 전송
-}
-
-main();
+```markdown
+## Design System
+Always read DESIGN.md before making any visual or UI decisions.
+All font choices, colors, spacing, and aesthetic direction are defined there.
+Do not deviate without explicit user approval.
+In QA mode, flag any code that doesn't match DESIGN.md.
 ```
+
+이 4줄이 곧 RAGI 파이프라인입니다:
+- **Retrieval**: "Always read DESIGN.md" → 에이전트가 파일을 직접 읽음
+- **Augmentation**: DESIGN.md 내용이 컨텍스트에 추가됨
+- **Generation**: 디자인 시스템 규약을 반영한 코드 생성
+- **Inspection**: "In QA mode, flag any code that doesn't match" → 검증 강제
+
+별도의 embedding 검색이나 컴포넌트 매칭 로직 없이도, 에이전트는 DESIGN.md를 읽고 그 규약을 따릅니다. 2026년 기준, **선언적 컨텍스트 주입이 프로그래밍적 컨텍스트 주입보다 실전에서 더 효과적**입니다.
 
 ## 2026년 이후의 전망: 멀티모달과 자동 동기화
 

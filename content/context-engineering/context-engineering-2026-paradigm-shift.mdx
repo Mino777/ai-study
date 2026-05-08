@@ -1,7 +1,7 @@
 ---
-title: "Context Engineering 2026 패러다임 전환 — Prompt Engineering을 넘어서"
+title: Context Engineering 2026 패러다임 전환 — Prompt Engineering을 넘어서
 category: context-engineering
-date: "2026-04-18"
+date: '2026-04-18'
 tags:
   - context-engineering
   - paradigm-shift
@@ -10,8 +10,9 @@ tags:
   - memory-architecture
   - agent-context
 confidence: 2
-last_verified: "2026-04-18"
-applicable_to: ["any"]
+last_verified: '2026-04-18'
+applicable_to:
+  - any
 connections:
   - context-engineering/context-engineering-fundamentals
   - context-engineering/claude-md-design-patterns
@@ -21,34 +22,44 @@ connections:
   - harness-engineering/harness-engineering-overview
   - harness-engineering/compound-engineering-philosophy
   - tokenomics/claude-code-token-levers-catalog
+  - agents/multi-agent-orchestration-patterns-2026
+  - harness-engineering/ai-engineering-landscape-2026-midpoint
+  - harness-engineering/claude-design-visual-prototyping-workflow
+  - harness-engineering/spec-driven-development-for-ai-agents
 status: complete
-description: "2026년 Gartner가 breakout AI capability로 지정한 Context Engineering. Prompt Engineering에서의 패러다임 전환과 3층 메모리 아키텍처, 60% 임계값 등 실전 적용 기법."
+description: >-
+  2026년 Gartner가 breakout AI capability로 지정한 Context Engineering. Prompt
+  Engineering에서의 패러다임 전환과 3층 메모리 아키텍처, 60% 임계값 등 실전 적용 기법.
 type: entry
 quiz:
-  - question: "2026년 Context Engineering이 Prompt Engineering과 근본적으로 다른 점은?"
+  - question: 2026년 Context Engineering이 Prompt Engineering과 근본적으로 다른 점은?
     choices:
-      - "더 긴 프롬프트를 작성하는 것"
-      - "전체 정보 환경(메모리+도구+검색+상태)을 설계하는 것"
-      - "모델을 fine-tuning하는 것"
-      - "프롬프트를 여러 언어로 번역하는 것"
+      - 더 긴 프롬프트를 작성하는 것
+      - 전체 정보 환경(메모리+도구+검색+상태)을 설계하는 것
+      - 모델을 fine-tuning하는 것
+      - 프롬프트를 여러 언어로 번역하는 것
     answer: 1
-    explanation: "Context Engineering은 단일 프롬프트가 아니라 프롬프트+메모리+도구+검색+상태를 포함한 전체 정보 환경을 설계하는 기술이다."
-  - question: "컨텍스트 윈도우 활용도가 몇 % 를 넘으면 품질 저하가 시작되는가?"
+    explanation: >-
+      Context Engineering은 단일 프롬프트가 아니라 프롬프트+메모리+도구+검색+상태를 포함한 전체 정보 환경을 설계하는
+      기술이다.
+  - question: 컨텍스트 윈도우 활용도가 몇 % 를 넘으면 품질 저하가 시작되는가?
     choices:
-      - "40%"
-      - "60%"
-      - "80%"
-      - "95%"
+      - 40%
+      - 60%
+      - 80%
+      - 95%
     answer: 1
-    explanation: "실측 데이터에 따르면 컨텍스트 60% 활용도에서 품질 저하가 시작된다. 60% 이상은 낭비일 가능성이 높다."
-  - question: "2026년 표준 에이전트 메모리 3층 구조에서 Episodic Memory의 역할은?"
+    explanation: 실측 데이터에 따르면 컨텍스트 60% 활용도에서 품질 저하가 시작된다. 60% 이상은 낭비일 가능성이 높다.
+  - question: 2026년 표준 에이전트 메모리 3층 구조에서 Episodic Memory의 역할은?
     choices:
-      - "현재 세션의 스크래치패드"
-      - "타임스탬프 기반 액션/결과 로그 (중기)"
-      - "도메인 팩트와 선호도 저장 (장기)"
-      - "모델 가중치 캐시"
+      - 현재 세션의 스크래치패드
+      - 타임스탬프 기반 액션/결과 로그 (중기)
+      - 도메인 팩트와 선호도 저장 (장기)
+      - 모델 가중치 캐시
     answer: 1
-    explanation: "Episodic Memory는 중기 계층으로, 세션 간 액션과 결과를 타임스탬프 기반으로 로깅한다. Working(단기)과 Semantic(장기) 사이에 위치."
+    explanation: >-
+      Episodic Memory는 중기 계층으로, 세션 간 액션과 결과를 타임스탬프 기반으로 로깅한다. Working(단기)과
+      Semantic(장기) 사이에 위치.
 ---
 
 ## 갭 / 맥락

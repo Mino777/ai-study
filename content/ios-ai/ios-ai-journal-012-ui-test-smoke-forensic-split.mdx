@@ -1,52 +1,76 @@
 ---
-title: "iOS Harness Journal 012 — UI 테스트 인프라 Phase 1 완결: 3-tier 등급 + 5병목 진단 + 22s→7s + screenshot-diff + 팀 온보딩 자동화"
+title: >-
+  iOS Harness Journal 012 — UI 테스트 인프라 Phase 1 완결: 3-tier 등급 + 5병목 진단 + 22s→7s +
+  screenshot-diff + 팀 온보딩 자동화
 category: ios-ai
 series: ios-ai-journal
-date: "2026-04-29"
-tags: [ios-harness-journal, ios, ui-test, deeplink, ribs, condition-wait, smoke-test, forensic, fixture, xcode, idb, xcodebuildmcp, screenshot-diff, onboarding, zstd]
+date: '2026-04-29'
+tags:
+  - ios-harness-journal
+  - ios
+  - ui-test
+  - deeplink
+  - ribs
+  - condition-wait
+  - smoke-test
+  - forensic
+  - fixture
+  - xcode
+  - idb
+  - xcodebuildmcp
+  - screenshot-diff
+  - onboarding
+  - zstd
 confidence: 4
-last_verified: "2026-04-29"
-applicable_to: ["ios-study"]
-connections: [ios-ai/ios-ai-journal-009-ai-probe-dual-pipeline, ios-ai/ios-ai-journal-010-ai-orchestration-tmux-worker-pool, ios-ai/ios-ai-journal-008-first-full-harness-setup-retro, harness-engineering/ai-agent-start-here]
+last_verified: '2026-04-29'
+applicable_to:
+  - ios-study
+connections:
+  - ios-ai/ios-ai-journal-009-ai-probe-dual-pipeline
+  - ios-ai/ios-ai-journal-010-ai-orchestration-tmux-worker-pool
+  - ios-ai/ios-ai-journal-008-first-full-harness-setup-retro
+  - harness-engineering/ai-agent-start-here
+  - ios-ai/ios-ai-journal-013-spec-driven-pipeline
 status: complete
 type: entry
 description: >-
-  `/ios-ui-test` 한 번에 30초+ → 5-8초. 단일 원인이 아닌 5개 병목 누적 진단. 3-tier 등급(Level 1/2/3),
-  condition wait(22s→7s), seed-fixture 자동 복원, deeplink lazy 등록, Xcode-attached 모드.
-  당일 추가: wait-for-ui.sh 헬퍼, fixture zstd 압축, screenshot-diff.sh(픽셀 diff), setup-onboarding.sh(9항목 자동 설치). 총 18커밋.
+  `/ios-ui-test` 한 번에 30초+ → 5-8초. 단일 원인이 아닌 5개 병목 누적 진단. 3-tier 등급(Level
+  1/2/3), condition wait(22s→7s), seed-fixture 자동 복원, deeplink lazy 등록,
+  Xcode-attached 모드. 당일 추가: wait-for-ui.sh 헬퍼, fixture zstd 압축,
+  screenshot-diff.sh(픽셀 diff), setup-onboarding.sh(9항목 자동 설치). 총 18커밋.
 quiz:
-  - question: "APP_FRESHLY_LAUNCHED 플래그를 도입한 이유는?"
+  - question: APP_FRESHLY_LAUNCHED 플래그를 도입한 이유는?
     choices:
-      - "앱이 이미 떠있으면 시뮬레이터를 재부팅해야 하기 때문"
-      - "이미 진행된 일(DebugMode/열기 다이얼로그)을 계속 폴링하는 비용을 막기 위해 분기점을 두었다"
-      - "idb describe-all이 fresh launch에서만 동작하기 때문"
-      - "Xcode-attached 모드 전환 신호로 사용하기 위해"
+      - 앱이 이미 떠있으면 시뮬레이터를 재부팅해야 하기 때문
+      - 이미 진행된 일(DebugMode/열기 다이얼로그)을 계속 폴링하는 비용을 막기 위해 분기점을 두었다
+      - idb describe-all이 fresh launch에서만 동작하기 때문
+      - Xcode-attached 모드 전환 신호로 사용하기 위해
     answer: 1
     explanation: >-
-      fresh launch일 때만 DebugMode와 '열기' 다이얼로그가 나타난다. 이미 떠있는 앱에서 폴링을 10회 반복하면
-      idb 호출 비용이 8-13초 추가된다. 플래그로 fresh/ready 분기 → 재호출 시 ~10s로 단축.
-  - question: "deeplink lazy 등록 정책의 핵심 전제는?"
+      fresh launch일 때만 DebugMode와 '열기' 다이얼로그가 나타난다. 이미 떠있는 앱에서 폴링을 10회 반복하면 idb
+      호출 비용이 8-13초 추가된다. 플래그로 fresh/ready 분기 → 재호출 시 ~10s로 단축.
+  - question: deeplink lazy 등록 정책의 핵심 전제는?
     choices:
-      - "자주 쓰는 화면을 사전에 일괄 등록해 시간을 절약한다"
-      - "deeplink 등록은 Phase 2에 전담 스프린트로 묶어서 한다"
-      - "어떤 화면이 자주 쓰일지 미리 알 수 없다 — /ios-ui-test 호출 시점에 미등록이면 그 자리에서 lazy 등록한다"
-      - "navigation fallback이 deeplink보다 항상 빠르다"
+      - 자주 쓰는 화면을 사전에 일괄 등록해 시간을 절약한다
+      - deeplink 등록은 Phase 2에 전담 스프린트로 묶어서 한다
+      - 어떤 화면이 자주 쓰일지 미리 알 수 없다 — /ios-ui-test 호출 시점에 미등록이면 그 자리에서 lazy 등록한다
+      - navigation fallback이 deeplink보다 항상 빠르다
     answer: 2
     explanation: >-
-      사전 일괄 등록은 over-engineering이다. 실제로 어떤 화면을 자주 테스트할지는 작업하다 보면 드러난다.
-      lazy 등록 정책은 1단(Workflow 1개) / 2-3단(ActionableItem 정공법) 패턴 가이드를 갖추고,
-      등록 작업 자체도 30분 내 완료할 수 있어 진입 비용이 낮다.
-  - question: "smoke 모드에서 snapshot_ui 호출을 최소화하는 방법으로 올바른 것은?"
+      사전 일괄 등록은 over-engineering이다. 실제로 어떤 화면을 자주 테스트할지는 작업하다 보면 드러난다. lazy 등록
+      정책은 1단(Workflow 1개) / 2-3단(ActionableItem 정공법) 패턴 가이드를 갖추고, 등록 작업 자체도 30분
+      내 완료할 수 있어 진입 비용이 낮다.
+  - question: smoke 모드에서 snapshot_ui 호출을 최소화하는 방법으로 올바른 것은?
     choices:
-      - "snapshot_ui 대신 XCUITest를 항상 사용한다"
-      - "deeplink 직진 후 snapshot_ui 1회 + 핵심 라벨만 idb python grep으로 확인 후 종료한다"
-      - "snapshot_ui를 각 단계마다 호출해 진행 상황을 트래킹한다"
-      - "forensic 모드를 기본으로 설정하고 --smoke 옵션으로 줄인다"
+      - snapshot_ui 대신 XCUITest를 항상 사용한다
+      - deeplink 직진 후 snapshot_ui 1회 + 핵심 라벨만 idb python grep으로 확인 후 종료한다
+      - snapshot_ui를 각 단계마다 호출해 진행 상황을 트래킹한다
+      - forensic 모드를 기본으로 설정하고 --smoke 옵션으로 줄인다
     answer: 1
     explanation: >-
-      snapshot_ui는 JSON 트리 전체를 덤프하므로 한 번에 ~5KB 토큰이 나간다. smoke에서는 deeplink 직진 후
-      단 1회만 호출하거나, idb describe-all + python 라벨 grep(훨씬 가벼움)으로 대체한다.
-      단계마다 호출하면 토큰이 폭발한다.
+      snapshot_ui는 JSON 트리 전체를 덤프하므로 한 번에 ~5KB 토큰이 나간다. smoke에서는 deeplink 직진 후 단
+      1회만 호출하거나, idb describe-all + python 라벨 grep(훨씬 가벼움)으로 대체한다. 단계마다 호출하면 토큰이
+      폭발한다.
 ---
 
 ## 배경 — /ios-ui-test가 사람보다 느려지다

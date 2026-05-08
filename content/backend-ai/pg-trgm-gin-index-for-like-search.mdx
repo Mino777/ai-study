@@ -1,42 +1,73 @@
 ---
-title: "PostgreSQL pg_trgm + GIN 인덱스로 LIKE '%keyword%' 최적화"
+title: PostgreSQL pg_trgm + GIN 인덱스로 LIKE '%keyword%' 최적화
 category: backend-ai
-date: "2026-04-16"
-tags: [backend-ai, postgresql, pg-trgm, gin-index, full-text-search, flyway, h2-testing]
+date: '2026-04-16'
+tags:
+  - backend-ai
+  - postgresql
+  - pg-trgm
+  - gin-index
+  - full-text-search
+  - flyway
+  - h2-testing
 confidence: 4
-last_verified: "2026-04-16"
-applicable_to: ["aidy", "any"]
+last_verified: '2026-04-16'
+applicable_to:
+  - aidy
+  - any
 connections:
   - backend-ai/backend-flow-map-via-aidy-server
   - infrastructure/aidy-3-client-deployment-design-roadmap
+  - backend-ai/ai-api-cost-prevention-serverless-security-pattern
 status: complete
-description: "메모리 검색이 `LOWER(content) LIKE LOWER('%keyword%')` 로 시작해 sequential scan으로 회귀한 시점에 pg_trgm extension + GIN 인덱스로 최적화. Aidy Session 6 R7 V12 마이그레이션 기반. 주의: PostgreSQL 전용 → H2 테스트 프로파일은 flyway.enabled=false 로 자동 우회, CREATE EXTENSION 권한 폴백 패턴, IF NOT EXISTS 로 비파괴 additive-only."
+description: >-
+  메모리 검색이 `LOWER(content) LIKE LOWER('%keyword%')` 로 시작해 sequential scan으로 회귀한
+  시점에 pg_trgm extension + GIN 인덱스로 최적화. Aidy Session 6 R7 V12 마이그레이션 기반. 주의:
+  PostgreSQL 전용 → H2 테스트 프로파일은 flyway.enabled=false 로 자동 우회, CREATE EXTENSION 권한
+  폴백 패턴, IF NOT EXISTS 로 비파괴 additive-only.
 type: entry
 quiz:
-  - question: "B-tree 인덱스가 `LIKE '%keyword%'` 에 왜 쓸모없는가?"
+  - question: B-tree 인덱스가 `LIKE '%keyword%'` 에 왜 쓸모없는가?
     choices:
-      - "PostgreSQL 버그"
-      - "B-tree는 prefix 비교 기반 — `LIKE 'keyword%'` (앞 와일드카드 없음)는 range scan 가능하지만 `%keyword%` (앞뒤 와일드카드)는 모든 row 검사 필요 → sequential scan 강제"
-      - "B-tree는 문자열 지원 안 함"
-      - "PostgreSQL은 항상 sequential scan"
+      - PostgreSQL 버그
+      - >-
+        B-tree는 prefix 비교 기반 — `LIKE 'keyword%'` (앞 와일드카드 없음)는 range scan 가능하지만
+        `%keyword%` (앞뒤 와일드카드)는 모든 row 검사 필요 → sequential scan 강제
+      - B-tree는 문자열 지원 안 함
+      - PostgreSQL은 항상 sequential scan
     answer: 1
-    explanation: "B-tree는 prefix 기준 정렬 구조다. 앞 와일드카드(`%keyword...`)는 prefix가 정의되지 않아 인덱스 활용 불가. pg_trgm GIN 인덱스는 문자열을 3-gram 단위로 쪼개 역인덱스로 만들어, substring 검색에도 인덱스 사용 가능."
-  - question: "이 마이그레이션을 H2 테스트 프로파일에서 자동 우회하는 방법은?"
+    explanation: >-
+      B-tree는 prefix 기준 정렬 구조다. 앞 와일드카드(`%keyword...`)는 prefix가 정의되지 않아 인덱스 활용
+      불가. pg_trgm GIN 인덱스는 문자열을 3-gram 단위로 쪼개 역인덱스로 만들어, substring 검색에도 인덱스 사용
+      가능.
+  - question: 이 마이그레이션을 H2 테스트 프로파일에서 자동 우회하는 방법은?
     choices:
-      - "Flyway baseline version 변경"
-      - "`test` profile에서 `spring.flyway.enabled=false` + `spring.jpa.hibernate.ddl-auto=create-drop` — 테스트 스키마는 JPA entity로 생성, Flyway 스크립트 실행 안 함. PostgreSQL 전용 DDL(CREATE EXTENSION)은 테스트에서 무시됨"
-      - "pg_trgm을 H2에 포팅"
-      - "profile 마다 다른 V12 작성"
+      - Flyway baseline version 변경
+      - >-
+        `test` profile에서 `spring.flyway.enabled=false` +
+        `spring.jpa.hibernate.ddl-auto=create-drop` — 테스트 스키마는 JPA entity로 생성,
+        Flyway 스크립트 실행 안 함. PostgreSQL 전용 DDL(CREATE EXTENSION)은 테스트에서 무시됨
+      - pg_trgm을 H2에 포팅
+      - profile 마다 다른 V12 작성
     answer: 1
-    explanation: "Aidy의 표준 패턴 — application-test.yml 에서 Flyway 비활성화 + JPA create-drop으로 스키마 생성. V12 파일은 존재하지만 실행 안 됨. Entity 정의에 인덱스 힌트(@Index)를 주진 않아서 테스트는 seq scan이지만 기능 검증은 통과. 프로덕션만 pg_trgm 사용."
-  - question: "`CREATE EXTENSION IF NOT EXISTS pg_trgm` 이 프로덕션에서 실패할 수 있는 시나리오는?"
+    explanation: >-
+      Aidy의 표준 패턴 — application-test.yml 에서 Flyway 비활성화 + JPA create-drop으로 스키마
+      생성. V12 파일은 존재하지만 실행 안 됨. Entity 정의에 인덱스 힌트(@Index)를 주진 않아서 테스트는 seq
+      scan이지만 기능 검증은 통과. 프로덕션만 pg_trgm 사용.
+  - question: '`CREATE EXTENSION IF NOT EXISTS pg_trgm` 이 프로덕션에서 실패할 수 있는 시나리오는?'
     choices:
-      - "Flyway 버전 호환성"
-      - "DB 계정이 superuser가 아닐 때 — `CREATE EXTENSION` 은 일반 권한으로 실행 불가. 해결: DBA가 사전 실행해두면 `IF NOT EXISTS` 로 no-op 안전 통과. 또는 관리형 DB는 prelude 스크립트로 extension 먼저 생성"
-      - "테이블 이름 충돌"
-      - "charset 불일치"
+      - Flyway 버전 호환성
+      - >-
+        DB 계정이 superuser가 아닐 때 — `CREATE EXTENSION` 은 일반 권한으로 실행 불가. 해결: DBA가 사전
+        실행해두면 `IF NOT EXISTS` 로 no-op 안전 통과. 또는 관리형 DB는 prelude 스크립트로 extension
+        먼저 생성
+      - 테이블 이름 충돌
+      - charset 불일치
     answer: 1
-    explanation: "pg_trgm은 contrib 모듈이라 superuser 또는 rds_superuser 등 상위 권한 필요. 일반 앱 계정으로는 실패. DBA 사전 실행 + Flyway는 `IF NOT EXISTS` 로 no-op 통과가 안전. Aidy의 V12 주석에 이 폴백이 명시됨."
+    explanation: >-
+      pg_trgm은 contrib 모듈이라 superuser 또는 rds_superuser 등 상위 권한 필요. 일반 앱 계정으로는
+      실패. DBA 사전 실행 + Flyway는 `IF NOT EXISTS` 로 no-op 통과가 안전. Aidy의 V12 주석에 이
+      폴백이 명시됨.
 ---
 
 ## 컨텍스트

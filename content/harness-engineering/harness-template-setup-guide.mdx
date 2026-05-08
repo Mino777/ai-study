@@ -1,8 +1,10 @@
 ---
-title: "공통 하네스 템플릿 셋업 가이드 — 신규 프로젝트에 AI 코딩 에이전트 울타리를 5분 만에 이식하는 법"
-description: "harness-template/ 폴더를 새 프로젝트에 복사하고 setup.sh 한 번이면 deny-first 보안, 타입체크 자동수정, GC 드리프트 탐지, 스프린트 회고까지 동작하는 하네스가 완성된다. 설계 근거, 트레이드오프, 커스터마이징 가이드 포함."
+title: 공통 하네스 템플릿 셋업 가이드 — 신규 프로젝트에 AI 코딩 에이전트 울타리를 5분 만에 이식하는 법
+description: >-
+  harness-template/ 폴더를 새 프로젝트에 복사하고 setup.sh 한 번이면 deny-first 보안, 타입체크 자동수정, GC
+  드리프트 탐지, 스프린트 회고까지 동작하는 하네스가 완성된다. 설계 근거, 트레이드오프, 커스터마이징 가이드 포함.
 category: harness-engineering
-date: "2026-05-02"
+date: '2026-05-02'
 tags:
   - harness-engineering
   - harness-template
@@ -13,8 +15,9 @@ tags:
   - compound-engineering
   - onboarding
 confidence: 4
-last_verified: "2026-05-02"
-applicable_to: ["any"]
+last_verified: '2026-05-02'
+applicable_to:
+  - any
 connections:
   - harness-engineering/martin-fowler-harness-engineering-framework
   - harness-engineering/claude-code-architecture-arxiv-deep-dive
@@ -23,33 +26,42 @@ connections:
   - harness-engineering/ai-engineering-landscape-2026-midpoint
   - harness-engineering/five-levers-of-harness-engineering
   - harness-engineering/compound-engineering-philosophy
+  - harness-engineering/ai-agent-start-here
+  - ios-ai/ios-harness-setup-xcodebuildmcp
 status: complete
 type: entry
 quiz:
-  - question: "하네스 템플릿에서 경로를 하드코딩하지 않고 동적으로 탐지하는 방법은?"
+  - question: 하네스 템플릿에서 경로를 하드코딩하지 않고 동적으로 탐지하는 방법은?
     choices:
-      - "환경변수 $HOME 사용"
-      - "git rev-parse --show-toplevel로 프로젝트 루트 동적 탐지"
-      - "setup.sh에서 sed로 치환"
-      - "심볼릭 링크 사용"
+      - 환경변수 $HOME 사용
+      - git rev-parse --show-toplevel로 프로젝트 루트 동적 탐지
+      - setup.sh에서 sed로 치환
+      - 심볼릭 링크 사용
     answer: 1
-    explanation: "git rev-parse --show-toplevel은 현재 git 레포의 루트 경로를 반환한다. 어떤 프로젝트에 이식해도 올바른 경로를 자동으로 찾는다. 하드코딩된 경로는 다른 머신, 다른 유저에서 깨진다."
-  - question: "PostToolUse 타입체크 Hook이 exit code 2를 반환하는 이유는?"
+    explanation: >-
+      git rev-parse --show-toplevel은 현재 git 레포의 루트 경로를 반환한다. 어떤 프로젝트에 이식해도 올바른
+      경로를 자동으로 찾는다. 하드코딩된 경로는 다른 머신, 다른 유저에서 깨진다.
+  - question: PostToolUse 타입체크 Hook이 exit code 2를 반환하는 이유는?
     choices:
-      - "에러를 무시하기 위해"
-      - "세션을 종료하기 위해"
-      - "에이전트에게 에러를 수정하고 다시 시도하라고 지시하기 위해"
-      - "사용자에게 확인을 요청하기 위해"
+      - 에러를 무시하기 위해
+      - 세션을 종료하기 위해
+      - 에이전트에게 에러를 수정하고 다시 시도하라고 지시하기 위해
+      - 사용자에게 확인을 요청하기 위해
     answer: 2
-    explanation: "Claude Code Hook에서 exit 0=성공(계속), exit 2=차단(도구 실행 중단 + stderr가 에이전트에게 전달). exit 1은 비차단 경고(도구 실행 계속!)이므로 주의. PostToolUse에서 exit 2를 반환하면 에이전트가 에러를 읽고 자동 수정하는 루프가 만들어진다."
-  - question: "secret-guard.sh에서 .claude/ 내부 파일을 화이트리스트하는 이유는?"
+    explanation: >-
+      Claude Code Hook에서 exit 0=성공(계속), exit 2=차단(도구 실행 중단 + stderr가 에이전트에게 전달).
+      exit 1은 비차단 경고(도구 실행 계속!)이므로 주의. PostToolUse에서 exit 2를 반환하면 에이전트가 에러를 읽고
+      자동 수정하는 루프가 만들어진다.
+  - question: secret-guard.sh에서 .claude/ 내부 파일을 화이트리스트하는 이유는?
     choices:
-      - "성능 최적화"
-      - "훅 스크립트 자체를 수정할 때 금지 패턴에 걸리면 하네스 관리가 불가능하므로"
-      - "보안 규칙 예외"
-      - ".claude/ 파일은 중요하지 않아서"
+      - 성능 최적화
+      - 훅 스크립트 자체를 수정할 때 금지 패턴에 걸리면 하네스 관리가 불가능하므로
+      - 보안 규칙 예외
+      - .claude/ 파일은 중요하지 않아서
     answer: 1
-    explanation: "secret-guard.sh 자체에 API 키 패턴(sk-ant-...)이 정규식으로 들어있다. 화이트리스트 없이는 이 훅 파일을 수정할 때마다 자기 자신이 차단당하는 역설이 발생한다."
+    explanation: >-
+      secret-guard.sh 자체에 API 키 패턴(sk-ant-...)이 정규식으로 들어있다. 화이트리스트 없이는 이 훅 파일을
+      수정할 때마다 자기 자신이 차단당하는 역설이 발생한다.
 ---
 
 ## 이 가이드의 목적

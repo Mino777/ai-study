@@ -7,7 +7,7 @@ confidence: 2
 last_verified: "2026-05-03"
 applicable_to: ["any"]
 connections: [ios-ai/apple-intelligence-api, ios-ai/ios-ai-code-quality-test-strategy, ios-ai/ios-ai-journal-000-baseline]
-status: draft
+status: complete
 description: "LLM 에이전트가 `xcodebuild`를 직접 호출하여 iOS 프로젝트의 빌드, 테스트, 아카이빙을 자동화하는 실전 패턴을 소개합니다."
 type: entry
 quiz:
@@ -172,21 +172,33 @@ func buildPrompt(for userRequest: String) -> String {
 // main.swift
 import Foundation
 
-// API 클라이언트 및 응답 모델 (실제 구현 필요)
+// API 클라이언트 — Anthropic Messages API 호출
 struct ClaudeAPIClient {
-    func generateCommand(prompt: String) async -> String {
-        // 실제 API 호출 로직. 여기서는 하드코딩된 예시 반환
-        return """
-        {
-          "tool": "xcodebuild",
-          "action": "test",
-          "args": {
-            "-workspace": "MyApp.xcworkspace",
-            "-scheme": "MyAppTests",
-            "-destination": "platform=iOS Simulator,name=iPhone 17 Pro,OS=18.0"
-          }
-        }
-        """
+    private let apiKey: String
+    
+    init(apiKey: String = ProcessInfo.processInfo.environment["ANTHROPIC_API_KEY"] ?? "") {
+        self.apiKey = apiKey
+    }
+    
+    func generateCommand(prompt: String) async throws -> String {
+        var request = URLRequest(url: URL(string: "https://api.anthropic.com/v1/messages")!)
+        request.httpMethod = "POST"
+        request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
+        request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let body: [String: Any] = [
+            "model": "claude-sonnet-4-20250514",
+            "max_tokens": 1024,
+            "messages": [["role": "user", "content": prompt]]
+        ]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        
+        let (data, _) = try await URLSession.shared.data(for: request)
+        // Messages API 응답에서 text content 추출
+        let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        let content = (json?["content"] as? [[String: Any]])?.first
+        return content?["text"] as? String ?? ""
     }
 }
 
@@ -240,7 +252,8 @@ struct MCP {
                 print("❌ 실패! (종료 코드: \(result.terminationStatus))")
                 print("--- 에러 로그 ---")
                 print(result.standardError)
-                // TODO: 에러 로그를 다시 Claude에게 보내 원인 분석 요청
+                // 에러 로그를 Claude에게 재전송하여 원인 분석 가능
+                // let analysis = try await apiClient.generateCommand(prompt: "Analyze this xcodebuild error:\n\(result.standardError)")
             }
         } catch {
             print("오류: xcodebuild 실행 중 예외 발생 - \(error)")

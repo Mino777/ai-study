@@ -1,12 +1,23 @@
 ---
-title: "Aidy Journal 009 — Stall Detection + 3-way Dispatch + Feature Sprint (s11-s14)"
+title: Aidy Journal 009 — Stall Detection + 3-way Dispatch + Feature Sprint (s11-s14)
 category: harness-engineering
 series: aidy-journal
-date: "2026-04-17"
-tags: [aidy-journal, stall-detection, 3-way-dispatch, feature-sprint, e2e-testing, enter-flush, tmux, escalation-protocol, test-scaling]
+date: '2026-04-17'
+tags:
+  - aidy-journal
+  - stall-detection
+  - 3-way-dispatch
+  - feature-sprint
+  - e2e-testing
+  - enter-flush
+  - tmux
+  - escalation-protocol
+  - test-scaling
 confidence: 4
-last_verified: "2026-04-17"
-applicable_to: ["aidy", "any"]
+last_verified: '2026-04-17'
+applicable_to:
+  - aidy
+  - any
 connections:
   - harness-engineering/aidy-journal-008-ui-test-automation-backlog-zero
   - harness-engineering/aidy-journal-003-parallel-dispatch-token-economics
@@ -14,34 +25,54 @@ connections:
   - evaluation/test-strategy-3-client-via-aidy
   - harness-engineering/compound-engineering-philosophy
   - context-engineering/api-contract-as-3-client-source-of-truth
+  - harness-engineering/aidy-journal-010-mvp-sprint-api-v10-quality-foundation
+  - >-
+    harness-engineering/aidy-journal-013-smart-notifications-relationship-map-interaction-log
+  - >-
+    harness-engineering/aidy-journal-014-shared-memories-memory-tags-ai-chat-suggestions
+  - harness-engineering/aidy-journal-015-agent-teams-pipelining-8r-to-5r
+  - harness-engineering/dispatch-state-idle-false-positive
+  - harness-engineering/worker-memory-pressure-crash-recovery
 status: complete
-description: "Session 11-14: Worker Stall Detection 4단계 프로토콜 설계(s11), CRUD 6기능 3-client 구현(s11-s13), 3-way 동시 dispatch로 테스트 177건 일괄 추가(s14). api-contract v0.3→v0.4 진행. 테스트 562→637건."
+description: >-
+  Session 11-14: Worker Stall Detection 4단계 프로토콜 설계(s11), CRUD 6기능 3-client
+  구현(s11-s13), 3-way 동시 dispatch로 테스트 177건 일괄 추가(s14). api-contract v0.3→v0.4
+  진행. 테스트 562→637건.
 type: entry
 quiz:
-  - question: "Worker Stall Detection 4단계 프로토콜의 올바른 순서는?"
+  - question: Worker Stall Detection 4단계 프로토콜의 올바른 순서는?
     choices:
-      - "원격 개입 → tmux 진단 → 조기 확인 → Architect 직접 수정"
-      - "조기 확인 → tmux 진단 → 원격 개입 → Architect 직접 수정"
-      - "tmux 진단 → 조기 확인 → Architect 직접 수정 → 원격 개입"
-      - "Architect 직접 수정 → 조기 확인 → tmux 진단 → 원격 개입"
+      - 원격 개입 → tmux 진단 → 조기 확인 → Architect 직접 수정
+      - 조기 확인 → tmux 진단 → 원격 개입 → Architect 직접 수정
+      - tmux 진단 → 조기 확인 → Architect 직접 수정 → 원격 개입
+      - Architect 직접 수정 → 조기 확인 → tmux 진단 → 원격 개입
     answer: 1
-    explanation: "경량 확인부터 시작해서 점진적으로 개입 수준을 높인다. Stage 1(조기 확인)에서 90%+ 해결, Stage 3(원격 개입)까지 가는 건 iOS tuist test 루프처럼 워커가 자체 해결 불가능한 경우만."
-  - question: "Session 14에서 3-way 동시 dispatch가 가능했던 전제 조건은?"
+    explanation: >-
+      경량 확인부터 시작해서 점진적으로 개입 수준을 높인다. Stage 1(조기 확인)에서 90%+ 해결, Stage 3(원격 개입)까지
+      가는 건 iOS tuist test 루프처럼 워커가 자체 해결 불가능한 경우만.
+  - question: Session 14에서 3-way 동시 dispatch가 가능했던 전제 조건은?
     choices:
-      - "API 변경이 있어서 동기화가 필요했기 때문"
-      - "API 변경 없이 테스트만 추가하는 독립 작업이므로, server/iOS/android가 서로 의존 없이 병렬 실행 가능"
-      - "워커가 3개였으므로 자동으로 가능"
-      - "autoceo가 자동으로 판단"
+      - API 변경이 있어서 동기화가 필요했기 때문
+      - 'API 변경 없이 테스트만 추가하는 독립 작업이므로, server/iOS/android가 서로 의존 없이 병렬 실행 가능'
+      - 워커가 3개였으므로 자동으로 가능
+      - autoceo가 자동으로 판단
     answer: 1
-    explanation: "3-way 동시 dispatch의 핵심 조건: 작업 간 API/스키마 변경 없음(독립성). s14의 WO-030/031/032는 모두 '기존 기능에 테스트 추가'라서 상호 의존 0. API 변경이 포함된 s11-s13은 server-first → 2-way 순차가 필수였다."
-  - question: "s11-s14 Feature Sprint에서 api-contract가 v0.3→v0.4로 진행되면서 추가된 6개 기능은?"
+    explanation: >-
+      3-way 동시 dispatch의 핵심 조건: 작업 간 API/스키마 변경 없음(독립성). s14의 WO-030/031/032는 모두
+      '기존 기능에 테스트 추가'라서 상호 의존 0. API 변경이 포함된 s11-s13은 server-first → 2-way 순차가
+      필수였다.
+  - question: s11-s14 Feature Sprint에서 api-contract가 v0.3→v0.4로 진행되면서 추가된 6개 기능은?
     choices:
-      - "로그인, 회원가입, 비밀번호 변경, 프로필 조회, 설정 변경, 알림"
-      - "메모리 수정, 채팅 검색, 채팅 삭제, 메모리 내보내기, 프로필 수정, 메모리 핀"
-      - "SSE 스트리밍, Circuit Breaker, Rate Limit, Security Headers, CORS, Health Check"
-      - "대화 그룹핑, Daily Digest, SMTP, 카테고리 변경, 통계, 대시보드"
+      - '로그인, 회원가입, 비밀번호 변경, 프로필 조회, 설정 변경, 알림'
+      - '메모리 수정, 채팅 검색, 채팅 삭제, 메모리 내보내기, 프로필 수정, 메모리 핀'
+      - >-
+        SSE 스트리밍, Circuit Breaker, Rate Limit, Security Headers, CORS, Health
+        Check
+      - '대화 그룹핑, Daily Digest, SMTP, 카테고리 변경, 통계, 대시보드'
     answer: 1
-    explanation: "s11: 메모리 수정 + 채팅 검색 (v0.3), s12: 채팅 삭제 + 메모리 내보내기 (v0.3.1), s13: 프로필 수정 + 메모리 핀 (v0.4). 모두 CRUD 패턴이지만, 3-client 동시 구현 + Gate 검증이 핵심."
+    explanation: >-
+      s11: 메모리 수정 + 채팅 검색 (v0.3), s12: 채팅 삭제 + 메모리 내보내기 (v0.3.1), s13: 프로필 수정 +
+      메모리 핀 (v0.4). 모두 CRUD 패턴이지만, 3-client 동시 구현 + Gate 검증이 핵심.
 ---
 
 ## Before — Journal 008 이후의 상태

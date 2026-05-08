@@ -1,8 +1,10 @@
 ---
-title: "Anthropic 3-Agent Harness 패턴 — Planning → Generation → Evaluation 분업 설계"
-description: "Anthropic이 공개한 멀티시간 자율 개발을 위한 3-Agent 하네스: Planning/Generation/Evaluation 분리, 컨텍스트 리셋 전략, Few-shot Calibration 평가"
+title: Anthropic 3-Agent Harness 패턴 — Planning → Generation → Evaluation 분업 설계
+description: >-
+  Anthropic이 공개한 멀티시간 자율 개발을 위한 3-Agent 하네스: Planning/Generation/Evaluation 분리,
+  컨텍스트 리셋 전략, Few-shot Calibration 평가
 category: agents
-date: "2026-05-02"
+date: '2026-05-02'
 tags:
   - anthropic
   - three-agent
@@ -12,40 +14,49 @@ tags:
   - long-running-session
   - harness-engineering
 confidence: 3
-last_verified: "2026-05-02"
-applicable_to: ["any"]
+last_verified: '2026-05-02'
+applicable_to:
+  - any
 connections:
   - harness-engineering/architect-flow-map-via-aidy-architect
   - agents/agent-architectures
   - agents/moneyflow-flow-map-13-agent-trading-pipeline
   - harness-engineering/martin-fowler-harness-engineering-framework
+  - harness-engineering/harness-template-setup-guide
+  - harness-engineering/openai-codex-harness-engineering-agent-first
 status: complete
 type: entry
 quiz:
-  - question: "Anthropic 3-Agent에서 컨텍스트 압축(compaction) 대신 리셋을 사용하는 이유는?"
+  - question: Anthropic 3-Agent에서 컨텍스트 압축(compaction) 대신 리셋을 사용하는 이유는?
     choices:
-      - "압축이 불가능해서"
-      - "압축하면 모델이 컨텍스트 한계 근처에서 지나치게 신중해져서"
-      - "리셋이 더 빠르기 때문"
-      - "비용 절약"
+      - 압축이 불가능해서
+      - 압축하면 모델이 컨텍스트 한계 근처에서 지나치게 신중해져서
+      - 리셋이 더 빠르기 때문
+      - 비용 절약
     answer: 1
-    explanation: "컨텍스트 압축은 모델이 '곧 한계에 도달할 것'을 인식하여 보수적으로 행동하게 만든다. 리셋 + 구조화된 아티팩트 전달이 더 깔끔한 상태에서 작업을 이어갈 수 있게 해준다."
-  - question: "생성 에이전트와 평가 에이전트를 분리하는 핵심 이유는?"
+    explanation: >-
+      컨텍스트 압축은 모델이 '곧 한계에 도달할 것'을 인식하여 보수적으로 행동하게 만든다. 리셋 + 구조화된 아티팩트 전달이 더 깔끔한
+      상태에서 작업을 이어갈 수 있게 해준다.
+  - question: 생성 에이전트와 평가 에이전트를 분리하는 핵심 이유는?
     choices:
-      - "비용 절감"
-      - "속도 향상"
-      - "에이전트의 자기 과신(overconfidence)을 방지하기 위해"
-      - "다른 모델을 사용하기 위해"
+      - 비용 절감
+      - 속도 향상
+      - 에이전트의 자기 과신(overconfidence)을 방지하기 위해
+      - 다른 모델을 사용하기 위해
     answer: 2
-    explanation: "모델은 자기 출력을 과대평가하는 경향이 있다(특히 주관적 작업). 별도 에이전트가 독립적으로 평가하면 이 편향을 깨뜨릴 수 있다. LLM-as-a-Judge의 핵심 원리."
-  - question: "이 패턴에서 Frontend 디자인 평가의 4가지 메트릭은?"
+    explanation: >-
+      모델은 자기 출력을 과대평가하는 경향이 있다(특히 주관적 작업). 별도 에이전트가 독립적으로 평가하면 이 편향을 깨뜨릴 수 있다.
+      LLM-as-a-Judge의 핵심 원리.
+  - question: 이 패턴에서 Frontend 디자인 평가의 4가지 메트릭은?
     choices:
-      - "속도, 크기, 호환성, 접근성"
-      - "디자인 품질, 독창성, 완성도, 기능성"
-      - "코드 품질, 테스트 커버리지, 성능, 보안"
-      - "사용성, 학습성, 효율성, 만족도"
+      - '속도, 크기, 호환성, 접근성'
+      - '디자인 품질, 독창성, 완성도, 기능성'
+      - '코드 품질, 테스트 커버리지, 성능, 보안'
+      - '사용성, 학습성, 효율성, 만족도'
     answer: 1
-    explanation: "Design quality, Originality, Craft, Functionality. 주관적 영역에서도 구조화된 평가 기준을 적용하는 것이 핵심."
+    explanation: >-
+      Design quality, Originality, Craft, Functionality. 주관적 영역에서도 구조화된 평가 기준을
+      적용하는 것이 핵심.
 ---
 
 ## 왜 이 패턴이 중요한가

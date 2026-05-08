@@ -12,50 +12,51 @@ tags:
   - crisis-detection
   - tarosaju
 confidence: 4
-last_verified: "2026-04-18"
-applicable_to: ["tarosaju","any"]
+last_verified: '2026-04-18'
+applicable_to:
+  - tarosaju
+  - any
 connections:
   - prompt-engineering/quality-guards
   - harness-engineering/ai-ops-environment-diagnosis-checklist
+  - >-
+    prompt-engineering/claude-opus-system-prompt-evolution-llm-control-optimization
 status: complete
 description: >-
-  AI 상담/대화 서비스에서 상담 심리학 3대 기법(Rogerian, MI, NVC)을 시스템 프롬프트에 적용하는 패턴.
-  위기 신호 서버 측 가드레일 포함. tarosaju 3개 route 실전 적용 사례.
+  AI 상담/대화 서비스에서 상담 심리학 3대 기법(Rogerian, MI, NVC)을 시스템 프롬프트에 적용하는 패턴. 위기 신호 서버 측
+  가드레일 포함. tarosaju 3개 route 실전 적용 사례.
 type: entry
 quiz:
   - question: 멀티턴 깊은 고민 상담에 가장 적합한 상담 심리 기법은?
     choices:
       - NVC (OFNR) — 관찰-감정-필요-요청 4단계
       - MI (Motivational Interviewing) — 강점 기반 긍정 에너지
-      - >-
-        **Rogerian 비지시적 상담** — 판단 없는 수용 + 공감적 반영 + 질문으로 열기
+      - '**Rogerian 비지시적 상담** — 판단 없는 수용 + 공감적 반영 + 질문으로 열기'
       - Chain of Thought — 단계별 추론
     answer: 2
     explanation: >-
-      Rogerian은 "답은 내담자 안에 있다"는 전제. 멀티턴 대화에서 AI가 조언을 쏟아내는 대신
-      공감적 반영과 열린 질문으로 사용자가 스스로 답을 찾도록 안내한다.
+      Rogerian은 "답은 내담자 안에 있다"는 전제. 멀티턴 대화에서 AI가 조언을 쏟아내는 대신 공감적 반영과 열린 질문으로
+      사용자가 스스로 답을 찾도록 안내한다.
   - question: 위기 신호(자살/자해) 감지 시 가장 안전한 대응 구조는?
     choices:
       - 시스템 프롬프트에 "위기 시 핫라인 안내" 추가
       - LLM에게 위기 판단을 맡기고 응답에 포함
-      - >-
-        **서버 측 regex로 AI 호출 자체를 차단** + 하드코딩된 공감 응답 + 핫라인 번호
+      - '**서버 측 regex로 AI 호출 자체를 차단** + 하드코딩된 공감 응답 + 핫라인 번호'
       - 클라이언트 측 키워드 필터링
     answer: 2
     explanation: >-
-      LLM은 시스템 프롬프트를 무시할 수 있고, 프롬프트 인젝션으로 우회 가능.
-      서버 측에서 AI 호출 자체를 차단하면 LLM 의존도 0, 100% 예측 가능한 안전 응답.
+      LLM은 시스템 프롬프트를 무시할 수 있고, 프롬프트 인젝션으로 우회 가능. 서버 측에서 AI 호출 자체를 차단하면 LLM 의존도
+      0, 100% 예측 가능한 안전 응답.
   - question: NVC의 OFNR 4단계 중 첫 메시지(icebreaker)에서 가장 중요한 요소는?
     choices:
       - Observation — 판단 없는 관찰
       - Feeling — 나의 감정 표현
       - Need — 충족되지 않은 필요
-      - >-
-        **Request — 초대형 질문** ("~해볼래요?")
+      - '**Request — 초대형 질문** ("~해볼래요?")'
     answer: 3
     explanation: >-
-      첫 메시지에서 가장 큰 실수는 "혼잣말"(일방 전달)이나 "요구형". Request를
-      초대형 질문으로 구성하면 상대에게 선택권을 주면서 대화를 열 수 있다.
+      첫 메시지에서 가장 큰 실수는 "혼잣말"(일방 전달)이나 "요구형". Request를 초대형 질문으로 구성하면 상대에게 선택권을
+      주면서 대화를 열 수 있다.
 ---
 
 ## 갭

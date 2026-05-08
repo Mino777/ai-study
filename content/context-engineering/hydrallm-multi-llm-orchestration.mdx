@@ -1,10 +1,19 @@
 ---
-title: "멀티 LLM 오케스트레이션: 라우터 LLM과 전문가 모델의 협력 설계"
+title: '멀티 LLM 오케스트레이션: 라우터 LLM과 전문가 모델의 협력 설계'
 category: context-engineering
-date: "2026-05-08"
-last_verified: "2026-05-08"
-applicable_to: ["any"]
-tags: [multi-llm, llm-orchestration, llm-router, cost-optimization, latency, routellm, frugal-gpt, context-engineering]
+date: '2026-05-08'
+last_verified: '2026-05-08'
+applicable_to:
+  - any
+tags:
+  - multi-llm
+  - llm-orchestration
+  - llm-router
+  - cost-optimization
+  - latency
+  - routellm
+  - frugal-gpt
+  - context-engineering
 confidence: 2
 connections:
   - context-engineering/api-contract-as-3-client-source-of-truth
@@ -12,8 +21,11 @@ connections:
   - context-engineering/claude-md-design-patterns
   - agents/ai-agent-cost-model-computer-use-structured-api
   - agents/agent-compiler-dynamic-routing
-status: draft
-description: "쿼리 복잡도·비용·지연 시간 제약에 맞춰 LLM을 동적으로 선택하는 라우터 패턴 — RouteLLM, FrugalGPT, Not Diamond, Semantic Router 등 실측된 구현을 기준으로 정리합니다."
+  - ios-ai/ios-ai-developer-growth-direction-2026
+status: complete
+description: >-
+  쿼리 복잡도·비용·지연 시간 제약에 맞춰 LLM을 동적으로 선택하는 라우터 패턴 — RouteLLM, FrugalGPT, Not
+  Diamond, Semantic Router 등 실측된 구현을 기준으로 정리합니다.
 type: entry
 generated_by: gemini
 quiz:
@@ -24,7 +36,9 @@ quiz:
       - On-device 모델의 성능이 클라우드 기반 LLM에 비해 현저히 낮다는 문제.
       - LLM의 추론 능력을 정적인 규칙 기반 시스템으로 대체하려는 시도의 한계.
     answer: 0
-    explanation: "정답은 0번입니다. RouteLLM 논문(2024)이 보여주듯이 라우터 패턴은 '간단한 쿼리는 저렴한 모델로, 복잡한 쿼리만 강력한 모델로' 보내 MT-Bench에서 GPT-4 성능의 95%를 유지하며 비용을 최대 85%까지 줄이는 것이 목적입니다."
+    explanation: >-
+      정답은 0번입니다. RouteLLM 논문(2024)이 보여주듯이 라우터 패턴은 '간단한 쿼리는 저렴한 모델로, 복잡한 쿼리만 강력한
+      모델로' 보내 MT-Bench에서 GPT-4 성능의 95%를 유지하며 비용을 최대 85%까지 줄이는 것이 목적입니다.
   - question: RouteLLM이 보고한 핵심 결과는 무엇인가요?
     choices:
       - 라우터 모델이 GPT-4 단일 사용 대비 항상 더 나은 응답 품질을 낸다.
@@ -32,16 +46,21 @@ quiz:
       - 모든 라우팅 전략 중 BERT classifier가 가장 우수하다.
       - 라우터는 학습된 모델 페어 외에는 일반화되지 않는다.
     answer: 1
-    explanation: 정답은 1번입니다. RouteLLM 공식 보고는 GPT-4와 Mixtral 8x7B 페어로 학습한 라우터가 MT-Bench에서 GPT-4 95% 성능을 유지하며 비용을 최대 85% 절감한다고 명시합니다. Matrix Factorization이 권장 전략이며, 라우터는 다른 모델 페어에도 어느 정도 일반화됩니다.
+    explanation: >-
+      정답은 1번입니다. RouteLLM 공식 보고는 GPT-4와 Mixtral 8x7B 페어로 학습한 라우터가 MT-Bench에서
+      GPT-4 95% 성능을 유지하며 비용을 최대 85% 절감한다고 명시합니다. Matrix Factorization이 권장 전략이며,
+      라우터는 다른 모델 페어에도 어느 정도 일반화됩니다.
   - question: 라우터 LLM 패턴을 도입할 때 반드시 고려해야 할 함정은 무엇인가요?
     choices:
       - 라우터 모델의 추론 비용이 누적되어 절감 효과를 상쇄할 수 있다.
-      - 라우터가 잘못 분류하면 간단한 요청에 비싼 모델이 호출되거나, 복잡한 요청에 약한 모델이 호출된다.
+      - '라우터가 잘못 분류하면 간단한 요청에 비싼 모델이 호출되거나, 복잡한 요청에 약한 모델이 호출된다.'
       - 라우팅 결정의 불확실성이 응답 품질의 분산을 키운다.
       - 위 셋 모두.
     answer: 3
-    explanation: 정답은 3번입니다. 라우터 비용·오분류·품질 분산은 모두 실측된 운영 함정입니다. 그래서 RouteLLM은 임계값 calibration을 강조하고, FrugalGPT는 cascade(저비용→고비용 순차 호출)로 위험을 줄입니다. 라우터를 단순한 정적 규칙으로 대체할 수 있는 도메인이라면 그게 더 안전한 경우도 많습니다.
-
+    explanation: >-
+      정답은 3번입니다. 라우터 비용·오분류·품질 분산은 모두 실측된 운영 함정입니다. 그래서 RouteLLM은 임계값
+      calibration을 강조하고, FrugalGPT는 cascade(저비용→고비용 순차 호출)로 위험을 줄입니다. 라우터를 단순한
+      정적 규칙으로 대체할 수 있는 도메인이라면 그게 더 안전한 경우도 많습니다.
 ---
 
 ## 만능 LLM에서 모델의 조합으로

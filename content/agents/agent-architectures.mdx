@@ -7,8 +7,9 @@ tags:
   - architectures
   - agents
 confidence: 2
-last_verified: "2026-05-03"
-applicable_to: ["any"]
+last_verified: '2026-05-03'
+applicable_to:
+  - any
 connections:
   - agents/multi-agent-pipeline
   - agents/tool-use
@@ -17,7 +18,22 @@ connections:
   - agents/hermes-agent-analysis
   - agents/perpetual-engine-portable-patterns
   - agents/gbrain-openclaw-hermes-stack
-status: draft
+  - agents/agent-compiler-dynamic-routing
+  - agents/ai-agent-cost-model-computer-use-structured-api
+  - agents/ai-agent-fleet-governance-engineering-model-scalability
+  - agents/ai-agent-workflow-scaffolding-codify-senior-procedures
+  - agents/anthropic-three-agent-harness-pattern
+  - agents/google-cloud-a2a-mcp-multi-agent-communication-control-patte
+  - agents/llm-kv-cache-bottleneck-race-condition-scaling
+  - agents/long-running-ai-agents-survival-state-persistence-fault-reco
+  - agents/mini-swe-agent-100-line-github-issue-solver-analysis
+  - agents/multi-agent-communication
+  - agents/multi-agent-orchestration-patterns-2026
+  - agents/multi-claude-agent-management-compile-strategy
+  - agents/solid-principles-for-agent-design
+  - harness-engineering/ai-engineering-landscape-2026-midpoint
+  - harness-engineering/claude-code-architecture-arxiv-deep-dive
+status: complete
 description: AI 시스템의 복잡한 작업을 자율적으로 처리하고 목표 지향적인 행동을 수행하는 에이전트 기반 아키텍처를 설계하고 구현하는 실전 가이드.
 type: entry
 generated_by: gemini
@@ -29,7 +45,10 @@ quiz:
       - 계획된 행동을 실제 환경에서 실행하거나 외부 도구를 호출하는 것
       - 에이전트의 모든 호출을 추적하고 토큰 사용량을 기록하는 것
     answer: 1
-    explanation: Think 단계는 LLM을 사용하여 현재 상황을 분석하고 최적의 행동 계획을 수립하는 추론(Reasoning) 단계입니다. Sense는 정보 수집, Act는 행동 실행, Observability는 모니터링을 담당하므로, Think 단계가 추론과 계획의 중추입니다.
+    explanation: >-
+      Think 단계는 LLM을 사용하여 현재 상황을 분석하고 최적의 행동 계획을 수립하는 추론(Reasoning) 단계입니다.
+      Sense는 정보 수집, Act는 행동 실행, Observability는 모니터링을 담당하므로, Think 단계가 추론과 계획의
+      중추입니다.
   - question: 파이썬 예제의 ToolExecutor에서 execute_tool() 메서드가 하는 역할은 무엇인가요?
     choices:
       - 사용자의 자연어 입력을 LLM 프롬프트로 변환한다
@@ -37,15 +56,20 @@ quiz:
       - 에이전트의 메모리를 관리하고 대화 이력을 저장한다
       - 도구 호출의 응답 형식을 JSON으로 파싱한다
     answer: 1
-    explanation: ToolExecutor는 LLM이 선택한 도구의 이름과 인자(arguments)를 받아, self.available_tools 딕셔너리에서 해당 함수를 찾아 실행하는 '행동 실행' 계층입니다. 이는 Act 단계의 구현입니다.
+    explanation: >-
+      ToolExecutor는 LLM이 선택한 도구의 이름과 인자(arguments)를 받아, self.available_tools
+      딕셔너리에서 해당 함수를 찾아 실행하는 '행동 실행' 계층입니다. 이는 Act 단계의 구현입니다.
   - question: 본 글에서 설명하는 2026년 트렌드 'Human-in-the-Loop Collaboration'의 핵심 목적은 무엇인가요?
     choices:
       - 에이전트의 자율성을 완전히 제거하고 모든 결정을 인간이 내리게 하는 것
-      - AI의 자율성과 인간의 통제 사이의 균형을 맞춰, 위험한 오작동을 방지하면서도 효율성을 유지하는 것
+      - 'AI의 자율성과 인간의 통제 사이의 균형을 맞춰, 위험한 오작동을 방지하면서도 효율성을 유지하는 것'
       - 에이전트가 LLM을 더 효율적으로 활용하도록 프롬프트를 자동으로 최적화하는 것
       - 인간 사용자의 행동 패턴을 학습하여 앞서 예측하고 제안하는 것
     answer: 1
-    explanation: Human-in-the-Loop Collaboration은 에이전트가 복잡한 결정을 내리기 전에 인간의 검토나 승인을 요청하고, 피드백을 통해 학습하며 점차 자율성을 높여가는 패턴입니다. 이는 AI의 자율성(효율성)과 인간의 통제(안전성) 사이의 균형을 핵심으로 합니다.
+    explanation: >-
+      Human-in-the-Loop Collaboration은 에이전트가 복잡한 결정을 내리기 전에 인간의 검토나 승인을 요청하고,
+      피드백을 통해 학습하며 점차 자율성을 높여가는 패턴입니다. 이는 AI의 자율성(효율성)과 인간의 통제(안전성) 사이의 균형을 핵심으로
+      합니다.
 ---
 
 ---

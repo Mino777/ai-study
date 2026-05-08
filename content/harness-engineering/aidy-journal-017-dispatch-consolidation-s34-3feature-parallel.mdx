@@ -1,46 +1,80 @@
 ---
-title: "Aidy Journal 017 — dispatch 단일 함수 통합 + AGENT_TEAMS=1 + s34 3-Feature 병렬 스프린트 (v4.7~v4.9)"
+title: >-
+  Aidy Journal 017 — dispatch 단일 함수 통합 + AGENT_TEAMS=1 + s34 3-Feature 병렬 스프린트
+  (v4.7~v4.9)
 category: harness-engineering
 series: aidy-journal
-date: "2026-04-24"
-tags: [aidy-journal, dispatch, agent-teams, parallel-sprint, avatar, search-filters, heatmap, gate-1, tokenomics]
+date: '2026-04-24'
+tags:
+  - aidy-journal
+  - dispatch
+  - agent-teams
+  - parallel-sprint
+  - avatar
+  - search-filters
+  - heatmap
+  - gate-1
+  - tokenomics
 confidence: 4
-last_verified: "2026-04-24"
-applicable_to: ["aidy", "any"]
+last_verified: '2026-04-24'
+applicable_to:
+  - aidy
+  - any
 connections:
   - harness-engineering/aidy-journal-016-ui-smoke-test-robot-pattern-preflight
   - harness-engineering/aidy-journal-015-agent-teams-pipelining-8r-to-5r
   - harness-engineering/aidy-journal-011-gate1-enforcement-turning-point
   - harness-engineering/aidy-journal-012-multiagent-efficiency-optimization
   - harness-engineering/compound-engineering-philosophy
+  - >-
+    harness-engineering/aidy-journal-018-tma-aidy-ios-microfeatures-modularization
 status: complete
-description: "Journal 016(s32)이 preflight + UI Smoke Test의 '예방 인프라'였다면, 이 글은 두 가지 축의 기록이다. 첫째, dispatch 함수 23개 중복 → 단일 함수 통합 + gate-log 스크립트 + AGENT_TEAMS=1 활성화 (ios-study 패턴 이식). 둘째, 그 인프라 위에서 s34가 v4.7 Avatar + v4.8 Search Filters + v4.9 Activity Heatmap을 5라운드 45분에 완주한 기록. 서버 1056 / iOS 748 / Android 998 테스트. iOS 3-feature 동시 dispatch의 빌드 에러 리스크(15분 수정)를 박제하고 2+1 분할 권장을 도출."
+description: >-
+  Journal 016(s32)이 preflight + UI Smoke Test의 '예방 인프라'였다면, 이 글은 두 가지 축의 기록이다.
+  첫째, dispatch 함수 23개 중복 → 단일 함수 통합 + gate-log 스크립트 + AGENT_TEAMS=1 활성화
+  (ios-study 패턴 이식). 둘째, 그 인프라 위에서 s34가 v4.7 Avatar + v4.8 Search Filters + v4.9
+  Activity Heatmap을 5라운드 45분에 완주한 기록. 서버 1056 / iOS 748 / Android 998 테스트. iOS
+  3-feature 동시 dispatch의 빌드 에러 리스크(15분 수정)를 박제하고 2+1 분할 권장을 도출.
 type: entry
 quiz:
-  - question: "dispatch 함수를 23개에서 1개로 통합한 핵심 이유는?"
+  - question: dispatch 함수를 23개에서 1개로 통합한 핵심 이유는?
     choices:
-      - "코드가 길어서 읽기 어려워서"
-      - "23개 함수가 거의 동일한 패턴(send-keys → 대기 → 확인)이었고, 플랫폼/WO번호만 다른 파라미터. 중복 제거 + 변경 시 1곳만 수정하면 되는 구조"
-      - "bash 함수 개수 제한에 걸려서"
-      - "테스트를 위해 mock하기 쉬운 구조가 필요해서"
+      - 코드가 길어서 읽기 어려워서
+      - >-
+        23개 함수가 거의 동일한 패턴(send-keys → 대기 → 확인)이었고, 플랫폼/WO번호만 다른 파라미터. 중복 제거 + 변경
+        시 1곳만 수정하면 되는 구조
+      - bash 함수 개수 제한에 걸려서
+      - 테스트를 위해 mock하기 쉬운 구조가 필요해서
     answer: 1
-    explanation: "dispatch_server_wo_100, dispatch_ios_wo_101 같은 함수들이 사실상 같은 로직이었다. 플랫폼(server/ios/android) + WO 번호 + Brief 파일 경로만 다른 파라미터인데 각각 별도 함수로 존재. 통합 후 dispatch(platform, wo_number, brief_path) 하나로 모든 dispatch가 가능."
-  - question: "s34에서 iOS에 3개 피처를 동시 dispatch한 결과 15분 빌드 수정이 발생한 근본 원인은?"
+    explanation: >-
+      dispatch_server_wo_100, dispatch_ios_wo_101 같은 함수들이 사실상 같은 로직이었다.
+      플랫폼(server/ios/android) + WO 번호 + Brief 파일 경로만 다른 파라미터인데 각각 별도 함수로 존재. 통합
+      후 dispatch(platform, wo_number, brief_path) 하나로 모든 dispatch가 가능.
+  - question: s34에서 iOS에 3개 피처를 동시 dispatch한 결과 15분 빌드 수정이 발생한 근본 원인은?
     choices:
-      - "iOS 빌드 시스템이 느려서"
-      - "Agent Teams가 3개 피처의 코드를 동시에 생성하면서 SearchFeature 수정 충돌 + IRGen 크래시가 발생. 서버와 달리 iOS는 UI 레이어에서 피처 간 타입 간섭이 있어 동시 생성이 위험"
-      - "Xcode 버전이 맞지 않아서"
-      - "테스트가 너무 많아서"
+      - iOS 빌드 시스템이 느려서
+      - >-
+        Agent Teams가 3개 피처의 코드를 동시에 생성하면서 SearchFeature 수정 충돌 + IRGen 크래시가 발생.
+        서버와 달리 iOS는 UI 레이어에서 피처 간 타입 간섭이 있어 동시 생성이 위험
+      - Xcode 버전이 맞지 않아서
+      - 테스트가 너무 많아서
     answer: 1
-    explanation: "서버는 독립 Controller/Service라 병렬 생성이 안전하지만, iOS는 TCA Feature 구조에서 AppFeature → SearchFilterFeature → AvatarFeature 간 의존이 있고, Agent Teams가 이를 동시에 건드리면서 충돌이 발생. Android는 Activity/Fragment가 비교적 독립적이라 16분에 성공. 플랫폼별 병렬 안전성이 다르다는 실측."
-  - question: "AGENT_TEAMS=1 설정의 의미는?"
+    explanation: >-
+      서버는 독립 Controller/Service라 병렬 생성이 안전하지만, iOS는 TCA Feature 구조에서 AppFeature
+      → SearchFilterFeature → AvatarFeature 간 의존이 있고, Agent Teams가 이를 동시에 건드리면서
+      충돌이 발생. Android는 Activity/Fragment가 비교적 독립적이라 16분에 성공. 플랫폼별 병렬 안전성이 다르다는
+      실측.
+  - question: AGENT_TEAMS=1 설정의 의미는?
     choices:
-      - "에이전트 팀 수를 1개로 제한하는 것"
-      - "Claude Code의 Agent Teams 기능 활성화 — 워커가 서브에이전트를 스폰해서 병렬 처리 가능"
-      - "모든 에이전트를 하나의 팀으로 묶는 것"
-      - "에이전트 간 통신을 활성화하는 것"
+      - 에이전트 팀 수를 1개로 제한하는 것
+      - Claude Code의 Agent Teams 기능 활성화 — 워커가 서브에이전트를 스폰해서 병렬 처리 가능
+      - 모든 에이전트를 하나의 팀으로 묶는 것
+      - 에이전트 간 통신을 활성화하는 것
     answer: 1
-    explanation: "settings.json에 AGENT_TEAMS=1을 추가하면 각 워커 Claude 세션이 Agent tool로 서브에이전트를 스폰할 수 있다. s34에서 Android 워커가 3개 피처를 서브에이전트로 분리해 병렬 처리한 게 이 설정 덕분. 16분에 빌드 포함 3피처 완료."
+    explanation: >-
+      settings.json에 AGENT_TEAMS=1을 추가하면 각 워커 Claude 세션이 Agent tool로 서브에이전트를 스폰할
+      수 있다. s34에서 Android 워커가 3개 피처를 서브에이전트로 분리해 병렬 처리한 게 이 설정 덕분. 16분에 빌드 포함
+      3피처 완료.
 ---
 
 ## Before — 23개 dispatch 함수 + Agent Teams 비활성

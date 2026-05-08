@@ -1,27 +1,61 @@
 ---
-title: "AI Native 시스템 — 결정론적 제어가 CLAUDE.md를 이긴다"
+title: AI Native 시스템 — 결정론적 제어가 CLAUDE.md를 이긴다
 category: harness-engineering
-date: "2026-04-21"
-tags: [ai-native, deterministic-control, ci, pre-commit-hook, parallel-execution, worktree, architecture-test, ddd, ast-analysis]
+date: '2026-04-21'
+tags:
+  - ai-native
+  - deterministic-control
+  - ci
+  - pre-commit-hook
+  - parallel-execution
+  - worktree
+  - architecture-test
+  - ddd
+  - ast-analysis
 confidence: 2
-last_verified: "2026-05-03"
-connections: [harness-engineering/compound-engineering-philosophy, harness-engineering/architect-flow-map-via-aidy-architect, harness-engineering/five-levers-of-harness-engineering, harness-engineering/aidy-journal-000-architect-worker-baseline, harness-engineering/skillify-failure-to-skill-practice]
+last_verified: '2026-05-03'
+connections:
+  - harness-engineering/compound-engineering-philosophy
+  - harness-engineering/architect-flow-map-via-aidy-architect
+  - harness-engineering/five-levers-of-harness-engineering
+  - harness-engineering/aidy-journal-000-architect-worker-baseline
+  - harness-engineering/skillify-failure-to-skill-practice
+  - harness-engineering/harness-journal-026-midpoint-ai-engineering-review
+  - harness-engineering/harness-journal-027-skillify-resolver-backfill
 status: complete
-description: "채널톡 Perry의 'AI Native 시스템' 2부작 — CLAUDE.md 대신 CI/린터/아키텍처 테스트로 LLM을 결정론적으로 제어하는 방법론 + 우리 Next.js 프로젝트 적용 로드맵"
+description: >-
+  채널톡 Perry의 'AI Native 시스템' 2부작 — CLAUDE.md 대신 CI/린터/아키텍처 테스트로 LLM을 결정론적으로 제어하는
+  방법론 + 우리 Next.js 프로젝트 적용 로드맵
 type: entry
 quiz:
-  - question: "CLAUDE.md만으로 LLM 행동을 통제할 때의 핵심 문제는?"
-    choices: ["토큰 비용 증가", "자연어 모호성 + 긴 컨텍스트 후반부 무시 + 규칙 충돌 시 임의 결정", "모델 호환성 문제", "파일 크기 제한"]
+  - question: CLAUDE.md만으로 LLM 행동을 통제할 때의 핵심 문제는?
+    choices:
+      - 토큰 비용 증가
+      - 자연어 모호성 + 긴 컨텍스트 후반부 무시 + 규칙 충돌 시 임의 결정
+      - 모델 호환성 문제
+      - 파일 크기 제한
     answer: 1
-    explanation: "연구 데이터에 따르면 CLAUDE.md는 SWE-bench -0.5%, AgentBench -2%, 추론 비용 +20~23% — 자연어 규칙은 '부탁'이지 '강제'가 아니다."
-  - question: "Perry의 아키텍처 테스트가 CLAUDE.md보다 효과적인 근본 이유는?"
-    choices: ["더 자세해서", "AI가 에러 메시지를 해석하고 자동 수정하는 피드백 루프가 생기므로", "파일 크기가 작아서", "Go 전용이라서"]
+    explanation: >-
+      연구 데이터에 따르면 CLAUDE.md는 SWE-bench -0.5%, AgentBench -2%, 추론 비용 +20~23% —
+      자연어 규칙은 '부탁'이지 '강제'가 아니다.
+  - question: Perry의 아키텍처 테스트가 CLAUDE.md보다 효과적인 근본 이유는?
+    choices:
+      - 더 자세해서
+      - AI가 에러 메시지를 해석하고 자동 수정하는 피드백 루프가 생기므로
+      - 파일 크기가 작아서
+      - Go 전용이라서
     answer: 1
-    explanation: "아키텍처 테스트 실패 → 에러 메시지 → AI 자동 수정 → 재실행의 루프가 핵심. CLAUDE.md는 위반해도 피드백이 없다."
-  - question: "우리 ai-study 프로젝트에서 '점진적 enforcement' 전략의 1단계로 가장 적합한 것은?"
-    choices: ["Go AST 프레임워크 도입", "validate-content.test.mjs에 frontmatter 스키마 + import 규칙 추가", "전체 코드베이스 DDD 리팩토링", "CLAUDE.md 삭제"]
+    explanation: 아키텍처 테스트 실패 → 에러 메시지 → AI 자동 수정 → 재실행의 루프가 핵심. CLAUDE.md는 위반해도 피드백이 없다.
+  - question: 우리 ai-study 프로젝트에서 '점진적 enforcement' 전략의 1단계로 가장 적합한 것은?
+    choices:
+      - Go AST 프레임워크 도입
+      - validate-content.test.mjs에 frontmatter 스키마 + import 규칙 추가
+      - 전체 코드베이스 DDD 리팩토링
+      - CLAUDE.md 삭제
     answer: 1
-    explanation: "이미 존재하는 vitest 인프라(validate-content.test.mjs)에 규칙을 추가하는 것이 최소 비용 최대 효과. Go AST는 Go 프로젝트용이고, 우리는 Next.js/TypeScript다."
+    explanation: >-
+      이미 존재하는 vitest 인프라(validate-content.test.mjs)에 규칙을 추가하는 것이 최소 비용 최대 효과. Go
+      AST는 Go 프로젝트용이고, 우리는 Next.js/TypeScript다.
 ---
 
 ## 왜 지금 이 주제인가

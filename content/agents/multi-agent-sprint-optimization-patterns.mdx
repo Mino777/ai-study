@@ -1,7 +1,7 @@
 ---
-title: "멀티에이전트 스프린트 최적화 — 11세션 운영 데이터 기반 3대 병목 해결"
+title: 멀티에이전트 스프린트 최적화 — 11세션 운영 데이터 기반 3대 병목 해결
 category: agents
-date: "2026-04-19"
+date: '2026-04-19'
 tags:
   - multi-agent
   - orchestration
@@ -10,8 +10,10 @@ tags:
   - operational-data
   - aidy-journal
 confidence: 4
-last_verified: "2026-04-19"
-applicable_to: ["aidy", "any"]
+last_verified: '2026-04-19'
+applicable_to:
+  - aidy
+  - any
 connections:
   - agents/multi-agent-orchestration-patterns-2026
   - agents/multi-claude-agent-management-compile-strategy
@@ -20,34 +22,40 @@ connections:
   - harness-engineering/spec-driven-development-for-ai-agents
   - tokenomics/project-level-cost-analysis-pattern
   - agents/perpetual-engine-portable-patterns
+  - harness-engineering/aidy-journal-012-multiagent-efficiency-optimization
+  - >-
+    harness-engineering/aidy-journal-013-smart-notifications-relationship-map-interaction-log
+  - harness-engineering/orchestrator-fail-meta-verify-growth-axes
 status: published
-description: "Architect+3Worker 멀티에이전트를 11세션(62 WO) 운영한 실측 데이터로 3대 병목(idle 55%, Gate 토큰 과다, 빌드 미검증)을 발견하고, 파이프라이닝/축약 Gate/verify 자동화로 해결한 패턴."
+description: >-
+  Architect+3Worker 멀티에이전트를 11세션(62 WO) 운영한 실측 데이터로 3대 병목(idle 55%, Gate 토큰 과다,
+  빌드 미검증)을 발견하고, 파이프라이닝/축약 Gate/verify 자동화로 해결한 패턴.
 type: entry
 quiz:
-  - question: "멀티에이전트 스프린트에서 Architect(오케스트레이터)의 가장 큰 시간 병목은?"
+  - question: 멀티에이전트 스프린트에서 Architect(오케스트레이터)의 가장 큰 시간 병목은?
     choices:
-      - "스펙 작성 시간"
-      - "워커 대기(idle) 시간"
-      - "Gate 검증 시간"
-      - "Compound 회고 시간"
+      - 스펙 작성 시간
+      - 워커 대기(idle) 시간
+      - Gate 검증 시간
+      - Compound 회고 시간
     answer: 1
-    explanation: "11세션 측정 결과, Architect 시간의 55%가 워커 완료를 기다리는 idle 시간이었다."
-  - question: "라운드 파이프라이닝의 핵심 원칙은?"
+    explanation: '11세션 측정 결과, Architect 시간의 55%가 워커 완료를 기다리는 idle 시간이었다.'
+  - question: 라운드 파이프라이닝의 핵심 원칙은?
     choices:
-      - "워커를 최대한 많이 동시 실행"
-      - "워커가 일하는 동안 Architect도 다음 작업을 선행"
-      - "모든 워커가 완료될 때까지 기다린 후 다음 라운드 시작"
-      - "Architect가 직접 코드를 작성"
+      - 워커를 최대한 많이 동시 실행
+      - 워커가 일하는 동안 Architect도 다음 작업을 선행
+      - 모든 워커가 완료될 때까지 기다린 후 다음 라운드 시작
+      - Architect가 직접 코드를 작성
     answer: 1
-    explanation: "파이프라이닝: 서버 워커가 구현하는 동안 다음 피처의 스펙/WO를 미리 작성하여 idle 시간을 활용한다."
-  - question: "축약 Gate-1의 적용 조건은?"
+    explanation: '파이프라이닝: 서버 워커가 구현하는 동안 다음 피처의 스펙/WO를 미리 작성하여 idle 시간을 활용한다.'
+  - question: 축약 Gate-1의 적용 조건은?
     choices:
-      - "항상 축약 모드 사용"
-      - "신규 엔드포인트 3개 이하"
-      - "서버 프로젝트에만"
-      - "테스트가 100개 이상일 때"
+      - 항상 축약 모드 사용
+      - 신규 엔드포인트 3개 이하
+      - 서버 프로젝트에만
+      - 테스트가 100개 이상일 때
     answer: 1
-    explanation: "EP 3개 이하면 Architect가 직접 git diff → 스펙 대조. 서브에이전트 spawn 없이 67% 토큰 절감."
+    explanation: EP 3개 이하면 Architect가 직접 git diff → 스펙 대조. 서브에이전트 spawn 없이 67% 토큰 절감.
 ---
 
 ## 갭 / 맥락

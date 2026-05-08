@@ -1,5 +1,5 @@
 ---
-title: 'GBrain + OpenClaw + Hermes 스택 — 기억·실행·학습을 분리하는 멀티 에이전트 아키텍처'
+title: GBrain + OpenClaw + Hermes 스택 — 기억·실행·학습을 분리하는 멀티 에이전트 아키텍처
 category: agents
 date: '2026-04-19'
 tags:
@@ -11,8 +11,11 @@ tags:
   - memory-system
   - chief-of-staff
 confidence: 3
-last_verified: "2026-04-19"
-applicable_to: ["moneyflow","tarosaju","any"]
+last_verified: '2026-04-19'
+applicable_to:
+  - moneyflow
+  - tarosaju
+  - any
 connections:
   - agents/hermes-agent-analysis
   - agents/agent-architectures
@@ -20,13 +23,14 @@ connections:
   - harness-engineering/compound-engineering-philosophy
   - harness-engineering/skill-system-introduction
   - harness-engineering/skillify-failure-to-skill-practice
+  - agents/ai-agent-fleet-governance-engineering-model-scalability
 status: complete
 description: >-
-  GBrain(기억) + OpenClaw(실행) + Hermes(학습/오케스트레이션)의 3계층 에이전트 스택 분석.
-  각 레이어의 역할 분담과 Delegation 패턴을 정리하고, 내 프로젝트 적용 가능성을 탐색.
+  GBrain(기억) + OpenClaw(실행) + Hermes(학습/오케스트레이션)의 3계층 에이전트 스택 분석. 각 레이어의 역할 분담과
+  Delegation 패턴을 정리하고, 내 프로젝트 적용 가능성을 탐색.
 type: entry
 quiz:
-  - question: 'GBrain + OpenClaw + Hermes 스택에서 GBrain이 담당하는 핵심 역할은?'
+  - question: GBrain + OpenClaw + Hermes 스택에서 GBrain이 담당하는 핵심 역할은?
     choices:
       - 로컬 환경 제어 및 파일 시스템 조작
       - 에이전트 간 공유되는 장기 기억 저장소 (뇌)
@@ -34,9 +38,9 @@ quiz:
       - 스킬 자동 생성 및 진화
     answer: 1
     explanation: >-
-      GBrain은 Garry Tan이 만든 에이전트 기억 시스템으로, 마크다운 파일 + Postgres/pgvector 하이브리드 검색으로
-      지식 그래프를 구축한다. 에이전트들이 세션 초기화 후에도 과거 정보를 유지하는 '뇌' 역할.
-  - question: 'Hermes가 OpenClaw에 작업을 위임하는 "Chief of Staff" 패턴의 핵심 동기는?'
+      GBrain은 Garry Tan이 만든 에이전트 기억 시스템으로, 마크다운 파일 + Postgres/pgvector 하이브리드
+      검색으로 지식 그래프를 구축한다. 에이전트들이 세션 초기화 후에도 과거 정보를 유지하는 '뇌' 역할.
+  - question: Hermes가 OpenClaw에 작업을 위임하는 "Chief of Staff" 패턴의 핵심 동기는?
     choices:
       - OpenClaw가 더 저렴해서
       - Hermes가 기억을 잘 유지하지만 로컬 OS 제어에 한계가 있어서
@@ -44,18 +48,18 @@ quiz:
       - 보안 정책상 분리가 필수라서
     answer: 1
     explanation: >-
-      Hermes는 자기 개선 루프와 메모리에 강하지만, 로컬 환경 제어(bash, 파일 시스템, 브라우저)는
-      OpenClaw가 더 강력하다. 전략적 사고는 Hermes가, 실행은 OpenClaw가 맡는 계층적 분업.
-  - question: 'GBrain의 "Compiled Truth + Timeline" 패턴에서 위쪽과 아래쪽의 역할은?'
+      Hermes는 자기 개선 루프와 메모리에 강하지만, 로컬 환경 제어(bash, 파일 시스템, 브라우저)는 OpenClaw가 더
+      강력하다. 전략적 사고는 Hermes가, 실행은 OpenClaw가 맡는 계층적 분업.
+  - question: GBrain의 "Compiled Truth + Timeline" 패턴에서 위쪽과 아래쪽의 역할은?
     choices:
-      - 위쪽은 원본 데이터, 아래쪽은 요약
-      - 위쪽은 현재 최고의 이해(최신 종합), 아래쪽은 시간순 증거 추적(append-only)
-      - 위쪽은 공개 정보, 아래쪽은 비공개 정보
-      - 위쪽은 에이전트용, 아래쪽은 사람용
+      - '위쪽은 원본 데이터, 아래쪽은 요약'
+      - '위쪽은 현재 최고의 이해(최신 종합), 아래쪽은 시간순 증거 추적(append-only)'
+      - '위쪽은 공개 정보, 아래쪽은 비공개 정보'
+      - '위쪽은 에이전트용, 아래쪽은 사람용'
     answer: 1
     explanation: >-
-      마크다운 파일의 상단은 최신 종합 평가로 갱신되고, 하단은 날짜별 이벤트가 append-only로
-      쌓인다. 이렇게 하면 최신 판단과 과거 근거를 한 파일에서 동시에 관리할 수 있다.
+      마크다운 파일의 상단은 최신 종합 평가로 갱신되고, 하단은 날짜별 이벤트가 append-only로 쌓인다. 이렇게 하면 최신 판단과
+      과거 근거를 한 파일에서 동시에 관리할 수 있다.
 ---
 
 ## 왜 지금 이 주제인가

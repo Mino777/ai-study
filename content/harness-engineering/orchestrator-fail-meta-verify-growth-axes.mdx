@@ -1,44 +1,69 @@
 ---
-title: "오케스트레이터 성장 3축 — FAIL·META·VERIFY로 자기 개선하는 CLI"
+title: 오케스트레이터 성장 3축 — FAIL·META·VERIFY로 자기 개선하는 CLI
 category: harness-engineering
-date: "2026-04-21"
-tags: [orchestrator, fail-meta-verify, baseongsaeng, architect-cli, self-improvement, crash-log, compound, knowledge-accumulation]
+date: '2026-04-21'
+tags:
+  - orchestrator
+  - fail-meta-verify
+  - baseongsaeng
+  - architect-cli
+  - self-improvement
+  - crash-log
+  - compound
+  - knowledge-accumulation
 confidence: 4
-last_verified: "2026-04-21"
-applicable_to: ["aidy", "any"]
+last_verified: '2026-04-21'
+applicable_to:
+  - aidy
+  - any
 connections:
-  - harness-engineering/aidy-journal-013-smart-notifications-relationship-map-interaction-log
+  - >-
+    harness-engineering/aidy-journal-013-smart-notifications-relationship-map-interaction-log
   - harness-engineering/worker-memory-pressure-crash-recovery
   - harness-engineering/compound-engineering-philosophy
   - agents/multi-agent-sprint-optimization-patterns
+  - harness-engineering/ai-orchestration-roi-negative-trivial-task-detection
+  - harness-engineering/aidy-journal-010-mvp-sprint-api-v10-quality-foundation
+  - harness-engineering/aidy-journal-011-gate1-enforcement-turning-point
+  - harness-engineering/dispatch-state-idle-false-positive
+  - harness-engineering/orchestrator-worker-tmux-communication-rules
 status: complete
-description: "멀티에이전트 오케스트레이터(바선생)의 성장 모델. FAIL(실패 수집)/META(패턴 학습)/VERIFY(검증 의무화) 3축이 독립적으로 발전해 전체 레벨을 끌어올리는 구조. 6개 능력 축 레벨 시스템 포함."
+description: >-
+  멀티에이전트 오케스트레이터(바선생)의 성장 모델. FAIL(실패 수집)/META(패턴 학습)/VERIFY(검증 의무화) 3축이 독립적으로
+  발전해 전체 레벨을 끌어올리는 구조. 6개 능력 축 레벨 시스템 포함.
 type: entry
 quiz:
-  - question: "FAIL/META/VERIFY 3축 중 '특정 워커가 반복해서 크래시된다'는 신호를 처리하는 축은?"
+  - question: FAIL/META/VERIFY 3축 중 '특정 워커가 반복해서 크래시된다'는 신호를 처리하는 축은?
     choices:
-      - "VERIFY — 빌드 검증이 부족해서"
-      - "META — 패턴을 문서화하는 축"
-      - "FAIL — 실패 데이터를 수집하고 원인을 분류하는 축"
-      - "ORCH — 오케스트레이션 전략 문제"
+      - VERIFY — 빌드 검증이 부족해서
+      - META — 패턴을 문서화하는 축
+      - FAIL — 실패 데이터를 수집하고 원인을 분류하는 축
+      - ORCH — 오케스트레이션 전략 문제
     answer: 2
-    explanation: "FAIL 축은 실패 데이터 수집과 분류. crash-log 명령이 FAIL 축의 대표 도구. '반복 크래시'는 FAIL 축에서 패턴이 쌓여야 META 축(원인 문서화)과 VERIFY 축(예방 체크리스트 추가)으로 전파된다."
-  - question: "META 축이 FAIL 축보다 '한 단계 위'인 이유는?"
+    explanation: >-
+      FAIL 축은 실패 데이터 수집과 분류. crash-log 명령이 FAIL 축의 대표 도구. '반복 크래시'는 FAIL 축에서 패턴이
+      쌓여야 META 축(원인 문서화)과 VERIFY 축(예방 체크리스트 추가)으로 전파된다.
+  - question: META 축이 FAIL 축보다 '한 단계 위'인 이유는?
     choices:
-      - "META는 더 어려운 작업이어서"
-      - "FAIL은 개별 실패를 기록하고, META는 그 기록에서 패턴을 추출해 다음 세션에 적용할 수 있는 규칙으로 변환"
-      - "META가 더 많은 토큰을 사용해서"
-      - "FAIL은 워커가 처리하고 META는 Architect가 처리해서"
+      - META는 더 어려운 작업이어서
+      - 'FAIL은 개별 실패를 기록하고, META는 그 기록에서 패턴을 추출해 다음 세션에 적용할 수 있는 규칙으로 변환'
+      - META가 더 많은 토큰을 사용해서
+      - FAIL은 워커가 처리하고 META는 Architect가 처리해서
     answer: 1
-    explanation: "FAIL: 발생 → 기록. META: 기록 → 분석 → 규칙. crash-log가 FAIL 축이라면, s29 교훈 파일('iOS 크래시 반복 패턴 → WO 분리 전송')이 META 축. META 없이 FAIL만 쌓이면 데이터가 있어도 행동이 바뀌지 않는다."
-  - question: "VERIFY 축 점수가 낮을 때 나타나는 증상은?"
+    explanation: >-
+      FAIL: 발생 → 기록. META: 기록 → 분석 → 규칙. crash-log가 FAIL 축이라면, s29 교훈 파일('iOS
+      크래시 반복 패턴 → WO 분리 전송')이 META 축. META 없이 FAIL만 쌓이면 데이터가 있어도 행동이 바뀌지 않는다.
+  - question: VERIFY 축 점수가 낮을 때 나타나는 증상은?
     choices:
-      - "워커가 자주 stall에 빠짐"
-      - "같은 유형의 검증 누락이 여러 스프린트에 걸쳐 retro에서 반복 언급됨"
-      - "Gate-1이 자주 FAIL남"
-      - "토큰 소비가 급증"
+      - 워커가 자주 stall에 빠짐
+      - 같은 유형의 검증 누락이 여러 스프린트에 걸쳐 retro에서 반복 언급됨
+      - Gate-1이 자주 FAIL남
+      - 토큰 소비가 급증
     answer: 1
-    explanation: "VERIFY 점수가 낮다 = 검증 항목이 의무화되지 않았다. 의무화 안 된 것은 바쁜 라운드에서 생략된다. 결과: retro에서 'Android 빌드 미검증', 'iOS 테스트 누락' 같은 문구가 s20, s21, s22, s23 4세션 연속 반복. 규칙이 아닌 리마인더는 작동하지 않는다."
+    explanation: >-
+      VERIFY 점수가 낮다 = 검증 항목이 의무화되지 않았다. 의무화 안 된 것은 바쁜 라운드에서 생략된다. 결과: retro에서
+      'Android 빌드 미검증', 'iOS 테스트 누락' 같은 문구가 s20, s21, s22, s23 4세션 연속 반복. 규칙이 아닌
+      리마인더는 작동하지 않는다.
 ---
 
 ## 오케스트레이터가 성장해야 하는 이유

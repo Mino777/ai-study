@@ -1,7 +1,7 @@
 ---
-title: "Spec-Driven Development (SDD) — AI 에이전트 시대의 설계 계약"
+title: Spec-Driven Development (SDD) — AI 에이전트 시대의 설계 계약
 category: harness-engineering
-date: "2026-04-18"
+date: '2026-04-18'
 tags:
   - spec-driven-development
   - sdd
@@ -10,8 +10,9 @@ tags:
   - quality-gate
   - harness-engineering
 confidence: 2
-last_verified: "2026-04-18"
-applicable_to: ["any"]
+last_verified: '2026-04-18'
+applicable_to:
+  - any
 connections:
   - harness-engineering/harness-engineering-overview
   - harness-engineering/compound-engineering-philosophy
@@ -21,34 +22,43 @@ connections:
   - harness-engineering/llm-first-wiki-principles
   - context-engineering/context-engineering-2026-paradigm-shift
   - agents/multi-agent-orchestration-patterns-2026
+  - agents/ai-agent-workflow-scaffolding-codify-senior-procedures
+  - agents/multi-agent-communication
+  - agents/multi-agent-sprint-optimization-patterns
+  - harness-engineering/claude-design-visual-prototyping-workflow
+  - harness-engineering/harness-journal-026-midpoint-ai-engineering-review
 status: complete
-description: "코드 ≠ 진실, Spec = 진실. AI 에이전트가 코드를 생성하는 시대에 Spec이 유일한 검증 기준이 되는 SDD 방법론. Gartner는 2027까지 agentic AI 프로젝트 40% 취소를 예측."
+description: >-
+  코드 ≠ 진실, Spec = 진실. AI 에이전트가 코드를 생성하는 시대에 Spec이 유일한 검증 기준이 되는 SDD 방법론.
+  Gartner는 2027까지 agentic AI 프로젝트 40% 취소를 예측.
 type: entry
 quiz:
-  - question: "SDD에서 코드와 Spec이 충돌할 때 올바른 대응은?"
+  - question: SDD에서 코드와 Spec이 충돌할 때 올바른 대응은?
     choices:
-      - "Spec을 코드에 맞게 수정한다"
-      - "코드를 Spec에 맞게 수정한다"
-      - "둘 다 삭제하고 새로 시작한다"
-      - "충돌을 무시하고 진행한다"
+      - Spec을 코드에 맞게 수정한다
+      - 코드를 Spec에 맞게 수정한다
+      - 둘 다 삭제하고 새로 시작한다
+      - 충돌을 무시하고 진행한다
     answer: 1
-    explanation: "SDD의 핵심 원칙: 코드 ≠ 진실, Spec = 진실. 코드와 Spec 충돌 시 항상 코드를 수정한다."
-  - question: "Gartner가 2027년까지 agentic AI 프로젝트 취소율을 몇 %로 예측했는가?"
+    explanation: 'SDD의 핵심 원칙: 코드 ≠ 진실, Spec = 진실. 코드와 Spec 충돌 시 항상 코드를 수정한다.'
+  - question: Gartner가 2027년까지 agentic AI 프로젝트 취소율을 몇 %로 예측했는가?
     choices:
-      - "10%"
-      - "25%"
-      - "40%"
-      - "60%"
+      - 10%
+      - 25%
+      - 40%
+      - 60%
     answer: 2
-    explanation: "Gartner는 평가 부족과 데이터 품질 문제로 2027까지 agentic AI 프로젝트의 40%가 취소될 것으로 예측. SDD 채택팀이 생존 확률이 높다."
-  - question: "SDD의 피드백 루프 주기는?"
+    explanation: >-
+      Gartner는 평가 부족과 데이터 품질 문제로 2027까지 agentic AI 프로젝트의 40%가 취소될 것으로 예측. SDD
+      채택팀이 생존 확률이 높다.
+  - question: SDD의 피드백 루프 주기는?
     choices:
-      - "주 단위"
-      - "일 단위"
-      - "분 단위 (5~15분)"
-      - "월 단위"
+      - 주 단위
+      - 일 단위
+      - 분 단위 (5~15분)
+      - 월 단위
     answer: 2
-    explanation: "SDD의 피드백 루프: spec 작성 → 5~15분 코드 생성 → 리뷰 → spec 수정 → 재생성. 분 단위로 반복."
+    explanation: 'SDD의 피드백 루프: spec 작성 → 5~15분 코드 생성 → 리뷰 → spec 수정 → 재생성. 분 단위로 반복.'
 ---
 
 ## 갭 / 맥락

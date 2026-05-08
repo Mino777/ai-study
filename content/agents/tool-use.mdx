@@ -9,33 +9,38 @@ tags:
   - api
   - mcp
 confidence: 3
-last_verified: "2026-05-03"
+last_verified: '2026-05-03'
 quiz:
-  - question: "Tool Use의 핵심 목적은 무엇인가?"
+  - question: Tool Use의 핵심 목적은 무엇인가?
     choices:
-      - "사용자 입력을 더 정확히 이해하기"
-      - "LLM이 외부 도구를 호출하여 실제 작업을 수행하는 것"
-      - "프롬프트 엔지니어링을 더 효과적으로 하기"
-      - "모델의 토큰 사용량을 줄이기"
+      - 사용자 입력을 더 정확히 이해하기
+      - LLM이 외부 도구를 호출하여 실제 작업을 수행하는 것
+      - 프롬프트 엔지니어링을 더 효과적으로 하기
+      - 모델의 토큰 사용량을 줄이기
     answer: 1
-    explanation: "Tool Use는 LLM이 단순 텍스트 생성을 넘어 API, 데이터베이스, 파일 시스템 등 외부 도구를 호출하여 실제 행동을 수행할 수 있게 하는 메커니즘이다."
-  - question: "Tool hallucination을 방지하기 위한 가장 효과적인 방법은?"
+    explanation: >-
+      Tool Use는 LLM이 단순 텍스트 생성을 넘어 API, 데이터베이스, 파일 시스템 등 외부 도구를 호출하여 실제 행동을 수행할
+      수 있게 하는 메커니즘이다.
+  - question: Tool hallucination을 방지하기 위한 가장 효과적인 방법은?
     choices:
-      - "사용할 수 있는 모든 도구를 시스템 프롬프트에 나열하기"
-      - "도구 설명을 명확하고 간결하게 작성하고 필요한 도구만 노출하기"
-      - "도구 호출을 완전히 비활성화하기"
-      - "강력한 모델(GPT-4 급)만 사용하기"
+      - 사용할 수 있는 모든 도구를 시스템 프롬프트에 나열하기
+      - 도구 설명을 명확하고 간결하게 작성하고 필요한 도구만 노출하기
+      - 도구 호출을 완전히 비활성화하기
+      - 강력한 모델(GPT-4 급)만 사용하기
     answer: 1
-    explanation: "불명확한 도구 설명과 과다한 도구 노출이 tool hallucination의 주요 원인이다. 도구 설명을 명확하게 하고 필요한 도구만 노출하며, 최소 권한 원칙을 따르는 것이 핵심이다."
-  - question: "위험한 도구(삭제, 결제 등)를 안전하게 구현하는 방법은?"
+    explanation: >-
+      불명확한 도구 설명과 과다한 도구 노출이 tool hallucination의 주요 원인이다. 도구 설명을 명확하게 하고 필요한 도구만
+      노출하며, 최소 권한 원칙을 따르는 것이 핵심이다.
+  - question: '위험한 도구(삭제, 결제 등)를 안전하게 구현하는 방법은?'
     choices:
-      - "모든 위험한 도구를 비활성화하기"
-      - "실행 전에 사용자 승인을 요청하는 확인 단계 추가하기"
-      - "로그만 남기고 실제로는 실행하지 않기"
-      - "위험도가 높으면 도구 호출 자체를 금지하기"
+      - 모든 위험한 도구를 비활성화하기
+      - 실행 전에 사용자 승인을 요청하는 확인 단계 추가하기
+      - 로그만 남기고 실제로는 실행하지 않기
+      - 위험도가 높으면 도구 호출 자체를 금지하기
     answer: 1
-    explanation: "위험한 도구도 필요하지만, 실행 전에 사용자에게 확인을 요청하는 단계를 추가하여 실수로 인한 피해를 방지할 수 있다."
-applicable_to: ["any"]
+    explanation: '위험한 도구도 필요하지만, 실행 전에 사용자에게 확인을 요청하는 단계를 추가하여 실수로 인한 피해를 방지할 수 있다.'
+applicable_to:
+  - any
 connections:
   - prompt-engineering/chain-of-thought
   - agents/agent-architectures
@@ -44,7 +49,8 @@ connections:
   - harness-engineering/harness-engineering-overview
   - infrastructure/multi-provider-fallback
   - infrastructure/streaming-architecture
-status: in-progress
+  - harness-engineering/ai-engineering-landscape-2026-midpoint
+status: complete
 description: 'LLM이 외부 도구를 호출하여 실제 작업을 수행하는 패턴. API, DB, 파일시스템 연동.'
 type: entry
 ---

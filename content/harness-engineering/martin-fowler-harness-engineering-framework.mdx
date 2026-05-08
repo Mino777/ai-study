@@ -1,8 +1,12 @@
 ---
-title: "Martin Fowler의 Harness Engineering 프레임워크 — Guide/Sensor × Computational/Inferential 매트릭스"
-description: "Martin Fowler가 정의한 하네스 엔지니어링 프레임워크: Feedforward Guide + Feedback Sensor, Computational + Inferential 제어의 4분면 매트릭스와 실전 적용 패턴"
+title: >-
+  Martin Fowler의 Harness Engineering 프레임워크 — Guide/Sensor ×
+  Computational/Inferential 매트릭스
+description: >-
+  Martin Fowler가 정의한 하네스 엔지니어링 프레임워크: Feedforward Guide + Feedback Sensor,
+  Computational + Inferential 제어의 4분면 매트릭스와 실전 적용 패턴
 category: harness-engineering
-date: "2026-05-02"
+date: '2026-05-02'
 tags:
   - harness-engineering
   - martin-fowler
@@ -13,40 +17,54 @@ tags:
   - cybernetics
   - harnessability
 confidence: 3
-last_verified: "2026-05-02"
-applicable_to: ["any"]
+last_verified: '2026-05-02'
+applicable_to:
+  - any
 connections:
   - harness-engineering/five-levers-of-harness-engineering
   - harness-engineering/harness-engineering-overview
   - harness-engineering/ai-engineering-landscape-2026-midpoint
   - harness-engineering/compound-engineering-philosophy
+  - agents/anthropic-three-agent-harness-pattern
+  - harness-engineering/ai-agent-start-here
+  - harness-engineering/claude-code-architecture-arxiv-deep-dive
+  - harness-engineering/harness-template-setup-guide
+  - harness-engineering/openai-codex-harness-engineering-agent-first
+  - ios-ai/ios-harness-setup-xcodebuildmcp
 status: complete
 type: entry
 quiz:
-  - question: "Fowler 프레임워크에서 Computational Sensor의 예시로 적절한 것은?"
+  - question: Fowler 프레임워크에서 Computational Sensor의 예시로 적절한 것은?
     choices:
-      - "CLAUDE.md에 적은 코딩 컨벤션"
-      - "코드 리뷰 에이전트의 의미 분석"
-      - "린터, 타입 체커, 테스트 — 매 변경마다 실행되는 결정론적 검증"
-      - "아키텍처 문서"
+      - CLAUDE.md에 적은 코딩 컨벤션
+      - 코드 리뷰 에이전트의 의미 분석
+      - '린터, 타입 체커, 테스트 — 매 변경마다 실행되는 결정론적 검증'
+      - 아키텍처 문서
     answer: 2
-    explanation: "Computational Sensor = 결정론적(CPU 기반) + 피드백. 린터/타입체커/테스트는 빠르고 저렴하고 결과가 확정적이며, 에이전트가 작업한 '후'에 결과를 검증한다. CLAUDE.md는 Guide(사전), 코드 리뷰 에이전트는 Inferential."
-  - question: "Harnessability(하네스 적용 가능성)가 높은 코드베이스의 특징은?"
+    explanation: >-
+      Computational Sensor = 결정론적(CPU 기반) + 피드백. 린터/타입체커/테스트는 빠르고 저렴하고 결과가
+      확정적이며, 에이전트가 작업한 '후'에 결과를 검증한다. CLAUDE.md는 Guide(사전), 코드 리뷰 에이전트는
+      Inferential.
+  - question: Harnessability(하네스 적용 가능성)가 높은 코드베이스의 특징은?
     choices:
-      - "코드량이 적은 프로젝트"
-      - "강타입, 명확한 모듈 경계, 프레임워크 규약이 있는 코드베이스"
-      - "테스트가 많은 프로젝트"
-      - "최신 언어를 사용하는 프로젝트"
+      - 코드량이 적은 프로젝트
+      - '강타입, 명확한 모듈 경계, 프레임워크 규약이 있는 코드베이스'
+      - 테스트가 많은 프로젝트
+      - 최신 언어를 사용하는 프로젝트
     answer: 1
-    explanation: "강타입 + 모듈 경계 + 프레임워크 규약이 에이전트의 문제 공간을 줄여준다. 레거시 시스템은 하네스가 가장 필요하지만 적용이 가장 어려운 역설."
-  - question: "Feedforward-Only 시스템의 문제점은?"
+    explanation: >-
+      강타입 + 모듈 경계 + 프레임워크 규약이 에이전트의 문제 공간을 줄여준다. 레거시 시스템은 하네스가 가장 필요하지만 적용이 가장
+      어려운 역설.
+  - question: Feedforward-Only 시스템의 문제점은?
     choices:
-      - "너무 비싸다"
-      - "규칙을 인코딩하지만 그 규칙이 실제로 작동하는지 검증하지 않는다"
-      - "에이전트가 규칙을 무시한다"
-      - "실행 속도가 느리다"
+      - 너무 비싸다
+      - 규칙을 인코딩하지만 그 규칙이 실제로 작동하는지 검증하지 않는다
+      - 에이전트가 규칙을 무시한다
+      - 실행 속도가 느리다
     answer: 1
-    explanation: "Feedforward(Guide)만 있으면 규칙을 줬지만 지켜지는지 확인 안 함. Feedback(Sensor)만 있으면 같은 실수를 반복. 둘 다 필요."
+    explanation: >-
+      Feedforward(Guide)만 있으면 규칙을 줬지만 지켜지는지 확인 안 함. Feedback(Sensor)만 있으면 같은 실수를
+      반복. 둘 다 필요.
 ---
 
 ## 왜 이 글이 중요한가

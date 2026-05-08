@@ -1,13 +1,28 @@
 ---
-title: "AI 에이전트 플릿 거버넌스: 엔지니어링 조직 운영 모델로 확장성 확보하기"
+title: 'AI 에이전트 플릿 거버넌스: 엔지니어링 조직 운영 모델로 확장성 확보하기'
 category: agents
-date: "2026-04-24"
-tags: [governance, agent-fleet, mlops, observability, lifecycle-management, agents]
+date: '2026-04-24'
+tags:
+  - governance
+  - agent-fleet
+  - mlops
+  - observability
+  - lifecycle-management
+  - agents
 confidence: 2
-last_verified: "2026-05-03"
-connections: [agents/agent-architectures, agents/agent-compiler-dynamic-routing, agents/gbrain-openclaw-hermes-stack]
-status: draft
-description: "단일 에이전트 개발을 넘어, 수십, 수백 개의 AI 에이전트 플릿을 안정적으로 운영하고 확장하기 위한 거버넌스 모델을 제시합니다."
+last_verified: '2026-05-03'
+connections:
+  - agents/agent-architectures
+  - agents/agent-compiler-dynamic-routing
+  - agents/gbrain-openclaw-hermes-stack
+  - agents/ai-agent-cost-model-computer-use-structured-api
+  - agents/google-cloud-a2a-mcp-multi-agent-communication-control-patte
+  - agents/llm-kv-cache-bottleneck-race-condition-scaling
+  - agents/long-running-ai-agents-survival-state-persistence-fault-reco
+  - agents/mini-swe-agent-100-line-github-issue-solver-analysis
+  - agents/solid-principles-for-agent-design
+status: complete
+description: '단일 에이전트 개발을 넘어, 수십, 수백 개의 AI 에이전트 플릿을 안정적으로 운영하고 확장하기 위한 거버넌스 모델을 제시합니다.'
 type: entry
 generated_by: gemini
 quiz:
@@ -15,27 +30,40 @@ quiz:
     choices:
       - 각 에이전트의 API 호출 비용을 개별적으로 추적하여 전체 운영 비용을 절감할 수 있기 때문에
       - 모든 에이전트의 프롬프트를 Git으로 통합 관리하여 개발자의 생산성을 극대화할 수 있기 때문에
-      - 수십 개가 넘는 에이전트에게 명확한 역할, 성능 측정, 생명주기를 부여하여 시스템 전체의 가시성과 확장성을 확보할 수 있기 때문에
+      - '수십 개가 넘는 에이전트에게 명확한 역할, 성능 측정, 생명주기를 부여하여 시스템 전체의 가시성과 확장성을 확보할 수 있기 때문에'
       - AI 에이전트가 인간 개발자와 동일한 CI/CD 파이프라인을 사용하게 만들어 개발 프로세스를 통일하기 위함이기 때문에
     answer: 2
-    explanation: 정답은 3번입니다. 본문에서는 에이전트 수가 많아지면 추적이 불가능해지는 문제를 지적하며, '엔지니어링 조직' 모델이 수십 년간 검증된 관리 프레임워크로서 에이전트 플릿에 가시성, 책임성, 확장성, 안정성을 부여하는 핵심 해결책이라고 설명합니다. 1, 2번은 거버넌스의 일부 요소(비용 측정, Prompt-as-Code)이지만 모델을 도입하는 가장 근본적인 이유는 아닙니다. 4번은 '차용'하는 개념을 '동일하게 만든다'고 오해한 것입니다.
+    explanation: >-
+      정답은 3번입니다. 본문에서는 에이전트 수가 많아지면 추적이 불가능해지는 문제를 지적하며, '엔지니어링 조직' 모델이 수십 년간
+      검증된 관리 프레임워크로서 에이전트 플릿에 가시성, 책임성, 확장성, 안정성을 부여하는 핵심 해결책이라고 설명합니다. 1, 2번은
+      거버넌스의 일부 요소(비용 측정, Prompt-as-Code)이지만 모델을 도입하는 가장 근본적인 이유는 아닙니다. 4번은
+      '차용'하는 개념을 '동일하게 만든다'고 오해한 것입니다.
   - question: 에이전트 생명주기(Agent Lifecycle)에서 'Deprecated' 상태의 에이전트는 어떤 역할을 수행하나요?
     choices:
       - 제한된 내부 사용자 트래픽만을 처리하며 최종 성능을 검증받는다.
       - 시스템에서 완전히 제거되어 더 이상 어떠한 작업도 수행하지 않는다.
       - 개발 환경에서만 사용되며 새로운 기능의 핵심 로직을 테스트한다.
-      - 더 이상 새로운 작업은 할당받지 않지만, 이미 진행 중인 작업은 완료하여 후속 버전으로 안전하게 전환되도록 한다.
+      - '더 이상 새로운 작업은 할당받지 않지만, 이미 진행 중인 작업은 완료하여 후속 버전으로 안전하게 전환되도록 한다.'
     answer: 3
-    explanation: 정답은 4번입니다. 'Deprecated' 상태는 새로운 버전이 'Active' 상태로 배포되었을 때, 기존 버전의 에이전트가 수행하는 역할입니다. 새로운 요청은 새 버전으로 가지만, 기존에 처리하던 요청은 마무리지어 서비스 중단 없이 안전하게 전환(graceful transition)하는 것을 돕습니다. 1번은 'Staging', 2번은 'Retired', 3번은 'Experimental' 상태에 대한 설명입니다.
-  - question: 본문에 따르면, 개선된 새 버전의 에이전트가 기존 'Active' 에이전트를 대체하기 위한 '승진 프로세스'에서 가장 중요한 검증 단계는 무엇인가요?
+    explanation: >-
+      정답은 4번입니다. 'Deprecated' 상태는 새로운 버전이 'Active' 상태로 배포되었을 때, 기존 버전의 에이전트가
+      수행하는 역할입니다. 새로운 요청은 새 버전으로 가지만, 기존에 처리하던 요청은 마무리지어 서비스 중단 없이 안전하게
+      전환(graceful transition)하는 것을 돕습니다. 1번은 'Staging', 2번은 'Retired', 3번은
+      'Experimental' 상태에 대한 설명입니다.
+  - question: >-
+      본문에 따르면, 개선된 새 버전의 에이전트가 기존 'Active' 에이전트를 대체하기 위한 '승진 프로세스'에서 가장 중요한 검증
+      단계는 무엇인가요?
     choices:
       - OpenTelemetry를 사용하여 새 에이전트의 성공률과 지연 시간을 측정할 수 있도록 코드를 계측한다.
-      - 자동화된 평가(Evals)를 통과한 후, 실제 트래픽의 일부를 이용한 A/B 테스트를 통해 성능 우위를 확인한다.
+      - '자동화된 평가(Evals)를 통과한 후, 실제 트래픽의 일부를 이용한 A/B 테스트를 통해 성능 우위를 확인한다.'
       - 새로운 에이전트의 담당 팀(ownerTeam)과 의존성(dependencies)을 Agent Registry에 명확히 기록한다.
       - Git에 프롬프트를 코드로 등록하고 변경 사항에 대한 Pull Request를 생성한다.
     answer: 1
-    explanation: 정답은 2번입니다. '승진 프로세스'의 핵심은 새로운 에이전트가 기존 에이전트보다 실제로 더 나은 성능을 내는지 '검증'하는 것입니다. 본문의 CI/CD 파이프라인 다이어그램은 자동화된 Evals 통과 후, Canary/A/B 테스트를 통해 성능 우위가 확인되어야 'Active'로 승격될 수 있음을 명확히 보여줍니다. 1번은 성능 측정을 위한 준비 단계, 3번은 행정적인 기록, 4번은 프로세스의 시작 단계일 뿐, 최종 승진을 결정하는 핵심 검증 단계는 아닙니다.
-
+    explanation: >-
+      정답은 2번입니다. '승진 프로세스'의 핵심은 새로운 에이전트가 기존 에이전트보다 실제로 더 나은 성능을 내는지 '검증'하는
+      것입니다. 본문의 CI/CD 파이프라인 다이어그램은 자동화된 Evals 통과 후, Canary/A/B 테스트를 통해 성능 우위가
+      확인되어야 'Active'로 승격될 수 있음을 명확히 보여줍니다. 1번은 성능 측정을 위한 준비 단계, 3번은 행정적인 기록, 4번은
+      프로세스의 시작 단계일 뿐, 최종 승진을 결정하는 핵심 검증 단계는 아닙니다.
 ---
 
 우리는 이제 단일 프롬프트로 작동하는 AI 기능을 넘어, 여러 에이전트가 협력하여 복잡한 작업을 수행하는 '에이전트 플릿(Agent Fleet)'의 시대로 진입하고 있습니다. iOS 앱의 사용자 의도를 파악하는 라우팅 에이전트, API를 호출하는 툴 에이전트, 결과를 요약하는 프론트엔드 표시용 에이전트 등, 하나의 서비스에도 수십 개의 에이전트가 유기적으로 동작합니다.

@@ -1,8 +1,8 @@
 ---
-title: "Harness Journal 028 — Resolver eval 52% → 100% 3-lever playbook"
+title: Harness Journal 028 — Resolver eval 52% → 100% 3-lever playbook
 category: harness-engineering
 series: harness-journal
-date: "2026-04-24"
+date: '2026-04-24'
 tags:
   - harness-journal
   - skillify
@@ -12,50 +12,65 @@ tags:
   - golden-set
   - playbook
 confidence: 4
-last_verified: "2026-04-24"
-applicable_to: ["any"]
+last_verified: '2026-04-24'
+applicable_to:
+  - any
 connections:
   - harness-engineering/harness-journal-027-skillify-resolver-backfill
   - harness-engineering/skillify-failure-to-skill-practice
   - harness-engineering/skill-system-introduction
   - harness-engineering/compound-engineering-philosophy
   - evaluation/llm-evaluation-fundamentals
+  - harness-engineering/harness-journal-029-skillify-6of6-rollout
 status: complete
-description: "Step 7(resolver-eval.mjs)이 허브에서 52% → 100%로 올라간 과정을 재사용 가능한 playbook으로 박제. 3개의 독립적 레버(tokenizer 강화, 한국어 키워드 보강, regex tail fix) + golden set 25 → 48 확장 후 유지. 다음 워커 6개 이식 시 그대로 따라갈 수 있도록 수치·순서·실패 신호를 모두 기록."
+description: >-
+  Step 7(resolver-eval.mjs)이 허브에서 52% → 100%로 올라간 과정을 재사용 가능한 playbook으로 박제. 3개의
+  독립적 레버(tokenizer 강화, 한국어 키워드 보강, regex tail fix) + golden set 25 → 48 확장 후 유지.
+  다음 워커 6개 이식 시 그대로 따라갈 수 있도록 수치·순서·실패 신호를 모두 기록.
 type: entry
 quiz:
-  - question: "52% → 68% 구간을 올린 단일 변경은?"
+  - question: 52% → 68% 구간을 올린 단일 변경은?
     choices:
-      - "한국어 키워드 보강"
-      - "golden set 추가"
-      - "tokenizer에 한국어 조사/어미 제거 + slash 구두점 처리"
-      - "regex tail을 desc 내부로 이동"
+      - 한국어 키워드 보강
+      - golden set 추가
+      - tokenizer에 한국어 조사/어미 제거 + slash 구두점 처리
+      - regex tail을 desc 내부로 이동
     answer: 2
-    explanation: "scripts/resolver-eval.mjs tokenize()에 KOREAN_SUFFIX 정규식 + `/\\\\`를 구두점에 추가. 이 한 커밋으로 13/25 → 17/25. CLAUDE.md를 건드리지 않고 평가 엔진만 현실화한 것이 포인트."
-  - question: "68% → 100% 구간의 두 번째 레버는?"
+    explanation: >-
+      scripts/resolver-eval.mjs tokenize()에 KOREAN_SUFFIX 정규식 + `/\\`를 구두점에 추가.
+      이 한 커밋으로 13/25 → 17/25. CLAUDE.md를 건드리지 않고 평가 엔진만 현실화한 것이 포인트.
+  - question: 68% → 100% 구간의 두 번째 레버는?
     choices:
-      - "LLM 기반 라우터로 교체"
-      - "CLAUDE.md routing 10개 엔트리에 한국어 키워드 보강"
-      - "expected 필드 완화"
-      - "threshold 0.3 → 0.1 하향"
+      - LLM 기반 라우터로 교체
+      - CLAUDE.md routing 10개 엔트리에 한국어 키워드 보강
+      - expected 필드 완화
+      - threshold 0.3 → 0.1 하향
     answer: 1
-    explanation: "office-hours/investigate/ship/qa/review 등 실제 사용자 말투(버그/배포/리뷰/디자인 폴리싱 등)를 트리거 설명에 박음. '감사'처럼 infra audit 의미와 겹치는 단어는 의도적으로 제외."
-  - question: "rules 개수가 20 → 21로 갑자기 늘어난 이유는?"
+    explanation: >-
+      office-hours/investigate/ship/qa/review 등 실제 사용자 말투(버그/배포/리뷰/디자인 폴리싱 등)를
+      트리거 설명에 박음. '감사'처럼 infra audit 의미와 겹치는 단어는 의도적으로 제외.
+  - question: rules 개수가 20 → 21로 갑자기 늘어난 이유는?
     choices:
-      - "라우팅 1개 추가"
-      - "review 라인 꼬리 '(2-Stage: ...)'가 regex `$` 앵커에 안 걸려 파싱에서 탈락한 상태였음. 꼬리를 desc 내부로 이동해 복구"
-      - "parse-rules 캐시 무효화"
-      - "중복 rule 중복 제거 오버카운트"
+      - 라우팅 1개 추가
+      - >-
+        review 라인 꼬리 '(2-Stage: ...)'가 regex `$` 앵커에 안 걸려 파싱에서 탈락한 상태였음. 꼬리를
+        desc 내부로 이동해 복구
+      - parse-rules 캐시 무효화
+      - 중복 rule 중복 제거 오버카운트
     answer: 1
-    explanation: "정확도 숫자만 보면 놓치는 '잠복 파싱 실패'. review가 테이블에 있었지만 eval은 그 규칙을 본 적이 없었다. 평가 도구는 자기 파싱 로그를 드러내야 한다는 신호."
-  - question: "golden set 25 → 48 확장 후에도 100%가 유지됐다. 이는 무엇을 시사하는가?"
+    explanation: >-
+      정확도 숫자만 보면 놓치는 '잠복 파싱 실패'. review가 테이블에 있었지만 eval은 그 규칙을 본 적이 없었다. 평가 도구는
+      자기 파싱 로그를 드러내야 한다는 신호.
+  - question: golden set 25 → 48 확장 후에도 100%가 유지됐다. 이는 무엇을 시사하는가?
     choices:
-      - "eval이 너무 쉽게 작성됨 — 더 어려운 케이스 필요"
-      - "tokenizer + 키워드 보강이 특정 25케이스에 과적합된 게 아니라 광역으로 유효했다는 방증"
-      - "48개 중 23개가 중복"
-      - "expectedSkill null(routing 거부) 케이스를 포함 안 했기 때문"
+      - eval이 너무 쉽게 작성됨 — 더 어려운 케이스 필요
+      - tokenizer + 키워드 보강이 특정 25케이스에 과적합된 게 아니라 광역으로 유효했다는 방증
+      - 48개 중 23개가 중복
+      - expectedSkill null(routing 거부) 케이스를 포함 안 했기 때문
     answer: 1
-    explanation: "25개 golden에만 맞춘 튜닝이었다면 신규 23개에서 실패가 터져야 정상. 유지된 건 라우팅 어휘가 실제 사용자 말투와 구조적으로 정렬됐다는 뜻. 단, 난이도 상향은 별도 스프린트로 필요."
+    explanation: >-
+      25개 golden에만 맞춘 튜닝이었다면 신규 23개에서 실패가 터져야 정상. 유지된 건 라우팅 어휘가 실제 사용자 말투와 구조적으로
+      정렬됐다는 뜻. 단, 난이도 상향은 별도 스프린트로 필요.
 ---
 
 ## 왜 쓰는가

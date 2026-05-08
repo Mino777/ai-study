@@ -11,8 +11,11 @@ tags:
   - openai
   - transferable-pattern
 confidence: 3
-last_verified: "2026-04-12"
-applicable_to: ["moneyflow","tarosaju","any"]
+last_verified: '2026-04-12'
+applicable_to:
+  - moneyflow
+  - tarosaju
+  - any
 connections:
   - harness-engineering/harness-journal-000-baseline
   - harness-engineering/ai-call-patterns-circuit-breaker-fallback
@@ -22,6 +25,11 @@ connections:
   - tokenomics/claude-code-token-levers-applied-log
   - tokenomics/claude-code-token-levers-catalog
   - tokenomics/project-level-cost-analysis-pattern
+  - context-engineering/token-budget-management
+  - harness-engineering/ai-code-review-reliability-production-quality
+  - harness-engineering/ai-coding-brain-training-desirable-difficulty-strategy
+  - harness-engineering/design-md-ai-design-system-comm-standard
+  - harness-engineering/harness-journal-026-midpoint-ai-engineering-review
 status: complete
 description: >-
   양쪽 프로젝트(mino-moneyflow, mino-tarosaju) 모두 *비용 가시성 0* 상태. 매 호출에 토큰/비용을 로깅하고 일/월

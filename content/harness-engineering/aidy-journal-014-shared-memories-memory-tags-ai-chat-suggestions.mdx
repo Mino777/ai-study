@@ -1,46 +1,71 @@
 ---
-title: "Aidy Journal 014 — Shared Memories + Memory Tags + AI Chat Suggestions (s29)"
+title: Aidy Journal 014 — Shared Memories + Memory Tags + AI Chat Suggestions (s29)
 category: harness-engineering
 series: aidy-journal
-date: "2026-04-21"
-tags: [aidy-journal, shared-memories, memory-tags, ai-chat-suggestions, ios-crash, watch-workers, context-aware-ai, 5r-sprint]
+date: '2026-04-21'
+tags:
+  - aidy-journal
+  - shared-memories
+  - memory-tags
+  - ai-chat-suggestions
+  - ios-crash
+  - watch-workers
+  - context-aware-ai
+  - 5r-sprint
 confidence: 4
-last_verified: "2026-04-21"
-applicable_to: ["aidy", "any"]
+last_verified: '2026-04-21'
+applicable_to:
+  - aidy
+  - any
 connections:
-  - harness-engineering/aidy-journal-013-smart-notifications-relationship-map-interaction-log
-  - harness-engineering/aidy-journal-009-stall-detection-3way-dispatch-feature-sprint
+  - >-
+    harness-engineering/aidy-journal-013-smart-notifications-relationship-map-interaction-log
+  - >-
+    harness-engineering/aidy-journal-009-stall-detection-3way-dispatch-feature-sprint
   - agents/multi-agent-orchestration-patterns-2026
   - evaluation/test-strategy-3-client-via-aidy
   - context-engineering/api-contract-as-3-client-source-of-truth
+  - harness-engineering/aidy-journal-015-agent-teams-pipelining-8r-to-5r
+  - harness-engineering/aidy-journal-016-ui-smoke-test-robot-pattern-preflight
+  - harness-engineering/dispatch-state-idle-false-positive
+  - harness-engineering/worker-memory-pressure-crash-recovery
 status: complete
-description: "s29(5R): v3.2 Shared Memories + v3.3 Memory Tags + v3.4 AI Chat Suggestions. iOS 4회 크래시 → 메모리 압박 패턴 확인. watch-workers 오탐 발견. server 880 / iOS 590 / Android 1225 tests."
+description: >-
+  s29(5R): v3.2 Shared Memories + v3.3 Memory Tags + v3.4 AI Chat Suggestions.
+  iOS 4회 크래시 → 메모리 압박 패턴 확인. watch-workers 오탐 발견. server 880 / iOS 590 / Android
+  1225 tests.
 type: entry
 quiz:
-  - question: "AI Chat Suggestions(v3.4)의 4가지 추천 타입은?"
+  - question: AI Chat Suggestions(v3.4)의 4가지 추천 타입은?
     choices:
-      - "like, comment, share, remind"
-      - "followup, reminder, exploration, check_in"
-      - "reply, forward, archive, delete"
-      - "urgent, normal, low, scheduled"
+      - 'like, comment, share, remind'
+      - 'followup, reminder, exploration, check_in'
+      - 'reply, forward, archive, delete'
+      - 'urgent, normal, low, scheduled'
     answer: 1
-    explanation: "followup: 2주+ 된 미해결 메모리에 후속 질문. reminder: 7일 내 기념일/일정. exploration: 2주+ 메모리 없는 카테고리 탐색. check_in: healthScore 40 미만 인물 안부. 모두 메모리 컨텍스트를 분석해서 생성한다."
-  - question: "s29에서 iOS 워커 크래시가 반복된 주요 원인은?"
+    explanation: >-
+      followup: 2주+ 된 미해결 메모리에 후속 질문. reminder: 7일 내 기념일/일정. exploration: 2주+
+      메모리 없는 카테고리 탐색. check_in: healthScore 40 미만 인물 안부. 모두 메모리 컨텍스트를 분석해서 생성한다.
+  - question: s29에서 iOS 워커 크래시가 반복된 주요 원인은?
     choices:
-      - "Swift 컴파일 오류"
-      - "네트워크 타임아웃"
-      - "메모리 부족 또는 세션 길이 제한 (토큰 초과)"
-      - "xcodebuild 버전 불일치"
+      - Swift 컴파일 오류
+      - 네트워크 타임아웃
+      - 메모리 부족 또는 세션 길이 제한 (토큰 초과)
+      - xcodebuild 버전 불일치
     answer: 2
-    explanation: "crash-log 원인 분류: UNKNOWN + ERROR. 시스템 swap 331MB 사용, 6개 Claude 인스턴스 동시 실행. task 표시는 완료되지만 커밋 전 세션 종료 — 토큰 소진 패턴. 대응: iOS 프롬프트 간결화 + WO 2개 분리 전송."
-  - question: "v3.3 Memory Tags에서 메모리당 최대 태그 수가 5개로 제한된 이유로 가장 적절한 것은?"
+    explanation: >-
+      crash-log 원인 분류: UNKNOWN + ERROR. 시스템 swap 331MB 사용, 6개 Claude 인스턴스 동시 실행.
+      task 표시는 완료되지만 커밋 전 세션 종료 — 토큰 소진 패턴. 대응: iOS 프롬프트 간결화 + WO 2개 분리 전송.
+  - question: v3.3 Memory Tags에서 메모리당 최대 태그 수가 5개로 제한된 이유로 가장 적절한 것은?
     choices:
-      - "데이터베이스 컬럼 크기 제한"
-      - "iOS UI에서 5개 이상 표시가 어려움"
-      - "태그 남용을 방지하고 의미 있는 분류를 강제"
-      - "성능 최적화를 위한 JOIN 제한"
+      - 데이터베이스 컬럼 크기 제한
+      - iOS UI에서 5개 이상 표시가 어려움
+      - 태그 남용을 방지하고 의미 있는 분류를 강제
+      - 성능 최적화를 위한 JOIN 제한
     answer: 2
-    explanation: "5개 제한은 아키텍처 결정. 제한이 없으면 태그가 검색 키워드처럼 남발되어 분류 체계가 붕괴된다. 5개 강제는 '이 메모리에서 가장 중요한 맥락 5개'를 선택하게 만드는 UX 설계."
+    explanation: >-
+      5개 제한은 아키텍처 결정. 제한이 없으면 태그가 검색 키워드처럼 남발되어 분류 체계가 붕괴된다. 5개 강제는 '이 메모리에서 가장
+      중요한 맥락 5개'를 선택하게 만드는 UX 설계.
 ---
 
 ## Before — s28 종료 후 상태

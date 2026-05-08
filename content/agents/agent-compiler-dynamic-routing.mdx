@@ -1,40 +1,67 @@
 ---
-title: "AgentCompiler 동적 라우팅: 하드코딩 → 티어+키 기반 런타임 컴파일"
+title: 'AgentCompiler 동적 라우팅: 하드코딩 → 티어+키 기반 런타임 컴파일'
 category: agents
-date: "2026-04-19"
-tags: [agent-routing, dynamic-compilation, multi-provider, tier-system, agents, tokenomics]
+date: '2026-04-19'
+tags:
+  - agent-routing
+  - dynamic-compilation
+  - multi-provider
+  - tier-system
+  - agents
+  - tokenomics
 confidence: 2
-last_verified: "2026-04-19"
-applicable_to: ["aidy", "any"]
-connections: [agents/multi-claude-agent-management-compile-strategy, agents/multi-provider-circuit-breaker, agents/agent-architectures, backend-ai/tier-based-ai-cost-cap, agents/multi-agent-orchestration-patterns-2026]
+last_verified: '2026-04-19'
+applicable_to:
+  - aidy
+  - any
+connections:
+  - agents/multi-claude-agent-management-compile-strategy
+  - agents/multi-provider-circuit-breaker
+  - agents/agent-architectures
+  - backend-ai/tier-based-ai-cost-cap
+  - agents/multi-agent-orchestration-patterns-2026
+  - agents/ai-agent-cost-model-computer-use-structured-api
+  - agents/ai-agent-fleet-governance-engineering-model-scalability
+  - agents/google-cloud-a2a-mcp-multi-agent-communication-control-patte
+  - agents/llm-kv-cache-bottleneck-race-condition-scaling
+  - agents/long-running-ai-agents-survival-state-persistence-fault-reco
+  - agents/mini-swe-agent-100-line-github-issue-solver-analysis
+  - backend-ai/ai-api-cost-prevention-serverless-security-pattern
+  - context-engineering/hydrallm-multi-llm-orchestration
 status: published
-description: "에이전트별 모델 라우팅을 하드코딩하는 대신, 유저 티어 + 에이전트 역할 + 사용 가능한 API 키 3차원으로 런타임 컴파일하는 패턴. moneyflow 실 구현 + aidy ADR-011 불채택 대비 분석."
+description: >-
+  에이전트별 모델 라우팅을 하드코딩하는 대신, 유저 티어 + 에이전트 역할 + 사용 가능한 API 키 3차원으로 런타임 컴파일하는 패턴.
+  moneyflow 실 구현 + aidy ADR-011 불채택 대비 분석.
 type: entry
 quiz:
-  - question: "AgentCompiler가 '컴파일'하는 3개 입력 차원은?"
+  - question: AgentCompiler가 '컴파일'하는 3개 입력 차원은?
     choices:
-      - "모델명, 온도, 최대 토큰"
-      - "에이전트 역할, 유저 티어, 사용 가능한 API 키"
-      - "프롬프트, 컨텍스트, 도구"
-      - "비용, 지연시간, 정확도"
+      - '모델명, 온도, 최대 토큰'
+      - '에이전트 역할, 유저 티어, 사용 가능한 API 키'
+      - '프롬프트, 컨텍스트, 도구'
+      - '비용, 지연시간, 정확도'
     answer: 1
-    explanation: "compileAgent(role, tier, keys) → CompiledAgent. 역할로 카테고리를, 티어로 모델을, 키로 폴백을 결정한다."
-  - question: "aidy-architect가 ADR-011에서 AgentCompiler를 불채택한 핵심 이유는?"
+    explanation: >-
+      compileAgent(role, tier, keys) → CompiledAgent. 역할로 카테고리를, 티어로 모델을, 키로 폴백을
+      결정한다.
+  - question: aidy-architect가 ADR-011에서 AgentCompiler를 불채택한 핵심 이유는?
     choices:
-      - "구현 복잡도가 너무 높아서"
-      - "3개 고정 워커에서는 라우팅 판단이 자명하여 동적 컴파일이 과잉"
-      - "API 키 폴백 기능이 불필요해서"
-      - "성능 오버헤드가 너무 커서"
+      - 구현 복잡도가 너무 높아서
+      - 3개 고정 워커에서는 라우팅 판단이 자명하여 동적 컴파일이 과잉
+      - API 키 폴백 기능이 불필요해서
+      - 성능 오버헤드가 너무 커서
     answer: 1
-    explanation: "56건 WO 중 라우팅 오류 0건. server=백엔드, iOS=iOS, Android=Android — 라우팅이 자명한 환경에서 동적 컴파일은 토큰 낭비."
-  - question: "Free 티어에서 AgentCompiler가 적용하는 최적화 두 가지는?"
+    explanation: >-
+      56건 WO 중 라우팅 오류 0건. server=백엔드, iOS=iOS, Android=Android — 라우팅이 자명한 환경에서
+      동적 컴파일은 토큰 낭비.
+  - question: Free 티어에서 AgentCompiler가 적용하는 최적화 두 가지는?
     choices:
-      - "모든 에이전트 Gemini 사용 + maxTokens 30% 감소"
-      - "모든 에이전트 Claude 사용 + 캐싱 활성화"
-      - "모든 에이전트 OpenAI 사용 + temperature 0 고정"
-      - "라우팅 비활성화 + 단일 모델 고정"
+      - 모든 에이전트 Gemini 사용 + maxTokens 30% 감소
+      - 모든 에이전트 Claude 사용 + 캐싱 활성화
+      - 모든 에이전트 OpenAI 사용 + temperature 0 고정
+      - 라우팅 비활성화 + 단일 모델 고정
     answer: 0
-    explanation: "Free 티어는 비용 최소화가 목표. 전 카테고리 Gemini + maxTokens 30% 감소로 비용을 최소화한다."
+    explanation: Free 티어는 비용 최소화가 목표. 전 카테고리 Gemini + maxTokens 30% 감소로 비용을 최소화한다.
 ---
 
 ## 요약
