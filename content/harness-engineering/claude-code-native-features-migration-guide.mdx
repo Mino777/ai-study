@@ -1,0 +1,463 @@
+---
+title: "Claude Code 공식 기능 마이그레이션 가이드 — 커스텀 구현을 네이티브로 대체하기"
+description: "Claude Code가 공식 지원하는 기능 전체 카탈로그 + 커스텀 구현 대체 매핑. 다른 세션이 읽고 자기 프로젝트에 즉시 적용 가능."
+category: harness-engineering
+date: "2026-05-08"
+tags: [claude-code, native-features, migration, agent-teams, hooks, tokenomics]
+confidence: 3
+connections: [claude-code-token-levers-catalog, orchestrator-worker-tmux-communication-rules, bash-watcher-zero-token-polling, dispatch-state-idle-false-positive]
+quiz:
+  - question: "tmux 4-pane 오케스트레이션의 네이티브 대체 기능은?"
+    choices: ["Subagents only", "Agent Teams + TaskCreate + SendMessage + worktree isolation", "CronCreate + /loop", "Plan Mode + /compact"]
+    answer: 1
+    explanation: "Agent Teams는 TeamCreate로 팀 구성, TaskCreate/TaskUpdate로 태스크 관리, SendMessage로 에이전트 간 통신, isolation: worktree로 병렬 편집 충돌 방지를 모두 네이티브로 제공한다."
+  - question: "커스텀 bash-watcher 워커 폴링을 대체하는 네이티브 훅 이벤트는?"
+    choices: ["PostToolUse", "SessionStart", "TeammateIdle", "PreCompact"]
+    answer: 2
+    explanation: "TeammateIdle 훅은 팀 멤버가 유휴 상태가 되면 자동 발화하므로, capture-pane 기반 수동 폴링을 완전히 대체한다."
+  - question: "다음 중 아직 네이티브 대체가 불가능한 커스텀 기능은?"
+    choices: ["worktree 생성", "세션 내 태스크 추적", "크로스 레포 비동기 메시징", "워커 상태 감지"]
+    answer: 2
+    explanation: "Claude Code의 Agent Teams/SendMessage는 단일 세션 내 통신만 지원한다. 프로젝트 간(cross-repo) 비동기 메시징은 여전히 커스텀 구현(messages/ 큐)이 필요하다."
+---
+
+## 이 엔트리의 목적
+
+> **다른 Claude 세션이 이 엔트리를 읽고, 자기 프로젝트의 커스텀 구현 중 Claude Code 공식 기능으로 대체 가능한 것을 식별하고 마이그레이션할 수 있도록 한다.**
+
+하네스 엔지니어링 초기에는 Claude Code가 제공하지 않던 기능을 tmux, bash 스크립트, 파일 기반 메시지 큐 등으로 직접 구현했다. 2026년 현재 Claude Code가 이 중 상당수를 네이티브로 흡수했으므로, **네이티브 우선 원칙**으로 전환한다.
+
+**네이티브 우선 원칙**: 같은 기능을 커스텀과 네이티브 둘 다 할 수 있으면, 네이티브를 쓴다. 유지보수 비용 0, 업데이트 자동, 버그 수정도 자동.
+
+---
+
+## 대체 가능 매핑 — 한눈에 보기
+
+| 커스텀 구현 | 네이티브 대체 | 상태 | 절감 효과 |
+|---|---|---|---|
+| tmux 4-pane 오케스트레이션 | **Agent Teams** | experimental | 스크립트 500줄+ → 설정 3줄 |
+| `/tmp/aidy-dispatch-state/` 폴링 | **TaskCreate / TaskUpdate / TaskList** | stable | 파일 I/O 제거, 상태 일관성 |
+| bash-watcher 워커 상태 감시 | **TeammateIdle 훅** | stable | 30초 폴링 → 이벤트 드리븐 |
+| tmux capture-pane 완료 감지 | **Agent `run_in_background`** + 자동 알림 | stable | 정규식 파싱 제거 |
+| `/wt-branch` 수동 worktree | **`isolation: "worktree"`** 파라미터 | stable | 스크립트 → 파라미터 1개 |
+| NEXT.md 태스크 큐 | **TaskCreate + TaskUpdate** (세션 내) | stable | 파일 파싱 제거 |
+| tmux paste-buffer 프롬프트 전달 | **SendMessage** | stable | flush 4-layer 방어 불필요 |
+| 수동 `/compact` 리마인더 | **60% 자동 compaction** | stable | 리마인더 훅 제거 |
+| 커스텀 cron (GHA only) | **CronCreate / /loop** (세션 내) | stable | 세션 내 스케줄링 추가 |
+| Plan 파일 수동 관리 | **EnterPlanMode / ExitPlanMode** | stable | Shift+Tab 토글 |
+
+---
+
+## 1. 멀티에이전트 오케스트레이션
+
+### Before: tmux 4-pane + bash 스크립트
+
+```
+# 기존: 500줄+ 인프라
+architect-cli.sh          # paste-buffer + C-m retry + 429 감지
+watch-workers.sh          # capture-pane 30초 폴링
+/tmp/aidy-dispatch-state/ # 파일 기반 상태 추적
+inbox/{worker}-request.md # 파일 기반 메시징
+```
+
+문제점: tmux 세션 끊김, paste-buffer 누락, 정규식 false positive, 429 rate limit 감지 필요.
+
+### After: Agent Teams (네이티브)
+
+**활성화** (settings.json):
+```json
+{
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  }
+}
+```
+
+**팀 구성 예시**:
+```
+Agent(
+  name="tech-lead",
+  model="opus",
+  prompt="코드베이스 분석 + 태스크 생성. 구현은 워커에 위임."
+)
+
+Agent(
+  name="worker-1",
+  model="sonnet",
+  isolation="worktree",
+  prompt="할당된 태스크를 구현하세요."
+)
+```
+
+**네이티브가 자동 처리하는 것**:
+- 에이전트 간 메시지 전달 (SendMessage)
+- 태스크 의존성 관리 (TaskCreate + addBlockedBy)
+- 워커 유휴 감지 (TeammateIdle 훅)
+- 병렬 편집 충돌 방지 (worktree isolation)
+- 완료 알림 (run_in_background 자동 통지)
+
+### 역할 설계 패턴
+
+| 역할 | model | 책임 | 금지 |
+|---|---|---|---|
+| CTO (메인 세션) | - | 유저 대화, 프롬프트 변환, 위임 | 코드 읽기/쓰기 |
+| Tech Lead | opus | 분석, 계획, Gate 검증, 어드바이저 | 직접 구현 |
+| 실무자 x N | sonnet | 도메인 무관 구현, 테스트 | 범위 밖 작업 |
+
+**핵심**: CTO는 코드를 만지지 않고, Tech Lead는 구현하지 않고, 실무자는 범위를 넘지 않는다.
+
+---
+
+## 2. 태스크 & 진행 추적
+
+### Before: NEXT.md + 파일 기반 큐
+
+```markdown
+<!-- NEXT.md -->
+## P0
+- [ ] 빌드 에러 수정
+## P1
+- [ ] 새 API 엔드포인트 추가
+```
+
+문제점: 수동 파싱, 상태 동기화 없음, 다중 에이전트가 같은 파일 수정 시 충돌.
+
+### After: TaskCreate / TaskUpdate (네이티브)
+
+```
+TaskCreate(
+  subject="빌드 에러 수정",
+  description="src/api/client.py 타입 에러 해결"
+)
+
+TaskUpdate(taskId="1", status="in_progress")
+TaskUpdate(taskId="1", status="completed")
+
+# 의존성 설정
+TaskUpdate(taskId="3", addBlockedBy=["1", "2"])
+```
+
+**자동 제공**: 상태 머신 (pending → in_progress → completed), 의존성 블로킹, 팀 전체 가시성.
+
+---
+
+## 3. Worktree 격리
+
+### Before: `/wt-branch` 커스텀 스크립트
+
+```bash
+# 기존: squash merge 함정 회피용 수동 worktree
+git fetch origin main
+git worktree add /tmp/project-feature origin/main
+cd /tmp/project-feature
+git checkout -b feature-name
+```
+
+### After: `isolation: "worktree"` (네이티브)
+
+```
+Agent(
+  name="worker",
+  isolation="worktree",
+  prompt="이 태스크를 구현하세요."
+)
+```
+
+**자동 처리**: worktree 생성, 브랜치 분기, 작업 완료 후 결과 반환, 변경 없으면 자동 정리.
+
+**직접 worktree 진입도 가능**:
+```bash
+claude --worktree feature-auth
+```
+
+---
+
+## 4. 훅 시스템 — 실무 필수 이벤트
+
+### QA 게이트 (PreToolUse)
+
+커밋 전 테스트 자동 실행:
+```json
+{
+  "hooks": {
+    "PreToolUse": [{
+      "matcher": "Bash",
+      "hooks": [{
+        "type": "command",
+        "command": "if echo \"$CLAUDE_TOOL_INPUT\" | python3 -c \"import sys,json; print(json.load(sys.stdin).get('command',''))\" 2>/dev/null | grep -qE 'git commit'; then pytest tests/ -x --tb=short 2>&1 | tail -5; [ $? -ne 0 ] && exit 2; fi",
+        "timeout": 60000
+      }]
+    }]
+  }
+}
+```
+
+### Compound 리마인더 (PostToolUse)
+
+push 후 자동 리마인더:
+```json
+{
+  "PostToolUse": [{
+    "matcher": "Bash",
+    "hooks": [{
+      "type": "command",
+      "command": "if echo \"$CLAUDE_TOOL_INPUT\" | python3 -c \"import sys,json; print(json.load(sys.stdin).get('command',''))\" 2>/dev/null | grep -qE 'git push'; then echo '/compound 실행하세요'; fi",
+      "timeout": 3000
+    }]
+  }]
+}
+```
+
+### 보호 파일 가드 (PreToolUse)
+
+민감 파일 수정 차단:
+```json
+{
+  "permissions": {
+    "deny": [
+      "Read(**/.env*)",
+      "Write(**/.env*)",
+      "Bash(rm -rf *)",
+      "Bash(git push --force*)",
+      "Bash(git reset --hard*)"
+    ]
+  }
+}
+```
+
+### 전체 훅 이벤트 레퍼런스
+
+| 이벤트 | 발화 시점 | 블로킹 | 실무 용도 |
+|---|---|---|---|
+| SessionStart | 세션 시작/재개 | No | 환경 초기화, 상태 로드 |
+| PreToolUse | 도구 실행 전 | Yes (exit 2) | QA 게이트, 보호 파일 차단 |
+| PostToolUse | 도구 성공 후 | No | 포매팅, 리마인더 |
+| TeammateIdle | 팀원 유휴 | Yes (exit 2로 유지) | 워커 완료 감지 |
+| TaskCreated | 태스크 생성 | Yes | 태스크 검증 |
+| TaskCompleted | 태스크 완료 | Yes | Gate 검증 트리거 |
+| PreCompact | 압축 전 | Yes | 상태 저장 |
+| PostCompact | 압축 후 | No | 컨텍스트 재주입 |
+| SubagentStop | 서브에이전트 종료 | Yes | 결과 검증 |
+
+**Exit code 규칙**: 0=허용, 1=비블로킹 에러(로그만), 2=블로킹(차단/재시도).
+
+---
+
+## 5. 스케줄링 & 자동화
+
+### /loop — 세션 내 반복 실행
+
+```bash
+/loop 5m CI 상태 확인하고 실패하면 수정해줘
+/loop 30m PR 리뷰 댓글 확인하고 대응해줘
+/loop        # 기본 유지보수 루프 (동적 간격)
+```
+
+커스텀 `loop.md`로 기본 동작 정의 가능 (`.claude/loop.md`).
+
+### CronCreate — 세션 내 스케줄
+
+```bash
+# 45분 후 알림
+CronCreate "remind me to check deploy status" delay=45m
+
+# 매 시간 반복
+CronCreate "audit security headers" cron="0 * * * *" recurring=true
+```
+
+**한계**: 세션 스코프 (세션 종료 시 만료). 영구 스케줄은 GitHub Actions 또는 Cloud Routines 사용.
+
+---
+
+## 6. 컨텍스트 관리
+
+### 자동 압축 (60% 임계값)
+
+200K 토큰 중 ~120K 소진 시 자동 발동. 오래된 대화를 요약으로 교체.
+
+### /compact 커스텀 지시
+
+```bash
+/compact 인증 모듈 변경사항과 결정 로그만 유지. 탐색 과정은 삭제.
+```
+
+### /rewind 체크포인트
+
+```bash
+Esc Esc  # 체크포인트 메뉴
+```
+
+옵션: 코드+대화 복원 / 대화만 복원 / 코드만 복원 / 해당 지점부터 요약.
+
+---
+
+## 7. Plan Mode — 분석 후 실행
+
+### Shift+Tab 모드 순환
+
+`default` → `acceptEdits` → `plan` → `auto` (가능 시)
+
+### Plan 승인 플로우
+
+1. Claude가 코드베이스 탐색 + 계획 작성
+2. `Ctrl+G`로 에디터에서 계획 수정 가능
+3. 승인 옵션:
+   - "auto 모드로 실행" — 자율 실행
+   - "편집만 자동 승인" — 파일 수정은 자동, bash는 확인
+   - "매 편집 수동 확인" — 하나씩 리뷰
+   - "계획 수정 피드백" — 재계획
+
+---
+
+## 8. Permission Modes — 안전과 속도의 균형
+
+| 모드 | 자동 허용 | 용도 |
+|---|---|---|
+| **default** | 읽기만 | 민감 작업, 학습 |
+| **acceptEdits** | 읽기 + 파일 편집 | 일반 개발 |
+| **plan** | 읽기만 (계획 제안) | 아키텍처 탐색 |
+| **auto** | 전체 (분류기 검증) | 장시간 자율 작업 |
+| **dontAsk** | 사전 승인 도구만 | CI/CD |
+
+### auto 모드 분류기
+
+별도 모델이 매 액션을 검증:
+- **차단**: `curl | bash`, 시크릿 외부 전송, 프로덕션 배포, force push
+- **허용**: 로컬 파일 편집, 의존성 설치, 읽기 전용 HTTP
+- 대화 내 "push 하지마" → 분류기가 해당 액션 차단
+- 연속 3회 차단 → 프롬프팅 모드로 전환
+
+---
+
+## 9. 서브에이전트 — 컨텍스트 격리 위임
+
+### 빌트인 타입
+
+| subagent_type | 용도 | 도구 |
+|---|---|---|
+| `general-purpose` | 범용 작업 | 전체 |
+| `Explore` | 코드베이스 탐색 | Read, Grep, Glob (Edit 없음) |
+| `Plan` | 아키텍처 설계 | Read, Grep, Glob (Edit 없음) |
+| `claude-code-guide` | Claude Code 사용법 질문 | Read, Grep, WebFetch |
+
+### 모델 라우팅으로 비용 절감
+
+```
+Agent(model="haiku", prompt="이 로그에서 에러 패턴 추출")   # 저비용 탐색
+Agent(model="opus", prompt="아키텍처 결정 + Gate 검증")      # 고비용 판단
+Agent(model="sonnet", prompt="이 함수 구현")                 # 중간 구현
+```
+
+**비용 절감**: Haiku 탐색 + Sonnet 구현 + Opus 판단 = 전부 Opus 대비 40-60% 절감.
+
+### 병렬 서브에이전트
+
+```
+# 한 메시지에서 여러 Agent 호출 → 병렬 실행
+Agent(name="researcher-1", prompt="인증 모듈 분석")
+Agent(name="researcher-2", prompt="DB 스키마 분석")
+Agent(name="researcher-3", prompt="API 엔드포인트 매핑")
+```
+
+---
+
+## 10. MCP 서버 통합
+
+### 프로젝트 레벨 설정 (`.claude/mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "github": {
+      "type": "stdio",
+      "command": "github-mcp-server"
+    },
+    "database": {
+      "type": "stdio",
+      "command": "sqlite-mcp",
+      "env": { "DB_PATH": "./data/trades.db" }
+    }
+  }
+}
+```
+
+### 서브에이전트별 MCP 스코프
+
+특정 에이전트에만 특정 MCP 도구 허용 가능 — 보안 경계 설정.
+
+---
+
+## 아직 네이티브 대체 불가 — 커스텀 유지 필요
+
+| 커스텀 기능 | 대체 불가 이유 |
+|---|---|
+| `/messages` 크로스 레포 비동기 큐 | Agent Teams는 단일 세션 내 통신만 |
+| `/projects-sync` 멀티 프로젝트 진단 | Claude Code는 단일 프로젝트 스코프 |
+| `/cross-session-review` | 세션 간 통신 미지원 |
+| `/compound` 7-Phase 파이프라인 | 도메인 특화 워크플로우 (네이티브화 부적합) |
+| JIT 임베딩 검색 | 로컬 벡터 검색 엔진은 외부 도구 |
+| `/validate-mdx`, `/validate-ai-output` | 도메인 특화 검증 규칙 |
+| `/promote-solution` N=3+ 승격 | 솔루션 누적 패턴 감지는 프로젝트 고유 로직 |
+| Hermes VPS 에이전트 | 외부 인프라 오케스트레이션 |
+
+**원칙**: 네이티브로 80% 커버하고, 나머지 20%만 커스텀으로 유지.
+
+---
+
+## 마이그레이션 체크리스트 — 다른 세션용
+
+자기 프로젝트에 적용할 때 이 순서로:
+
+1. **settings.json 점검**: `permissions.deny`에 보호 규칙 있는가? 없으면 추가
+2. **PreToolUse 훅**: 커밋 전 빌드/테스트 게이트 설정
+3. **PostToolUse 훅**: push 후 `/compound` 리마인더 설정
+4. **tmux 스크립트 제거**: Agent Teams + SendMessage + TaskCreate로 대체
+5. **파일 기반 상태 추적 제거**: TaskUpdate로 대체
+6. **수동 worktree 스크립트 제거**: `isolation: "worktree"` 사용
+7. **폴링 스크립트 제거**: TeammateIdle 훅 + run_in_background 사용
+8. **/loop 활용**: CI 모니터링, PR 리뷰 폴링에 사용
+9. **Plan Mode 활용**: 큰 변경 전 Shift+Tab으로 계획 먼저
+10. **모델 라우팅**: 탐색=Haiku, 구현=Sonnet, 판단=Opus로 비용 최적화
+
+---
+
+## settings.json 템플릿 — 즉시 적용
+
+```json
+{
+  "permissions": {
+    "deny": [
+      "Read(**/.env*)",
+      "Write(**/.env*)",
+      "Bash(rm -rf *)",
+      "Bash(git push --force*)",
+      "Bash(git reset --hard*)"
+    ]
+  },
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [{
+          "type": "command",
+          "command": "커밋 전 테스트 게이트 (프로젝트에 맞게 수정)",
+          "timeout": 60000
+        }]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [{
+          "type": "command",
+          "command": "push 후 compound 리마인더 (프로젝트에 맞게 수정)",
+          "timeout": 3000
+        }]
+      }
+    ]
+  }
+}
+```
