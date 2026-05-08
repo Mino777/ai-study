@@ -9,8 +9,8 @@
 
 ## 작성 시점
 
-- **작성 일시**: 2026-05-03 (Session 28 — 프로젝트 씽크 + 면접 페이지 개선)
-- **작성 주체**: Claude (Session 28)
+- **작성 일시**: 2026-05-08 (전체 엔트리 점검 스프린트)
+- **작성 주체**: Claude (엔트리 점검 세션)
 - **이유**: 세션 핸드오프
 
 ---
@@ -18,42 +18,52 @@
 ## 현재 상태 스냅샷
 
 ### ai-study Wiki
-- **엔트리 수**: 194+
-- **Solutions**: workflow 16, mdx 9, ai-pipeline 6, github-actions 5, next-patterns 3, performance 1
+- **엔트리 수**: 204
+- **그래프**: 207 nodes, 1,509 edges
+- **상태**: draft 0, in-progress 0, complete 204 (전수 정상)
+- **Solutions**: workflow 15, mdx 8, ai-pipeline 5, github-actions 4, next-patterns 3, performance 1
 - **테스트**: 71개 (mermaid-fix 34 + check-skills 23 + resolver-eval 7 + harness-fitness 7)
 - **하네스 구성**: deny 7, hooks 4+, rules 2, commands 13, harness-fitness 7개 자동검증
-- **하네스 템플릿**: harness-template/ (공통) + harness-template/ios/ (iOS)
-- **하네스 연구**: Fowler + arxiv + Anthropic + OpenAI 4편 종합 적용
 - **Flow Map**: 6편 (architect + ios + android + backend + moneyflow + tarosaju)
 
-### 워커 프로젝트 위키 접근
-- aidy-architect: ✅ additionalDirectories + CLAUDE.md 안내 (커밋 완료)
-- mino-moneyflow: ✅ 동일 (커밋 완료, 미푸시)
-- mino-tarosaju: ✅ 동일 (커밋 완료, 미푸시)
-- pre-assignment: ✅ 공통 하네스 + 위키 접근 (git init + 커밋 완료)
+### 이번 세션에서 한 것
+- draft 21개 + in-progress 3개 → complete (production 404 전부 수정)
+- 역링크 309개 일괄 추가 (지식 그래프 촘촘화)
+- 의사코드 3건 → 실전 패턴으로 교체
 
-### /interview 히든 페이지
-- **규모**: constants.ts 3,500+줄 + page.tsx 2,600+줄
-- **구성**: 7탭 / 120퀴즈 / 55플래시카드(iOS) / 11알고리즘 / 20CS / 6시스템디자인 / 토스 25토픽 상세
-- **플래시카드**: 랜덤 셔플 (페이지 진입 시마다 다른 7장)
-- **모바일 반응형**: 6개 섹션 브레이크포인트 적용 (2026-05-03)
+### 워커 프로젝트 위키 접근
+- aidy-architect: ✅ (커밋 완료)
+- mino-moneyflow: ✅ (커밋 완료)
+- mino-tarosaju: ✅ 커밋 완료, 미푸시
+
+---
+
+## 이번 스프린트 KPI
+
+| 지표 | baseline | target | direction | actual |
+|------|----------|--------|-----------|--------|
+| 엔트리 수 | 204 | 210 | higher | ? |
+| 그래프 edges | 1509 | 1600 | higher | ? |
+| draft 잔여 | 0 | 0 | lower | ? |
 
 ---
 
 ## 다음 작업 큐 (우선순위순)
 
 ### P0 — 즉시
-1. **워커 프로젝트 위키 접근 검증**: 다음 moneyflow/tarosaju 세션에서 `cd ../ai-study && node scripts/search.mjs` 실제 동작 확인
-2. **tarosaju 커밋 push**: 위키 접근 설정 커밋이 아직 미푸시 (moneyflow는 push 완료)
+1. **Vercel 배포 확인**: 이번 120파일 변경이 정상 배포되었는지 확인
+2. **tarosaju 커밋 push**: 위키 접근 설정 커밋이 아직 미푸시
 
 ### P1 — 이번 주
-3. **하네스 템플릿을 다른 프로젝트에서 실전 검증**: pre-assignment에서 실제 사전과제 진행하며 하네스 효과 측정
-4. **CS 토픽 25개 목표**: 현재 20개 → 분산시스템/캐싱/인증 심화
+3. **엔트리 내용 깊이 보강**: 이번 점검은 구조(status/connections) 중심. 다음은 본문 품질 보강 (특히 confidence 1-2 엔트리)
+4. **draft 자동 경고**: generate-content-manifest.mjs에서 draft 엔트리 발견 시 경고 출력 추가 검토
+5. **역링크 자동화**: 엔트리 생성 시 fix-one-way-connections 자동 실행 통합 검토
 
 ### Backlog
 - SM-2 분산반복 알고리즘을 퀴즈에 적용 (틀린 문제 우선 출제)
 - 하네스 템플릿 GitHub 공개 검토
-- 워커 프로젝트 위키 검색 히트 카운트 수집 구조 (필요 시)
+- next-patterns 솔루션 compiled-truth 생성 (N=3 도달)
+- AI 생성 엔트리 코드블록 "의사 코드" 패턴 자동 경고 (validate-content 보강)
 
 ---
 
@@ -62,4 +72,5 @@
 1. CLAUDE.md → SPEC.md → ai-agent-start-here → 이 문서 로드
 2. `git pull --rebase` (AI 파이프라인 자동 생성 엔트리 확인)
 3. 엔트리 수 실측: `cat src/generated/content-manifest.json | python3 -c "import json,sys; d=json.load(sys.stdin); print(len(d['entries']))"`
-4. P0 큐 착수
+4. Vercel 배포 상태 확인
+5. P0 큐 착수

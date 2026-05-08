@@ -2,6 +2,26 @@
 
 모든 주목할 만한 변경사항을 이 파일에 기록합니다.
 
+## [2026-05-08] 전체 엔트리 점검 스프린트
+
+### Added
+- 역링크 309개 일괄 추가 (106개 파일, 지식 그래프 촘촘화)
+
+### Changed
+- 21개 draft 엔트리 → complete (production 404 일괄 수정)
+- 3개 in-progress 엔트리 → complete (tool-use, rag-overview, vector-databases)
+- workflow-scaffolding: TypeScript 의사코드 100줄 → Compound Engineering 실전 사례로 교체
+- design-md: TypeScript 의사코드 → CLAUDE.md 선언적 패턴으로 교체
+- ios-claude-code-mcp: 하드코딩 API 클라이언트 → 실제 Anthropic Messages API 호출로 교체
+- quiz 문항 정합성 수정 (workflow-scaffolding)
+
+### Fixed
+- **critical**: ios-ai-developer-growth-direction-2026 production 404 (status: draft → complete)
+
+### Metrics
+- 커밋 3, 파일 120개, +2,965/-1,650줄
+- 최종: 204 엔트리, 207 nodes, 1,509 edges
+
 ## [2026-05-02] 세션 27 — 하네스 마스터클래스
 
 ### Added
