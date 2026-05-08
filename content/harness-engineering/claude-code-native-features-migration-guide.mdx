@@ -5,7 +5,7 @@ category: harness-engineering
 date: "2026-05-08"
 tags: [claude-code, native-features, migration, agent-teams, hooks, tokenomics]
 confidence: 3
-connections: [claude-code-token-levers-catalog, orchestrator-worker-tmux-communication-rules, bash-watcher-zero-token-polling, dispatch-state-idle-false-positive]
+connections: [claude-code-token-levers-catalog, orchestrator-worker-tmux-communication-rules, bash-watcher-zero-token-polling, dispatch-state-idle-false-positive, tmux-flush-automation-pattern]
 quiz:
   - question: "tmux 4-pane 오케스트레이션의 네이티브 대체 기능은?"
     choices: ["Subagents only", "Agent Teams + TaskCreate + SendMessage + worktree isolation", "CronCreate + /loop", "Plan Mode + /compact"]
@@ -14,7 +14,7 @@ quiz:
   - question: "커스텀 bash-watcher 워커 폴링을 대체하는 네이티브 훅 이벤트는?"
     choices: ["PostToolUse", "SessionStart", "TeammateIdle", "PreCompact"]
     answer: 2
-    explanation: "TeammateIdle 훅은 팀 멤버가 유휴 상태가 되면 자동 발화하므로, capture-pane 기반 수동 폴링을 완전히 대체한다."
+    explanation: "TeammateIdle 훅은 팀 멤버가 유휴 상태가 되면 자동 발화하므로, capture-pane 기반 수동 폴링을 대체한다. 단, dispatch 전 idle과 완료 후 idle을 구분하려면 TaskCreate 타임스탬프 추적이 보완 필요 (dispatch-state-idle-false-positive 참고)."
   - question: "다음 중 아직 네이티브 대체가 불가능한 커스텀 기능은?"
     choices: ["worktree 생성", "세션 내 태스크 추적", "크로스 레포 비동기 메시징", "워커 상태 감지"]
     answer: 2
@@ -105,6 +105,30 @@ Agent(
 | 실무자 x N | sonnet | 도메인 무관 구현, 테스트 | 범위 밖 작업 |
 
 **핵심**: CTO는 코드를 만지지 않고, Tech Lead는 구현하지 않고, 실무자는 범위를 넘지 않는다.
+
+**비용 경고**: Agent Teams 사용 시 Plan 모드 대비 ~7x 토큰 증가 (claude-code-token-levers-catalog 참고). 병렬 멀티 워커가 꼭 필요한 경우만 사용. 순차 처리는 서브에이전트 + TaskCreate 조합이 저비용.
+
+### dispatch state false-positive 보완
+
+TeammateIdle 훅만으로는 "dispatch 전 대기"와 "작업 완료 후 대기"를 구분할 수 없다 (dispatch-state-idle-false-positive 참고). TaskCreate 타임스탬프로 보완:
+
+```
+# 워커에 태스크 할당 시 시간 기록
+TaskCreate(subject="WO-001 구현", metadata={"dispatched_at": "2026-05-08T10:00:00Z"})
+
+# TeammateIdle 발화 시: dispatched_at 이후 충분한 시간이 경과했는지 확인
+# → 미경과면 아직 시작 전 idle, 경과했으면 완료 후 idle
+```
+
+### tmux 4-layer 방어 → SendMessage (역사적 맥락)
+
+기존 tmux 프롬프트 전달에는 4-layer 방어가 필요했다 (tmux-flush-automation-pattern 참고):
+1. **Layer 1**: paste-buffer 경유 (send-keys 직접 전송 시 bracketed paste mode 문제)
+2. **Layer 2**: C-m 최대 3회 재시도 (paste 완료 경쟁 조건)
+3. **Layer 3**: 429/rate-limit 감지 + 5분 backoff
+4. **Layer 4**: sequential dispatch + idle 대기 (동시 전송 충돌 방지)
+
+SendMessage는 이 4개를 모두 불필요하게 만든다 — 메시지 전달이 Claude Code 내부 프로토콜이므로 전송 실패, 경쟁 조건, rate limit이 존재하지 않는다.
 
 ---
 
@@ -387,6 +411,152 @@ Agent(name="researcher-3", prompt="API 엔드포인트 매핑")
 
 ---
 
+## 11. 커스텀 에이전트 정의 (.claude/agents/)
+
+`.claude/agents/*.md` 파일로 재사용 가능한 에이전트 타입을 정의할 수 있다.
+
+```markdown
+---
+name: security-reviewer
+model: opus
+description: "보안 취약점 분석 전문 에이전트"
+tools:
+  allow:
+    - Read
+    - Grep
+    - Glob
+    - Bash(grep *)
+  deny:
+    - Edit
+    - Write
+permissionMode: plan
+---
+
+보안 리뷰 전문가입니다. OWASP Top 10 기준으로 코드를 분석하세요.
+SQL injection, XSS, CSRF 등 취약점을 찾고 심각도를 보고하세요.
+코드를 직접 수정하지 마세요. 분석 결과만 보고하세요.
+```
+
+**호출**: `Agent(subagent_type="security-reviewer", prompt="src/api/ 모듈 보안 분석")`
+
+**용도**: Gate 검증, 코드 리뷰, 탐색 등 반복되는 역할을 코드로 정의.
+
+---
+
+## 12. Cloud Routines — 영구 스케줄링
+
+세션 종료 후에도 실행되는 자동화. Anthropic 인프라에서 실행.
+
+### 트리거 종류
+
+| 트리거 | 설정 | 용도 |
+|---|---|---|
+| **Schedule** | cron (최소 1시간) 또는 일회성 | 일일 보안 감사, 주간 리포트 |
+| **API** | POST `/fire` + Bearer 토큰 | CI 실패 시 자동 수정 |
+| **GitHub** | PR/Release 이벤트 + 필터 | PR 자동 리뷰, 릴리스 노트 |
+
+### 설정
+
+```bash
+# CLI에서 생성
+/schedule "daily at 9am" "코드베이스 보안 감사 + 리포트 생성"
+
+# 웹에서 생성: claude.ai/code/routines
+```
+
+**CronCreate와 차이**: CronCreate는 세션 스코프 (세션 종료 시 만료). Routines는 영구 (Anthropic 클라우드 실행).
+
+---
+
+## 13. Remote Control — 모바일에서 세션 제어
+
+로컬 머신의 Claude Code 세션을 모바일/웹에서 원격 제어.
+
+```bash
+# 로컬에서 서버 모드 활성화
+claude remote-control
+claude remote-control --permission-mode acceptEdits
+
+# 모바일 앱이나 claude.ai/code에서 접속
+```
+
+**용도**: 배포 모니터링 중 외출, 장시간 작업 진행 상황 확인, 모바일에서 빠른 승인.
+
+---
+
+## 14. Channels — 외부 시스템 → 세션 푸시 알림
+
+CI 실패, 웹훅 이벤트 등을 실행 중인 세션에 직접 주입. 폴링 없이 이벤트 드리븐.
+
+```bash
+# 외부에서 세션에 메시지 푸시
+POST http://localhost:9999/messages
+{"type": "notification", "content": "CI 실패: test suite timeout"}
+```
+
+**커스텀 /loop 폴링 대체**: CI 상태를 5분마다 체크하는 대신, CI가 실패 시 직접 세션에 알림.
+
+**상태**: Research preview (`--dangerously-load-development-channels` 필요).
+
+---
+
+## 15. 비동기 훅 — 블로킹 없는 백그라운드 작업
+
+### async (fire-and-forget)
+
+```json
+{
+  "type": "command",
+  "command": ".claude/hooks/slow-lint.sh",
+  "async": true
+}
+```
+
+Claude가 기다리지 않고 다음 작업 진행. 결과는 로그에만 기록.
+
+### asyncRewake (완료 시 Claude 깨우기)
+
+```json
+{
+  "type": "command",
+  "command": ".claude/hooks/security-scan.sh",
+  "async": true,
+  "asyncRewake": true
+}
+```
+
+백그라운드 실행 + exit code 2로 종료 시 Claude를 깨워서 결과 처리. 장시간 보안 스캔, 대규모 테스트 등에 적합.
+
+---
+
+## 16. 설정 계층 — 스코프별 우선순위
+
+| 스코프 | 위치 | 적용 범위 | 우선순위 |
+|---|---|---|---|
+| **Managed** | Org 정책 (Claude Console) | 팀 전체 | 최고 (오버라이드 불가) |
+| **Local** | `.claude/settings.local.json` | 현재 프로젝트, git 미추적 | 높음 |
+| **Project** | `.claude/settings.json` | 프로젝트, git 추적 | 중간 |
+| **User** | `~/.claude/settings.json` | 모든 프로젝트 | 낮음 |
+
+**배열 병합 규칙**: permissions, allow/deny 규칙은 스코프 간 **합산** (교체 아님). deny는 추가만 가능하므로 하위 스코프에서 상위 deny를 제거할 수 없다.
+
+---
+
+## 17. Prefix 관리 주의사항
+
+네이티브 기능 도입 시 CLAUDE.md가 비대해지면 캐시 효율이 떨어진다 (claude-code-token-levers-catalog § A1 참고).
+
+**규칙**:
+- CLAUDE.md는 200줄 이하 유지
+- 훅 설정 상세 → `.claude/rules/*.md`로 분리
+- 에이전트 정의 → `.claude/agents/*.md`로 분리
+- 워크플로우 상세 → `.claude/commands/*.md`로 분리
+- 대형 참조 → `@docs/foo.md` import 활용
+
+**Frozen Snapshot 원칙**: 활성 세션 중 CLAUDE.md 수정 금지. Prefix가 변하면 캐시 전부 무효화 + 1.25x 오버헤드.
+
+---
+
 ## 아직 네이티브 대체 불가 — 커스텀 유지 필요
 
 | 커스텀 기능 | 대체 불가 이유 |
@@ -408,16 +578,19 @@ Agent(name="researcher-3", prompt="API 엔드포인트 매핑")
 
 자기 프로젝트에 적용할 때 이 순서로:
 
-1. **settings.json 점검**: `permissions.deny`에 보호 규칙 있는가? 없으면 추가
-2. **PreToolUse 훅**: 커밋 전 빌드/테스트 게이트 설정
+1. **settings.json 점검**: `permissions.deny`에 `.env`, `rm -rf`, `force push` 보호 규칙 추가
+2. **PreToolUse 훅**: 커밋 전 빌드/테스트 게이트 설정 (exit 2로 차단)
 3. **PostToolUse 훅**: push 후 `/compound` 리마인더 설정
-4. **tmux 스크립트 제거**: Agent Teams + SendMessage + TaskCreate로 대체
-5. **파일 기반 상태 추적 제거**: TaskUpdate로 대체
+4. **tmux 스크립트 제거**: Agent Teams + SendMessage + TaskCreate로 대체 (비용 주의: 7x)
+5. **파일 기반 상태 추적 제거**: TaskUpdate + metadata 타임스탬프로 대체
 6. **수동 worktree 스크립트 제거**: `isolation: "worktree"` 사용
 7. **폴링 스크립트 제거**: TeammateIdle 훅 + run_in_background 사용
-8. **/loop 활용**: CI 모니터링, PR 리뷰 폴링에 사용
-9. **Plan Mode 활용**: 큰 변경 전 Shift+Tab으로 계획 먼저
-10. **모델 라우팅**: 탐색=Haiku, 구현=Sonnet, 판단=Opus로 비용 최적화
+8. **커스텀 에이전트 정의**: 반복 역할 (리뷰어, 테스터)을 `.claude/agents/*.md`로 코드화
+9. **/loop 활용**: CI 모니터링, PR 리뷰 폴링에 사용
+10. **Plan Mode 활용**: 큰 변경 전 Shift+Tab으로 계획 먼저
+11. **모델 라우팅**: 탐색=Haiku, 구현=Sonnet, 판단=Opus로 비용 최적화
+12. **Prefix 관리**: CLAUDE.md 200줄 이하 유지. 상세는 rules/agents/commands로 분리
+13. **Cloud Routines 검토**: 영구 스케줄이 필요한 작업은 GHA → Routines 이관 고려
 
 ---
 
