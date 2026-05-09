@@ -1188,8 +1188,8 @@ export default function InterviewPage() {
         {/* ═══════════ TAB: DAILY MISSIONS ═══════════ */}
         {activeTab === "daily" && (() => {
           // Generate missions for a given day based on the 100-day bootcamp plan
-          const getMissions = (day: number): { id: string; label: string; category: string; color: string }[] => {
-            const missions: { id: string; label: string; category: string; color: string }[] = [];
+          const getMissions = (day: number): { id: string; label: string; category: string; color: string; tab?: "coding" | "tech" | "quiz" | "cs" | "culture" | "assignment" | "toss7"; url?: string }[] => {
+            const missions: { id: string; label: string; category: string; color: string; tab?: "coding" | "tech" | "quiz" | "cs" | "culture" | "assignment" | "toss7"; url?: string }[] = [];
 
             // Phase 1: Day 1-35
             if (day <= 35) {
@@ -1326,6 +1326,21 @@ export default function InterviewPage() {
                 missions.push({ id: `d${day}-dday`, label: ddayMissions[day] || "최종 점검", category: "D-Day", color: "#f59e0b" });
               }
             }
+            // Auto-map category → tab for navigation
+            const categoryTabMap: Record<string, typeof missions[0]["tab"]> = {
+              "알고리즘": "coding", "모의고사": "coding",
+              "카드": "tech", "기술면접": "tech", "보강": "tech", "녹음": "tech",
+              "퀴즈": "quiz",
+              "CS": "cs",
+              "SD": "tech", "시스템 디자인": "tech",
+              "FDE": "tech",
+              "컬쳐핏": "culture",
+              "모의면접": "tech",
+              "정리": "coding",
+            };
+            for (const m of missions) {
+              if (!m.tab) m.tab = categoryTabMap[m.category];
+            }
             return missions;
           };
 
@@ -1396,23 +1411,37 @@ export default function InterviewPage() {
                 ) : (
                   <div className="space-y-3">
                     {todayMissions.map((mission, i) => (
-                      <label key={mission.id} className={`flex items-start gap-4 p-4 rounded-xl border cursor-pointer transition-all ${dailyMissions[mission.id] ? 'bg-surface/40 border-border/20' : 'bg-surface/10 border-border/40 hover:border-accent/30'}`}>
+                      <div key={mission.id} className={`flex items-start gap-4 p-4 rounded-xl border transition-all ${dailyMissions[mission.id] ? 'bg-surface/40 border-border/20' : 'bg-surface/10 border-border/40'}`}>
                         <input
                           type="checkbox"
                           checked={!!dailyMissions[mission.id]}
                           onChange={() => setDailyMissions(prev => ({ ...prev, [mission.id]: !prev[mission.id] }))}
-                          className="mt-1 w-5 h-5 rounded accent-accent cursor-pointer"
+                          className="mt-1 w-5 h-5 rounded accent-accent cursor-pointer shrink-0"
                         />
-                        <div className="flex-1">
+                        <div className="flex-1 min-w-0">
                           <div className={`text-base ${dailyMissions[mission.id] ? 'line-through text-text/30' : 'text-text'}`}>
                             {mission.label}
                           </div>
-                          <span className="inline-block mt-1 text-xs px-2 py-0.5 rounded-full" style={{ background: mission.color + "20", color: mission.color }}>
-                            {mission.category}
-                          </span>
+                          <div className="flex items-center gap-2 mt-1.5">
+                            <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: mission.color + "20", color: mission.color }}>
+                              {mission.category}
+                            </span>
+                            {mission.tab && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActiveTab(mission.tab!);
+                                  window.scrollTo({ top: 0, behavior: "smooth" });
+                                }}
+                                className="text-xs px-2.5 py-0.5 rounded-full border border-accent/30 text-accent hover:bg-accent/10 transition-colors cursor-pointer"
+                              >
+                                바로가기 →
+                              </button>
+                            )}
+                          </div>
                         </div>
-                        <span className="text-2xl mt-1">{dailyMissions[mission.id] ? "✓" : ""}</span>
-                      </label>
+                        {dailyMissions[mission.id] && <span className="text-xl text-emerald-400 mt-1 shrink-0">✓</span>}
+                      </div>
                     ))}
                   </div>
                 )}
