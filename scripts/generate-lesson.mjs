@@ -233,14 +233,14 @@ ${existingTitles || "(없음)"}
 - 그 다음 줄에 TAGS: 쉼표로 구분된 영문 태그 3~6개 를 작성하세요 (예: "TAGS: circuit-breaker, fallback, error-handling, resilience"). 핵심 기술 키워드만, 한국어 금지, 카테고리명은 자동 추가되므로 생략. SEO용 키워드 나열 금지.
 - 그 다음부터 본문을 작성하세요.
 - 핵심 개념 설명 (왜 중요한지부터 시작)
-- 실제 동작하는 코드 예제 포함 (카테고리에 맞는 언어: Swift, TypeScript, Python 등)
-- Mermaid 다이어그램 1개 이상 포함 (\`\`\`mermaid 코드 블록)
+- **코드는 실제 실행 가능한 경우에만 포함**. 개념 설명용 의사코드는 언어 중립 pseudocode나 Mermaid 다이어그램으로 표현. 특정 언어(TypeScript, Python 등)로 실행 불가능한 의사코드를 작성하지 마세요.
+- Mermaid 다이어그램 1개 이상 포함 (\`\`\`mermaid 코드 블록). 워크플로우/아키텍처는 코드보다 다이어그램이 효과적.
 - 실무에서 바로 사용할 수 있는 구체적 사례와 패턴
 - 2026년 최신 트렌드 반영
 - 마지막에 "## 자기 점검" 섹션:
   - 이해도 확인 질문 3-5개 (번호 리스트)
-  - "이 개념을 동료에게 설명한다면?" 형식의 열린 질문 1개
-  - 실습 과제 1개 (구체적, 실행 가능한 것)
+  - 자기 프로젝트에 적용하는 열린 질문 1개
+  - 특정 언어로 코딩하라는 실습 과제는 넣지 마세요
 - 한국어로 작성, 영어 기술 용어는 원문 유지
 - 2000-3000자 분량
 - h2(##)와 h3(###) 헤딩을 적절히 사용
@@ -296,14 +296,13 @@ MDX 문법 제약 (반드시 준수 — 위반 시 빌드 실패):
 
   // Quality validation
   const hasH2 = content.includes("## ");
-  const hasCodeBlock = content.includes("```");
-  const hasSelfCheck = content.includes("자기 점검") || content.includes("자기점검");
+  const hasCodeOrDiagram = content.includes("```");
   const minLength = content.length >= 500;
 
-  if (!hasH2 || !hasCodeBlock || !minLength) {
+  if (!hasH2 || !hasCodeOrDiagram || !minLength) {
     console.warn("⚠️  Quality check failed. Regenerating...");
     const retryResult = await model.generateContent(
-      prompt + "\n\n중요: 반드시 ## 헤딩, 코드 블록(```), 자기 점검 섹션을 포함하세요."
+      prompt + "\n\n중요: 반드시 ## 헤딩, Mermaid 다이어그램 또는 코드 블록(```), 자기 점검 섹션을 포함하세요."
     );
     content = retryResult.response.text();
   }
