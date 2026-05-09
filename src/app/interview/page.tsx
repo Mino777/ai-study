@@ -373,7 +373,7 @@ function formatDate(day: number): string {
 
 export default function InterviewPage() {
   const [track, setTrack] = useState<TrackKey>("ios");
-  const [activeTab, setActiveTab] = useState<"overview" | "coding" | "assignment" | "cs" | "tech" | "quiz" | "culture" | "toss7">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "daily" | "coding" | "assignment" | "cs" | "tech" | "quiz" | "culture" | "toss7">("overview");
   const [toss7Day, setToss7Day] = useState<number>(1);
   const [toss7Tasks, setToss7Tasks] = useState<Record<string, boolean>>({});
   const [quizIndex, setQuizIndex] = useState(0);
@@ -390,6 +390,7 @@ export default function InterviewPage() {
   const [timerLabel, setTimerLabel] = useState("");
   const [quizHistory, setQuizHistory] = useState<Record<string, { answer: number; correct: boolean; date: string }>>({});
   const [quizSelection, setQuizSelection] = useState<Record<string, number | null>>({});
+  const [dailyMissions, setDailyMissions] = useState<Record<string, boolean>>({});
 
   // Load from localStorage
   useEffect(() => {
@@ -409,6 +410,8 @@ export default function InterviewPage() {
       if (quiz) setQuizHistory(JSON.parse(quiz));
       const t7 = localStorage.getItem("interview-toss7-tasks");
       if (t7) setToss7Tasks(JSON.parse(t7));
+      const dm = localStorage.getItem("interview-daily-missions");
+      if (dm) setDailyMissions(JSON.parse(dm));
     } catch { /* noop */ }
   }, []);
 
@@ -423,8 +426,9 @@ export default function InterviewPage() {
       localStorage.setItem("interview-company-ddays", JSON.stringify(companyDdays));
       localStorage.setItem("interview-quiz-history", JSON.stringify(quizHistory));
       localStorage.setItem("interview-toss7-tasks", JSON.stringify(toss7Tasks));
+      localStorage.setItem("interview-daily-missions", JSON.stringify(dailyMissions));
     } catch { /* noop */ }
-  }, [checkedTasks, revealedCards, solvedProblems, hardCards, companyDdays, quizHistory, toss7Tasks, mounted]);
+  }, [checkedTasks, revealedCards, solvedProblems, hardCards, companyDdays, quizHistory, toss7Tasks, dailyMissions, mounted]);
 
   // Timer countdown
   useEffect(() => {
@@ -736,6 +740,7 @@ export default function InterviewPage() {
         <div className="flex gap-1 mb-8 overflow-x-auto pb-1 -mx-1 px-1">
           {([
             { key: "overview" as const, label: "Overview" },
+            { key: "daily" as const, label: "데일리 미션" },
             { key: "coding" as const, label: "코딩테스트" },
             { key: "assignment" as const, label: "사전과제" },
             { key: "cs" as const, label: "CS 기초" },
@@ -1179,6 +1184,297 @@ export default function InterviewPage() {
         </details>
 
         </>)}
+
+        {/* ═══════════ TAB: DAILY MISSIONS ═══════════ */}
+        {activeTab === "daily" && (() => {
+          // Generate missions for a given day based on the 100-day bootcamp plan
+          const getMissions = (day: number): { id: string; label: string; category: string; color: string }[] => {
+            const missions: { id: string; label: string; category: string; color: string }[] = [];
+
+            // Phase 1: Day 1-35
+            if (day <= 35) {
+              // Algo mission
+              const algoProblems: Record<number, string> = {
+                1: "두 수의 합 (Lv.0)", 2: "Valid Parentheses (Easy)", 3: "같은 숫자는 싫어 (Lv.1)",
+                4: "완주하지 못한 선수 (Lv.1)", 5: "전화번호 목록 (Lv.2)", 6: "K번째수 (Lv.1)",
+                8: "가장 큰 수 (Lv.2)", 9: "타겟 넘버 (Lv.2 DFS)", 10: "게임 맵 최단거리 (Lv.2 BFS)",
+                11: "Two Sum (Easy)", 12: "입국심사 (Lv.3)", 13: "Container With Most Water (Medium)",
+                15: "N으로 표현 (Lv.3 DP)", 16: "정수 삼각형 (Lv.3 DP)", 17: "구명보트 (Lv.2 탐욕)",
+                18: "섬 연결하기 (Lv.3)", 19: "LRU Cache (Medium)", 20: "디스크 컨트롤러 (Lv.3 힙)",
+                22: "카카오 2023 개인정보 (Lv.1)", 23: "카카오 2023 이모티콘 (Lv.2)", 24: "카카오 2023 미로 탈출 (Lv.3)",
+                25: "단어 변환 (Lv.3 BFS)", 26: "여행경로 (Lv.3 DFS)", 27: "Best Time to Buy Stock",
+                28: "Merge Intervals (Medium)", 30: "등굣길 (Lv.3 DP)", 31: "자신감 충전 쉬운 문제 1개",
+              };
+              // Rest days
+              if ([7, 14, 21, 28].includes(day)) {
+                missions.push({ id: `d${day}-review`, label: "복습 데이: 틀린 퀴즈 재풀이 + 약한 카드 5장", category: "복습", color: "#6b7280" });
+                missions.push({ id: `d${day}-cs`, label: "CS 딥다이브 카드 2-3장 정독", category: "CS", color: "#8b5cf6" });
+              } else if (day >= 32) {
+                missions.push({ id: `d${day}-algo`, label: "여유 복습: 알고 1문제 + 약한 카드 10장", category: "알고리즘", color: "#3b82f6" });
+                missions.push({ id: `d${day}-pattern`, label: "알고 14패턴 1줄 요약 작성", category: "정리", color: "#10b981" });
+              } else {
+                missions.push({ id: `d${day}-algo`, label: algoProblems[day] || `알고리즘 Lv.${day <= 14 ? '1-2' : '2-3'} 1문제`, category: "알고리즘", color: "#3b82f6" });
+
+                // Card mission
+                const cardRanges: Record<number, string> = {
+                  1: "ios-1~5 (Swift 기초)", 2: "ios-6~9 (메모리)", 3: "ios-10~12 (동시성)",
+                  4: "ios-13~15 (아키텍처)", 5: "ios-16~18 (UIKit/SwiftUI)", 6: "ios-19~22 (네트워크)",
+                  8: "ios-23~27 (테스팅/보안)", 9: "ios-28~31 (반응형/성능)", 10: "ios-36~41 (이미지 캐싱)",
+                  11: "ios-42~46 (Swift 심화)", 12: "ios-47~49 (디자인 패턴)", 13: "ios-50~53 (데이터 저장)",
+                  15: "ios-55~58 (SwiftUI 심화)", 16: "ios-59~62 (Animation/Widget)", 17: "ios-63~67 (Swift 6)",
+                  18: "ios-68~71 (Tuist/SPM)", 19: "ios-72~74 (TCA)", 20: "ios-75~78 (CI/CD)",
+                  22: "ios-79~83 (딥링크/App Store)", 23: "ios-84~88 (Push/Instruments)", 24: "ios-89~93 (CoreML/Crash)",
+                  25: "ios-94~97 (Testing/Macro)", 26: "ios-98~100 (RxSwift)", 27: "iOS 100장 스피드런 (30초/장)",
+                  29: "CS 심화 카드 정독", 30: "CS 심화 카드 정독",
+                };
+                missions.push({ id: `d${day}-card`, label: cardRanges[day] || "플래시카드 5장 복습", category: "카드", color: "#06b6d4" });
+
+                // Quiz mission
+                const quizStart = Math.min((day - 1) * 4 + 1, 120);
+                const quizEnd = Math.min(quizStart + 3, 120);
+                missions.push({ id: `d${day}-quiz`, label: `퀴즈 q${quizStart}~q${quizEnd}`, category: "퀴즈", color: "#f59e0b" });
+              }
+            }
+            // Phase 2: Day 36-65
+            else if (day <= 65) {
+              if ([42, 49, 51, 56].includes(day)) {
+                missions.push({ id: `d${day}-rest`, label: day === 51 ? "쉬는 날 — 산책 or 가벼운 복습" : "복습 데이: 스피드런 + 약한 부분 보강", category: "휴식", color: "#6b7280" });
+              } else if (day <= 41) {
+                const fdeMissions: Record<number, string> = {
+                  36: "FDE fde-1~6 + Python 템플릿", 37: "FDE fde-7~12 + SD Framework 암기",
+                  38: "FDE fde-13~17 (Cloud/K8s)", 39: "FDE fde-18~23 (Observability/Security)",
+                  40: "FDE fde-24~30 (CS/Data)", 41: "SD: 소셜 피드 45분 타임어택",
+                };
+                missions.push({ id: `d${day}-fde`, label: fdeMissions[day] || "FDE 카드 복습", category: "FDE", color: "#8b5cf6" });
+                missions.push({ id: `d${day}-algo`, label: "알고리즘 Lv.2-3 1문제", category: "알고리즘", color: "#3b82f6" });
+                missions.push({ id: `d${day}-card`, label: "iOS+FDE+CS 카드 10장 랜덤", category: "카드", color: "#06b6d4" });
+              } else if (day <= 49) {
+                const sdMissions: Record<number, string> = {
+                  43: "SD: 채팅 앱 45분 타임어택", 44: "SD: 이미지 로더 45분",
+                  45: "SD: 오프라인 앱 45분", 46: "FDE SD: 고객 대시보드 45분",
+                  47: "FDE SD: 데이터 파이프라인 45분", 48: "퀴즈 q121~q140 몰아서",
+                };
+                missions.push({ id: `d${day}-sd`, label: sdMissions[day] || "시스템 디자인 복습", category: "SD", color: "#10b981" });
+                missions.push({ id: `d${day}-algo`, label: "알고리즘 Lv.2-3 1문제", category: "알고리즘", color: "#3b82f6" });
+                missions.push({ id: `d${day}-card`, label: "카드 10장 복습", category: "카드", color: "#06b6d4" });
+              } else if (day === 50) {
+                missions.push({ id: `d${day}-kakao`, label: "카카오 모의 (5시간 7문제, 타이머)", category: "모의고사", color: "#ef4444" });
+              } else if (day === 52) {
+                missions.push({ id: `d${day}-naver`, label: "네이버 모의 (2시간 3문제)", category: "모의고사", color: "#ef4444" });
+              } else if (day <= 60) {
+                const techTopics: Record<number, string> = {
+                  53: "기술면접: ARC 완전 정복", 54: "기술면접: GCD vs async/await",
+                  55: "기술면접: 앱 라이프사이클", 57: "기술면접: UIKit 성능 최적화",
+                  58: "기술면접: 네트워킹 Deep Dive", 59: "기술면접: 아키텍처 트레이드오프",
+                  60: "기술면접: 시스템 디자인 실전",
+                };
+                missions.push({ id: `d${day}-tech`, label: techTopics[day] || "기술면접 토픽 정독", category: "기술면접", color: "#f59e0b" });
+                missions.push({ id: `d${day}-algo`, label: "알고리즘 1문제 (감 유지)", category: "알고리즘", color: "#3b82f6" });
+                missions.push({ id: `d${day}-quiz`, label: "퀴즈 4문항", category: "퀴즈", color: "#f59e0b" });
+              } else {
+                missions.push({ id: `d${day}-review`, label: "Phase 2 총복습: 전체 카드 스피드런", category: "복습", color: "#6b7280" });
+                missions.push({ id: `d${day}-quiz`, label: "퀴즈 q141~q170 + 틀린 것 재풀이", category: "퀴즈", color: "#f59e0b" });
+              }
+            }
+            // Phase 3: Day 66-90
+            else if (day <= 90) {
+              if ([73, 81].includes(day)) {
+                missions.push({ id: `d${day}-rest`, label: "쉬는 날 — 컨디션 관리", category: "휴식", color: "#6b7280" });
+              } else if (day <= 72) {
+                const mockMissions: Record<number, string> = {
+                  66: "이력서 모든 항목 1문장 설명 (녹음)", 67: "과제 코드 복기 — '왜 이 구조?'",
+                  68: "SD 타임어택: 소셜 피드", 69: "SD 타임어택: 채팅 앱",
+                  70: "라이브 코딩 Think-Aloud (녹음)", 71: "모의면접 1회차 (기술 1시간)",
+                  72: "약점 토픽 3개 보강",
+                };
+                missions.push({ id: `d${day}-mock`, label: mockMissions[day] || "모의면접 준비", category: "모의면접", color: "#ef4444" });
+                missions.push({ id: `d${day}-card`, label: "카드 15장 스피드 (30초/장)", category: "카드", color: "#06b6d4" });
+                missions.push({ id: `d${day}-answer`, label: "기술면접 답변 2개 녹음", category: "녹음", color: "#ec4899" });
+              } else if (day <= 79) {
+                missions.push({ id: `d${day}-live`, label: day <= 76 ? "모의면접 답변 5개 녹음" : "라이브 코딩 1문제 (말하면서)", category: "모의면접", color: "#ef4444" });
+                missions.push({ id: `d${day}-card`, label: "카드 15장 스피드", category: "카드", color: "#06b6d4" });
+              } else if (day === 80) {
+                missions.push({ id: `d${day}-mock2`, label: "모의면접 2회차 + 피드백 반영", category: "모의면접", color: "#ef4444" });
+              } else if (day === 85) {
+                missions.push({ id: `d${day}-mock3`, label: "모의면접 3회차 (기술+행동 혼합)", category: "모의면접", color: "#ef4444" });
+              } else if (day <= 88) {
+                missions.push({ id: `d${day}-weak`, label: day <= 84 ? "약점 집중 보강 (기술 토픽 2개)" : "역질문 3개 준비", category: "보강", color: "#f97316" });
+                missions.push({ id: `d${day}-card`, label: "전체 카드 스피드런 (2일 나눠서)", category: "카드", color: "#06b6d4" });
+              } else {
+                missions.push({ id: `d${day}-easy`, label: "여유 복습 + 컨디션 관리", category: "휴식", color: "#6b7280" });
+              }
+            }
+            // Phase 4: Day 91-100
+            else {
+              if (day <= 95) {
+                const cultureMissions: Record<number, string> = {
+                  91: "cul-1~8 정독 + 1분 자기소개 3회 녹음 + '왜 이 회사' 작성",
+                  92: "cul-9~15 정독 + STAR: 갈등 해결 + 실패 경험",
+                  93: "회사 핵심 가치 암기 + 본인 경험 연결 + 역질문 3개",
+                  94: "셀프 모의면접 (컬쳐핏 45분 녹음) — 약점 표시",
+                  95: "약점 답변 5개 재작성 + 마지막 녹음",
+                };
+                missions.push({ id: `d${day}-culture`, label: cultureMissions[day] || "컬쳐핏 준비", category: "컬쳐핏", color: "#ec4899" });
+              } else {
+                const ddayMissions: Record<number, string> = {
+                  96: "면접 장소/교통편 확인 + 지참물 체크",
+                  97: "쉬는 날 — 좋아하는 거 하기 (뇌 리셋)",
+                  98: "D-2: 쉬운 문제 1개 (자신감) + 이력서 리허설",
+                  99: "D-1: 역질문 최종 확인 + 10시 취침",
+                  100: "D-Day: Box Breathing + 진심으로",
+                };
+                missions.push({ id: `d${day}-dday`, label: ddayMissions[day] || "최종 점검", category: "D-Day", color: "#f59e0b" });
+              }
+            }
+            return missions;
+          };
+
+          const today = getToday();
+          const phase = today <= 35 ? 1 : today <= 65 ? 2 : today <= 90 ? 3 : 4;
+          const phaseColors = ["#3b82f6", "#8b5cf6", "#10b981", "#f59e0b"];
+          const phaseNames = ["기초 다지기", "실력 갖추기", "면접 집중", "컬쳐핏 + D-Day"];
+
+          // Calculate stats
+          const totalChecked = Object.values(dailyMissions).filter(Boolean).length;
+          let totalMissions = 0;
+          let streakCount = 0;
+          for (let d = today; d >= 1; d--) {
+            const ms = getMissions(d);
+            totalMissions += ms.length;
+            const allDone = ms.length > 0 && ms.every(m => dailyMissions[m.id]);
+            if (d === today || d === today - 1) { if (allDone) streakCount++; else if (d < today) break; }
+            else { if (allDone) streakCount++; else break; }
+          }
+          // Also count backwards properly
+          let streak = 0;
+          for (let d = today; d >= 1; d--) {
+            const ms = getMissions(d);
+            if (ms.length === 0) continue;
+            const allDone = ms.every(m => dailyMissions[m.id]);
+            if (allDone) streak++;
+            else break;
+          }
+
+          const todayMissions = getMissions(today);
+          const todayDone = todayMissions.filter(m => dailyMissions[m.id]).length;
+
+          return (
+            <>
+              {/* Progress Header */}
+              <div className="rounded-2xl p-6 mb-6" style={{ background: `linear-gradient(135deg, ${phaseColors[phase-1]}15, ${phaseColors[phase-1]}05)`, border: `1px solid ${phaseColors[phase-1]}30` }}>
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <div className="text-sm text-text/50 mb-1">Phase {phase} — {phaseNames[phase-1]}</div>
+                    <div className="text-3xl font-bold">Day {today} <span className="text-lg font-normal text-text/40">/ 100</span></div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-3xl font-bold" style={{ color: phaseColors[phase-1] }}>{streak}일</div>
+                    <div className="text-sm text-text/50">연속 달성</div>
+                  </div>
+                </div>
+                {/* Progress bar */}
+                <div className="h-3 rounded-full bg-surface/50 overflow-hidden">
+                  <div className="h-full rounded-full transition-all duration-500" style={{ width: `${today}%`, background: `linear-gradient(90deg, ${phaseColors[0]}, ${phaseColors[phase-1]})` }} />
+                </div>
+                <div className="flex justify-between mt-2 text-xs text-text/40">
+                  <span>5/11 시작</span>
+                  <span>전체 {totalChecked}개 완료</span>
+                  <span>8/19 D-Day</span>
+                </div>
+              </div>
+
+              {/* Today's Missions */}
+              <div className="rounded-2xl border border-border/30 bg-surface/20 p-6 mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xl font-bold">오늘의 미션</h3>
+                  <div className="text-sm px-3 py-1 rounded-full" style={{ background: todayDone === todayMissions.length ? "#10b98120" : "#f59e0b20", color: todayDone === todayMissions.length ? "#10b981" : "#f59e0b" }}>
+                    {todayDone}/{todayMissions.length} 완료
+                  </div>
+                </div>
+                {todayMissions.length === 0 ? (
+                  <div className="text-center py-8 text-text/40">부트캠프 시작 전이거나 100일이 지났습니다.</div>
+                ) : (
+                  <div className="space-y-3">
+                    {todayMissions.map((mission, i) => (
+                      <label key={mission.id} className={`flex items-start gap-4 p-4 rounded-xl border cursor-pointer transition-all ${dailyMissions[mission.id] ? 'bg-surface/40 border-border/20' : 'bg-surface/10 border-border/40 hover:border-accent/30'}`}>
+                        <input
+                          type="checkbox"
+                          checked={!!dailyMissions[mission.id]}
+                          onChange={() => setDailyMissions(prev => ({ ...prev, [mission.id]: !prev[mission.id] }))}
+                          className="mt-1 w-5 h-5 rounded accent-accent cursor-pointer"
+                        />
+                        <div className="flex-1">
+                          <div className={`text-base ${dailyMissions[mission.id] ? 'line-through text-text/30' : 'text-text'}`}>
+                            {mission.label}
+                          </div>
+                          <span className="inline-block mt-1 text-xs px-2 py-0.5 rounded-full" style={{ background: mission.color + "20", color: mission.color }}>
+                            {mission.category}
+                          </span>
+                        </div>
+                        <span className="text-2xl mt-1">{dailyMissions[mission.id] ? "✓" : ""}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+                {todayDone === todayMissions.length && todayMissions.length > 0 && (
+                  <div className="mt-4 text-center py-4 rounded-xl bg-emerald-500/10 text-emerald-400 font-medium">
+                    오늘 미션 올클리어! 내일도 이어가자.
+                  </div>
+                )}
+              </div>
+
+              {/* Week View (past 7 days) */}
+              <div className="rounded-2xl border border-border/30 bg-surface/20 p-6 mb-6">
+                <h3 className="text-lg font-bold mb-4">최근 7일</h3>
+                <div className="grid grid-cols-7 gap-2">
+                  {Array.from({ length: 7 }, (_, i) => {
+                    const d = Math.max(1, today - 6 + i);
+                    if (d > 100 || d < 1) return <div key={i} />;
+                    const ms = getMissions(d);
+                    const done = ms.filter(m => dailyMissions[m.id]).length;
+                    const total = ms.length;
+                    const pct = total > 0 ? done / total : 0;
+                    const isToday = d === today;
+                    return (
+                      <div key={i} className={`text-center p-3 rounded-xl border ${isToday ? 'border-accent/50 bg-accent/5' : 'border-border/20 bg-surface/10'}`}>
+                        <div className="text-xs text-text/40 mb-1">Day {d}</div>
+                        <div className={`text-lg font-bold ${pct === 1 && total > 0 ? 'text-emerald-400' : pct > 0 ? 'text-yellow-400' : 'text-text/20'}`}>
+                          {pct === 1 && total > 0 ? "●" : pct > 0 ? "◐" : "○"}
+                        </div>
+                        <div className="text-xs text-text/40 mt-1">{done}/{total}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Upcoming Preview */}
+              <div className="rounded-2xl border border-border/30 bg-surface/20 p-6">
+                <h3 className="text-lg font-bold mb-4">내일 미션 미리보기</h3>
+                {today < 100 ? (
+                  <div className="space-y-2">
+                    {getMissions(today + 1).map(m => (
+                      <div key={m.id} className="flex items-center gap-3 p-3 rounded-lg bg-surface/10">
+                        <span className="w-2 h-2 rounded-full" style={{ background: m.color }} />
+                        <span className="text-sm text-text/60">{m.label}</span>
+                        <span className="ml-auto text-xs px-2 py-0.5 rounded-full" style={{ background: m.color + "15", color: m.color }}>{m.category}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-4 text-text/40">100일 부트캠프 완료!</div>
+                )}
+              </div>
+
+              {/* Warning */}
+              {todayDone < todayMissions.length && todayMissions.length > 0 && (
+                <div className="mt-6 text-center py-4 px-6 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+                  오늘 {todayMissions.length - todayDone}개 남았다. 안 하면 내일 {(todayMissions.length - todayDone) * 2}개.
+                </div>
+              )}
+            </>
+          );
+        })()}
 
         {/* ═══════════ TAB: CODING TEST ═══════════ */}
         {activeTab === "coding" && (<>
