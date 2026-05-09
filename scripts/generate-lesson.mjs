@@ -202,9 +202,13 @@ async function generateMDX(topic, manifest) {
   const genAI = new GoogleGenerativeAI(apiKey);
   // Pro 우선, 실패 시 Flash 폴백 (ping 테스트 제거 — 본 호출에서 직접 폴백)
   const MODELS = ["gemini-2.5-pro", "gemini-2.5-flash"];
-  let model = genAI.getGenerativeModel({ model: MODELS[0] });
+  // Google Search grounding: 웹 검색 결과 기반으로 권위 있는 자료 인용
+  let model = genAI.getGenerativeModel({
+    model: MODELS[0],
+    tools: [{ googleSearch: {} }],
+  });
   let currentModelIdx = 0;
-  console.log(`🤖 Primary model: ${MODELS[0]} (fallback: ${MODELS[1]})`);
+  console.log(`🤖 Primary model: ${MODELS[0]} (+ Google Search grounding, fallback: ${MODELS[1]})`);
 
   // 토큰 최적화: 같은 카테고리 엔트리만 컨텍스트로 전송 (전체 134개 → ~10개)
   const sameCategoryEntries = manifest.entries.filter((e) => e.frontmatter.category === topic.category);
@@ -265,14 +269,19 @@ ${existingTitles || "(없음)"}
 
 ## 품질 기준 (매우 중요)
 
-1. **주장에는 근거**: 수치는 출처 필수. 출처 없으면 "경험적 관찰" 또는 "이론적으로" 명시.
-2. **외부 권위 자료 우선**: 프로젝트 사례만으로 채우지 말 것. 외부 자료 먼저, 프로젝트 적용은 별도 섹션.
-   - 우선순위: ①빅테크 블로그(Anthropic, OpenAI, Google) ②논문(NeurIPS, ICML) ③권위자(Karpathy, Simon Willison) ④공식 문서
-   - 인용 형식: "제목 — 출처, 핵심 인사이트 1줄" 인라인
-3. **프로젝트 연결**: ai-study/moneyflow/tarosaju/aidy 중 하나에 구체적으로 적용하면 어떻게 되는지.
+1. **웹 검색으로 근거 확보 (가장 중요)**: Google Search tool이 활성화되어 있습니다. 반드시 웹 검색을 활용하여 최신 자료를 찾고 인용하세요.
+   - **자기 지식으로 생성하지 말 것**. 검색해서 실제 존재하는 아티클/논문/공식 문서를 기반으로 작성.
+   - 검색 대상: "${topic.title}" 관련 최신 기술 블로그, 공식 문서, 컨퍼런스 발표, 권위자 글
+   - 최소 3개 이상의 외부 자료를 인용. 각 인용은 "제목 — 출처" 형식으로 인라인.
+   - 검색 결과가 부족하면 관련 키워드를 바꿔서 재검색.
+2. **외부 자료 우선순위**: ①빅테크 블로그(Anthropic, OpenAI, Google, Apple) ②논문/컨퍼런스 ③권위자(Karpathy, Simon Willison, Andrej Karpathy) ④공식 문서
+   - 프로젝트 사례만으로 채우지 말 것. 외부 자료 먼저, 프로젝트 적용은 별도 섹션.
+   - 출처 없는 주장은 "경험적 관찰" 또는 "이론적으로" 명시.
+3. **프로젝트 연결**: ai-study/moneyflow/tarosaju/aidy/auto-trade 중 하나에 구체적으로 적용하면 어떻게 되는지.
 4. **트레이드오프 필수**: 장점만 나열 금지. "언제 쓰면 안 되는지", "어떤 대안이 있는지" 반드시 포함.
 5. **중복 금지**: 기존 엔트리 목록과 겹치는 내용 절대 반복하지 말 것.
 6. **Slug**: 영문 kebab-case, 40자 이내.
+7. **hallucination 방지**: 검색 결과에 없는 URL이나 논문 제목을 지어내지 마세요. 검색으로 확인된 자료만 인용.
 
 MDX 문법 제약 (반드시 준수 — 위반 시 빌드 실패):
 1. HTML void 태그는 반드시 self-closing: <br />, <hr />, <img /> (특히 표 안)
@@ -299,7 +308,10 @@ MDX 문법 제약 (반드시 준수 — 위반 시 빌드 실패):
       // 첫 실패 시 폴백 모델로 전환
       if (attempt === 0 && currentModelIdx < MODELS.length - 1) {
         currentModelIdx++;
-        model = genAI.getGenerativeModel({ model: MODELS[currentModelIdx] });
+        model = genAI.getGenerativeModel({
+          model: MODELS[currentModelIdx],
+          tools: [{ googleSearch: {} }],
+        });
         console.log(`🔄 Switching to fallback: ${MODELS[currentModelIdx]}`);
       }
       if (attempt === 2) {
