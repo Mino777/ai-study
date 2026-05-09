@@ -93,18 +93,18 @@ LLM 기반 코딩 워크플로우의 가장 큰 걸림돌 중 하나는 '상태 
 
 ```mermaid
 graph TD
-    subgraph "Session 1 (어제)"
+    subgraph session1session1 ["Session1어제["Session 1 어제"]"]
         A["User: SwiftUI ViewModel 코드 제공"] --> B{Claude};
         B --> C["응답: View 로직 제안"];
         C --> D["User: ctx save moneyflow-viewmodel"];
         D --> E["(Local Storage: moneyflow-viewmodel.ctx)"];
     end
 
-    subgraph "Session 2 (오늘)"
-        F[User: "새로운 세션 시작"] --> G["User: ctx load moneyflow-viewmodel"];
+    subgraph session2session2 ["Session2오늘["Session 2 오늘"]"]
+        F["User: "새로운 세션 시작""] --> G["User: ctx load moneyflow-viewmodel"];
         G --> E;
         E --> H{Claude};
-        H -- "ViewModel 구조를 · 기억한 상태" --> I[User: "이 ViewModel에 · 에러 핸들링 로직 추가해줘"];
+        H -- "ViewModel 구조를 · 기억한 상태" --> I["User: "이 ViewModel에 · 에러 핸들링 로직 추가해줘""];
         I --> J["응답: 정확한 코드 제안"];
     end
 ```

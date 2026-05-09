@@ -65,7 +65,7 @@ graph TD
     B -- Lint/포맷팅 통과 --> C{Layer 2: AI 핵심 리뷰};
     B -- 실패 --> D["CI 실패: 즉시 피드백"];
     C -- 리뷰 코멘트 생성 --> E[PR에 코멘트 게시];
-    E --> F{"Layer 3: 인간 피드백 수집 (👍/👎)"};
+    E --> F{"Layer 3: 인간 피드백 수집 👍/👎"};
     F -- 피드백 발생 (Webhook) --> G[LLM-as-Judge 평가];
     G -- 평가 결과 (JSON) --> H["데이터베이스에 저장 (BigQuery/Supabase)"];
     H --> I[품질 대시보드 업데이트];

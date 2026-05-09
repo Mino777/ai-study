@@ -146,7 +146,7 @@ A task is complete when ALL of the following pass:
 graph TD
     subgraph "Agent Task Cycle"
         A(Start Task) --> B{"Read AGENTS.md"}
-        B --> C["Run Command (e.g., `npm run test`)"]
+        B --> C["Run Command e.g. `npm run test`"]
         C --> D{Check Exit Code}
         D -- "Exit 0 (Success)" --> E{All 'Done' criteria met?}
         D -- "Exit != 0 (Failure)" --> F{"Check Escalation Rules"}

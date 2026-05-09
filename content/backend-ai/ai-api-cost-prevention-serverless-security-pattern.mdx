@@ -259,10 +259,10 @@ flowchart TD
 
     subgraph Serverless_Backend ["☁️ Firebase Cloud Functions"]
         D[API Endpoint /callGemini] --> E{Verify ID Token};
-        E -- "✅ Valid" --> F{"Check Rate Limit (Firestore)"};
+        E -- "✅ Valid" --> F{"Check Rate Limit Firestore"};
         E -- "❌ Invalid" --> G[Return 401 Unauthorized];
         
-        F -- "✅ OK" --> H{"Load Secret Key (Secret Manager)"};
+        F -- "✅ OK" --> H{"Load Secret Key Secret Manager"};
         F -- "❌ Limit Exceeded" --> I[Return 429 Too Many Requests];
         
         H --> J[Call Gemini API];

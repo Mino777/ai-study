@@ -76,6 +76,46 @@ export function fixAndValidateMermaid(code, filename) {
     '$1["$2"]',
   );
 
+  // AUTO-FIX 5: subgraph "Label (with parens)" → subgraph ID["Label without parens"]
+  // 브라우저 Mermaid 렌더러가 subgraph 라벨 내 괄호를 파싱 실패 (Node.js parse 통과하지만 렌더링 에러)
+  fixed = fixed.replace(
+    /^(\s*)subgraph\s+(\w+)\s*\["([^"]*[\(\)\[\]][^"]*)"\]/gm,
+    (match, indent, id, label) => {
+      const cleanLabel = label.replace(/[\(\)\[\]]/g, '').replace(/\s+/g, ' ').trim();
+      return `${indent}subgraph ${id}["${cleanLabel}"]`;
+    },
+  );
+  // "quoted" 형태의 subgraph 라벨에서도 괄호 제거
+  fixed = fixed.replace(
+    /^(\s*)subgraph\s+"([^"]*[\(\)\[\]][^"]*)"/gm,
+    (match, indent, label) => {
+      const cleanLabel = label.replace(/[\(\)\[\]]/g, '').replace(/\s+/g, ' ').trim();
+      const id = cleanLabel.replace(/[^a-zA-Z0-9]/g, '').slice(0, 20);
+      return `${indent}subgraph ${id || 'sub'}["${cleanLabel}"]`;
+    },
+  );
+
+  // AUTO-FIX 6: 중괄호 decision 노드 내 괄호 제거
+  // B{"Layer 2: Policy Enforcement (정책 강제)"} → B{"Layer 2: Policy Enforcement 정책 강제"}
+  fixed = fixed.replace(
+    /\{"([^"]*)\(([^)]*)\)([^"]*)"\}/g,
+    '{"$1$2$3"}',
+  );
+
+  // AUTO-FIX 7: (e.g., xxx) 패턴 제거 — 라벨 내에서 렌더링 깨짐
+  // ["Run Command (e.g., npm run test)"] → ["Run Command e.g. npm run test"]
+  fixed = fixed.replace(
+    /\(e\.g\.,?\s*([^)]*)\)/g,
+    'e.g. $1',
+  );
+
+  // AUTO-FIX 8: 괄호 노드에 콜론 B(Text: xxx) → B["Text: xxx"]
+  // 라운드 괄호 노드에 콜론이 있으면 렌더링 실패
+  fixed = fixed.replace(
+    /([A-Z_]\w*)\(([^)]*:[^)]*)\)/g,
+    '$1["$2"]',
+  );
+
   const fixedLines = fixed.split("\n");
   const fixedContent = fixed;
 

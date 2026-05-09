@@ -78,14 +78,14 @@ AI를 활용하는 두 가지 상반된 워크플로우를 통해 '바람직한 
 
 ```mermaid
 graph TD
-    subgraph passive_ai ["A. 수동적 AI 활용 (성장 정체)"]
+    subgraph passive_ai["A. 수동적 AI 활용 성장 정체"]
         A1(요구사항) --> A2{"AI에 코드 생성 요청"}
         A2 --> A3(코드 복사/붙여넣기)
         A3 --> A4[작동 확인]
         A4 --> A5((표면적 이해))
     end
 
-    subgraph active_ai ["B. 바람직한 어려움 적용 (성장 가속)"]
+    subgraph active_ai["B. 바람직한 어려움 적용 성장 가속"]
         B1(요구사항) --> B2(테스트 코드 직접 작성)
         B2 --> B3{"AI에 테스트 통과 코드 요청"}
         B3 --> B4(생성된 코드 분석/리팩토링)

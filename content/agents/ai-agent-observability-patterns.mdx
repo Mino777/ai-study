@@ -42,7 +42,7 @@ Blake Crosley는 에이전트의 소비와 실행을 추적하기 위해 독립�
 graph TD
     subgraph "AI Agent Visibility Stack"
         direction TB
-        A["Input: Agent Task ('DB 스키마 수정')"] --> B{"Layer 2: Policy Enforcement (정책 강제)"};
+        A["Input: Agent Task ('DB 스키마 수정')"] --> B{"Layer 2: Policy Enforcement 정책 강제"};
         B -- "Allow" --> C["Execution (Tool Call: `psql ...`)"];
         B -- "Deny: `rm -rf`" --> D["Action Blocked & Logged"];
         C --> E["Layer 1: Resource Metering (리소스 계측)"];

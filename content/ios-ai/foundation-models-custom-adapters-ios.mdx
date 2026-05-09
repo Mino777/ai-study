@@ -73,13 +73,13 @@ graph TD
         B --> C{정확도/일관성/속도 · 충분한가?};
     end
 
-    subgraph "Adapter Lifecycle (When 'No')"
+    subgraph AdapterLifecycleWhen["Adapter Lifecycle When 'No'"]
         C -- No --> D["1. 데이터셋 준비 (jsonl, 100~5000+개)"];
         D --> E["2. Python 툴킷으로 학습 · (Apple Silicon Mac or Linux GPU)"];
         E --> F{".fmadapter 파일 생성"};
         F --> G["3. Asset Pack으로 · 서버에 호스팅"];
         G --> H["4. 앱에서 BackgroundAssets로 · On-demand 다운로드"];
-        H --> I["5. Swift에서 · SystemLanguageModel(adapter:)로 로드"];
+        H --> I["5. Swift에서 · SystemLanguageModel["adapter:"]로 로드"];
     end
     
     subgraph "Maintenance Loop"

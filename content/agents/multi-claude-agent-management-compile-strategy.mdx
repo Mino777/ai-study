@@ -88,7 +88,7 @@ graph TD
 
     subgraph agent_compile ["에이전트 '컴파일' 방식"]
         F[사용자 요청] --> G{Orchestrator}
-        G --> H(컨텍스트 분석: 사용자 등급, 시간 등)
+        G --> H["컨텍스트 분석: 사용자 등급, 시간 등"]
         H --> I["AgentCompiler.compile(context)"]
         I --> J[동적으로 생성된 프롬프트와 도구]
         J --> K[LLM API 호출]

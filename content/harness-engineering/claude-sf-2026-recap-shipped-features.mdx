@@ -61,11 +61,11 @@ Anthropic은 10개의 금융 서비스 에이전트 템플릿(피치북 빌더, 
 
 ```mermaid
 graph TD
-    subgraph "정의 (Artifact)"
+    subgraph artifactArtifact ["정의Artifact["정의 Artifact"]"]
         A["금융 에이전트 로직 (예: 재무 모델 빌더)"]
     end
 
-    subgraph "배포 (Surfaces)"
+    subgraph surfacesSurfaces ["배포Surfaces["배포 Surfaces"]"]
         B["Plugin: 개발자용 (Claude Code CLI)"]
         C["Plugin: 사용자용 (Claude Cowork GUI)"]
         D["Cookbook: 서버리스 실행용 (Managed Agents)"]

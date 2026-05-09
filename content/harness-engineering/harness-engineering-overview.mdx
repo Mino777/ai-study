@@ -160,7 +160,7 @@ let result = try await service.fetchSummary(for: "test")
 graph TD
     subgraph id_before ["하네스 도입 이전: 위험한 직접 호출"]
         direction LR
-        Client_A[iOS/Web Client] -->|Direct API Call| LLM_A["LLM API (e.g., OpenAI)"]
+        Client_A[iOS/Web Client] -->|Direct API Call| LLM_A["LLM API e.g. OpenAI"]
         LLM_A -->|Raw Text/JSON · 환각, 형식 오류 처리 안 함| Client_A
     end
 

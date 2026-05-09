@@ -126,7 +126,7 @@ Flow Map 시리즈 **4편**. iOS 주력 개발자가 `aidy-architect`(tmux 4-pan
 flowchart TD
     Human["사람: 'chat 응답에 createdAt 필드 넣자'"]
 
-    subgraph Architect ["Architect 세션 (pane 0)"]
+    subgraph Architect["Architect 세션 pane 0"]
       Spec["specs/api-contract.md 수정 · § 2. Chat Response 스키마"]
       ADR["specs/decisions/ADR-XXX.md · 결정 근거 박제"]
       WO_new["work-orders/backlog/WO-NNN.md · 3개 발행 (server/ios/android)"]
@@ -139,7 +139,7 @@ flowchart TD
     WO_new --> Dispatch["/dispatch WO-NNN · architect-cli.sh wo NNN"]
     Dispatch --> Move["backlog/ → in-progress/ · tmux send-keys로 워커에 프롬프트"]
 
-    subgraph Workers ["워커 세션 (pane 1/2/3, 병렬)"]
+    subgraph Workers["워커 세션 pane 1/2/3, 병렬"]
       W_read["CLAUDE.md + api-contract.md · + conventions + WO 읽기"]
       W_impl["구현 + 자가 검증 grep · (커밋 전 스펙 대조 필수)"]
       W_commit["git commit + push · (hooks: 컴파일/테스트 리마인더)"]
@@ -163,7 +163,7 @@ flowchart TD
 
     Compound --> Knowledge["docs/retros/WO-NNN-retro.md · docs/solutions/ · specs/decisions/"]
 
-    subgraph Async ["비동기 블로커 흐름 (워커가 막힐 때)"]
+    subgraph Async["비동기 블로커 흐름 워커가 막힐 때"]
       Block["워커: inbox/{worker}-request.md 작성 · 작업 중단 + 대기"]
       Watch["inbox-watcher.sh 또는 /monitor · Architect가 발견"]
       Resp["Architect: inbox/{worker}-response.md · 스펙 변경 or 답변"]

@@ -151,7 +151,7 @@ flowchart TD
     PL1 --> PL2
     PL2 --> PL3
 
-    subgraph Server ["서버 워커 (Kotlin)"]
+    subgraph Server["서버 워커 Kotlin"]
       S_Unit["MemoryServiceTest · deleteMemory_rollsBack_whenApiFails"]
       S_Ctrl["MemoryControllerTest @WebMvcTest · 204 · 404 MEMORY_NOT_FOUND · 403 FORBIDDEN · 401"]
       S_Run["./gradlew test · → BUILD SUCCESSFUL + NN passed"]
@@ -163,7 +163,7 @@ flowchart TD
     S_Ctrl --> S_Run
     S_Run --> S_Evidence
 
-    subgraph iOS ["iOS 워커 (Swift/TCA)"]
+    subgraph iOS["iOS 워커 Swift/TCA"]
       I_Feat["MemoryFeatureTests · delete_happyPath · delete_notFound · delete_forbidden"]
       I_Api["APIClientTest (MockURLProtocol)"]
       I_Run["xcodebuild test -workspace · → TEST SUCCEEDED · NN tests executed"]
@@ -179,7 +179,7 @@ flowchart TD
     I_Check -->|YES| I_Fail
     I_Check -->|NO · 실제 실행됨| I_Evidence
 
-    subgraph Android ["Android 워커 (Compose)"]
+    subgraph Android["Android 워커 Compose"]
       A_Vm["MemoryViewModelTest"]
       A_Repo["MemoryRepositoryTest (MockWebServer)"]
       A_Run["./gradlew testDebugUnitTest · → NN tests, 0 failures"]
