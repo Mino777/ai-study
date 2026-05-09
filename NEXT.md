@@ -34,14 +34,12 @@
 
 ---
 
-## P0 — 다음 세션 즉시
+## P0 — 완료 ✅
 
-### /interview 대폭 디벨롭
-- **목표**: "이것들만 보면 서류 기술면접 완벽 통과" 수준
-- **현재**: iOS 55 + FDE 14 + 퀴즈 121 = 190개
-- **타겟**: iOS 100+ / FDE 30+ / 퀴즈 200+ / CS 심화 추가
-- **보강 영역**: Swift 6 Concurrency, SwiftUI 심화, Tuist/SPM, 시스템 디자인, CS 기초, FDE 확장
-- **파일**: `src/app/interview/constants.ts` (3220줄 → 5000줄+ 예상)
+### /interview 대폭 디벨롭 (2026-05-09 완료)
+- **결과**: iOS 101 + FDE 32 + Culture 15 + Quiz 170 = **318개** (190 → 318, +67%)
+- **파일**: `src/app/interview/constants.ts` (3220줄 → 3395줄)
+- **추가 영역**: SwiftUI 심화(8), Swift 6 Concurrency(5), Tuist/SPM(4), TCA(3), CI/CD(3), 접근성(2), 딥링크(2), App Store(3), Push(2), Instruments(3), CoreML(3), Crash(2), Swift Testing(2), Swift Macro(2), RxSwift(2), FDE Cloud/인프라(5), Observability(4), Security(3), Customer Success(4), Data(3), Culture 7개
 
 ---
 
@@ -59,5 +57,5 @@
 | 지표 | baseline | target | direction | actual |
 |------|----------|--------|-----------|--------|
 | 엔트리 수 | 221 | 225 | higher | ? |
-| 면접 콘텐츠 | 190 | 300 | higher | ? |
+| 면접 콘텐츠 | 190 | 300 | higher | **318** ✅ |
 | Mermaid 렌더링 에러 | 0 | 0 | lower | ? |

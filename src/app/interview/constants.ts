@@ -107,6 +107,82 @@ export const IOS_QUESTIONS: InterviewQuestion[] = [
 
   // ── 네트워크 / URLSession 심화 (Phase 2-3) ──
   { id: "ios-36", topic: "네트워크", phase: 2, question: "URLSession의 Task 종류와 사용 시점?", answer: "4종류: ①dataTask — 메모리에 응답 저장. JSON API 호출용 (작은 데이터) ②downloadTask — 파일로 저장. 대용량 다운로드 + background 지원 ③uploadTask — multipart/form-data, 이미지 업로드 ④streamTask — 양방향 TCP 연결(iOS 9+), 채팅/실시간용. 선택 기준: 작은 JSON→data, 파일 다운로드→download, 백그라운드 필요→download+background config.", followUp: "URLSession에서 인증서 고정(Certificate Pinning)은 어떻게 구현하나요?", followUpAnswer: "URLSessionDelegate의 didReceiveChallenge에서 서버 인증서를 앱에 번들된 인증서와 비교. ①SecTrustGetCertificateAtIndex로 서버 인증서 추출 ②로컬 인증서의 공개키와 비교 ③불일치 시 .cancelAuthenticationChallenge 반환. 주의: 인증서 갱신 시 앱 업데이트 필요 → 공개키 고정(Public Key Pinning)이 더 유연. TrustKit 라이브러리로 간편 구현 가능." },
+
+  // ── SwiftUI 심화 (Phase 2-3) ──
+  { id: "ios-55", topic: "SwiftUI", phase: 2, question: "NavigationStack vs NavigationView 차이?", answer: "NavigationView: iOS 13+, 선언적이지만 상태 관리가 약함. NavigationStack(iOS 16+): 배열 기반 네비게이션 스택으로 상태를 명시적으로 관리. navigationDestination(for:)로 대상 선언. 딥링크 제어 용이.", followUp: "SwiftUI에서 복잡한 네비게이션 흐름(탭 → 리스트 → 상세)을 구현하려면?", followUpAnswer: "NavigationStack 조합: ①각 레벨에서 @State 배열 관리 ②navigationDestination(for: ItemID) → ItemDetailView ③TabView와 NavigationStack을 명확히 분리 ④딥링크: 앱 델리게이트에서 NavigationState를 업데이트 시작점에 주입. 3+ 레벨 중첩은 버그 위험 → Coordinator 패턴 고려." },
+  { id: "ios-56", topic: "SwiftUI", phase: 2, question: "@Observable 매크로(iOS 17+)란?", answer: "@Observable 클래스: @State/@StateObject 불필요. 모든 프로퍼티가 자동 추적. @Bindable로 양방향 바인딩. 컴파일러가 프로퍼티 접근 추적 → 변경 시만 뷰 업데이트. ObservableObject/Published보다 보일러플레이트 적음.", followUp: "@Observable과 @ObservedObject의 성능 차이는?", followUpAnswer: "@Observable: 변경된 프로퍼티만 뷰 재계산. @ObservedObject: objectWillChange로 전체 뷰 재계산. 벤치마크: @Observable은 재렌더링 50~80% 감소. 복잡한 폼/목록에서 차이 극적." },
+  { id: "ios-57", topic: "SwiftUI", phase: 2, question: "@Bindable이란?", answer: "@Bindable: @Observable 객체의 프로퍼티에 양방향 바인딩. @State처럼 동작하지만 기존 객체 참조. 자식 뷰에서 부모의 상태를 직접 수정 가능. @Binding의 대체." },
+  { id: "ios-58", topic: "SwiftUI", phase: 2, question: "@Environment와 @EnvironmentObject 차이?", answer: "@Environment: 기본값 제공(Color, Font). 모든 뷰에 자동 주입. @EnvironmentObject: 커스텀 observable 객체. 명시적으로 .environmentObject()로 주입 필요. 미주입 시 크래시." },
+  { id: "ios-59", topic: "SwiftUI", phase: 3, question: "SwiftUI Animation/Transition 심화?", answer: "withAnimation {}로 범위 내 상태 변경 애니메이션. .transition(.opacity/.scale) 조합으로 뷰 진입/퇴장. matchedGeometryEffect로 크로스 뷰 애니메이션. .animation(.easeInOut, value:)로 특정 값 변경에만 적용." },
+  { id: "ios-60", topic: "SwiftUI", phase: 3, question: "SwiftUI Charts 프레임워크?", answer: "iOS 16.1+. Chart 컨테이너 + BarMark/LineMark/AreaMark/PointMark 조합. .x, .y로 데이터 매핑. SwiftUI 선언적 스타일로 간편. 주식 차트, 판매량 추이 등." },
+  { id: "ios-61", topic: "SwiftUI", phase: 2, question: "WidgetKit 기초?", answer: "홈/잠금 화면 위젯. TimelineProvider로 업데이트 정책 정의. Small/Medium/Large 크기. SwiftUI UI. App Groups + UserDefaults로 메인 앱과 데이터 공유. 시스템이 정기적으로 TimelineEntry 요청." },
+  { id: "ios-62", topic: "SwiftUI", phase: 2, question: "App Intents란?", answer: "앱 기능을 Siri/Spotlight에 노출(iOS 16.2+). Intent 정의 → Siri 음성 실행. Shortcut 앱에서도 사용. perform()에 로직 구현. interactive UI 지원. 예: 'Siri, 내 피드 새로고침해줘'." },
+
+  // ── Swift 6 Concurrency 심화 (Phase 3) ──
+  { id: "ios-63", topic: "Swift Concurrency", phase: 3, question: "~Copyable (move-only types)이란?", answer: "Swift 6의 ~Copyable: struct/class를 복사 불가능하게 선언. 소유권 명확 → ARC 오버헤드 제거. consuming var로 ownership transfer 강제. borrow로 임시 사용. Rust의 ownership model 도입.", followUp: "~Copyable의 성능 이점은?", followUpAnswer: "ARC 비용 제거: 복사 시 retain/release 불필요. 단일 소유권 보장 → 동시성 문제 없음(락 불필요). 고빈도 복사 구조체에서 메모리 할당 30-50% 감소. 단, API 설계 복잡 → 라이브러리 수준에서만 권장." },
+  { id: "ios-64", topic: "Swift Concurrency", phase: 3, question: "typed throws(Swift 6)란?", answer: "함수가 throw 가능 에러 타입을 명시. func process() throws(MyError) { }. 호출자가 정확한 에러만 catch. 코드 가독성 향상 + 컴파일 타임 에러 처리 검증." },
+  { id: "ios-65", topic: "Swift Concurrency", phase: 3, question: "Isolation regions이란?", answer: "Swift 6: 함수/클로저의 격리 컨텍스트 명시. nonisolated: actor 격리에서 벗어남. @MainActor: 메인 스레드 격리 강제. isolated(any): 임의 격리 컨텍스트. 컴파일 타임 data race 검증." },
+  { id: "ios-66", topic: "Swift Concurrency", phase: 3, question: "Strict Concurrency Checking?", answer: "Swift 6 Language Mode에서 기본 활성화. 경고: MainActor 벗어난 UI 접근, non-Sendable 객체의 cross-isolation 전달, data race 검출. 레거시 ObjC 코드는 @unchecked Sendable로 처리 후 리팩토링.", followUp: "레거시 Objective-C와 Strict Concurrency 공존?", followUpAnswer: "ObjC 클래스는 Thread Safety 정보 없음 → @unchecked Sendable 취급. NSObject 서브클래스 경계에서 NSLock/GCD로 직접 보호. UIViewController는 @unchecked Sendable 처리, 신규 코드는 fully Sendable 지향." },
+  { id: "ios-67", topic: "Swift Concurrency", phase: 3, question: "Task cancellation patterns?", answer: "Task 취소: task.cancel() 또는 Scope 벗어남. try Task.checkCancellation() — 취소되었으면 throw. withTaskCancellationHandler { } — 취소 시 cleanup. 화면 dismiss 시점에 미리 취소.", followUp: "부모 Task 취소 시 자식은?", followUpAnswer: "자동 전파: 부모 취소 → 자식도 모두 취소. 반대로 자식 취소는 부모에 영향 X. TaskGroup: throwingGroup은 하나 실패 시 전체 중단, non-throwing은 계속 실행." },
+
+  // ── Tuist/SPM 모듈화 (Phase 3) ──
+  { id: "ios-68", topic: "모듈화", phase: 3, question: "Tuist vs SPM 비교?", answer: "Tuist: 프로젝트 생성 자동화. 일관된 구조 강제. 빌드 캐싱. SPM: Apple 공식. Xcode 통합 우수. 선택: 대규모 모노레포(100+ 모듈) → Tuist, 작은 라이브러리 → SPM. 둘 다: Tuist로 생성 + SPM으로 배포." },
+  { id: "ios-69", topic: "모듈화", phase: 3, question: "Feature/Core/Shared 레이어 설계?", answer: "3계층: ①Shared: 모든 모듈 의존(DesignSystem, Logger). 비즈니스 로직 X ②Core: Feature 기반 서비스(Authentication, Database) ③Feature: 화면/기능. 다른 Feature 의존 금지. 규칙: Shared → Core ← Feature.", followUp: "Feature 간 통신이 필요하면?", followUpAnswer: "①Shared에 공통 Protocol 정의 ②각 Feature에서 구현 ③DI 컨테이너에서 주입 ④Event Bus(NotificationCenter/RxRelay). Coordinator와 조합으로 해결." },
+  { id: "ios-70", topic: "모듈화", phase: 3, question: "모듈 간 의존성 규칙?", answer: "순환 의존성(A → B → A) 금지. 감지: Tuist graph inspect. 해결: Shared로 추상화, 의존성 역전, 이벤트 버스. 빌드 시간: 의존성 적을수록 빠름 → 병렬 빌드로 보상." },
+  { id: "ios-71", topic: "모듈화", phase: 3, question: "빌드 시간 최적화?", answer: "측정: xcode-build-times. ①병렬 빌드 활성화 ②모듈별 컴파일 ③SPM 캐싱 ④불필요 링크 제거 ⑤모듈 쪼개기. 그린카: 2분 → 45초(병렬화 + 모듈화)." },
+
+  // ── TCA (Phase 3) ──
+  { id: "ios-72", topic: "TCA", phase: 3, question: "TCA 핵심: Reducer/Store/State/Action?", answer: "State: 불변 데이터(struct). Action: 사용자 이벤트. Reducer: (State, Action) → State(+ Effects). Store: State 보유 + Action 디스패치. 단방향 데이터 흐름. 각 Action에 대한 State 변화 독립 테스트 가능.", followUp: "MVVM과 TCA 차이?", followUpAnswer: "MVVM: 양방향 바인딩, 상태 분산. TCA: 단방향 흐름, 상태 중앙집중. TCA 장점: 시간 여행 디버깅, 테스트 결정론적. 단점: 러닝 커브 높음. 대규모 복잡한 앱에서 TCA 유리." },
+  { id: "ios-73", topic: "TCA", phase: 3, question: "@Dependency와 의존성 주입?", answer: "@Dependency: TCA의 DI 방식. 클로저 기반. @Dependency(\\.logger) var logger. 테스트: Dependency.Value { logger = mock }로 교체. 타입 안전, 컴파일 타임 검증." },
+  { id: "ios-74", topic: "TCA", phase: 3, question: "TCA vs MVVM 선택 기준?", answer: "MVVM: 작은 프로젝트, UIKit 중심. TCA: 대규모, SwiftUI 신규, 테스트 중시. 복합: 기존 MVVM 유지 + 신규는 TCA. AI 도구와 조합 시 TCA가 생성 품질 높음(선언적)." },
+
+  // ── CI/CD for iOS (Phase 3) ──
+  { id: "ios-75", topic: "CI/CD", phase: 3, question: "Fastlane 자동화 기초?", answer: "Ruby 스크립트 기반 배포 자동화. build_app + upload_to_testflight로 베타 배포. match로 증명서 자동 관리. CI에서 fastlane build → fastlane beta → 완전 자동." },
+  { id: "ios-76", topic: "CI/CD", phase: 3, question: "Xcode Cloud vs Bitrise vs GitHub Actions?", answer: "Xcode Cloud: Apple 공식, Xcode 완벽 통합. Bitrise: 모바일 특화, 자유도 높음. GitHub Actions: 무료/오픈소스 우호적, YAML 기반. Apple 생태→Xcode Cloud, 다중 플랫폼→Bitrise, 개인/오픈소스→GitHub Actions." },
+
+  // ── 접근성 (Phase 2) ──
+  { id: "ios-77", topic: "접근성", phase: 2, question: "VoiceOver 지원 구현?", answer: "시각 장애 사용자용 스크린 리더. accessibilityLabel: 동작 설명, accessibilityValue: 상태, accessibilityHint: 추가 정보. isAccessibilityElement로 노출 제어. 테스트: Settings > Accessibility > VoiceOver." },
+  { id: "ios-78", topic: "접근성", phase: 2, question: "Dynamic Type 지원?", answer: "사용자 설정에 맞춤 텍스트 크기. preferredFont(forTextStyle: .body). SwiftUI: .font(.body) 자동 지원. 최소 11pt, UI 깨지지 않는 범위. 글줄 높이/여백도 함께 조정." },
+
+  // ── 딥링크 (Phase 2) ──
+  { id: "ios-79", topic: "딥링크", phase: 2, question: "Universal Links vs URL Scheme?", answer: "URL Scheme(myapp://): 직접 정의, 충돌 가능, 미설치 시 실패. Universal Links(https://): Apple 도메인 설정, 미설치 시 웹 폴백. 보안: Universal Links 우수(도메인 소유 증명 필수).", followUp: "Universal Links 디버깅?", followUpAnswer: "체크: ①apple-app-site-association 파일 위치 ②JSON 형식 ③Team ID/Bundle ID ④Associated Domains 활성화 ⑤HTTPS 도메인. Console에서 validation log 확인. swcutil -d example.com으로 검증." },
+  { id: "ios-80", topic: "딥링크", phase: 2, question: "Deferred Deep Linking이란?", answer: "앱 미설치 시 먼저 설치 → 설치 후 원래 링크 실행. Branch, Firebase Dynamic Links 등. 원리: URL 클릭 → 미설치 → 앱 스토어 → 설치 → 서버 쿼리 → 목적지 이동. 광고/마케팅에서 필수." },
+
+  // ── App Store (Phase 3) ──
+  { id: "ios-81", topic: "App Store", phase: 3, question: "앱 심사 거절 주요 사유?", answer: "①성능: 크래시/버그 ②프라이버시: 동의 없는 데이터 수집 ③콘텐츠: 폭력/약물 ④내부 구매 ⑤Private API 사용 ⑥메타데이터 불일치. 통과율 ~90%." },
+  { id: "ios-82", topic: "App Store", phase: 3, question: "TestFlight란?", answer: "베타 테스트 배포. 최대 100명(내부) + 10000명(외부). Crash report, Performance metrics 제공. TestFlight 통과 → App Store 배포. 모든 빌드 기록 유지." },
+  { id: "ios-83", topic: "App Store", phase: 3, question: "App Thinning이란?", answer: "디바이스에 필요한 것만 배포. ①Slicing: 디바이스별 이미지 ②Bitcode: 디바이스별 바이너리 ③On-Demand Resources: 필요 시만 다운로드. 앱 용량 40~50% 감소." },
+
+  // ── Push Notification (Phase 2) ──
+  { id: "ios-84", topic: "Push Notification", phase: 2, question: "APNs 동작 원리?", answer: "①앱이 deviceToken 획득 → 서버 전송 ②서버가 APNs에 푸시 전송 ③APNs가 기기로 전달 ④기기가 앱에 콜백. Key(.p8) 인증 권장. Payload 최대 4KB.", followUp: "APNs 메시지 손실 대응?", followUpAnswer: "손실 가능: 푸시 거부, 네트워크 불안정, 오프라인. 대응: 서버 DB 기록 → 앱 오픈 시 서버 쿼리로 누락 동기화. 메시징 앱은 WebSocket + APNs 이중 구조." },
+  { id: "ios-85", topic: "Push Notification", phase: 2, question: "Rich Notification과 NSE?", answer: "Rich: 이미지/비디오 포함 푸시. Notification Service Extension: 푸시 수신 후 콘텐츠 수정(이미지 다운로드). 최대 30초 실행. NSE는 메인 앱과 별도 프로세스." },
+
+  // ── Instruments 심화 (Phase 3) ──
+  { id: "ios-86", topic: "성능", phase: 3, question: "Time Profiler 실전 사용법?", answer: "CPU 사용량 측정. Profile > Time Profiler. Heavy Weight 정렬: CPU 사용 많은 함수부터. 1~2% 이상이면 최적화 대상." },
+  { id: "ios-87", topic: "성능", phase: 3, question: "Allocations과 Leaks 디버깅?", answer: "Allocations: 메모리 할당 추적. 스냅샷 비교로 증가 감지. Leaks: 순환 참조 자동 탐지. Memory Graph: 실시간 객체 관계도. 같은 화면 10번 반복 → Allocations 일정해야 정상." },
+  { id: "ios-88", topic: "성능", phase: 3, question: "Network Link Conditioner?", answer: "느린 네트워크(3G, WiFi 약함) 시뮬레이션. Mac에 Hardware IO Tools 설치. 이미지 다운로드, 타임아웃 처리 검증. 지하철 환경을 단일 기기에서 테스트 가능." },
+
+  // ── CoreML / 온디바이스 AI (Phase 3-4) ──
+  { id: "ios-89", topic: "AI 온디바이스", phase: 3, question: "CoreML 모델 통합?", answer: ".mlmodel을 Xcode에 드래그 → Swift 코드 자동 생성. let prediction = try model.prediction(image: cgImage). 온디바이스(프라이버시), 오프라인, 낮은 레이턴시(10-100ms). 양자화로 크기 축소.", followUp: "모델을 앱 업데이트 없이 갱신하려면?", followUpAnswer: "서버에서 모델 다운로드 → 런타임 로드. 단, 입출력 형식 변경 시 코드 수정 필요. 프로덕션은 3-6개월 주기 업데이트." },
+  { id: "ios-90", topic: "AI 온디바이스", phase: 3, question: "Create ML 모델 훈련?", answer: "Mac Create ML 앱으로 간편 훈련. 이미지 폴더/CSV 데이터. Training/Validation 정확도 비교. 대규모(>100K) → PyTorch 훈련 후 coremltools로 변환." },
+  { id: "ios-91", topic: "AI 온디바이스", phase: 3, question: "Vision Framework?", answer: "이미지/비디오 처리 고수준 API. 얼굴 인식(VNDetectFacesRequest), QR 코드, 텍스트 인식. CoreML과 통합: VNCoreMLRequest. GPU 가속, 멀티프로세싱 지원." },
+
+  // ── Crash 분석 (Phase 3) ──
+  { id: "ios-92", topic: "디버깅", phase: 3, question: "dSYM과 Symbolication?", answer: "crash 로그 주소 → dSYM으로 함수/라인 번호 변환. 빌드 시 자동 생성. Xcode Organizer 자동 symbicate. 버전별 dSYM 보관 필수(1년+).", followUp: "프로덕션 크래시 수집?", followUpAnswer: "Crashlytics(무료, 자동 수집) 또는 Sentry(오픈소스, 셀프 호스팅). 우선순위: Impact(영향 사용자수) × Frequency(빈도)." },
+  { id: "ios-93", topic: "디버깅", phase: 3, question: "Crashlytics vs Sentry?", answer: "Crashlytics: Firebase 공식, 무료. Sentry: 오픈소스, 더 많은 커스터마이징. 간편함→Crashlytics, 제어 필요→Sentry. 크래시 그룹화, 버전별 필터 제공." },
+
+  // ── Swift Testing (Phase 3) ──
+  { id: "ios-94", topic: "테스팅", phase: 3, question: "Swift Testing(@Test) vs XCTest?", answer: "Swift Testing(iOS 18+): 매크로 기반 간결 문법, 병렬 실행 기본. XCTest: iOS 9+, 호환성. #expect(lhs == rhs). 단점: iOS 18+ 필수." },
+  { id: "ios-95", topic: "테스팅", phase: 3, question: "매개변수화 테스트?", answer: "같은 로직을 여러 입력으로 테스트. @Test(arguments: [\"abc\", \"def\"]) func test(_ input: String). 코드 중복 제거, 엣지 케이스 커버. 어느 입력에서 실패했는지 명확 표시." },
+
+  // ── Swift Macro (Phase 3) ──
+  { id: "ios-96", topic: "Swift 심화", phase: 3, question: "Swift Macro 종류?", answer: "4가지: ①Expression(#expression) ②Declaration(@macro) ③Attached(@Observable) ④FreeStanding(#stringify). 커스텀 매크로: Swift Compiler Plugin으로 구현. 꼭 필요 시만 사용(복잡도 증가)." },
+  { id: "ios-97", topic: "Swift 심화", phase: 3, question: "Swift Macro 작성 프로세스?", answer: "Plugin 프로젝트 생성 → Macro 정의 → AST 변환 구현 → 컴파일 테스트 → 호스트 프로젝트에서 사용. Apple Macro Samples 참고. 난이도 높음." },
+
+  // ── RxSwift 심화 (Phase 2-3) ──
+  { id: "ios-98", topic: "반응형", phase: 2, question: "Hot vs Cold Observable?", answer: "Cold: subscribe할 때마다 새로 시작(네트워크 요청). Hot: 이미 실행 중 → subscribe 이후 값만 수신(버튼 탭). replay/refCount로 Cold→Hot 변환. 네트워크=Cold, 버튼/센서=Hot." },
+  { id: "ios-99", topic: "반응형", phase: 2, question: "RxSwift Subject 종류 비교?", answer: "①PublishSubject: 구독 후 값만 ②BehaviorSubject: 최신 값 + 이후 ③ReplaySubject: N개 과거 값 + 이후 ④AsyncSubject: 완료 직전 마지막만. 이벤트→Publish, 상태→Behavior, 히스토리→Replay." },
+  { id: "ios-100", topic: "네트워크", phase: 3, question: "네트워크 상태 추적과 자동 재시도?", answer: "Network.framework 또는 Reachability로 상태 감시. 자동 재시도: 요청 실패 시 Network 복구 대기 후 재전송. waitsForConnectivity = true로 새 네트워크 대기. Alamofire의 RequestInterceptor로 선제적 재전송." },
 ];
 
 /* ── FDE Track ───────────────────────────────────────────── */
@@ -124,6 +200,34 @@ export const FDE_QUESTIONS: InterviewQuestion[] = [
   { id: "fde-10", topic: "커뮤니케이션", phase: 3, question: "프로젝트 스코프가 계속 확장될 때?", answer: "1) 현재 스코프 문서화 (합의된 것 vs 추가 요청). 2) 추가 요청의 비용(시간/인력) 정량화. 3) 우선순위 매트릭스: 임팩트 vs 노력. 4) 'Yes, and...' 프레임: '가능합니다. 단, X를 미루면 됩니다.' 5) MVP 제안: 핵심 기능 먼저 → 반복 개선." },
   { id: "fde-11", topic: "AI 통합", phase: 3, question: "고객사에 RAG 파이프라인을 설계할 때 핵심 고려사항?", answer: "1) 청킹 전략: 문서를 어떤 단위로 분할할지 (문단/섹션/의미 단위). 2) 임베딩 모델 선택: 다국어 지원 여부, 차원 수. 3) 검색 정확도: 코사인 유사도 임계값 + 리랭킹. 4) 프롬프트 구성: 검색 결과를 어떻게 LLM 컨텍스트에 넣을지. 5) 평가: 적중률(Precision/Recall) 측정 + 골든 셋 구축.", followUp: "RAG에서 검색 품질이 낮으면 어떻게 디버깅하나요?", followUpAnswer: "디버깅 순서: ①골든 셋(정답 쌍) 구축 → 적중률(Precision@K) 측정 ②청킹 크기 조정: 너무 크면 노이즈, 너무 작으면 컨텍스트 부족 ③임베딩 모델 교체: multilingual-e5 vs OpenAI ada 비교 ④리랭킹 추가: 1차 벡터 검색 → 2차 Cross-Encoder 리랭킹 ⑤하이브리드 검색: 벡터 + BM25(키워드) 조합. ai-study 위키의 Layer 3 JIT 검색이 이 과정을 거쳐 적중률 개선." },
   { id: "fde-12", topic: "AI 통합", phase: 3, question: "AI 에이전트의 Bounded Retry란?", answer: "실패 시 무한 재시도가 아닌, 최대 N회 재시도 후 다른 전략으로 전환. 예: Claude 2회 실패 → Gemini 전환 → 그래도 실패 → 캐시된 이전 응답 반환. 핵심: 1) 재시도 횟수 제한 2) 모델 간 폴백 체인 3) 최종 폴백(캐시/기본값). 무한 재시도 = 비용 폭증 + 사용자 대기.", followUp: "폴백 체인에서 모델마다 응답 형식이 다르면 어떻게 통일하나요?", followUpAnswer: "Adapter 패턴: 각 모델의 응답을 공통 인터페이스로 변환하는 어댑터 레이어. 예: ClaudeAdapter, GeminiAdapter, GPTAdapter가 모두 AnalysisResult 타입을 반환. JSON Schema를 프롬프트에 포함시켜 출력 형식 강제 + Zod/Codable로 파싱 검증. 파싱 실패 시 1회 재시도(형식 명시 강화) → 그래도 실패 시 다음 모델로 폴백." },
+
+  // ── Cloud/인프라 (Phase 2-3) ──
+  { id: "fde-13", topic: "Cloud/인프라", phase: 2, question: "AWS EC2와 S3 비용 최적화?", answer: "EC2는 예약 인스턴스(RI)로 30-70% 절감, S3는 스토리지 클래스(Standard→IA→Glacier)로 장기 보관 80% 절감. CloudFront CDN으로 전송비 감소.", followUp: "Spot 인스턴스 프로덕션 대응?", followUpAnswer: "Auto Scaling Group에서 On-Demand와 Spot 혼합, Spot 중단 시 30초 warning으로 graceful shutdown. stateless 서비스에 적합." },
+  { id: "fde-14", topic: "Cloud/인프라", phase: 2, question: "Lambda 콜드 스타트 해결법?", answer: "Java 2-3초, Python 0.5-1초 콜드 스타트. Provisioned Concurrency로 웜 유지, 또는 CloudWatch Events로 주기적 keep-alive. Python/Node.js가 Go보다 빠름." },
+  { id: "fde-15", topic: "Cloud/인프라", phase: 2, question: "GCP BigQuery vs Amazon Redshift?", answer: "BigQuery는 서버리스, 쿼리 단위 과금(저비용). Redshift는 클러스터 관리 필요하지만 PB급 더 저렴. 스타트업→BigQuery, 엔터프라이즈→비용 추정 후 선택." },
+  { id: "fde-16", topic: "Cloud/인프라", phase: 2, question: "Docker 이미지 크기 최적화?", answer: "multi-stage build로 불필요 컴파일 도구 제거, alpine/distroless 베이스 이미지, 레이어 수 감소, .dockerignore. 1GB → 100MB 수준 감소 가능.", followUp: "distroless 이미지 장단점?", followUpAnswer: "장점: 보안 취약점 최소화, 매우 작음(<50MB). 단점: 디버깅 어려움(shell 없음), glibc 호환성. 프로덕션 권장, 개발은 부적합." },
+
+  // ── Observability (Phase 2-3) ──
+  { id: "fde-17", topic: "Cloud/인프라", phase: 2, question: "K8s 리소스 요청/한계 설정?", answer: "request는 스케줄링 최소 리소스, limit은 최대 사용량. request < limit으로 버스팅 허용. limit 초과 시 pod 강제 종료. 프로파일링 후 설정." },
+  { id: "fde-18", topic: "Observability", phase: 2, question: "Metrics, Logs, Traces 3대 Pillar?", answer: "Metrics: 시계열 숫자(CPU, RPS)로 전체 상태 파악. Logs: 이벤트 기록으로 원인 분석. Traces: 분산 요청 추적(A→B→C)으로 지연 원인 파악. 세 가지 함께 사용해야 완전한 관찰성.", followUp: "로그 비용 폭증 대응?", followUpAnswer: "샘플링(10%), 에러/경고 우선 필터링, INFO 이하는 로컬만, retention 단축(7→3일), 스트림 처리로 중요 패턴만 추출." },
+  { id: "fde-19", topic: "Observability", phase: 2, question: "Prometheus + Grafana 주의점?", answer: "Prometheus는 높은 cardinality에 취약 — user_id 같은 무제한 레이블 금지. 메트릭 네이밍은 _total, _seconds 단위 명시. 알림은 Alertmanager에서 관리." },
+  { id: "fde-20", topic: "Observability", phase: 2, question: "SLI, SLO, SLA 차이?", answer: "SLI(지표): '응답시간 100ms 이하 비율'. SLO(목표): 'SLI 99.9% 달성'. SLA(약정): 고객과 법적 계약('미충족 시 환불'). SLA가 가장 엄격, 이를 역으로 SLO 설정." },
+
+  // ── Security (Phase 2-3) ──
+  { id: "fde-21", topic: "Security", phase: 2, question: "OAuth 2.0 Authorization Code Flow?", answer: "사용자→앱→인증 서버 리다이렉트→로그인→code 발급→앱이 code+secret으로 token 교환. state 파라미터로 CSRF 방지. token은 HTTPS만 전송.", followUp: "PKCE는 언제 필수?", followUpAnswer: "공개 클라이언트(모바일, SPA)는 secret 보관 불가 → PKCE 필수. code_challenge = SHA256(code_verifier) 해시 포함, 나중에 검증. code만으로 token 탈취 불가." },
+  { id: "fde-22", topic: "Security", phase: 2, question: "JWT 구조와 검증?", answer: "header.payload.signature 3부. header는 알고리즘(RS256), payload는 claims(user_id, exp), signature는 secret 서명. 검증: signature 재계산 일치 확인 + exp 만료 체크. stateless." },
+  { id: "fde-23", topic: "Security", phase: 2, question: "Rate Limiting과 CORS 구현?", answer: "Rate Limiting: IP별 요청 수 제한(Redis sliding window), 초과 시 429. CORS: Access-Control-Allow-Origin 도메인 화이트리스트, credentials 시 wildcard(*) 금지.", followUp: "분산 환경 Rate Limiting?", followUpAnswer: "Redis 중앙 저장소로 모든 서버가 같은 카운터 공유. 또는 API Gateway에서 통합 관리. Token Bucket 알고리즘으로 버스트 트래픽도 유연 처리." },
+
+  // ── Customer Success (Phase 1-3) ──
+  { id: "fde-24", topic: "Customer Success", phase: 1, question: "신규 고객 기술 온보딩?", answer: "API 문서/샘플 코드/동영상 먼저, 첫 7일 dedicated engineer 배정, 통합 시나리오 체크리스트 제공. 월 1회 회의로 blockers 즉시 해결. 목표: 2주 내 production 배포." },
+  { id: "fde-25", topic: "Customer Success", phase: 1, question: "고객 기술 교육 구성?", answer: "3단계: 레벨 1(개념)은 온라인 강의, 레벨 2(실습)는 sandbox 환경, 레벨 3(심화)는 오피스아워/워크숍. 매월 최신 기능 웨비나. 인증 프로그램으로 engagement 강화." },
+  { id: "fde-26", topic: "Customer Success", phase: 2, question: "서비스 장애 시 고객 커뮤니케이션?", answer: "T+0: 상태 페이지 업데이트, T+5: 초기 원인 추측+ETA, T+30: 진행상황 업데이트(매 10분). 복구 후: root cause + 재발 방지책 공개. severity별 communication template 준비." },
+  { id: "fde-27", topic: "Customer Success", phase: 2, question: "NPS와 CSAT 높이기?", answer: "NPS 목표 50+, 매월 조사. detractor는 2주 내 executive follow-up. CSAT는 각 interaction 직후 측정, <8은 escalation. 고객 advisory board로 정기 피드백 수집." },
+
+  // ── Data 심화 (Phase 2-3) ──
+  { id: "fde-28", topic: "데이터", phase: 2, question: "SQL 윈도우 함수 실전?", answer: "순위(ROW_NUMBER, RANK), 누적합(SUM OVER), 전월 대비(LAG/LEAD), 그룹 내 상위 N개(PARTITION BY + ORDER BY). GROUP BY 없이 원본 행 유지 가능.", followUp: "윈도우 함수 성능 최적화?", followUpAnswer: "PARTITION 크기가 크면 느려짐 → WHERE로 사전 필터링, PARTITION 컬럼 인덱싱. 대용량(1B+)은 Spark/BigQuery 분산 처리." },
+  { id: "fde-29", topic: "데이터", phase: 2, question: "NoSQL 선택 기준 (MongoDB vs DynamoDB)?", answer: "MongoDB: 문서 유연성, 복잡 쿼리 가능, 관리 부담. DynamoDB: key-value 단순/fast, AWS 완전 관리형, 쿼리 제약. 복잡 쿼리→MongoDB, 단순 조회→DynamoDB." },
+  { id: "fde-30", topic: "데이터", phase: 2, question: "정규화 vs 역정규화 결정 기준?", answer: "정규화: 중복 제거, 무결성 보장, 조인 비용 증가. 역정규화: 조회 성능 향상, 쓰기 복잡. 읽기 위주(분석)→역정규화, 쓰기 빈번(거래)→정규화. 트래픽 측정 후 결정.", followUp: "역정규화 데이터 불일치 대응?", followUpAnswer: "트랜잭션으로 원본+역정규화 동시 업데이트, 또는 이벤트 기반 비동기 sync. 정기 검증 배치로 불일치 감지/복구." },
 ];
 
 /* ═══════════════════════════════════════════════════════════ */
@@ -425,6 +529,15 @@ export const CULTURE_QUESTIONS: InterviewQuestion[] = [
   { id: "cul-6", topic: "성장", phase: 4, question: "최근 1년간 어떻게 성장했나요?", answer: "구체적 사례 기반: '독학으로 AI 에이전트 오케스트레이션을 학습 → 4개 프로젝트에 적용 → 방법론(Harness/Context/Compound)을 체계화하여 90+ 엔트리 위키로 정리 → 워커 프로젝트에서 검증된 패턴이 위키에 환류되는 구조 구축'. 추상적 '열심히 공부했다' X." },
   { id: "cul-7", topic: "협업", phase: 3, question: "코드 리뷰에 대한 생각은?", answer: "리뷰는 '틀린 곳 찾기'가 아니라 '더 나은 코드를 함께 만들기'. 그린카에서: 야곰 아카데미 리뷰어 경험 → 팀 내 리뷰 문화 도입 시도. 좋은 리뷰 = 맥락 제공 + 대안 제시 + 칭찬 병행. 코드 스타일 논쟁은 린터에 맡기고, 로직에 집중." },
   { id: "cul-8", topic: "리더십", phase: 3, question: "팀에 기술적으로 기여한 경험은?", answer: "SPM 모노레포 멀티모듈 구조화, Fastlane+Jenkins CI/CD 구축, Python CSV→API 자동 생성 도구 개발. 핵심: '내가 만든 도구가 팀 전체의 생산성을 올렸다'는 프레임. 정량적: '이벤트 불일치 0건', '빌드 시간 X분 단축'." },
+
+  // ── 팀 문화 심화 (Phase 2-3) ──
+  { id: "cul-9", topic: "팀 문화", phase: 3, question: "PR 리뷰를 안 하는 팀원에게 어떻게 대응?", answer: "직접 대면에서 리뷰 중요성(품질/학습/버그 방지) 설명하되 강압 대신 권장. PR 크기 제한(50줄 이하), 리뷰 체크리스트 제공. '24시간 내 리뷰' 팀 규범 수립." },
+  { id: "cul-10", topic: "팀 문화", phase: 2, question: "번아웃(Burnout) 감지와 대응?", answer: "신호: 결근/지각 증가, 코드 품질 저하, 회의 참석 감소. 대응: 개인면담으로 업무량 확인, 우선순위 조정, 온콜 로테이션, '퇴근 후 메시지 금지' 규범 수립.", followUp: "번아웃한 팀원 복직 기간?", followUpAnswer: "보통 2-4주 휴식 후 단계적 복귀로 3개월. 부담 없는 업무부터, 멘토링 강화, 주기적 체크인. 팀 이동도 고려." },
+  { id: "cul-11", topic: "자기개발", phase: 2, question: "새로운 기술을 빨리 학습하려면?", answer: "강의/책보다 '업무 적용' 우선. 작은 프로젝트(내부 도구)부터 시작, pair programming으로 knowledge transfer, 주간 스터디 30분 확보. Show & Tell 세션으로 공유." },
+  { id: "cul-12", topic: "협업", phase: 2, question: "리모트 팀의 생산성을 높이려면?", answer: "비동기 문서화 강화, 동기 회의는 짧고 자주(daily 15분), 오피스 아워 주 1회. 타임존 고려 회의 시간 조정. 분기 1회 오프사이트로 팀 케미 유지." },
+  { id: "cul-13", topic: "성장", phase: 2, question: "부정적 피드백을 받을 때?", answer: "즉시 방어하지 말 것 — 들으면서 메모. 나중에 '구체적으로 뭐가 문제였는지' 대화. 실제 잘못이면 빨리 인정 + 개선 계획. 극단적 수용 X, '한 관점'으로 참고.", followUp: "상사 피드백이 불공평하다면?", followUpAnswer: "1:1에서 차분히 근거와 사례 요청. 여전히 불공평하면 HR 상담, 360도 피드백 요청. 조직 문제일 수 있으니 리더십과 대화." },
+  { id: "cul-14", topic: "팀 문화", phase: 2, question: "큰 실수를 팀에 인정하는 방법?", answer: "즉시 공표('production 버그 발생, 원인은 제 테스트 부족'). 변명 말고 액션플랜 제시. standup에서 빠르게 언급. 1개월 후 후속 리뷰. 심리적 안전감 조성에 중요." },
+  { id: "cul-15", topic: "성장", phase: 3, question: "5년 후 커리어 비전 — IC vs Manager?", answer: "IC: 기술 깊이(아키텍처 설계), 자유도 높음. Manager: 팀 성장 임팩트, 경력 후반 기회 많음. '남 성장 돕기' 좋아하면 Manager, '문제 깊이 파기' 즐기면 IC. 양쪽 경험해 보는 것도 좋음." },
 ];
 
 /* ═══════════════════════════════════════════════════════════ */
@@ -2547,6 +2660,68 @@ export const QUIZ_BANK: QuizItem[] = [
   { id: "q98", category: "ios", question: "agent-device가 iOS 자동화에서 핵심인 이유는?", choices: ["UI를 스크린샷으로 분석", "접근성 트리를 압축 스냅샷으로 읽어 토큰 효율적으로 화면 상태 파악", "앱을 자동으로 설치", "코드를 자동 생성"], answer: 1, explanation: "agent-device(callstackincubator): iOS/Android UI 자동화 CLI. 접근성 트리(Accessibility Tree)를 압축된 스냅샷으로 읽어 에이전트가 현재 화면 상태를 토큰 효율적으로 파악. 스크린샷 분석(수천 토큰) 대신 시맨틱 검색(수십 토큰). 일회성 자동화가 아닌 결정론적/재현 가능한 E2E 테스트로 활용 가능." },
   { id: "q99", category: "ios", question: "CLAUDE.md에서 키워드 트리거 패턴이란?", choices: ["모든 문서를 CLAUDE.md에 포함", "특정 키워드 감지 시 해당 워크플로우 문서만 로딩", "키워드로 코드를 생성", "트리거로 빌드를 실행"], answer: 1, explanation: "CLAUDE.md는 모든 문서를 포함하지 않는다. 대신 'PR, 풀리퀘, 작업 완료' 같은 키워드를 감지하면 .claude/workflows/create-pr.md를 읽도록 설계. 한국어/영어 모두 매칭. 토큰 효율(필요한 것만 로딩) + 유지보수성(워크플로우별 독립 문서)." },
   { id: "q100", category: "ios", question: "Xcode MCP(xcrun mcpbridge)의 장점은?", choices: ["Xcode를 완전히 대체", "현재 열려있는 Xcode를 조작하여 증분빌드로 빠른 피드백 루프", "원격 빌드 지원", "앱 스토어 자동 제출"], answer: 1, explanation: "Xcode MCP는 현재 켜져있는 Xcode를 조작하는 방식. 증분빌드(Incremental Build)로 전체 빌드 대비 훨씬 빠른 피드백 루프. DocumentationSearch로 공식 문서 검색 실패확률 감소. SwiftUI Preview 렌더링도 가능. Xcode 26.4+ 공식 지원." },
+
+  // ── Swift 심화 (q121-q128) ──
+  { id: "q121", category: "swift", question: "Swift 6 Complete Concurrency Checking에서 컴파일 에러가 발생하는 주된 이유는?", choices: ["데이터 레이스 위험 감지", "Sendable 프로토콜 미준수", "async/await 키워드 없음", "MainThread isolation 필요"], answer: 1, explanation: "Swift 6은 Sendable을 강제하여 스레드 안전성을 보장. non-Sendable 타입을 actor 경계를 넘어 전달하면 컴파일 에러." },
+  { id: "q122", category: "swift", question: "Expression Macro와 Declaration Macro의 차이?", choices: ["Expression은 값 반환, Declaration은 새 선언 생성", "Expression은 컴파일, Declaration은 런타임", "Expression이 더 빠름", "Declaration만 export 가능"], answer: 0, explanation: "Expression Macro는 표현식 자리에서 값을 변환, Declaration Macro는 새로운 타입이나 함수 선언을 생성합니다." },
+  { id: "q123", category: "swift", question: "~Copyable 제약의 주요 장점?", choices: ["자동 메모리 해제", "복사 오버헤드 제거 + 유일 소유권 강제", "Reference counting 불필요", "자동 스레드 안전성"], answer: 1, explanation: "~Copyable은 암시적 복사를 금지하여 Move-only 의미론 구현, 리소스의 명시적 소유권 이전을 강제합니다." },
+  { id: "q124", category: "swift", question: "Typed Throws의 이점?", choices: ["자동 에러 핸들링", "발생 가능한 에러 타입을 컴파일 타임에 정확히 알 수 있음", "try-catch 불필요", "런타임 성능 향상"], answer: 1, explanation: "throws(CustomError)로 던질 수 있는 정확한 에러 타입을 명시하여 타입 안전성과 함수 계약을 명확히 합니다." },
+  { id: "q125", category: "swift", question: "@Observable 매크로의 역할?", choices: ["@Published 자동 생성", "프로퍼티 변경 감지 → SwiftUI 뷰 자동 업데이트", "Combine 대체", "프로퍼티 자동 동기화"], answer: 1, explanation: "@Observable은 프로퍼티 변경 추적을 자동 구현하여 SwiftUI와 통합. Combine 없이도 반응형 UI 가능." },
+  { id: "q126", category: "swift", question: "Regex Builder의 이점?", choices: ["컴파일 타임 검증 가능", "런타임 성능 향상", "더 짧은 표현", "더 읽기 쉬움"], answer: 0, explanation: "타입 안전한 DSL로 정규표현식 작성, 컴파일 타임에 문법 오류 감지 및 캡처 그룹 타입 보장." },
+  { id: "q127", category: "swift", question: "borrowing과 consuming 파라미터 차이?", choices: ["borrowing은 임시 사용, consuming은 소유권 이전", "consuming이 더 빠름", "borrowing만 non-Sendable 가능", "차이 없음"], answer: 0, explanation: "borrowing은 일시적으로 빌려 사용, consuming은 호출자의 소유권을 받아 함수가 처분합니다." },
+  { id: "q128", category: "swift", question: "any vs some 심화 차이?", choices: ["any=구체적, some=추상적", "some은 컴파일 타임 고정, any는 런타임 결정", "some이 더 빠름", "any는 프로토콜만, some은 클래스도"], answer: 1, explanation: "some은 불투명 타입(Static dispatch), any는 existential로 런타임 타입 정보 유지(Dynamic dispatch)." },
+
+  // ── iOS 심화 (q129-q138) ──
+  { id: "q129", category: "ios", question: "NavigationStack vs NavigationSplitView?", choices: ["Stack=선형, SplitView=다단계 계층", "Stack이 더 효율적", "SplitView는 iPad 전용", "Stack은 deprecated"], answer: 0, explanation: "NavigationStack은 선형 push/pop, NavigationSplitView는 마스터-디테일 패턴의 다열(column) 계층 동시 표시." },
+  { id: "q130", category: "ios", question: "WidgetKit Timeline의 역할?", choices: ["위젯 규칙적 업데이트 스케줄 정의", "애니메이션 제어", "성능 모니터링", "터치 인터랙션 처리"], answer: 0, explanation: "TimelineProvider의 getTimeline으로 위젯 콘텐츠 업데이트 일정 정의, 시스템이 그에 따라 새로고침." },
+  { id: "q131", category: "ios", question: "App Intents 프레임워크 용도?", choices: ["앱 간 데이터 공유", "Siri/Shortcuts/Control Center 통합 의도 정의", "Intent 자동 분석", "딥링크 생성"], answer: 1, explanation: "Siri, Shortcuts, Control Center에서 앱 기능을 직접 호출, 타입 안전한 인터페이스 제공." },
+  { id: "q132", category: "ios", question: "TCA의 핵심 철학?", choices: ["컴포저블 리듀서로 상태 관리 단순화", "SwiftUI 성능 극대화", "DI 프레임워크", "MVVM 패턴 강제"], answer: 0, explanation: "리듀서, 이펙트, 상태를 조합 가능한 단위로 나누어 복잡한 앱 로직을 모듈화하고 테스트 가능하게." },
+  { id: "q133", category: "ios", question: "Tuist의 주요 이점?", choices: ["빌드 시간 50% 단축", "프로젝트 생성/의존성 관리 자동화, xcodeproj 충돌 해결", "SPM 대체", "테스트 속도 향상"], answer: 1, explanation: "xcodeproj 파일 생성 자동화, 모듈화된 프로젝트 구조 관리, git 충돌과 수동 설정을 줄입니다." },
+  { id: "q134", category: "ios", question: "Snapshot Testing 용도?", choices: ["UI 의도치 않은 변경 감지", "메모리 사용량 측정", "UI 성능 벤치마킹", "이미지 압축 최적화"], answer: 0, explanation: "UI 렌더링 결과를 이전 스냅샷과 비교하여 예상치 못한 UI 변경을 감지하는 회귀 테스트 기법." },
+  { id: "q135", category: "ios", question: "App Attest의 역할?", choices: ["버그 자동 탐지", "기기 무결성 증명으로 봇/변조 감지", "데이터 암호화", "성능 모니터링"], answer: 1, explanation: "Apple 보안 하드웨어로 기기가 변조되지 않은 정품임을 증명, 서버가 봇/에뮬레이터 요청 거부 가능." },
+  { id: "q136", category: "ios", question: "SDUI(Server-Driven UI) 이점?", choices: ["앱 업데이트 없이 UI 원격 변경", "개발 속도 2배", "메모리 절감", "모든 디바이스 동일 UI"], answer: 0, explanation: "서버가 UI 구조를 JSON으로 전송하여 앱 스토어 업데이트 없이 실시간 UI 변경 및 A/B 테스트 가능." },
+  { id: "q137", category: "ios", question: "BGTask 제약?", choices: ["30초 미만 실행", "메인 스레드 전용", "시스템이 언제든 중단 가능, 보장된 실행 X", "최대 1시간"], answer: 2, explanation: "시스템 리소스에 따라 지연/중단 가능, 사용자가 앱 강제 종료 시 작업도 중단됩니다." },
+  { id: "q138", category: "ios", question: "Debounce vs Throttle 차이?", choices: ["Debounce=마지막 이벤트 지연, Throttle=주기적 제한", "Throttle이 더 효율적", "Debounce는 iOS 13.x+", "동일 역할"], answer: 0, explanation: "Debounce는 일정 시간 새 이벤트 없을 때만 마지막 값 방출(검색), Throttle은 주기마다 처음/마지막만 방출(스크롤)." },
+
+  // ── CS 심화 (q139-q150) ──
+  { id: "q139", category: "cs", question: "Consistent Hashing의 이점?", choices: ["해시 충돌 완전 제거", "서버 추가/제거 시 키 재분배 최소화", "항상 더 빠름", "데이터 암호화 제공"], answer: 1, explanation: "원형 해시 공간에서 서버 추가/제거 시 전체 키의 약 1/N만 재분배됩니다." },
+  { id: "q140", category: "cs", question: "CRDT의 특징?", choices: ["중앙 조정자 없이 복제본 자동 수렴", "항상 최신 버전 보장", "대역폭 절감", "모든 데이터 타입 지원"], answer: 0, explanation: "임의의 순서로 업데이트 적용해도 모든 복제본이 결국 같은 상태로 수렴하도록 설계된 데이터 구조 (Google Docs, Figma)." },
+  { id: "q141", category: "cs", question: "Write-Ahead Log(WAL) 목적?", choices: ["쓰기 성능 향상", "장애 시 데이터 손실 방지를 위해 실제 쓰기 전 로그 기록", "읽기 최적화", "메모리 절감"], answer: 1, explanation: "메모리 변경사항을 먼저 디스크 로그에 기록 후 실제 쓰기, 크래시 시 로그로부터 복구 가능." },
+  { id: "q142", category: "cs", question: "Bloom Filter 용도?", choices: ["정렬 데이터 검색", "메모리 효율적 멤버십 테스트 (거짓 음성 없음, 거짓 양성 가능)", "정확한 데이터 저장", "데이터 압축"], answer: 1, explanation: "비트 배열과 해시 함수로 '확실히 없음'은 보장하지만 '있을 수도 있음'만 보장. LSM 트리 등에 사용." },
+  { id: "q143", category: "cs", question: "Skip List 특징?", choices: ["완벽 균형 이진 트리", "확률적 O(log n) 검색", "삽입/삭제 우수 + 구현 단순", "메모리 오버헤드 큼"], answer: 2, explanation: "확률적 레이어 구성으로 O(log n) 성능 + AVL 트리보다 구현 단순 + 삽입/삭제 효율적. Redis sorted set 사용." },
+  { id: "q144", category: "cs", question: "Connection Pooling 이점?", choices: ["네트워크 트래픽 감소", "연결 생성 오버헤드 줄이고 재사용으로 성능 향상", "DB 크기 축소", "자동 캐싱"], answer: 1, explanation: "미리 생성된 연결 재사용으로 TCP handshake, 인증, 메모리 할당 오버헤드를 제거하고 처리량 극대화." },
+  { id: "q145", category: "cs", question: "Sharding 목적?", choices: ["백업 자동화", "대규모 데이터를 여러 DB로 분산하여 확장성 확보", "쿼리 성능 개선", "메모리 절감"], answer: 1, explanation: "데이터를 샤드 키로 분할하여 여러 DB 인스턴스에 분산, 단일 DB의 용량/성능 한계 극복 (horizontal scaling)." },
+  { id: "q146", category: "cs", question: "Leader Election 목적?", choices: ["가장 빠른 노드 탐색", "분산 시스템에서 하나의 조정자 선출로 일관성 보장", "노드 동기화", "지연 최소화"], answer: 1, explanation: "여러 노드 중 리더를 선출하여 중앙 조정, 데이터 일관성, 결정 권한 담당 (Raft, Paxos)." },
+  { id: "q147", category: "cs", question: "Saga Pattern 사용 사례?", choices: ["단일 DB 트랜잭션", "분산 트랜잭션을 마이크로서비스별로 나누고 보상 트랜잭션으로 롤백", "암호화 구현", "캐시 일관성"], answer: 1, explanation: "분산 트랜잭션을 순차/병렬 단계로 나누고, 실패 시 보상 트랜잭션으로 롤백하여 최종 일관성 보장." },
+  { id: "q148", category: "cs", question: "Event Sourcing 특징?", choices: ["최신 상태만 저장", "모든 상태 변경을 이벤트로 저장하여 과거 재구성 가능", "읽기 성능 극대화", "일관성 미보장"], answer: 1, explanation: "현재 상태 대신 모든 사건을 로그로 저장하므로 감사 추적, 시간 여행 디버깅, 장애 복구 가능." },
+  { id: "q149", category: "cs", question: "Back Pressure 목적?", choices: ["네트워크 속도 향상", "빠른 생산자가 느린 소비자를 압도하지 않도록 흐름 제어", "데이터 손실 방지", "캐시 비우기"], answer: 1, explanation: "소비자 처리 속도에 맞춰 생산자 속도를 조절, 큐 오버플로우/메모리 부족 방지 (Reactive Streams 필수)." },
+  { id: "q150", category: "cs", question: "Blue-Green Deployment 이점?", choices: ["배포 시간 빠름", "이전 버전 즉시 롤백 가능 + 다운타임 없음", "자동 테스트", "대역폭 절감"], answer: 1, explanation: "두 프로덕션 환경(Blue=현재, Green=신규) 유지, 트래픽 전환으로 즉시 롤백 가능." },
+
+  // ── Algo (q151-q158) ──
+  { id: "q151", category: "algo", question: "Monotone Stack 용도?", choices: ["정렬 배열 검색", "다음/이전 더 큰/작은 원소를 O(n)에 찾기", "최대/최소값 구하기", "트리 순회"], answer: 1, explanation: "증가/감소 순서 유지 스택으로 각 원소마다 다음 더 큰 원소 같은 쌍을 O(n)에 찾습니다." },
+  { id: "q152", category: "algo", question: "Segment Tree 시간 복잡도?", choices: ["구축 O(n), 쿼리 O(n)", "구축 O(n), 쿼리 O(log n), 업데이트 O(log n)", "구축 O(log n), 쿼리 O(1)", "모든 연산 O(n)"], answer: 1, explanation: "O(n) 구축, 범위 쿼리(합/최대)와 단일 업데이트 모두 O(log n)에 처리됩니다." },
+  { id: "q153", category: "algo", question: "KMP 알고리즘 핵심?", choices: ["모든 부분 문자열 비교", "실패 함수(LPS)로 불필요 비교 건너뛰어 O(n+m)", "정규표현식 사용", "해시 기반 검색"], answer: 1, explanation: "패턴 내 반복 구조를 분석한 LPS 배열로 불일치 시 비교를 건너뛰어 O(n+m) 선형 시간 달성." },
+  { id: "q154", category: "algo", question: "Floyd Cycle Detection 원리?", choices: ["방문 여부 추적", "느린/빠른 포인터가 사이클이면 반드시 만남", "전체 정렬 후 비교", "해시맵 저장"], answer: 1, explanation: "1배속 + 2배속 포인터 사용, 사이클이 있으면 반드시 만남. O(n) 시간 O(1) 공간." },
+  { id: "q155", category: "algo", question: "Bellman-Ford 강점?", choices: ["양수 간선만, 매우 빠름", "음수 간선 허용 + 음수 사이클 감지", "간선 많을 때 효율적", "병렬 처리"], answer: 1, explanation: "음수 간선 허용, O(VE)에 최단 경로. V번째 반복에서 거리 감소하면 음수 사이클 감지." },
+  { id: "q156", category: "algo", question: "A* 휴리스틱 조건?", choices: ["실제 거리보다 커야 함", "실제 거리보다 작거나 같아야 함 (admissible)", "정확할 필요 없음", "음수 가능"], answer: 1, explanation: "h(n) ≤ 실제 거리여야 최적 경로 보장. 과대 추정 시 최적해를 놓칠 수 있습니다." },
+  { id: "q157", category: "algo", question: "n & (n-1)의 의미?", choices: ["n을 2로 나눔", "가장 낮은 1 비트 제거", "비트 역순", "홀짝 판단"], answer: 1, explanation: "n의 가장 오른쪽 1 비트를 0으로 만듦 (12=1100→8=1000). 2의 거듭제곱 판단, 비트 카운트에 활용." },
+  { id: "q158", category: "algo", question: "Reservoir Sampling 용도?", choices: ["배열 정렬", "크기 미지 스트림에서 균등하게 k개 표본 추출", "데이터 압축", "중복 제거"], answer: 1, explanation: "전체 크기를 미리 모르는 스트림에서 O(n) 시간 O(k) 공간으로 k개 항목을 균등 확률 추출." },
+
+  // ── System Design (q159-q163) ──
+  { id: "q159", category: "system-design", question: "Event-Driven Architecture 이점?", choices: ["동기 통신", "느슨한 결합 + 확장성 + 이벤트 버스 비동기 통신", "복잡도 감소", "응답 시간 항상 감소"], answer: 1, explanation: "이벤트 발행자/구독자를 느슨하게 결합, 새 서비스 추가/제거 쉽고 확장성 우수." },
+  { id: "q160", category: "system-design", question: "API Gateway 역할?", choices: ["요청/응답 중개 + 인증 + 속도 제한 + 라우팅", "DB 관리", "UI 렌더링", "네트워크 관리"], answer: 0, explanation: "마이크로서비스 앞단 단일 진입점으로 인증, 로깅, 요청 제한, 프로토콜 변환 담당." },
+  { id: "q161", category: "system-design", question: "Service Mesh 주요 기능?", choices: ["코드 변경 없이 서비스 간 통신/트래픽/보안/모니터링 관리", "API 관리", "성능 극대화", "자동 암호화"], answer: 0, explanation: "사이드카 프록시로 애플리케이션 코드 변경 없이 서비스 간 통신을 투명하게 관리." },
+  { id: "q162", category: "system-design", question: "Distributed Tracing 목적?", choices: ["에러 자동 수정", "마이크로서비스 요청 전체 경로 추적으로 병목/지연 파악", "트래픽 감소", "인증"], answer: 1, explanation: "Jaeger/Zipkin 등으로 요청이 여러 서비스를 통과하는 과정 추적, 지연 원인과 의존성 시각화." },
+  { id: "q163", category: "system-design", question: "Feature Flags 이점?", choices: ["배포 속도 향상", "코드 배포와 기능 활성화 분리 + A/B 테스트 + 점진적 롤아웃", "메모리 절감", "동일 경험 보장"], answer: 1, explanation: "런타임에 기능 켜고 끌 수 있어 문제 시 즉시 비활성화, 특정 사용자에게만 새 기능 공개 가능." },
+
+  // ── FDE (q164-q170) ──
+  { id: "q164", category: "fde", question: "Customer Health Score 주요 지표?", choices: ["로그인 횟수만", "사용 빈도 + 피처 도입율 + 지원 티켓 수 + 결제 상태 종합", "나이와 위치만", "매출액만"], answer: 1, explanation: "여러 정량적 지표(DAU, 피처 사용률, 서포트 요청 수)와 정성적 신호를 조합하여 이탈 위험 예측." },
+  { id: "q165", category: "fde", question: "기술 부채를 고객에게 설명하는 방법?", choices: ["코드 복잡도 설명", "업무 속도 저하 + 미래 기능 지연 위험으로 재정의 + ROI 관점", "번아웃 위험 언급", "추상적 반복"], answer: 1, explanation: "고객 관점에서 기술 부채는 '미래 비용'. 현재 느린 개발과 미래 지연 위험을 경영적 언어로 연결." },
+  { id: "q166", category: "fde", question: "Data Migration 첫 단계?", choices: ["즉시 스크립트 작성", "현재 데이터 상태 파악 + 롤백 계획 + 검증 방법 정의", "담당자 배정", "고객 알림"], answer: 1, explanation: "데이터 감사, 롤백 전략, 검증 기준을 먼저 정의하고 작은 배치로 테스트하는 것이 필수." },
+  { id: "q167", category: "fde", question: "POC 성공 기준?", choices: ["완벽한 제품", "최소 기술/비즈니스 위험 검증 + 의사결정 데이터 수집", "최대 피처 포함", "비용 최소화"], answer: 1, explanation: "POC는 완성 제품이 아닌 핵심 가정 검증. 최소 리소스로 진행 여부 판단 증거를 수집." },
+  { id: "q168", category: "fde", question: "Stakeholder 기능 요청 충돌 해결?", choices: ["큰 목소리 우선", "동시 진행", "비즈니스 임팩트 + 리소스 비용으로 정량화 후 우선순위 결정", "무시"], answer: 2, explanation: "객관적 지표(매출 영향, 구현 비용, 기술 리스크)로 평가하고 투명하게 우선순위를 공개." },
+  { id: "q169", category: "fde", question: "Incident Postmortem에서 피해야 할 것?", choices: ["구체적 타임라인", "개인 비난과 책임 추궁", "근본 원인 파악", "개선 방안 제시"], answer: 1, explanation: "Blameless postmortem: '누가 실수'가 아닌 '어떤 시스템/프로세스 결함'에 집중해야 학습 가능." },
+  { id: "q170", category: "fde", question: "고객 요구사항 정리 핵심 기술?", choices: ["모두 받아적기", "'왜'를 반복 질문 + 요약 확인으로 진정한 문제 도출", "요청을 그대로 기능 변환", "해결책 먼저 제시"], answer: 1, explanation: "5 Why 기법으로 근본 문제 파악, 주기적 요약 확인(reflection)으로 진정한 요구사항 도출." },
 ];
 
 /* ═══════════════════════════════════════════════════════════ */
