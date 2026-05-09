@@ -1,0 +1,200 @@
+---
+title: "AI 에이전트 설계: 프롬프트 엔지니어링을 넘어 결정적 제어 흐름으로"
+category: agents
+date: "2026-05-09"
+tags: [control-flow, agent-design, prompt-engineering, deterministic, reliability, llmops, agents]
+confidence: 1
+connections: [agents/agent-architectures, agents/agent-compiler-dynamic-routing, agents/ai-agent-cost-model-computer-use-structured-api]
+status: draft
+description: "복잡한 자연어 프롬프트에 의존하는 대신, 코드 기반의 명시적 제어 흐름으로 AI 에이전트의 신뢰성과 예측 가능성을 높이는 설계 전략을 알아봅니다."
+type: entry
+generated_by: gemini
+quiz:
+  - question: 본문에 따르면, LLM 에이전트 설계 시 '프롬프트 중심(Prompt-Driven)' 접근 방식이 프로덕션 환경에서 가지는 가장 핵심적인 문제점은 무엇인가요?
+    choices:
+      - 초기 프로토타이핑 속도가 너무 느리다.
+      - LLM이 전체 로직을 주도하여 결과의 예측 불가능성이 높고 디버깅이 어렵다.
+      - LLM 호출 횟수가 너무 많아져 비용 부담이 크다.
+      - 모든 로직을 코드로 작성해야 해서 개발 복잡도가 매우 높다.
+    answer: 1
+    explanation: 본문은 프롬프트 중심 접근이 '프로덕션 환경에서 예측 불가능성, 디버깅의 어려움, 유지보수 비용 증가라는 부작용을 낳는다'고 명시합니다. 이는 모든 비즈니스 로직과 예외 처리를 비결정적인 LLM에 맡기기 때문에 발생하는 근본적인 문제입니다. 반면, 초기 프로토타이핑이 빠르다는 것은 장점으로 언급되었으며(1번 오답), 개발 복잡도가 높은 것은 제어 흐름 중심 접근의 단점에 해당합니다(4번 오답).
+  - question: 본문에서 제시된 '제어 흐름 중심(Control-Flow-Driven)' 아키텍처에서 LLM의 역할로 가장 적절한 것은 무엇인가요?
+    choices:
+      - 전체 워크플로우를 지휘하는 중앙 관제사(Orchestrator) 역할을 한다.
+      - 분류, 요약, 정보 추출 등 명확하게 정의된 특정 작업을 수행하는 전문 도구(tool)로 사용된다.
+      - 사용자의 모든 예외적인 요청을 처리하고 비즈니스 로직을 수행하는 최종 결정권자이다.
+      - 신뢰할 수 있는 라이브러리를 대체하여 날짜 계산과 같은 모든 논리적 연산을 전담한다.
+    answer: 1
+    explanation: 본문은 제어 흐름 중심 설계에서 'LLM은 분류, 요약, 변환 등 명확하게 정의된 특정 작업(task)에만 도구(tool)처럼 호출된다'고 설명합니다. 전체 흐름은 TypeScript, Swift 같은 결정적 코드(Orchestrator)가 제어하며, LLM을 필요한 순간에만 전문가처럼 호출하는 방식입니다. 1번은 프롬프트 중심 방식의 설명이며, 3번과 4번은 오히려 이 아키텍처가 지양하는 LLM의 역할입니다.
+  - question: 일정 추가 기능의 '좋은 예'에서 '내일 오후 3시'와 같은 시간 정보를 LLM 대신 `normalizeDate` 같은 결정적 코드로 처리하는 주된 이유는 무엇인가요?
+    choices:
+      - LLM은 '내일'과 같은 상대적인 시간 개념을 전혀 이해하지 못하기 때문이다.
+      - 결정적 코드를 사용하는 것이 LLM API 호출 비용을 절감하는 유일한 방법이기 때문이다.
+      - LLM의 환각(hallucination)이나 계산 오류 가능성을 원천 차단하고, 신뢰성과 예측 가능성을 확보하기 위함이다.
+      - 최종적으로 달력 API에 전달할 JSON 형식을 LLM이 만들지 못하기 때문이다.
+    answer: 2
+    explanation: 본문은 'LLM의 환각(hallucination)이나 계산 오류 가능성을 원천 차단합니다'라고 강조하며, 신뢰할 수 있는 라이브러리를 통해 날짜를 처리하는 것이 결정적이고 신뢰성을 보장하는 방법이라고 설명합니다. LLM이 상대적 시간을 어느 정도 이해할 수는 있지만(1번 오답), 100% 신뢰할 수 없어 중요한 로직 처리에 부적합합니다. 비용(2번)이나 JSON 생성 능력(4번)보다는 신뢰성 확보가 이 아키텍처의 핵심적인 목표입니다.
+
+---
+
+LLM 기반 에이전트를 설계할 때 많은 개발자들이 "완벽한 프롬프트"를 만드는 데 집중합니다. 작업의 모든 세부 사항, 예외 처리, 출력 형식까지 하나의 거대한 프롬프트에 담으려는 시도는 초기 프로토타이핑 단계에서는 매력적으로 보일 수 있습니다. 하지만 이는 프로덕션 환경에서 예측 불가능성, 디버깅의 어려움, 유지보수 비용 증가라는 부작용을 낳습니다.
+
+최근의 업계 논의는 이러한 접근 방식에 근본적인 의문을 제기합니다. 핵심은 **"에이전트에는 더 많은 프롬프트가 아니라, 더 나은 제어 흐름이 필요하다"**는 것입니다. (출처: a16z, "Emerging Architectures for LLM Applications") 이는 LLM을 모든 것을 처리하는 만능 두뇌로 여기는 대신, 강력한 기능을 가진 하나의 컴포넌트로 보고, 전체 워크플로우는 안정적인 결정적 코드(deterministic code)로 제어해야 한다는 패러다임의 전환을 의미합니다.
+
+## 프롬프트 중심 vs. 제어 흐름 중심
+
+두 접근 방식의 차이는 명확합니다. iOS/프론트엔드 개발자에게 익숙한 MVC나 MVVM 아키텍처에 비유할 수 있습니다.
+
+| 접근 방식 | 설명 | 비유 | 장점 | 단점 |
+|---|---|---|---|---|
+| **프롬프트 중심 (Prompt-Driven)** | 하나의 거대한 프롬프트에 모든 비즈니스 로직, 분기, 예외 처리를 자연어로 기술합니다. LLM이 전체 프로세스를 해석하고 주도합니다. | 모든 로직을 `View` 파일 하나에 다 넣는 것 | 빠른 프로토타이핑 | 비결정성, 디버깅 불가, 모델 의존성, "프롬프트 드리프트"에 취약 |
+| **제어 흐름 중심 (Control-Flow-Driven)** | 전체적인 작업 흐름과 비즈니스 로직은 TypeScript, Swift 같은 코드로 작성합니다. LLM은 분류, 요약, 변환 등 명확하게 정의된 특정 작업(task)에만 도구(tool)처럼 호출됩니다. | `Model`, `View`, `Controller/ViewModel`이 명확히 분리된 아키텍처 | 예측 가능성, 신뢰성, 테스트 용이성, 유지보수성, 로직의 명확성 | 초기 설계 복잡도 증가 |
+
+아래 다이어그램은 두 접근 방식의 차이를 시각적으로 보여줍니다. 제어 흐름 중심 설계에서는 코드(`Orchestrator`)가 전체 프로세스를 지휘하며 필요할 때만 LLM이라는 전문가를 호출합니다.
+
+```mermaid
+graph TD
+    subgraph "Prompt-Driven (Monolithic)"
+        P1["User Input"] --> P2{"Mega-Prompt\n(Logic, Rules, Format...)"}
+        P2 --> P3["LLM"]
+        P3 --> P4["Final Output"]
+    end
+
+    subgraph "Control-Flow-Driven (Modular)"
+        C1["User Input"] --> C2["Orchestrator (TypeScript/Swift)"]
+        C2 -- "1. What is the user's intent?" --> C3["LLM Call (Classify)"]
+        C3 --> C2
+        C2 -- "2. Intent is 'X', now extract entities" --> C4["LLM Call (Extract)"]
+        C4 --> C2
+        C2 -- "3. Validate entities & Run Business Logic" --> C5["Deterministic Code"]
+        C5 --> C6["Final Output"]
+    end
+```
+
+## TypeScript로 구현하는 제어 흐름 에이전트
+
+실제 프론트엔드 환경에서 사용자가 자연어로 일정을 추가하는 기능을 만든다고 가정해 봅시다.
+
+**요청**: "내일 오후 3시에 팀 미팅 일정 잡아줘. 장소는 3회의실."
+
+### 나쁜 예: 프롬프트 중심 접근
+
+```typescript
+const megaPrompt = `
+  You are a helpful assistant. Parse the user's request to schedule a meeting.
+  Extract the title, date, time, and location.
+  The current date is ${new Date().toISOString()}.
+  "Tomorrow" means the next day. "Afternoon" is generally between 1 PM and 5 PM.
+  If the time is specific, use it. If not, default to a reasonable time.
+  If any information is missing, you must ask the user for it.
+  Your final output must be a JSON object with keys: "title", "dateTime", "location".
+  Do not include any other text.
+
+  User request: "내일 오후 3시에 팀 미팅 일정 잡아줘. 장소는 3회의실."
+`;
+
+// This single call is expected to do everything, but is highly unreliable.
+const result = await llm.generate(megaPrompt);
+const schedule = JSON.parse(result);
+```
+이 방식은 LLM의 사소한 출력 변화에도 쉽게 깨지고, 날짜 계산 로직을 LLM에 위임하여 신뢰성을 보장할 수 없습니다.
+
+### 좋은 예: 제어 흐름 중심 접근
+
+전체 작업을 여러 단계로 나누고, 각 단계를 코드로 제어합니다.
+
+```typescript
+// main.ts - Orchestrator
+import { classifyIntent } from './steps/classifyIntent';
+import { extractMeetingDetails } from './steps/extractMeetingDetails';
+import { normalizeDate }s from './steps/normalizeDate';
+import { createCalendarEvent } from './api/calendar';
+
+async function handleScheduleRequest(text: string) {
+  // Step 1: Intent Classification (LLM Call)
+  const intent = await classifyIntent(text);
+
+  if (intent !== 'schedule_meeting') {
+    // Handle other intents or fallback
+    return;
+  }
+
+  // Step 2: Entity Extraction (LLM Call)
+  const rawDetails = await extractMeetingDetails(text);
+  // rawDetails -> { title: "팀 미팅", time_info: "내일 오후 3시", location: "3회의실" }
+
+  // Step 3: Validation and Normalization (Deterministic Code)
+  // LLM이 아닌, 신뢰할 수 있는 라이브러리(e.g., date-fns)로 날짜 처리
+  if (!rawDetails.time_info) {
+    throw new Error("Time information is missing.");
+  }
+  const dateTime = normalizeDate(rawDetails.time_info); // tomorrow 3pm -> Date object
+
+  // Step 4: Execute Action (Deterministic Code)
+  const finalEvent = {
+    title: rawDetails.title || "Untitled Meeting",
+    dateTime: dateTime,
+    location: rawDetails.location,
+  };
+
+  const result = await createCalendarEvent(finalEvent);
+  console.log('Event created:', result);
+}
+
+// steps/extractMeetingDetails.ts
+// LLM은 오직 정보 '추출'이라는 한 가지 역할만 담당
+export async function extractMeetingDetails(text: string) {
+  const prompt = `
+    Extract the meeting title, time information, and location from the text.
+    Return a JSON object with keys: "title", "time_info", "location".
+
+    Text: "${text}"
+  `;
+  const result = await llm.generate(prompt);
+  return JSON.parse(result);
+}
+```
+
+이 접근 방식에서는 각 단계가 명확히 분리됩니다.
+1.  **의도 분류 (`classifyIntent`)**: LLM은 사용자의 요청이 '일정 추가'인지 '조회'인지 등 큰 틀만 파악합니다.
+2.  **정보 추출 (`extractMeetingDetails`)**: 의도에 맞춰 필요한 정보(제목, 시간, 장소)만 추출하는 작은 프롬프트를 사용합니다.
+3.  **데이터 정규화/검증 (`normalizeDate`)**: '내일 오후 3시'라는 비정형 텍스트를 실제 `Date` 객체로 변환하는 작업은 `date-fns`와 같은 라이브러리를 사용해 코드 레벨에서 결정적으로 처리합니다. 이는 LLM의 환각(hallucination)이나 계산 오류 가능성을 원천 차단합니다.
+4.  **액션 실행 (`createCalendarEvent`)**: 정제된 데이터를 바탕으로 API를 호출합니다.
+
+이 구조는 각 단계를 개별적으로 테스트하고, 문제가 발생했을 때 어느 부분(LLM 호출, 데이터 변환, API 호출)에서 오류가 났는지 명확하게 추적할 수 있습니다.
+
+## `tarosaju` 프로젝트 적용 사례
+
+실제 `tarosaju` 프로젝트의 타로 카드 리딩 에이전트 설계에도 이 원칙을 적용할 수 있습니다.
+
+-   **기존 방식 (Prompt-Driven)**: "사용자 질문을 받고, 3장의 카드를 뽑은 후, 각 카드의 의미와 위치를 조합하여 전체적인 운세를 해설해줘." 라는 하나의 거대한 프롬프트로 처리. 결과물의 품질이 매번 달라지고, 특정 카드 해석이 누락되는 문제가 발생할 수 있습니다.
+
+-   **개선 방식 (Control-Flow-Driven)**:
+    1.  `Code`: 사용자의 질문을 입력받습니다.
+    2.  `Code`: `draw_cards(3)` 함수를 호출하여 3장의 카드 객체를 배열로 가져옵니다. 이 과정은 LLM과 무관합니다.
+    3.  `LLM Call (Per-Card Interpretation)`: 3장의 카드에 대해 **개별적으로** LLM을 호출합니다.
+        - `get_card_meaning("The Fool", "past")` -> "과거: 새로운 시작, 무모함..."
+        - `get_card_meaning("The Magician", "present")` -> "현재: 창의력, 잠재력 발현..."
+        - `get_card_meaning("The World", "future")` -> "미래: 완성, 성취..."
+    4.  `Code`: 3개의 개별 해석 결과를 수집합니다.
+    5.  `LLM Call (Synthesis)`: 수집된 구조화된 데이터를 바탕으로 최종 리딩을 생성합니다.
+        ```
+        Prompt:
+        You are a wise tarot reader. Synthesize the following elements into a cohesive narrative for the user.
+
+        User's Question: "${question}"
+        Past Card Interpretation: "${past_meaning}"
+        Present Card Interpretation: "${present_meaning}"
+        Future Card Interpretation: "${future_meaning}"
+
+        Provide a final, integrated reading.
+        ```
+이처럼 복잡한 생성 작업을 여러 개의 단순하고 예측 가능한 단계로 분해함으로써, 각 LLM 호출의 역할을 명확히 하고 전체 프로세스의 안정성을 극대화할 수 있습니다. 이는 "에이전트는 먼저 소프트웨어 컴포넌트"라는 SOLID 원칙의 재해석과도 일맥상통합니다.
+
+## 자기 점검
+
+1.  "메가 프롬프트(Mega-Prompt)"에 의존하는 에이전트 설계의 주요 단점 3가지는 무엇인가요?
+2.  결정적 제어 흐름(deterministic control flow)에서 LLM의 역할은 무엇이며, 전통적인 코드의 역할은 무엇인가요?
+3.  본문의 `tarosaju` 프로젝트 예제에서, 카드 해석과 최종 리딩 생성을 분리했을 때 얻을 수 있는 디버깅상의 이점은 무엇일까요?
+4.  이 개념을 동료 프론트엔드 개발자에게 "왜 우리는 복잡한 작업을 하나의 거대한 프롬프트로 처리하면 안 되는지" 코드 예제를 들어 설명해 보세요.
+5.  **실습 과제**: 사용자가 "배경을 어둡게 해줘" 또는 "글자 크기를 18px로 키워줘"와 같은 자연어 명령으로 UI를 제어하는 기능을 만든다고 가정해 봅시다. TypeScript를 사용하여 사용자 입력을 받아 `intent` (`change_theme`, `change_font_size`)와 `entities` (`{ theme: 'dark' }`, `{ size: '18px' }`)로 파싱하는 오케스트레이션 함수를 작성하세요. LLM 호출 부분은 `// LLM call` 주석과 함께 모킹(mocking)하고, 전체적인 제어 흐름이 코드로 명확히 드러나도록 설계하세요. 파싱된 결과에 따라 실제 CSS를 변경하는 더미 함수를 호출하는 부분까지 구현해 보세요.
