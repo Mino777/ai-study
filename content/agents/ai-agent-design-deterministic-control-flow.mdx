@@ -3,9 +3,9 @@ title: "AI 에이전트 설계: 프롬프트 엔지니어링을 넘어 결정적
 category: agents
 date: "2026-05-09"
 tags: [control-flow, agent-design, prompt-engineering, deterministic, reliability, llmops, agents]
-confidence: 1
+confidence: 2
 connections: [agents/agent-architectures, agents/agent-compiler-dynamic-routing, agents/ai-agent-cost-model-computer-use-structured-api]
-status: draft
+status: complete
 description: "복잡한 자연어 프롬프트에 의존하는 대신, 코드 기반의 명시적 제어 흐름으로 AI 에이전트의 신뢰성과 예측 가능성을 높이는 설계 전략을 알아봅니다."
 type: entry
 generated_by: gemini
@@ -71,97 +71,40 @@ graph TD
     end
 ```
 
-## TypeScript로 구현하는 제어 흐름 에이전트
+## 실전 예제: 일정 추가 에이전트
 
-실제 프론트엔드 환경에서 사용자가 자연어로 일정을 추가하는 기능을 만든다고 가정해 봅시다.
+사용자가 "내일 오후 3시에 팀 미팅 잡아줘. 장소는 3회의실." 라고 요청했을 때, 두 접근 방식의 차이:
 
-**요청**: "내일 오후 3시에 팀 미팅 일정 잡아줘. 장소는 3회의실."
+### 프롬프트 중심 — 모든 것을 LLM에 위임
 
-### 나쁜 예: 프롬프트 중심 접근
-
-```typescript
-const megaPrompt = `
-  You are a helpful assistant. Parse the user's request to schedule a meeting.
-  Extract the title, date, time, and location.
-  The current date is ${new Date().toISOString()}.
-  "Tomorrow" means the next day. "Afternoon" is generally between 1 PM and 5 PM.
-  If the time is specific, use it. If not, default to a reasonable time.
-  If any information is missing, you must ask the user for it.
-  Your final output must be a JSON object with keys: "title", "dateTime", "location".
-  Do not include any other text.
-
-  User request: "내일 오후 3시에 팀 미팅 일정 잡아줘. 장소는 3회의실."
-`;
-
-// This single call is expected to do everything, but is highly unreliable.
-const result = await llm.generate(megaPrompt);
-const schedule = JSON.parse(result);
 ```
-이 방식은 LLM의 사소한 출력 변화에도 쉽게 깨지고, 날짜 계산 로직을 LLM에 위임하여 신뢰성을 보장할 수 없습니다.
-
-### 좋은 예: 제어 흐름 중심 접근
-
-전체 작업을 여러 단계로 나누고, 각 단계를 코드로 제어합니다.
-
-```typescript
-// main.ts - Orchestrator
-import { classifyIntent } from './steps/classifyIntent';
-import { extractMeetingDetails } from './steps/extractMeetingDetails';
-import { normalizeDate }s from './steps/normalizeDate';
-import { createCalendarEvent } from './api/calendar';
-
-async function handleScheduleRequest(text: string) {
-  // Step 1: Intent Classification (LLM Call)
-  const intent = await classifyIntent(text);
-
-  if (intent !== 'schedule_meeting') {
-    // Handle other intents or fallback
-    return;
-  }
-
-  // Step 2: Entity Extraction (LLM Call)
-  const rawDetails = await extractMeetingDetails(text);
-  // rawDetails -> { title: "팀 미팅", time_info: "내일 오후 3시", location: "3회의실" }
-
-  // Step 3: Validation and Normalization (Deterministic Code)
-  // LLM이 아닌, 신뢰할 수 있는 라이브러리(e.g., date-fns)로 날짜 처리
-  if (!rawDetails.time_info) {
-    throw new Error("Time information is missing.");
-  }
-  const dateTime = normalizeDate(rawDetails.time_info); // tomorrow 3pm -> Date object
-
-  // Step 4: Execute Action (Deterministic Code)
-  const finalEvent = {
-    title: rawDetails.title || "Untitled Meeting",
-    dateTime: dateTime,
-    location: rawDetails.location,
-  };
-
-  const result = await createCalendarEvent(finalEvent);
-  console.log('Event created:', result);
-}
-
-// steps/extractMeetingDetails.ts
-// LLM은 오직 정보 '추출'이라는 한 가지 역할만 담당
-export async function extractMeetingDetails(text: string) {
-  const prompt = `
-    Extract the meeting title, time information, and location from the text.
-    Return a JSON object with keys: "title", "time_info", "location".
-
-    Text: "${text}"
-  `;
-  const result = await llm.generate(prompt);
-  return JSON.parse(result);
-}
+LLM(
+  "사용자 요청을 파싱해서 제목, 날짜, 시간, 장소를 추출하고
+   '내일'은 다음 날, '오후'는 1-5시 사이로 해석해서
+   JSON으로 반환해줘. 현재 시각은 {now}."
+)
+→ 결과가 매번 달라짐. 날짜 계산 틀릴 수 있음. 디버깅 불가.
 ```
 
-이 접근 방식에서는 각 단계가 명확히 분리됩니다.
-1.  **의도 분류 (`classifyIntent`)**: LLM은 사용자의 요청이 '일정 추가'인지 '조회'인지 등 큰 틀만 파악합니다.
-2.  **정보 추출 (`extractMeetingDetails`)**: 의도에 맞춰 필요한 정보(제목, 시간, 장소)만 추출하는 작은 프롬프트를 사용합니다.
-3.  **데이터 정규화/검증 (`normalizeDate`)**: '내일 오후 3시'라는 비정형 텍스트를 실제 `Date` 객체로 변환하는 작업은 `date-fns`와 같은 라이브러리를 사용해 코드 레벨에서 결정적으로 처리합니다. 이는 LLM의 환각(hallucination)이나 계산 오류 가능성을 원천 차단합니다.
-4.  **액션 실행 (`createCalendarEvent`)**: 정제된 데이터를 바탕으로 API를 호출합니다.
+### 제어 흐름 중심 — 코드가 지휘, LLM은 도구
 
-이 구조는 각 단계를 개별적으로 테스트하고, 문제가 발생했을 때 어느 부분(LLM 호출, 데이터 변환, API 호출)에서 오류가 났는지 명확하게 추적할 수 있습니다.
+```mermaid
+graph LR
+    A["사용자 입력"] --> B["1. 의도 분류"]
+    B -- "LLM: schedule_meeting" --> C["2. 정보 추출"]
+    C -- "LLM: 제목/시간/장소" --> D["3. 날짜 정규화"]
+    D -- "코드: date 라이브러리" --> E["4. API 호출"]
+    E --> F["일정 생성 완료"]
+```
+
+| 단계 | 실행 주체 | 역할 |
+|---|---|---|
+| 1. 의도 분류 | LLM | "일정 추가"인지 "조회"인지 분류만 |
+| 2. 정보 추출 | LLM | 제목, 시간 표현, 장소를 구조화 데이터로 추출만 |
+| 3. 날짜 정규화 | **결정적 코드** | "내일 오후 3시" → Date 객체 변환 (date 라이브러리) |
+| 4. 액션 실행 | **결정적 코드** | 정제된 데이터로 캘린더 API 호출 |
+
+**핵심**: 날짜 계산처럼 LLM이 환각할 수 있는 작업은 신뢰할 수 있는 라이브러리로 처리. LLM은 분류와 추출이라는 좁은 역할만 수행. 각 단계가 독립적이므로 어디서 오류가 났는지 즉시 추적 가능.
 
 ## `tarosaju` 프로젝트 적용 사례
 
@@ -193,8 +136,7 @@ export async function extractMeetingDetails(text: string) {
 
 ## 자기 점검
 
-1.  "메가 프롬프트(Mega-Prompt)"에 의존하는 에이전트 설계의 주요 단점 3가지는 무엇인가요?
-2.  결정적 제어 흐름(deterministic control flow)에서 LLM의 역할은 무엇이며, 전통적인 코드의 역할은 무엇인가요?
-3.  본문의 `tarosaju` 프로젝트 예제에서, 카드 해석과 최종 리딩 생성을 분리했을 때 얻을 수 있는 디버깅상의 이점은 무엇일까요?
-4.  이 개념을 동료 프론트엔드 개발자에게 "왜 우리는 복잡한 작업을 하나의 거대한 프롬프트로 처리하면 안 되는지" 코드 예제를 들어 설명해 보세요.
-5.  **실습 과제**: 사용자가 "배경을 어둡게 해줘" 또는 "글자 크기를 18px로 키워줘"와 같은 자연어 명령으로 UI를 제어하는 기능을 만든다고 가정해 봅시다. TypeScript를 사용하여 사용자 입력을 받아 `intent` (`change_theme`, `change_font_size`)와 `entities` (`{ theme: 'dark' }`, `{ size: '18px' }`)로 파싱하는 오케스트레이션 함수를 작성하세요. LLM 호출 부분은 `// LLM call` 주석과 함께 모킹(mocking)하고, 전체적인 제어 흐름이 코드로 명확히 드러나도록 설계하세요. 파싱된 결과에 따라 실제 CSS를 변경하는 더미 함수를 호출하는 부분까지 구현해 보세요.
+1.  메가 프롬프트에 의존하는 에이전트 설계의 주요 단점 3가지는?
+2.  제어 흐름 중심 설계에서 LLM과 결정적 코드의 역할 경계는 어디인가?
+3.  tarosaju 예제에서 카드 해석과 최종 리딩 생성을 분리했을 때의 디버깅 이점은?
+4.  자기 프로젝트에서 "LLM에 위임하고 있지만, 사실 결정적 코드로 처리해야 하는 작업"을 하나 찾아보자.
