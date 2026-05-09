@@ -8,7 +8,7 @@ tags:
 confidence: 2
 last_verified: "2026-05-05"
 applicable_to: ["any"]
-connections: []
+connections: [ios-ai/apple-intelligence-api, ios-ai/app-intents-2-visual-intelligence-ios]
 description: "이 글은 Apple Intelligence의 Writing Tools API를 iOS 앱에 통합하는 방법을 상세히 설명합니다. 개발자가 앱 내에서 AI 기반 쓰기 기능을 활용할 수 있도록 실제 구현 가이드를 제공합니다. 'Apple Intelligence'와 'on-d"
 generated_by: gemini
 quiz:
@@ -41,25 +41,22 @@ Writing Tools 연동 방식은 앱의 텍스트 뷰 구현 방식에 따라 세 
 
 ```mermaid
 graph TD
-    subgraph "앱의 텍스트 입력 방식"
-        A[텍스트 입력 뷰가 있는가?] --> B{표준 뷰인가? (UITextView, WKWebView 등)};
-    end
+    A["텍스트 입력 뷰 존재?"] --> B{"표준 뷰인가?"}
+    B -- Yes --> C{"TextKit 2 사용?"}
+    B -- No --> E["커스텀 텍스트 뷰"]
 
-    B -- Yes --> C{TextKit 2를 사용하는가?};
-    B -- No --> E[커스텀 텍스트 뷰];
+    C -- Yes --> D["Tier 1: 자동 연동 · 코드 없이 전체 기능 활성화"]
+    C -- No --> DN["TextKit 1은 인라인 미지원 · TextKit 2 마이그레이션 권장"]
 
-    C -- Yes --> D["**Tier 1: 자동 연동** · 코드 없이 모든 기능 (인라인 애니메이션 포함) 자동 활성화"];
-    C -- No --> D_Note["(TextKit 1은 · 인라인 애니메이션 미지원. · TextKit 2로 마이그레이션 권장)"];
+    E --> F{"인라인 경험 필요?"}
+    F -- No --> G["Tier 2: 부분 연동 · UITextInteraction 채택"]
+    F -- Yes --> H["Tier 3: 완전 연동 · UIWritingToolsCoordinator"]
 
-    E --> F{모든 인라인 경험이 필요한가? (애니메이션, 하이라이트 등)};
-    F -- No --> G["**Tier 2: 부분 연동** · UITextInteraction 채택 시 · 컨텍스트 메뉴/콜아웃 바로 기능 호출 · (결과는 붙여넣기 방식)"];
-    F -- Yes --> H["**Tier 3: 완전 연동** · UIWritingToolsCoordinator API를 사용해 · 커스텀 텍스트 엔진과 Writing Tools UI를 · 양방향으로 직접 연동"];
-
-    subgraph "제어 API"
-        I[모든 뷰에서 설정] --> J(writingToolsBehavior 속성);
-        J --> K[".complete (전체 기능)"];
-        J --> L[".limited (패널 UI만)"];
-        J --> M[".none (기능 비활성화)"];
+    subgraph ControlAPI["제어 API"]
+        I["모든 뷰에서 설정"] --> J["writingToolsBehavior"]
+        J --> K[".complete"]
+        J --> L[".limited"]
+        J --> M[".none"]
     end
 
     style D fill:#e6ffed,stroke:#333,stroke-width:2px

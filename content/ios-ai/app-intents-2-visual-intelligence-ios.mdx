@@ -8,7 +8,7 @@ tags:
 confidence: 2
 last_verified: "2026-05-09"
 applicable_to: ["any"]
-connections: []
+connections: [ios-ai/apple-intelligence-api, ios-ai/apple-intelligence-writing-api-guide]
 description: "iOS 26의 App Intents 2.0에 새로 추가된 시각적 인텔리전스, 인터랙티브 스니펫, 지연 속성(Deferred Properties) 기능을 소개합니다."
 generated_by: gemini
 quiz:
@@ -70,7 +70,7 @@ graph TD
     end
 
     subgraph "iOS 26 System"
-        B["Visual Intelligence Layer"] --> C{"SemanticContentDescriptor 생성 · (e.g., '영수증', '총액')"}
+        B["Visual Intelligence Layer"] --> C{"SemanticContentDescriptor 생성"}
         C --> D["등록된 앱들에 Query 전송"]
     end
 
