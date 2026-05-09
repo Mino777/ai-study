@@ -35,8 +35,8 @@ interface Phase {
 /*  CONSTANTS                                                  */
 /* ═══════════════════════════════════════════════════════════ */
 
-const START_DATE = new Date("2026-05-04");
-const END_DATE = new Date("2026-08-12");
+const START_DATE = new Date("2026-05-11");
+const END_DATE = new Date("2026-08-19");
 const TOTAL_DAYS = 100;
 
 const STORAGE_KEY = "interview-prep-progress";
