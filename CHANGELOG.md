@@ -2,6 +2,32 @@
 
 모든 주목할 만한 변경사항을 이 파일에 기록합니다.
 
+## [2026-05-09] auto-trade 하네스 이식 + Gemini 퀄리티 강화 + Blake 스카우트 정비
+
+### Added
+- **auto-trade 하네스 이식**: CLAUDE.md, settings.json(pytest 게이팅), /compound, /autoceo, /dispatch, /gate-1, /gate-2, JIT 검색(Python), specs/api-contract.md, conventions.md — 총 15파일
+- **Claude Code 네이티브 기능 마이그레이션 가이드** 엔트리 (636줄) — 커스텀→네이티브 대체 매핑 10개 + 체크리스트 13단계
+- **Blake 스카우트 엔트리 23개** 통합 머지 (PR #105/#108/#113/#116/#120)
+- **mermaid-fix.mjs** AUTO-FIX 5/6/7/8 추가 — subgraph 괄호, 중괄호 괄호, e.g. 패턴, 괄호+콜론
+- **Blake 스카우트 자동 머지** 워크플로우에 CI 대기 + squash 머지 추가
+
+### Changed
+- **Gemini 생성 프롬프트 대폭 강화**: AI slop 방지 규칙, Swift 우선 코드, Google Search grounding 활성화, 2500-4000자 분량, 트레이드오프 필수
+- **제어 흐름 에이전트 엔트리**: TypeScript 의사코드 90줄 삭제 → Mermaid 다이어그램 + 테이블로 교체
+- 엔트리 수: 204 → 221 (+17, 중복 7개 제거 후)
+- 그래프: 1509 → 1547 edges (+38 connections)
+
+### Fixed
+- Mermaid 렌더링 에러 42건 수정 (브라우저에서만 실패하는 패턴 — mermaid.parse() 통과하지만 렌더러 실패)
+- Blake 스카우트 PR 5개 쌓임 해소 (자동 머지 미설정 → 추가)
+- Blake 스카우트 잘못된 카테고리(methodology-patterns, agent-systems) → harness-engineering 이동
+- 면접 부트캠프 시작일 5/4 → 5/11 수정
+
+### Metrics
+- 43 files changed, 3261 insertions, 89 deletions (since last compound)
+- auto-trade 레포 신규 생성 (Mino777/auto-trade, private)
+- mermaid-fix 규칙: 4개 → 8개 (렌더링 에러 0으로)
+
 ## [2026-05-08] 전체 엔트리 점검 스프린트
 
 ### Added
