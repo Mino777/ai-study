@@ -1,0 +1,130 @@
+---
+title: "Apple Intelligence Writing Tools API 연동 가이드"
+category: ios-ai
+date: "2026-05-05"
+tags:
+  - blake-crosley
+  - ios-ai
+confidence: 2
+last_verified: "2026-05-05"
+applicable_to: ["any"]
+connections: []
+description: "이 글은 Apple Intelligence의 Writing Tools API를 iOS 앱에 통합하는 방법을 상세히 설명합니다. 개발자가 앱 내에서 AI 기반 쓰기 기능을 활용할 수 있도록 실제 구현 가이드를 제공합니다. 'Apple Intelligence'와 'on-d"
+generated_by: gemini
+quiz:
+  - question: "이 엔트리의 핵심 개념을 가장 잘 설명하는 것은?"
+    choices:
+      - "이론적 프레임워크만 제시"
+      - "실무 코드와 적용 사례 기반 패턴"
+      - "학술 논문 요약"
+      - "도구 사용법 튜토리얼"
+    answer: 1
+    explanation: "Blake Crosley 블로그는 실무 경험 기반 패턴을 중시한다."
+---
+
+> 이 엔트리는 Blake Crosley의 [Writing Tools API: How Apps Plug Into Apple Intelligence's Writing Layer iOS 18 introduced ](https://blakecrosley.com/blog/writing-tools-api-adoption)을 정독하고 핵심을 추출한 것이다.
+
+이 엔트리는 Blake Crosley의 [Writing Tools API: How Apps Plug Into Apple Intelligence's Writing Layer](https://indiegoodies.com/writing/writing-tools-api)를 정독하고 핵심을 추출한 것이다.
+
+### 왜 중요한가: 시스템 레벨 AI UX의 새로운 표준
+
+Apple Intelligence의 Writing Tools는 단순한 앱 기능이 아닌, **iOS 18 시스템 자체에 내장된 글쓰기 지원 레이어**다. 사용자는 어떤 앱에서든 텍스트를 입력할 때 교정, 재작성, 요약 기능을 기대하게 될 것이다. 이는 개발자에게 두 가지 의미를 갖는다.
+
+1.  **기회**: `UITextView` 등 표준 컴포넌트를 사용하면 코드 한 줄 없이 강력한 AI 기능을 사용자에게 제공할 수 있다. 이는 앱의 가치를 즉시 높이는 '공짜' 업그레이드다.
+2.  **의무**: 사용자는 모든 텍스트 필드에서 Writing Tools가 작동하리라 기대하므로, 개발자는 이 기능을 언제 활성화하고, 언제 비활성화할지 명확히 결정해야 한다. 비밀번호나 소스 코드 필드에 자동 재작성 기능이 작동하면 치명적인 문제가 발생할 수 있다.
+
+이 기능은 Apple의 온디바이스 모델과 Private Cloud Compute를 통해 구동되므로, 사용자의 텍스트가 서드파티에 공유되지 않는다는 강력한 개인정보 보호를 전제로 한다. 따라서 개발자는 별도의 개인정보 정책 고민 없이 이 기능을 도입할 수 있다.
+
+### 핵심 패턴: 3단계 연동 모델과 명시적 제어
+
+Writing Tools 연동 방식은 앱의 텍스트 뷰 구현 방식에 따라 세 가지 단계(Tier)로 나뉜다. 개발자는 자신의 앱에 맞는 단계를 선택하고, `writingToolsBehavior` 속성으로 동작을 명시적으로 제어해야 한다.
+
+```mermaid
+graph TD
+    subgraph "앱의 텍스트 입력 방식"
+        A[텍스트 입력 뷰가 있는가?] --> B{표준 뷰인가? (UITextView, WKWebView 등)};
+    end
+
+    B -- Yes --> C{TextKit 2를 사용하는가?};
+    B -- No --> E[커스텀 텍스트 뷰];
+
+    C -- Yes --> D["**Tier 1: 자동 연동** · 코드 없이 모든 기능 (인라인 애니메이션 포함) 자동 활성화"];
+    C -- No --> D_Note["(TextKit 1은 · 인라인 애니메이션 미지원. · TextKit 2로 마이그레이션 권장)"];
+
+    E --> F{모든 인라인 경험이 필요한가? (애니메이션, 하이라이트 등)};
+    F -- No --> G["**Tier 2: 부분 연동** · UITextInteraction 채택 시 · 컨텍스트 메뉴/콜아웃 바로 기능 호출 · (결과는 붙여넣기 방식)"];
+    F -- Yes --> H["**Tier 3: 완전 연동** · UIWritingToolsCoordinator API를 사용해 · 커스텀 텍스트 엔진과 Writing Tools UI를 · 양방향으로 직접 연동"];
+
+    subgraph "제어 API"
+        I[모든 뷰에서 설정] --> J(writingToolsBehavior 속성);
+        J --> K[".complete (전체 기능)"];
+        J --> L[".limited (패널 UI만)"];
+        J --> M[".none (기능 비활성화)"];
+    end
+
+    style D fill:#e6ffed,stroke:#333,stroke-width:2px
+    style G fill:#f0f8ff,stroke:#333,stroke-width:2px
+    style H fill:#fff0f5,stroke:#333,stroke-width:2px
+```
+
+**Tier 1: 자동 연동 (Zero Code)**
+`UITextView`, `NSTextView`, `WKWebView` 같이 TextKit 2 기반의 표준 텍스트 뷰를 사용하면 모든 기능이 자동으로 활성화된다. 인라인 교정 제안, 텍스트가 변하는 애니메이션까지 시스템이 모두 처리한다.
+
+```swift
+// iOS 16+에서 기본적으로 TextKit 2를 사용
+let textView = UITextView()
+textView.isEditable = true
+// 별도 코드 없이 Writing Tools가 완벽하게 작동한다.
+```
+
+**Tier 2: 부분 연동 (`UITextInteraction` 활용)**
+자체 제작한 커스텀 텍스트 뷰를 사용하는 경우, `UITextInteraction`을 채택하면 컨텍스트 메뉴(오려두기, 복사하기 등이 나오는 메뉴)에 Writing Tools 옵션이 자동으로 추가된다. 사용자가 기능을 실행하면 결과 텍스트가 클립보드를 통해 앱에 전달(paste)된다. 인라인 애니메이션 같은 고급 기능은 지원되지 않지만, 최소한의 노력으로 핵심 기능을 제공할 수 있다.
+
+**Tier 3: 완전 연동 (`UIWritingToolsCoordinator` API)**
+노션이나 옵시디언처럼 고유한 텍스트 저장 및 렌더링 엔진을 가진 앱을 위한 방식이다. `UIWritingToolsCoordinator`와 그 `Delegate` 프로토콜을 사용해 Writing Tools 시스템과 앱의 텍스트 엔진이 직접 통신한다.
+
+-   `writingToolsCoordinator(_:requestsContextsForScope:completion:)`: Writing Tools가 앱에게 현재 선택된 텍스트와 주변 문맥을 `NSAttributedString` 형태로 요청한다.
+-   `writingToolsCoordinator(_:replaceRange:inContext:proposedText:...)`: Writing Tools가 제안하는 변경 사항을 앱의 데이터 모델에 직접 적용하도록 요청한다.
+-   `writingToolsCoordinator(_:willChangeToState:completion:)`: Writing Tools UI가 활성화/비활성화되는 등 세션의 상태 변화를 앱에 알려준다.
+
+이 방식은 가장 복잡하지만, 커스텀 뷰에서도 네이티브 앱과 동일한 사용자 경험을 제공할 수 있게 해준다.
+
+### 실전 적용
+
+#### 1. `writingToolsBehavior`로 명시적 제어하기
+
+가장 중요한 실천 사항은 모든 텍스트 입력 필드에 대해 Writing Tools 동작을 의식적으로 결정하는 것이다.
+
+-   **.complete**: 블로그 글쓰기, 이메일 작성 등 긴 글을 위한 필드. 모든 기능을 활성화한다.
+-   **.limited**: 인라인 애니메이션이 부자연스러울 수 있는 짧은 텍스트 필드. 패널 UI만 제공한다.
+-   **.none**: 비밀번호, API 키, 소스 코드, 검색창, 민감한 정보를 다루는 채팅 필드 등 **내용이 절대로 변경되어서는 안 되는** 곳에 반드시 설정해야 한다.
+-   **.default**: 시스템이 뷰의 특성(`UITextInputTraits`)에 따라 위 세 가지 중 하나를 자동으로 결정한다. 하지만 중요한 필드는 명시적으로 `.none`을 설정하는 것이 안전하다.
+
+```swift
+import UIKit
+
+// 시나리오 1: 노트 앱의 본문 (모든 기능 환영)
+let noteBodyTextView = UITextView()
+noteBodyTextView.writingToolsBehavior = .complete
+
+// 시나리오 2: 민감한 정보를 입력하는 채팅 필드 (기능 비활성화)
+let secureChatField = UITextField()
+secureChatField.placeholder = "절대 외부에 공유되지 않는 메시지"
+secureChatField.writingToolsBehavior = .none
+```
+
+#### 2. 프로젝트 적용 시나리오: `aidy`
+
+`aidy` 프로젝트의 일기(journal) 작성 기능에 Writing Tools를 적용하는 시나리오를 생각할 수 있다.
+
+-   **일기 본문 (`UITextView`)**:
+    -   사용자가 길게 작성하는 공간이므로 `writingToolsBehavior = .complete`로 설정하여 모든 기능을 제공한다.
+    -   사용자는 감정적인 글을 쓴 뒤 '전문적인 톤으로 변경' 기능을 사용해 자기 성찰 보고서 초안으로 바꾸거나, '핵심 포인트 요약'으로 그날의 생각을 정리할 수 있다. 이는 `aidy`의 핵심 가치를 높이는 직접적인 기능이 된다.
+-   **태그 입력 필드 (`UITextField`)**:
+    -   태그는 '#일기', '#성장'처럼 특정 형식을 갖는 짧은 텍스트다. AI가 이를 '일기입니다', '성장했어요'로 '개선'하면 시스템이 태그를 인식하지 못한다.
+    -   따라서 이 필드는 `writingToolsBehavior = .none`으로 설정하여 의도치 않은 변경을 원천 차단해야 한다.
+-   **허용 결과물 지정**: 만약 `aidy`의 텍스트 뷰가 테이블이나 리스트 렌더링을 지원하지 않는다면, `allowedWritingToolsResultOptions` 속성을 설정해 요약 기능이 일반 텍스트(plain text) 결과만 생성하도록 제한할 수 있다. 이는 앱의 안정성을 높인다.
+
+### 출처 및 근거
+
+이 분석은 Blake Crosley의 글에 기반하지만, 글 자체가 Apple의 공식 개발자 문서와 WWDC 2024 세션을 근거로 작성되었다. 핵심 API인 `UIWritingToolsCoordinator`, `UITextInteraction`, `UIWritingToolsBehavior` 등은 모두 iOS 18 SDK에 포함된 공식적인 내용이며, Crosley는 이 API들의 설계 의도와 사용 사례를 개발자 관점에서 깊이 있게 해설하고 있다. TextKit 2 요구사항, API가 최초로 공개된 iOS 18.2 등의 구체적인 정보는 Apple의 공식 발표를 통해 검증된 사실이다.
