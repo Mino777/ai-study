@@ -45,6 +45,7 @@ jobs:
 
       - name: Create PR
         if: steps.scout.outputs.match_count > 0
+        id: pr
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TITLES: ${{ steps.scout.outputs.created_titles }}
@@ -66,7 +67,7 @@ jobs:
 
           git push origin "$BRANCH"
 
-          gh pr create \
+          PR_URL=$(gh pr create \
             --title "📚 Blake Crosley 스카우트: ${TITLES:-새 엔트리}" \
             --body "## 📚 Blake Crosley 블로그 자동 큐레이션
 
@@ -80,7 +81,26 @@ jobs:
 
           > 🤖 자동 생성 by scout-blakecrosley.mjs" \
             --base main \
-            --head "$BRANCH"
+            --head "$BRANCH")
+
+          echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
+
+      - name: Auto-merge PR
+        if: steps.scout.outputs.match_count > 0
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_NUM=$(echo "${{ steps.pr.outputs.pr_url }}" | grep -oE '[0-9]+$')
+          for i in $(seq 1 10); do
+            sleep 30
+            STATUS=$(gh pr checks "$PR_NUM" --repo ${{ github.repository }} 2>&1 || true)
+            if echo "$STATUS" | grep -q "pass\|All checks were successful"; then
+              gh pr merge "$PR_NUM" --repo ${{ github.repository }} --squash --auto
+              echo "✅ PR #$PR_NUM 자동 머지 예약"
+              break
+            fi
+            echo "⏳ CI 대기 중... ($i/10)"
+          done
 
       - name: Commit seen state (no PR case)
         if: steps.scout.outputs.match_count == 0 || steps.scout.outputs.match_count == ''
