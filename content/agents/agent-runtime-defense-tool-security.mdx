@@ -1,0 +1,143 @@
+---
+title: "툴 증강 에이전트를 위한 런타임 방어 전략"
+category: agents
+date: "2026-05-03"
+tags:
+  - blake-crosley
+  - agents
+confidence: 2
+last_verified: "2026-05-03"
+applicable_to: ["any"]
+connections: []
+description: "툴 사용(Tool Use) 능력을 가진 AI 에이전트의 보안 및 안정성을 확보하기 위한 런타임 방어 전략을 상세히 다룹니다."
+generated_by: gemini
+quiz:
+  - question: "이 엔트리의 핵심 개념을 가장 잘 설명하는 것은?"
+    choices:
+      - "이론적 프레임워크만 제시"
+      - "실무 코드와 적용 사례 기반 패턴"
+      - "학술 논문 요약"
+      - "도구 사용법 튜토리얼"
+    answer: 1
+    explanation: "Blake Crosley 블로그는 실무 경험 기반 패턴을 중시한다."
+---
+
+> 이 엔트리는 Blake Crosley의 [Runtime Defense for Tool-Augmented Agents](https://blakecrosley.com/blog/runtime-defense-tool-augmented-agents)을 정독하고 핵심을 추출한 것이다.
+
+이 엔트리는 Blake Crosley의 [Runtime Defense for Tool-Augmented Agents](https://blakewc.com/writing/runtime-defense-for-tool-augmented-agents)를 정독하고 핵심을 추출한 것이다.
+
+### 왜 중요한가: 얼라인먼트는 보안 경계가 아니다
+
+도구 증강 에이전트(Tool-Augmented Agent)의 공격 표면은 감사(audit) 역량을 초과하며 빠르게 확장되고 있다. 기존의 방어선이었던 모델 얼라인먼트(RLHF 등을 통한 유해 요청 거부 훈련)는 근본적인 한계를 가진다.
+
+- **확률적 한계**: 얼라인먼트는 "더 그럴듯하게" 거부할 뿐, 100%를 보장하지 않는다. 99%의 방어율은 공격자가 입력을 제어할 경우 1%의 실패를 뚫을 수 있다는 의미다.
+- **우회 가능성**: '도구 포이즈닝(tool poisoning)' 같은 공격은 모델이 악성 행위를 의도된 정상 행위로 착각하게 만들어 얼라인먼트 자체를 무력화한다.
+- **감사 불가능한 의도**: Vercel의 Claude Code 플러그인 원격 측정(telemetry) 수집 사건은 이것이 실제 위협임을 증명했다. 이 플러그인은 사용자가 의도하지 않은 광범위한 범위에서, 네이티브 UI를 우회하여 데이터를 수집했다. 이 구조는 데이터 '유출(exfiltration)' 공격과 기술적으로 동일하며, 유일한 차이는 감사할 수 없는 '의도' 뿐이다.
+
+결론적으로, 모델의 판단력에 의존하는 방어는 신뢰할 수 있는 보안 경계가 될 수 없다.
+
+### 핵심 패턴: 실행 경계에서 결정론적 방어
+
+ClawGuard 논문이 제시하는 핵심 아이디어는 방어의 초점을 모델의 '이해'에서 도구 호출의 '실행' 시점으로 옮기는 것이다. 이는 확률적 방어를 결정론적(deterministic) 방어로 전환한다.
+
+모든 외부 액션은 반드시 **'도구 호출 경계(tool-call boundary)'**라는 단일 지점을 통과해야 한다. 공격 벡터가 웹 콘텐츠 주입, MCP 서버 주입, 스킬 파일 주입 등 무엇이든 상관없다. 이 지점에 정책 엔진(Policy Engine)을 두면 모든 것을 통제할 수 있다.
+
+> "모든 주입을 탐지할 필요는 없다. 실행 경계에서 정책을 강제할 수만 있다면."
+> (You do not need to detect every injection if you can enforce policy at the execution boundary.)
+
+이 아키텍처는 모델이 공격을 인지했는지 여부와 무관하게 작동한다. 오직 '이 호출이 허용된 규칙 집합과 일치하는가?'라는 결정론적 검사만 수행한다.
+
+```mermaid
+graph TD
+    subgraph "입력 채널 (Injection Channels)"
+        A1[Web/Local Content]
+        A2[MCP Server]
+        A3[Skill Files]
+    end
+
+    subgraph "에이전트 시스템"
+        B(LLM Agent)
+        C{"ClawGuard Hook: PreToolUse"}
+        D[Tool Invocation]
+    end
+
+    subgraph "외부 시스템"
+        E(File System)
+        F(Network API)
+        G(Database)
+    end
+
+    A1 -- "Adversarial Instructions" --> B
+    A2 -- "Poisoned Tool Description" --> B
+    A3 -- "Malicious Skill Config" --> B
+
+    B -- "Tool Call Request (e.g., writeFile)" --> C
+    C -- "Call matches rules? (결정론적 검사)" -->|Allow| D
+    C -- "Block" --> H(End / User Confirmation)
+
+    D --> E
+    D --> F
+    D --> G
+```
+
+### 실전 적용: 수동 규칙에서 자동 제약 추론으로
+
+이 개념은 이미 실무에서 부분적으로 적용되고 있다. 원문 저자는 Claude Code에서 95개 이상의 수동 훅(hook)을 사용해 파일 경로를 제한하고, 파괴적인 Git 명령(`git force-push`) 전에 확인을 요구하는 등의 정책을 적용한다.
+
+ClawGuard가 평가한 기본 구성 역시 파일 접근 제어, 네트워크 호출 허용 목록 등 수동 규칙과 유사하다. 진짜 혁신은 아직 미래의 연구 과제로 남아있는 **'작업별 규칙 유도(task-specific rule-induction)'** 컴포넌트에 있다.
+
+- **현재 (수동 규칙)**: "`/etc` 디렉토리에 쓰기 금지" 와 같이 알려진 위협을 막는 블랙리스트 방식. 예상하지 못한 공격엔 취약하다.
+- **미래 (자동 유도)**: "로그인 모듈 리팩토링"이라는 사용자 목표로부터 "이 작업은 시스템 디렉토리 쓰기 권한이 필요 없다"는 제약을 자동으로 추론하는 화이트리스트 방식. 예상치 못한 공격까지 막을 수 있다. (이론적으로)
+
+#### `aidy` 프로젝트 적용 시나리오
+
+`aidy`가 코드베이스 분석 및 수정을 위해 파일 시스템과 Git 도구를 사용한다고 가정하자.
+
+1.  **현재 적용 가능한 수동 규칙 (PreToolUse Hook)**:
+    `aidy`의 도구 호출 전에 실행되는 TypeScript 훅을 구현한다. 이 훅은 `moneyflow` 프로젝트 디렉토리 외부로의 파일 쓰기나, `tarosaju` 리포지토리로의 강제 푸시를 차단한다.
+
+    ```typescript
+    // aidy/src/hooks/securityHooks.ts
+    interface ToolCall {
+      toolName: string; // e.g., 'filesystem.writeFile' or 'git.push'
+      args: { [key: string]: any };
+    }
+
+    interface HookDecision {
+      verdict: 'allow' | 'block';
+      reason?: string;
+    }
+
+    const ALLOWED_WRITE_PREFIX = '/Users/user/dev/moneyflow/';
+
+    export function preToolUseSecurityHook(call: ToolCall): HookDecision {
+      if (call.toolName === 'filesystem.writeFile') {
+        const path = call.args.path as string;
+        if (!path.startsWith(ALLOWED_WRITE_PREFIX)) {
+          return {
+            verdict: 'block',
+            reason: `File write blocked outside of project directory: ${path}`,
+          };
+        }
+      }
+
+      if (call.toolName === 'git.push' && call.args.force === true) {
+        // 실제로는 사용자 확인 UI를 호출해야 함
+        return {
+          verdict: 'block',
+          reason: 'Force push requires explicit user confirmation.',
+        };
+      }
+
+      return { verdict: 'allow' };
+    }
+    ```
+
+2.  **미래 비전 (자동 유도)**:
+    사용자가 `aidy`에게 "타로카드 이미지 에셋 최적화"라는 작업을 지시했다고 가정하자.
+    이론적으로, 고도화된 시스템은 이 자연어 목표를 분석해 다음과 같은 임시 제약조건을 자동으로 생성할 수 있다:
+    - **허용**: `image.compress`, `filesystem.readFile`, `filesystem.writeFile`
+    - **경로 제한**: `filesystem` 도구는 `tarosaju/src/assets/images/` 경로 내에서만 작동
+    - **금지**: `network.*`, `git.*` 등 관련 없는 모든 도구 호출
+
+이러한 실행 경계 방어는 모델의 취약점과 분리된, 견고하고 감사 가능한 보안 계층을 제공하는 현실적인 대안이다.

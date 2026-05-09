@@ -1,0 +1,113 @@
+---
+title: "Apple Intelligence Writing Tools API 연동 가이드"
+category: ios-ai
+date: "2026-05-03"
+tags:
+  - blake-crosley
+  - ios-ai
+confidence: 2
+last_verified: "2026-05-03"
+applicable_to: ["any"]
+connections: []
+description: "iOS 18에 도입된 Apple Intelligence의 Writing Tools API를 통해 앱이 Apple의 온디바이스 AI 글쓰기 기능과 어떻게 연동되는지 심층적으로 다룹니다."
+generated_by: gemini
+quiz:
+  - question: "이 엔트리의 핵심 개념을 가장 잘 설명하는 것은?"
+    choices:
+      - "이론적 프레임워크만 제시"
+      - "실무 코드와 적용 사례 기반 패턴"
+      - "학술 논문 요약"
+      - "도구 사용법 튜토리얼"
+    answer: 1
+    explanation: "Blake Crosley 블로그는 실무 경험 기반 패턴을 중시한다."
+---
+
+> 이 엔트리는 Blake Crosley의 [Writing Tools API: How Apps Plug Into Apple Intelligence's Writing Layer iOS 18 introduced ](https://blakecrosley.com/blog/writing-tools-api-adoption)을 정독하고 핵심을 추출한 것이다.
+
+Apple의 Writing Tools API는 iOS 18부터 시스템 전반에 통합된 AI 글쓰기 지원 기능입니다. 사용자가 텍스트를 선택하면 교정, 재작성, 요약 등의 기능을 모든 텍스트 필드에서 기대하게 됩니다. 따라서 앱 개발자는 이 새로운 사용자 경험 기준에 맞춰 통합 전략을 세워야 합니다. 단순히 기능을 추가하는 것을 넘어, 앱의 컨텍스트에 맞게 AI의 개입 수준을 정교하게 제어하는 것이 핵심입니다.
+
+### 왜 중요한가: 새로운 UX의 기준
+
+Writing Tools는 단순한 API가 아니라, 모든 텍스트 입력 필드에 적용되는 **시스템 레벨의 사용자 경험**입니다. 사용자는 이제 어떤 앱에서든 텍스트를 선택하면 AI 글쓰기 도우미가 나타날 것이라 기대합니다. 앱이 이를 지원하지 않거나 부적절하게 지원하면, 마치 복사/붙여넣기가 안 되는 앱처럼 '고장 난' 경험을 주게 됩니다. 따라서 개발자는 Writing Tools를 '채택할지 말지'가 아니라, '어떻게, 어느 수준까지 채택할지'를 결정해야 합니다.
+
+### 핵심 패턴 1: 3단계(Tier) 채택 모델
+
+Writing Tools 연동은 앱의 텍스트 뷰 구현 방식에 따라 세 가지 수준으로 나뉩니다. 어떤 수준을 선택할지는 개발 비용과 사용자 경험 사이의 트레이드오프입니다.
+
+```mermaid
+graph TD
+    A[텍스트 입력 UI 구현 방식] --> B{표준 뷰 사용? (UITextView 등)};
+    B -- Yes --> C["Tier 1: 자동 통합 · Zero Code · 풀 경험"];
+    B -- No --> D{풀 인라인 경험 필요?};
+    D -- Yes --> E["Tier 3: UIWritingToolsCoordinator · 최대 커스텀 · 높은 구현 비용"];
+    D -- No --> F["Tier 2: UITextInteraction · 메뉴만 연동 · 낮은 구현 비용"];
+```
+
+1.  **Tier 1: 자동 통합 (Zero Code)**
+    -   **대상**: `UITextView`, `NSTextView`, `WKWebView` 등 표준 텍스트 뷰 (TextKit 2 기반).
+    -   **내용**: 코드 한 줄 없이 교정, 재작성, 인라인 애니메이션 등 모든 기능을 완벽하게 지원받습니다. iOS 16 이상에서 `UITextView`는 기본적으로 TextKit 2를 사용하므로 대부분의 최신 앱은 여기에 해당합니다.
+
+    ```swift
+    // Tier 1: 별도 코드가 필요 없음
+    let textView = UITextView()
+    textView.text = "사용자가 이 텍스트를 선택하면 Writing Tools가 자동으로 나타납니다."
+    textView.isEditable = true
+    // Writing Tools just works.
+    ```
+
+2.  **Tier 2: 컨텍스트 메뉴만 연동 (Callout-Only)**
+    -   **대상**: 커스텀 텍스트 뷰를 사용하지만, 전체 인라인 경험까지는 필요 없는 경우.
+    -   **내용**: `UITextInteraction`을 채택하면 컨텍스트 메뉴(팝업)에 Writing Tools 옵션이 나타납니다. 사용자가 기능을 선택하면 결과가 패널 UI에 표시되고, '바꾸기'를 누르면 기존 텍스트를 대치하는 방식으로(paste/replace) 동작합니다. 인라인 하이라이트나 재작성 애니메이션은 제공되지 않습니다.
+
+3.  **Tier 3: 완전 통합 (Full Inline Experience)**
+    -   **대상**: 자체 텍스트 엔진을 가진 앱 (예: 코드 에디터, 전문 문서 편집기)에서 완벽한 네이티브 경험을 제공하고 싶을 때.
+    -   **내용**: `UIWritingToolsCoordinator` API를 사용하여 Writing Tools 시스템과 앱의 텍스트 저장소 간의 통신을 직접 구현합니다. 시스템이 텍스트 컨텍스트를 요청하면(`requestsContextsForScope`), 앱은 `NSAttributedString` 형태로 데이터를 제공합니다. 시스템이 텍스트 변경을 제안하면(`replaceRange`), 앱이 이를 실제 데이터에 반영하고 애니메이션 완료 신호를 받습니다.
+
+### 핵심 패턴 2: `writingToolsBehavior`로 명시적 제어
+
+가장 중요한 제어 수단은 `writingToolsBehavior` 속성입니다. 이 속성을 통해 텍스트 필드별로 Writing Tools의 동작 수준을 명시적으로 지정할 수 있습니다.
+
+-   `.complete`: 모든 기능(인라인 애니메이션, 하이라이트 등)을 활성화합니다. (기본값)
+-   `.limited`: 컨텍스트 메뉴와 패널 UI만 허용하고, 인라인 애니메이션 등은 비활성화합니다.
+-   `.none`: 해당 텍스트 필드에서 Writing Tools를 완전히 비활성화합니다.
+
+```swift
+// 사용 사례별 명시적 제어
+let longformEditor = UITextView()
+longformEditor.writingToolsBehavior = .complete // 긴 글 편집기: 모든 기능 활성화
+
+let chatInputField = UITextField()
+chatInputField.writingToolsBehavior = .limited // 채팅 입력창: 인라인 애니메이션은 방해될 수 있음
+
+let passwordField = UITextField()
+passwordField.isSecureTextEntry = true
+passwordField.writingToolsBehavior = .none // 비밀번호 필드: AI 개입 절대 금지
+
+let codeEditor = CustomTextView()
+codeEditor.writingToolsBehavior = .none // 코드 에디터: 의도치 않은 코드 변경 방지
+```
+
+`.default` 값은 시스템이 뷰의 특성에 따라 `.complete`, `.limited`, `.none` 중 하나로 자동 결정하도록 요청하는 옵션이며, 네 번째 Tier가 아닙니다.
+
+### 핵심 패턴 3: `allowedWritingToolsResultOptions`로 결과물 형태 제한
+
+앱이 렌더링할 수 없는 결과물을 AI가 생성하는 것을 막기 위해, `allowedWritingToolsResultOptions` 속성으로 허용할 결과물 형태(plain text, rich text, list, table)를 선언할 수 있습니다. 예를 들어, 앱이 일반 텍스트만 지원한다면 테이블이나 리스트 형태의 요약 결과가 제안되지 않도록 막을 수 있습니다.
+
+### 실전 적용: `aidy` 프로젝트 시나리오
+
+`aidy`는 AI 기반 생산성 앱으로, 다양한 텍스트 입력 필드가 존재합니다. Writing Tools를 다음과 같이 차등 적용할 수 있습니다.
+
+1.  **메인 노트/문서 편집 화면 (`UITextView`)**:
+    -   **전략**: 사용자가 긴 글을 작성하는 핵심 영역이므로 완벽한 경험을 제공해야 합니다.
+    -   **구현**: `UITextView`를 TextKit 2 기반으로 사용하고 `writingToolsBehavior`를 `.complete`로 유지합니다. 만약 마크다운 렌더링을 위해 커스텀 뷰를 사용 중이라면, 최상의 사용자 경험을 위해 `UIWritingToolsCoordinator` (Tier 3) 채택을 적극 고려해야 합니다.
+
+2.  **AI 에이전트 채팅 입력창 (`UITextField`)**:
+    -   **전략**: 사용자의 명령어나 질문을 AI가 임의로 '재작성'하면 의도가 왜곡될 수 있습니다. 또한, 빠른 인터랙션이 중요한데 인라인 애니메이션은 방해가 될 수 있습니다.
+    -   **구현**: `writingToolsBehavior = .none`으로 설정하여 Writing Tools의 개입을 완전히 막는 것이 가장 안전합니다. 사용자가 오타를 수정하고 싶을 때를 대비해 `.limited`(패널 UI)를 제공하는 것도 대안이 될 수 있습니다.
+
+3.  **할 일(To-Do) 항목 추가 필드**:
+    -   **전략**: 간단한 텍스트 입력이지만, 교정 기능은 유용할 수 있습니다.
+    -   **구현**: `writingToolsBehavior = .complete`를 유지하되, `allowedWritingToolsResultOptions`를 설정하여 요약 기능이 테이블이나 복잡한 리스트를 생성하지 않도록 제한할 수 있습니다.
+
+---
+이 엔트리는 Blake Crosley의 [Writing Tools API: How Apps Plug Into Apple Intelligence's Writing Layer](https://indie.blake.io/p/writing-tools-api)를 정독하고 핵심을 추출한 것입니다.
