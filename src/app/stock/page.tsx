@@ -630,16 +630,19 @@ export default function StockPage() {
               <div>
                 <div
                   onClick={() => setFlashRevealed(p => ({ ...p, [currentFlash.id]: !p[currentFlash.id] }))}
-                  className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-8 cursor-pointer min-h-[200px] flex flex-col items-center justify-center text-center"
+                  className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-8 cursor-pointer min-h-[200px] flex flex-col items-center text-center gap-3"
                 >
-                  <span className="text-xs text-[var(--color-fg-muted)] mb-3">
+                  <span className="text-xs text-[var(--color-fg-muted)]">
                     {flashIndex + 1} / {filteredFlash.length} · 원칙 {currentFlash.principle}
                   </span>
-                  <h3 className="text-xl font-bold mb-3">{currentFlash.front}</h3>
-                  {flashRevealed[currentFlash.id] ? (
-                    <p className="text-base leading-relaxed">{currentFlash.back}</p>
-                  ) : (
-                    <p className="text-sm text-[var(--color-fg-muted)]">탭해서 정답 보기</p>
+                  <h3 className="text-xl font-bold">{currentFlash.front}</h3>
+                  {flashRevealed[currentFlash.id] && (
+                    <div className="w-full pt-3 border-t border-[var(--color-border)]">
+                      <p className="text-base leading-relaxed">{currentFlash.back}</p>
+                    </div>
+                  )}
+                  {!flashRevealed[currentFlash.id] && (
+                    <p className="text-sm text-[var(--color-fg-muted)] mt-auto">탭해서 정답 보기</p>
                   )}
                 </div>
                 <div className="flex gap-2 mt-3 items-center">
