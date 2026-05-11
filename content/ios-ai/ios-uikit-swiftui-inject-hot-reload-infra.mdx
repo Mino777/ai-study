@@ -1,0 +1,340 @@
+---
+title: "UIKit + SwiftUI 운영 앱에 Inject Hot Reload 인프라 박제 — UI iteration 30초 → 1초, 그리고 함정들"
+category: ios-ai
+date: "2026-05-11"
+tags: [ios, hot-reload, inject, swiftui, uikit, spm, ribs, xcconfig, linker-flag, devtools]
+confidence: 4
+last_verified: "2026-05-11"
+applicable_to: ["moneyflow", "any"]
+connections:
+  - ios-ai/ios-harness-setup-xcodebuildmcp
+  - ios-ai/ios-ai-journal-006-spm-cycle-break
+  - ios-ai/ios-ai-journal-011-toss-slash23-tuist-microfeatures
+  - ios-ai/ios-legacy-to-ai-ready
+status: complete
+type: entry
+description: >-
+  UI 한 줄 바꿔서 시뮬에 비치는 데 30~60초 걸리던 사이클을 1초로 줄인 운영 앱 셋업. SwiftUI는
+  3줄로 끝나지만 UIKit + RIBs + SnapKit + BaseViewController 조합에선 함정이 많아서, 안전한
+  패턴(NotificationCenter + updateUI, lazy var 추출)과 금지 패턴(setupViews 재호출,
+  Inject.ViewControllerHost 래핑)을 코드와 함께 박제한다. Xcode 16.3+ 빌드 설정 4종과 SPM
+  모듈 linker flag까지 함께.
+quiz:
+  - question: "SwiftUI View에 .enableInjection()을 직접 if/else 분기에 부착하면 컴파일 에러가 난다. 어떻게 우회하는가?"
+    choices:
+      - "@ViewBuilder를 body에 명시한다"
+      - "Group { ... } 으로 감싸고 Group에 .enableInjection()을 부착한다"
+      - ".enableInjection()을 각 분기 안쪽에 중복 부착한다"
+      - "ViewModifier로 따로 정의한다"
+    answer: 1
+    explanation: "if/else는 some View 타입이 아니라 ConditionalContent라서 modifier 부착이 직접 안 된다. Group { }으로 감싸면 Group의 some View 타입에 modifier가 붙는다."
+  - question: "UIKit ViewController에서 onInjected 콜백 시 setupViews()를 재호출하면 발생하는 실측된 문제는?"
+    choices:
+      - "subview 메모리 누수만 발생 (시각적 이상 없음)"
+      - "SnapKit makeConstraints가 매번 누적되어 화면이 점점 아래로 밀리고 RxSwift subscription도 누적"
+      - "ViewController가 nil로 deallocate된다"
+      - "Inject 라이브러리가 자동으로 중복을 감지해 무시한다"
+    answer: 1
+    explanation: "SnapKit의 makeConstraints는 idempotent하지 않다. 호출할 때마다 새 constraint가 추가되어 layout drift가 발생한다. RxSwift bind도 똑같이 누적. 그래서 onInjected에서는 가벼운 updateUI()만 호출해야 한다."
+  - question: "새 SPM feature 모듈에 Inject hot reload를 켤 때 누락 시 'dlopen failed: symbol not found' 런타임 에러를 일으키는 설정은?"
+    choices:
+      - "Package.swift의 .target dependencies에 \"Inject\" 추가"
+      - "Package.swift의 linkerSettings에 .unsafeFlags([\"-Xlinker\", \"-interposable\"]) 추가"
+      - "AppDelegate에서 Bundle(path:)?.load() 호출"
+      - "Debug.xcconfig에 EMIT_FRONTEND_COMMAND_LINES = YES"
+    answer: 1
+    explanation: "-Xlinker -interposable는 SPM 모듈의 심볼을 interposition 가능하게 만들어 dlopen으로 swap할 수 있게 한다. 누락하면 dylib는 빌드되지만 런타임에 symbol resolution이 실패. 다른 세 설정도 모두 필요하지만, 이 에러의 직접 원인은 linker flag다."
+---
+
+import Callout from '@/components/callout'
+
+UI 한 줄 바꿔서 시뮬에 비치는 데 30~60초 걸리던 운영 앱(`moneyflow`)에 Inject hot reload 인프라를 박았다. SwiftUI는 거의 무손실로 즉시 반영되지만, UIKit + RIBs + SnapKit + BaseViewController 조합에선 *함정이 너무 많아서* 패턴을 박제하지 않으면 다음 사람이 똑같이 다친다.
+
+## 한 줄 요약
+
+UIKit에선 `onInjected → updateUI()`만 안전하다. `setupViews()` 재호출 절대 금지. SwiftUI는 3줄로 끝난다.
+
+## 왜 1초가 그렇게 중요한가
+
+- iOS UI 작업은 *값 하나 바꿔서 시뮬에 보는* 사이클이 본질. SwiftUI Preview가 있긴 하지만 실제 데이터 흐름·navigation·DI 컨테이너 안에서 동작하는 모습은 *시뮬에 띄워야* 안다.
+- 풀빌드 30~60초가 매번 끼면 하루에 100번 반복해도 *대기 시간만 50분~1시간*. 이걸 1초로 줄이면 사이클을 그냥 무한히 돌릴 수 있다.
+- 더 중요한 건 *flow state 유지*. 30초 대기는 "다른 거 잠깐 확인" 트리거가 되어 컨텍스트가 깨진다. 1초는 안 깨진다.
+
+## 셋업의 3 레이어
+
+운영 앱 한 군데 hot reload를 켜려면 3 레이어를 동시에 맞춰야 한다. 하나라도 빠지면 *조용히* 실패한다.
+
+### 레이어 1: Xcode 빌드 설정 (앱 타겟 공통)
+
+`Debug.xcconfig` + `QA.xcconfig`:
+
+```
+EMIT_FRONTEND_COMMAND_LINES = YES       // Xcode 16.3+ 빌드 로그 복구
+DEAD_CODE_STRIPPING = NO                // conformance descriptor 등 hidden 심볼 보존
+OTHER_LDFLAGS = -Xlinker -interposable -Xlinker -export_dynamic
+```
+
+각 설정의 *왜*:
+
+| 설정 | 누락 시 증상 |
+|---|---|
+| `EMIT_FRONTEND_COMMAND_LINES = YES` | `💉 Could not locate compile command` — Inject가 swift-frontend 명령을 못 찾음 |
+| `DEAD_CODE_STRIPPING = NO` | conformance descriptor가 strip되어 dlopen 시 protocol witness가 깨짐 |
+| `-Xlinker -interposable` | SPM 모듈 심볼이 interposition 불가 → `dlopen failed: symbol not found` |
+| `-Xlinker -export_dynamic` | flat namespace 노출 — dlopen 동적 심볼 lookup이 통함 |
+
+이 4개를 *동시에* 박아야 동작. Inject 라이브러리 README는 이 조합을 명확히 안 적어둬서 시행착오 비용이 컸다.
+
+### 레이어 2: AppDelegate Bundle 로드
+
+```swift
+// AppDelegate.swift
+func application(_ application: UIApplication, didFinishLaunchingWithOptions ...) -> Bool {
+  #if DEBUG || QA
+  // InjectionNext.app (있으면) 또는 InjectionIII.app
+  Bundle(path: "/Applications/InjectionNext.app/Contents/Resources/iOSInjection.bundle")?.load()
+  Bundle(path: "/Applications/InjectionIII.app/Contents/Resources/iOSInjection.bundle")?.load()
+  #endif
+
+  // ... 기존 셋업
+}
+```
+
+`Bundle.load()`가 실제 hot reload runtime을 메모리에 올린다. 이거 없으면 빌드 설정 다 맞아도 *아무 일도 안 일어남*.
+
+### 레이어 3: 새 SPM 모듈에 Inject 활성화 (모듈마다 1회)
+
+기존 모듈은 이미 설정되어 있지만, *새 feature 모듈*을 만들 때마다 누락된다. 검증 스크립트로 잡는 게 정답.
+
+```swift
+// MyFeaturePresentation/Package.swift
+let package = Package(
+  dependencies: [
+    .package(url: "https://github.com/krzysztofzablocki/Inject.git", from: "1.5.2")
+  ],
+  targets: [
+    .target(
+      name: "MyFeaturePresentation",
+      dependencies: ["Inject"],
+      path: "Sources",
+      linkerSettings: [
+        .unsafeFlags(["-Xlinker", "-interposable"])  // ⚠️ 누락 시 dlopen 실패
+      ]
+    )
+  ]
+)
+```
+
+검증 스크립트(`verify-inject-setup.sh`) 핵심 로직:
+
+```bash
+# 모든 Package.swift 스캔 → Inject 의존성은 있는데 linkerSettings에 -interposable 없는 모듈 추출
+for pkg in $(fd Package.swift Sources/); do
+  has_inject=$(grep -c '"Inject"' "$pkg")
+  has_interposable=$(grep -c '\-interposable' "$pkg")
+  if [ "$has_inject" -gt 0 ] && [ "$has_interposable" -eq 0 ]; then
+    echo "❌ $pkg: Inject 의존성 있는데 -interposable 누락"
+    exit 1
+  fi
+done
+```
+
+pre-commit hook에서 이걸 돌리면 누락된 채 머지될 일이 없다.
+
+## SwiftUI — 3줄로 끝, 함정은 적음
+
+```swift
+import Inject
+
+struct OnboardingView: View {
+  @ObserveInjection var inject                  // 1
+  @ObservedObject private var viewModel: OnboardingViewModel
+
+  var body: some View {
+    VStack {
+      Text("환영합니다")
+        .padding(8)                              // 이걸 바꾸고 Cmd+S → 1초 내 반영
+    }
+    .enableInjection()                           // 2 (body의 마지막 modifier)
+  }
+}
+```
+
+### SwiftUI 함정 3개
+
+**1. if/else 분기에 직접 부착 불가**
+
+```swift
+var body: some View {
+  if condition { ViewA() } else { ViewB() }
+  .enableInjection()  // ❌ Instance member... cannot be used on type 'View'
+}
+```
+
+`Group { }`으로 감싼다:
+
+```swift
+var body: some View {
+  Group {
+    if condition { ViewA() } else { ViewB() }
+  }
+  .enableInjection()  // ✅
+}
+```
+
+**2. `@State` 초기값 변경은 안 먹음**
+
+```swift
+@State var count = 0  // 이 값을 5로 바꿔도 무시. 이미 인스턴스 생성됨.
+```
+
+`body` 내부 로직 변경만 즉시 반영. property 추가/삭제는 풀빌드.
+
+**3. Nested private View는 부착 불필요**
+
+같은 파일 내 `private struct ChildView: View`는 부모 파일이 recompile되면 함께 hot reload. 별도로 `@ObserveInjection`/`enableInjection()` 안 붙여도 됨.
+
+## UIKit — 한계 명확, 패턴 따라야 안전
+
+UIKit는 SwiftUI와 달리 *body 자동 재계산이 없다*. `viewDidLoad`는 인스턴스 생애 동안 한 번만. 그래서 hot reload로 안전하게 바꿀 수 있는 건 **`updateUI()` 안의 dynamic 코드** 뿐이다.
+
+### 안전 패턴: NotificationCenter + updateUI
+
+```swift
+import Inject
+
+final class HomeViewController: BaseViewController {
+  override func viewDidLoad() {
+    super.viewDidLoad()
+    setupViews()
+    bindUI()
+    updateUI()
+
+    #if DEBUG || QA
+    NotificationCenter.default.addObserver(
+      self,
+      selector: #selector(onInjected),
+      name: NSNotification.Name("INJECTION_BUNDLE_NOTIFICATION"),
+      object: nil
+    )
+    #endif
+  }
+
+  #if DEBUG || QA
+  @objc private func onInjected() {
+    print("🔥 [HomeViewController] Injected")
+    view.setNeedsLayout()
+    updateUI()  // ← 가벼운 refresh만. setupViews/bindUI 재호출 ❌
+  }
+  #endif
+}
+```
+
+### 동작 매트릭스 (실측)
+
+| 변경 종류 | 결과 | 비고 |
+|---|---|---|
+| `updateUI()` 안 코드 (label.text, color 등) | ✅ 즉시 | swizzle 후 onInjected가 재호출 |
+| Action 핸들러 (button tap, didSelect) | ✅ 다음 호출부터 | swizzle된 새 코드 실행 |
+| `setupViews()` 안 layout (SnapKit `makeConstraints`) | ❌ 미반영 | viewDidLoad 1회만 호출 |
+| `let titleLabel = UILabel()...` 로컬 변수 .text 변경 | ❌ 미반영 | 인스턴스 참조 없음 |
+| 새 subview 추가 | ❌ 미반영 | viewDidLoad 재호출 안 됨 |
+
+### 우회 패턴: lazy var로 property 추출
+
+자주 수정할 element는 **로컬 let 대신 `lazy var` property**로:
+
+```swift
+// ❌ Before — 로컬 변수, hot reload 안 먹음
+override func setupViews() {
+  let titleLabel = UILabel().then { $0.text = "환영합니다" }
+  view.addSubview(titleLabel)
+}
+
+// ✅ After — property + onInjected에서 갱신
+private lazy var titleLabel = UILabel().then {
+  $0.text = "환영합니다"
+}
+
+override func setupViews() {
+  view.addSubview(titleLabel)
+  titleLabel.snp.makeConstraints { ... }  // ← 여전히 setupViews에만
+}
+
+@objc private func onInjected() {
+  titleLabel.text = "환영합니다"  // ← 이 줄을 바꾸면 hot reload OK
+  view.setNeedsLayout()
+  updateUI()
+}
+```
+
+### 절대 금지: `setupViews()` 재호출
+
+```swift
+// ❌ 금지 — SnapKit makeConstraints가 매번 누적되어 layout drift
+@objc private func onInjected() {
+  view.subviews.forEach { $0.removeFromSuperview() }
+  setupViews()  // ❌ constraint 누적, 화면이 매번 아래로 밀림 (실측)
+  bindUI()      // ❌ RxSwift subscription 누적, 이벤트가 N번 emit
+}
+```
+
+이 패턴이 **RIBs + SnapKit + RxSwift 조합에서 안전하지 않다**는 게 실측됐다. hot reload 한 번 할 때마다 화면이 ~~8pt씩 아래로 밀리고 button tap 1회가 3번 fire되는 식.
+
+### 절대 금지: `Inject.ViewControllerHost(viewController)` 래핑
+
+Inject 라이브러리가 제공하는 `Inject.ViewControllerHost` 래핑은 hot reload 시 새 VC 인스턴스를 생성/swap한다. 그런데 **RIBs Router는 원본 VC 참조를 유지**하므로 router ↔ view bridge가 깨진다.
+
+RIBs 환경에선 사용 금지. NotificationCenter + onInjected 패턴이 정답.
+
+### 결론: 신규 화면은 SwiftUI 권장
+
+UIKit hot reload의 한계가 분명하므로:
+
+- **신규 화면**: SwiftUI로 작성 → hot reload 무손실
+- **기존 UIKit 화면 수정**: `updateUI()` 위주 + lazy var 추출
+- **큰 리팩터링**: SwiftUI 마이그레이션 검토 (RIBs ViewController 안에 `UIHostingController` 박는 `OdaPresentation` 패턴 표준화)
+
+## 검증 — 첫 hot reload 정상 흐름
+
+1. Xcode scheme → `App.Debug` (또는 QA)
+2. `Cmd+Shift+K` Clean Build Folder
+3. `Cmd+R` 풀빌드 + 시뮬 실행
+4. 콘솔에서 다음 중 하나 확인:
+   - ✅ `💉 Injection connected` (InjectionNext/III 연결)
+   - ✅ `💉 HotReloading available for sources under [...]` (SPM standalone fallback)
+5. 시뮬에 화면 띄운 채 SwiftUI View `Text` 텍스트 수정 → `Cmd+S`
+6. 콘솔 흐름:
+   ```
+   🔥 Recompiling: .../OnboardingView.swift
+   💉 Compiling .../OnboardingView.swift
+   🔥 Loading .../eval_injection_OnboardingView_1.dylib
+   🔥 ✅ Hot reload complete - Rebound 1 symbols
+   ```
+7. 시뮬 1초 내 반영 ✅
+
+## 트러블슈팅 매트릭스
+
+| 증상 | 원인 / 해결 |
+|---|---|
+| `💉 Could not locate compile command` | Xcode 16.3+ 빌드 로그 변경. `EMIT_FRONTEND_COMMAND_LINES = YES` 누락 |
+| `🔥 ⚠️ dlopen failed: symbol not found` | SPM 모듈 심볼 strip. `DEAD_CODE_STRIPPING = NO` + `-export_dynamic` 또는 모듈 `Package.swift` `linkerSettings` 확인 |
+| `objc: Class XXX is implemented in both ...` | Mock listener/Preview 클래스 중복. **무해**. Inject도 "Ignore" 안내 |
+| Cmd+S 했는데 콘솔 0줄 | 1) 앱이 시뮬에 떠있는지 2) AppDelegate `Bundle.load()` 호출 있는지 3) 풀빌드 다시 |
+| swizzle 됐다는데 화면 안 바뀜 (UIKit) | onInjected가 호출하는 메소드가 변경 부분을 안 다룸. lazy var 추출 패턴 적용 |
+| hot reload 후 화면이 점점 아래로 밀림 | onInjected에서 `setupViews()` 재호출 중. 금지 패턴 |
+| 새 .swift 파일 추가 후 안 됨 | 신규 파일은 `Cmd+B`로 1회 컴파일 후 hot reload 가능 |
+| `@Published` property 추가/삭제 안 먹음 | hot reload는 메소드 swap 한정. property 변경은 풀빌드 |
+
+## 운영 앱 박제 시 배운 점
+
+1. **셋업 3 레이어가 *동시에* 맞아야 동작**. 하나만 빠지면 조용히 실패하므로 `verify-inject-setup.sh` 같은 검증 스크립트를 *pre-commit*에 박는 게 ROI 최고.
+2. **UIKit hot reload 한계를 *처음에 솔직히 명시*하라**. "다 된다"고 알리면 다음 사람이 `setupViews()` 재호출하다가 layout drift 만나서 *전체 패턴 자체를 의심*하게 됨. "이건 되고 이건 안 된다"를 매트릭스로 박아두면 신뢰가 유지된다.
+3. **신규 화면은 SwiftUI로 가는 게 hot reload ROI 측면에서도 정당화된다**. UIKit 우회 패턴이 작동은 하지만 *생산성 격차가 너무 크다*.
+4. **PR에 Inject 코드 포함은 안전**. Release 빌드는 `#if DEBUG || QA` 가드 + Inject SPM 자체가 no-op이라 영향 0. 팀원 전체가 동일 셋업 즉시 사용 가능.
+
+## 더 읽을거리
+
+- [Inject 라이브러리](https://github.com/krzysztofzablocki/Inject)
+- [InjectionNext.app](https://github.com/johnno1962/InjectionNext/releases) — 선택 (더 빠른 컴파일)
+- 관련 위키: `ios-ai-journal-006-spm-cycle-break` (SPM 의존성 사이클 해결 패턴), `ios-harness-setup-xcodebuildmcp` (xcconfig + 빌드 설정 박제)
