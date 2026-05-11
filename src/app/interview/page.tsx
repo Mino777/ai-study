@@ -2070,13 +2070,13 @@ export default function InterviewPage() {
               return (
                 <div key={`${q.id}-${qi}`} className="rounded-xl border border-border/40 bg-surface/30 overflow-hidden">
                   <button onClick={() => toggleReveal(q.id)} className="w-full px-5 py-4 text-left cursor-pointer hover:bg-surface/50 transition-colors">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1">
+                    <span className="flex items-start justify-between gap-3">
+                      <span className="flex-1 block">
                         <span className="text-xs font-code px-2 py-0.5 rounded-full bg-accent/10 text-accent/60 mr-2">{q.topic}</span>
-                        <p className="text-base text-text/80 mt-2 leading-relaxed font-medium">{q.question}</p>
-                      </div>
+                        <span className="block text-base text-text/80 mt-2 leading-relaxed font-medium">{q.question}</span>
+                      </span>
                       <span className={`shrink-0 text-xs mt-1 ${isRevealed ? "text-green-400" : "text-text/25"}`}>{isRevealed ? "reviewed" : "tap to reveal"}</span>
-                    </div>
+                    </span>
                   </button>
                   {isRevealed && (
                     <div className="px-5 py-4 border-t border-border/20 bg-accent/3">
