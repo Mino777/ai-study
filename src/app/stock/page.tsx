@@ -13,6 +13,8 @@ import {
   WIFE_MESSAGE,
   type QuizItem,
 } from "./constants";
+import { MASTERS } from "./masters";
+import { GLOSSARY, GLOSSARY_CATEGORIES, type GlossaryCategory } from "./glossary";
 
 const STORAGE = {
   buyCheck: "stock-buy-checklist",
@@ -23,7 +25,7 @@ const STORAGE = {
   flashHard: "stock-flash-hard",
 };
 
-type TabKey = "overview" | "p1" | "p2" | "p3" | "p4" | "p5" | "quiz" | "flash" | "crash";
+type TabKey = "overview" | "p1" | "p2" | "p3" | "p4" | "p5" | "crash" | "masters" | "glossary" | "quiz" | "flash";
 
 const TABS: { key: TabKey; label: string; emoji: string }[] = [
   { key: "overview", label: "시작", emoji: "✨" },
@@ -33,6 +35,8 @@ const TABS: { key: TabKey; label: string; emoji: string }[] = [
   { key: "p4", label: "파생 신호", emoji: "🎯" },
   { key: "p5", label: "분산 룰", emoji: "🧺" },
   { key: "crash", label: "폭락 매뉴얼", emoji: "🚨" },
+  { key: "masters", label: "투자 거장", emoji: "👑" },
+  { key: "glossary", label: "용어 사전", emoji: "📖" },
   { key: "quiz", label: "퀴즈", emoji: "❓" },
   { key: "flash", label: "플래시카드", emoji: "🃏" },
 ];
@@ -56,6 +60,11 @@ export default function StockPage() {
   const [flashIndex, setFlashIndex] = useState(0);
   const [flashRevealed, setFlashRevealed] = useState<Record<string, boolean>>({});
   const [flashHard, setFlashHard] = useState<Record<string, boolean>>({});
+
+  // Masters / Glossary state
+  const [masterId, setMasterId] = useState<string>(MASTERS[0].id);
+  const [glossaryCat, setGlossaryCat] = useState<GlossaryCategory | "all">("all");
+  const [glossarySearch, setGlossarySearch] = useState("");
 
   // Load
   useEffect(() => {
@@ -661,6 +670,202 @@ export default function StockPage() {
             )}
           </section>
         )}
+
+        {tab === "masters" && (() => {
+          const m = MASTERS.find(x => x.id === masterId) ?? MASTERS[0];
+          return (
+            <section className="space-y-6">
+              <header>
+                <h2 className="text-xl font-semibold mb-2">투자 거장 10인 — 5원칙의 *살아있는 증명*</h2>
+                <p className="text-sm text-[var(--color-fg-muted)]">
+                  이 사람들이 부를 일군 방식이 우리 5원칙과 어디서 만나는지. 각 인물의 *함정*까지 박제.
+                </p>
+              </header>
+
+              {/* Master selector */}
+              <div className="flex flex-wrap gap-2">
+                {MASTERS.map(x => (
+                  <button
+                    key={x.id}
+                    onClick={() => setMasterId(x.id)}
+                    className={`text-xs px-3 py-2 rounded-[var(--radius-sm)] border transition-colors ${
+                      masterId === x.id
+                        ? "bg-[var(--color-accent)] text-[var(--color-bg)] border-[var(--color-accent)] font-semibold"
+                        : "border-[var(--color-border)] hover:bg-[var(--color-bg-subtle)]"
+                    }`}
+                  >
+                    {x.name}
+                  </button>
+                ))}
+              </div>
+
+              {/* Master detail */}
+              <div className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-6">
+                <div className="flex items-baseline gap-3 mb-2 flex-wrap">
+                  <h3 className="text-2xl font-bold">{m.name}</h3>
+                  <span className="text-sm text-[var(--color-fg-muted)]">{m.nameEn}</span>
+                  <span className="text-xs text-[var(--color-fg-muted)]">({m.era})</span>
+                </div>
+                <p className="text-base font-medium border-l-2 border-[var(--color-accent)] pl-3 mb-4">
+                  {m.oneLine}
+                </p>
+                <p className="text-sm leading-relaxed text-[var(--color-fg-muted)]">{m.who}</p>
+                <div className="mt-3 flex gap-2 flex-wrap">
+                  {m.matchPrinciples.map(pid => {
+                    const p = PRINCIPLES.find(x => x.id === pid);
+                    if (!p) return null;
+                    return (
+                      <button
+                        key={pid}
+                        onClick={() => setTab(`p${pid}` as TabKey)}
+                        className="text-xs px-2 py-1 rounded border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[var(--color-bg)]"
+                      >
+                        {p.emoji} 원칙 {pid} {p.short}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <h3 className="font-semibold mb-3">대표 방법론</h3>
+                <div className="space-y-2">
+                  {m.methods.map((meth, i) => (
+                    <div key={i} className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3">
+                      <div className="font-medium text-sm mb-0.5">{meth.name}</div>
+                      <div className="text-sm text-[var(--color-fg-muted)]">{meth.def}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <h3 className="font-semibold mb-3">5원칙과의 매칭</h3>
+                <div className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-4 text-sm leading-relaxed">
+                  {m.matchExplain.split("**").map((chunk, i) =>
+                    i % 2 === 1 ? <strong key={i}>{chunk}</strong> : <span key={i}>{chunk}</span>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <h3 className="font-semibold mb-3">대표 명언</h3>
+                <div className="space-y-3">
+                  {m.quotes.map((q, i) => (
+                    <blockquote key={i} className="rounded-[var(--radius-sm)] border-l-2 border-[var(--color-accent)] bg-[var(--color-bg-subtle)] p-4">
+                      {q.en !== q.ko && <p className="italic text-sm mb-1">"{q.en}"</p>}
+                      <p className="text-sm font-medium">"{q.ko}"</p>
+                      <p className="text-xs text-[var(--color-fg-muted)] mt-1">— {q.source}</p>
+                    </blockquote>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <h3 className="font-semibold mb-3">와이프가 따라할 수 있는 것</h3>
+                <ul className="space-y-2">
+                  {m.wifeAction.map((a, i) => (
+                    <li key={i} className="text-sm leading-relaxed flex gap-2 rounded-[var(--radius-sm)] bg-[var(--color-bg-subtle)] p-3">
+                      <span className="text-[var(--color-accent)]">✓</span>
+                      <span>{a}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div>
+                <h3 className="font-semibold mb-3">관련 용어</h3>
+                <div className="grid gap-2 md:grid-cols-2">
+                  {m.flashTerms.map((t, i) => (
+                    <div key={i} className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 text-sm">
+                      <div className="font-medium mb-1">{t.front}</div>
+                      <div className="text-xs text-[var(--color-fg-muted)]">{t.back}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <h3 className="font-semibold mb-3 text-red-500">⚠️ 자주 인용되는 함정</h3>
+                <div className="text-sm leading-relaxed rounded-[var(--radius-sm)] bg-red-500/5 border border-red-500/20 p-4">
+                  {m.pitfall}
+                </div>
+              </div>
+            </section>
+          );
+        })()}
+
+        {tab === "glossary" && (() => {
+          const filtered = GLOSSARY.filter(g => {
+            const catOK = glossaryCat === "all" || g.category === glossaryCat;
+            const q = glossarySearch.trim().toLowerCase();
+            const searchOK = !q ||
+              g.term.toLowerCase().includes(q) ||
+              (g.alt?.toLowerCase().includes(q) ?? false) ||
+              g.short.toLowerCase().includes(q) ||
+              g.long.toLowerCase().includes(q);
+            return catOK && searchOK;
+          });
+          return (
+            <section className="space-y-6">
+              <header>
+                <h2 className="text-xl font-semibold mb-2">용어 사전 — {GLOSSARY.length}개</h2>
+                <p className="text-sm text-[var(--color-fg-muted)]">
+                  처음 본 단어가 나오면 여기서 찾아봐. 모든 용어는 *비전공자 언어*로 풀어 썼고, 예시가 있으면 같이.
+                </p>
+              </header>
+
+              <div className="flex flex-col gap-3">
+                <input
+                  type="text"
+                  value={glossarySearch}
+                  onChange={e => setGlossarySearch(e.target.value)}
+                  placeholder="용어 검색 (예: EPS, V-KOSPI, 분산)"
+                  className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-bg-subtle)] px-3 py-2 text-sm"
+                />
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => setGlossaryCat("all")}
+                    className={`text-xs px-2 py-1 rounded ${glossaryCat === "all" ? "bg-[var(--color-accent)] text-[var(--color-bg)]" : "border border-[var(--color-border)]"}`}
+                  >전체 ({GLOSSARY.length})</button>
+                  {GLOSSARY_CATEGORIES.map(c => {
+                    const count = GLOSSARY.filter(g => g.category === c).length;
+                    return (
+                      <button
+                        key={c}
+                        onClick={() => setGlossaryCat(c)}
+                        className={`text-xs px-2 py-1 rounded ${glossaryCat === c ? "bg-[var(--color-accent)] text-[var(--color-bg)]" : "border border-[var(--color-border)]"}`}
+                      >{c} ({count})</button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {filtered.length === 0 ? (
+                <p className="text-sm text-[var(--color-fg-muted)] text-center py-8">검색 결과 없음.</p>
+              ) : (
+                <div className="space-y-3">
+                  {filtered.map(g => (
+                    <div key={g.term} className="rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-4">
+                      <div className="flex items-baseline gap-2 mb-1 flex-wrap">
+                        <h3 className="font-semibold text-base">{g.term}</h3>
+                        {g.alt && <span className="text-xs text-[var(--color-fg-muted)]">({g.alt})</span>}
+                        <span className="text-xs px-2 py-0.5 rounded border border-[var(--color-border)] text-[var(--color-fg-muted)] ml-auto">{g.category}</span>
+                      </div>
+                      <p className="text-sm font-medium mb-2">{g.short}</p>
+                      <p className="text-sm leading-relaxed text-[var(--color-fg-muted)]">{g.long}</p>
+                      {g.example && (
+                        <p className="text-xs text-[var(--color-fg-muted)] mt-2 pt-2 border-t border-[var(--color-border)]">
+                          <span className="font-medium">예:</span> {g.example}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          );
+        })()}
 
         <footer className="mt-16 pt-6 border-t border-[var(--color-border)] text-xs text-[var(--color-fg-muted)] text-center">
           이 페이지는 색인되지 않습니다 (robots disallow). 진입: S키 5회.
