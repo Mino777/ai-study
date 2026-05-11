@@ -521,6 +521,20 @@ export interface SamplePortfolio {
 
 export const SAMPLE_PORTFOLIOS: SamplePortfolio[] = [
   {
+    name: "성장 집중형",
+    emoji: "🌱",
+    desc: "20~30대 초반, 종잣돈 형성기, 변동성 최대 감내",
+    allocations: [
+      { sector: "미국 ETF", weight: 50, examples: "QQQ 30 + SPY 20" },
+      { sector: "반도체", weight: 25, examples: "삼성전자 / SK하이닉스" },
+      { sector: "2차전지·AI", weight: 15, examples: "LG에너지솔루션 / 한미반도체" },
+      { sector: "현금", weight: 10, examples: "MMF (폭락 대비)" },
+    ],
+    fit: "원금 작아도 OK. 시간을 가장 큰 무기로 쓰는 단계",
+    risk: "-40% 이상 드로다운 가능. 매월 적립이 핵심",
+    expectedReturn: "연 12~18% (15년+ 복리 기대)",
+  },
+  {
     name: "공격형",
     emoji: "🚀",
     desc: "30~40대, 장기 보유, 변동성 감내",
@@ -585,11 +599,11 @@ export const KR_SECTORS: { name: string; kr: string; us: string }[] = [
 ];
 
 /* ═══════════════════════════════════════════════════════════ */
-/*  퀴즈 (32문항 — 5원칙 분산)                                  */
+/*  퀴즈 (40문항 — 5원칙 8문항씩 균등)                          */
 /* ═══════════════════════════════════════════════════════════ */
 
 export const QUIZ_BANK: QuizItem[] = [
-  // ── 원칙 1 (5문항) ──
+  // ── 원칙 1 (8문항) ──
   {
     id: "q1-1", principle: 1,
     question: "세계 자본이 한 섹터로 몰리는 가장 큰 이유는?",
@@ -624,6 +638,27 @@ export const QUIZ_BANK: QuizItem[] = [
     choices: ["1주일", "1달", "3~5년", "30년"],
     answer: 2,
     explanation: "큰 돈은 천천히 움직인다. 메가 트렌드의 시간 단위는 보통 3~5년.",
+  },
+  {
+    id: "q1-6", principle: 1,
+    question: "섹터 로테이션의 가장 정확한 정의는?",
+    choices: ["매일 다른 섹터를 사고파는 것", "메인 플로우가 한 섹터 → 다음 섹터로 옮겨가는 자본 흐름", "ETF 분기 리밸런싱", "외국인의 차익실현"],
+    answer: 1,
+    explanation: "한 섹터가 과열되면 자본이 다음 메가 트렌드 후보로 이동. 메가 트렌드의 연쇄 구조.",
+  },
+  {
+    id: "q1-7", principle: 1,
+    question: "달러인덱스(DXY)가 강세일 때 한국 시장에 미치는 영향은?",
+    choices: ["무관", "외국인 자금 이탈 압력 → 한국 증시 부담", "한국 수출주 무조건 호재", "원화 가치 동반 강세"],
+    answer: 1,
+    explanation: "달러 강세 = 신흥국에서 미국으로 자금 회귀 압력. 한국은 신흥국 분류로 자금 이탈 우려.",
+  },
+  {
+    id: "q1-8", principle: 1,
+    question: "한국 반도체주 흐름의 \"원본\"으로 가장 적합한 지표는?",
+    choices: ["코스피 지수", "필라델피아 반도체지수(SOX)", "원/달러 환율", "삼성전자 차트"],
+    answer: 1,
+    explanation: "SOX = 미국 반도체 30종목 지수. 한국 반도체주는 보통 1~2일 시차로 SOX를 따라간다.",
   },
 
   // ── 원칙 2 (8문항) ──
@@ -684,7 +719,7 @@ export const QUIZ_BANK: QuizItem[] = [
     explanation: "Yahoo Finance Analysis 탭의 EPS Estimate Trend가 가장 접근성 좋다.",
   },
 
-  // ── 원칙 3 (5문항) ──
+  // ── 원칙 3 (8문항) ──
   {
     id: "q3-1", principle: 3,
     question: "거래대금의 정확한 정의는?",
@@ -719,6 +754,27 @@ export const QUIZ_BANK: QuizItem[] = [
     choices: ["재미없어서", "팔고 싶을 때 못 팔 수 있고 작전에 휘둘리기 쉬워서", "수수료가 비싸서", "세금이 더 나와서"],
     answer: 1,
     explanation: "유동성 부족 + 작전 세력 놀이터. 민지니 단계에서 절대 금지.",
+  },
+  {
+    id: "q3-6", principle: 3,
+    question: "외국인+기관 동반 매수가 중요한 이유는?",
+    choices: ["국적이 다양해서", "각자 다른 자금원·분석 프로세스를 거쳤는데 같은 결론 → 신뢰도 ↑", "수수료가 낮아서", "세금 혜택이 있어서"],
+    answer: 1,
+    explanation: "외국인(글로벌 자금)과 기관(국내 연기금·자산운용)은 의사결정 체계가 완전히 다르다. 같은 종목을 동시에 산다면 *진짜 큰 돈* 진입 신호.",
+  },
+  {
+    id: "q3-7", principle: 3,
+    question: "거래대금이 *하루만* 급증한 종목을 어떻게 봐야 하나?",
+    choices: ["즉시 매수", "테마주 가능성 — 3일 이상 지속 확인 후 판단", "1년 보유 결심", "현금화"],
+    answer: 1,
+    explanation: "하루 급증은 단발 이슈·뉴스·작전 가능성. 진짜 메가 트렌드는 *연속적인* 거래대금 유입을 만든다.",
+  },
+  {
+    id: "q3-8", principle: 3,
+    question: "거래대금 1위인데 주가는 -5% 하락 중이다. 어떻게 해석하나?",
+    choices: ["무조건 매수 기회", "공포 매도가 1위를 만든 것 — 큰 돈이 *나가고* 있을 가능성", "거래대금 1위니까 좋은 종목", "차트가 예쁘니 매수"],
+    answer: 1,
+    explanation: "거래대금은 *방향*을 말하지 않는다. 가격 하락 + 거래대금 폭증 = 대량 매도. 큰 돈이 빠지는 신호.",
   },
 
   // ── 원칙 4 (8문항) ──
@@ -779,7 +835,7 @@ export const QUIZ_BANK: QuizItem[] = [
     explanation: "만기 주간은 변동성 ↑. 큰 결정 금지일. 신규 매수 보류, 포지션 유지.",
   },
 
-  // ── 원칙 5 (6문항) ──
+  // ── 원칙 5 (8문항) ──
   {
     id: "q5-1", principle: 5,
     question: "\"분산 투자\"의 핵심은?",
@@ -821,6 +877,20 @@ export const QUIZ_BANK: QuizItem[] = [
     choices: ["게을러서", "폭락 시 싸게 살 옵션", "이자 받으려고", "세금 회피"],
     answer: 1,
     explanation: "현금은 \"기회를 살 수 있는 권리\". 10%는 항상 남긴다.",
+  },
+  {
+    id: "q5-7", principle: 5,
+    question: "켈리 공식의 단순화된 교훈은?",
+    choices: ["승률 100%면 전부 베팅", "확신해도 한 종목 20% 넘기지 마라", "분산은 곧 손실", "포지션은 클수록 좋다"],
+    answer: 1,
+    explanation: "수학적 켈리는 승률·배당률 계산이 필요하지만, 실전 단순화는 \"아무리 확신해도 20% 한계\". 0이 한 번 나오면 게임 끝.",
+  },
+  {
+    id: "q5-8", principle: 5,
+    question: "익절 트리거로 가장 적절한 것은?",
+    choices: ["+10% 도달", "Forward EPS 추세 꺾일 때 (원칙 2와 연결)", "1년 보유 후 무조건 매도", "주변에서 다 산다고 할 때"],
+    answer: 1,
+    explanation: "가격 기준 익절은 좋은 종목을 일찍 놓치는 함정. 펀더멘털(EPS 추세) 꺾일 때가 진짜 매도 시점.",
   },
 ];
 
