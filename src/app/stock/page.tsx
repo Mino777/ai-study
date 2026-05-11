@@ -149,7 +149,7 @@ export default function StockPage() {
         <header className="mb-8">
           <div className="flex items-center gap-3 mb-2">
             <span className="text-3xl">💌</span>
-            <h1 className="text-2xl sm:text-3xl font-bold">와이프를 위한 주식 5원칙</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold">민지니를 위한 주식 5원칙</h1>
           </div>
           <p className="text-sm text-[var(--color-fg-muted)]">
             민호가 박은 *내가 옆에 없을 때*를 위한 지식 전수. 5원칙 외우고, 체크리스트 통과시키고, 분기마다 리밸런싱.
@@ -283,9 +283,9 @@ export default function StockPage() {
               </div>
             </div>
 
-            {/* 와이프에게 */}
+            {/* 민지니에게 */}
             <div className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-6">
-              <h2 className="text-xl font-semibold mb-3">💌 와이프에게</h2>
+              <h2 className="text-xl font-semibold mb-3">💌 민지니에게</h2>
               <p className="whitespace-pre-line text-sm leading-relaxed text-[var(--color-fg-muted)]">
                 {WIFE_MESSAGE}
               </p>
@@ -762,7 +762,7 @@ export default function StockPage() {
               </div>
 
               <div>
-                <h3 className="font-semibold mb-3">와이프가 따라할 수 있는 것</h3>
+                <h3 className="font-semibold mb-3">민지니가 따라할 수 있는 것</h3>
                 <ul className="space-y-2">
                   {m.wifeAction.map((a, i) => (
                     <li key={i} className="text-sm leading-relaxed flex gap-2 rounded-[var(--radius-sm)] bg-[var(--color-bg-subtle)] p-3">
