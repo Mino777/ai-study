@@ -7,9 +7,10 @@ import { useRouter, usePathname } from "next/navigation";
  * Hidden easter-egg navigation:
  *   R × 5 → /resume
  *   I × 5 → /interview
+ *   S × 5 → /stock
  *
  * Resets after 1.5s of inactivity.
- * Disabled on /resume and /interview pages (already there).
+ * Disabled on target pages (already there).
  * Disabled when focus is in an input/textarea/contenteditable.
  */
 export function EasterEggNav() {
@@ -27,7 +28,7 @@ export function EasterEggNav() {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
 
       const key = e.key.toLowerCase();
-      if (key !== "r" && key !== "i") {
+      if (key !== "r" && key !== "i" && key !== "s") {
         bufferRef.current = [];
         return;
       }
@@ -45,7 +46,7 @@ export function EasterEggNav() {
 
       // Check for 5 consecutive
       if (bufferRef.current.length >= 5) {
-        const target = key === "r" ? "/resume" : "/interview";
+        const target = key === "r" ? "/resume" : key === "i" ? "/interview" : "/stock";
         bufferRef.current = [];
         if (pathname !== target) {
           router.push(target);
