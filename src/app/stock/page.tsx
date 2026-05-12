@@ -25,7 +25,7 @@ const STORAGE = {
   flashHard: "stock-flash-hard",
 };
 
-type TabKey = "overview" | "p1" | "p2" | "p3" | "p4" | "p5" | "crash" | "masters" | "glossary" | "quiz" | "flash";
+type TabKey = "overview" | "p1" | "p2" | "p3" | "p4" | "p5" | "crash" | "swing" | "masters" | "glossary" | "quiz" | "flash";
 
 const TABS: { key: TabKey; label: string; emoji: string }[] = [
   { key: "overview", label: "시작", emoji: "✨" },
@@ -35,6 +35,7 @@ const TABS: { key: TabKey; label: string; emoji: string }[] = [
   { key: "p4", label: "파생 신호", emoji: "🎯" },
   { key: "p5", label: "분산 룰", emoji: "🧺" },
   { key: "crash", label: "폭락 매뉴얼", emoji: "🚨" },
+  { key: "swing", label: "스윙 매매", emoji: "⚡" },
   { key: "masters", label: "투자 거장", emoji: "👑" },
   { key: "glossary", label: "용어 사전", emoji: "📖" },
   { key: "quiz", label: "퀴즈", emoji: "❓" },
@@ -869,6 +870,307 @@ export default function StockPage() {
             </section>
           );
         })()}
+
+        {tab === "swing" && (
+          <section className="space-y-8">
+            <header className="rounded-[var(--radius)] border-2 border-amber-500/40 bg-amber-500/5 p-6">
+              <h2 className="text-xl font-bold mb-2">⚡ 단기 스윙 매매 전략</h2>
+              <p className="text-sm leading-relaxed text-[var(--color-fg-muted)]">
+                보유 <b>2일 ~ 4주</b>, 한 종목 추세의 한 *스윙*(상승 구간)만 잡고 빠지는 매매.
+                이 페이지의 1~5원칙(장기 추세 투자)과는 <b>완전히 다른 게임</b>이다.
+                통계적으로 단기 트레이딩의 <b>70~90% 참여자가 손실</b>(NBER 2020, Barber & Odean 2014)
+                — 시작 전 *전체 자산의 10% 이하* 별도 계좌로 분리하고, 손실 한도 정해놓고 시작할 것.
+              </p>
+            </header>
+
+            {/* 검증된 방법론 */}
+            <div>
+              <h3 className="font-semibold mb-3">📚 검증된 4대 방법론 (실적 검증)</h3>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-4">
+                  <div className="text-sm font-semibold mb-1">Mark Minervini — SEPA / VCP</div>
+                  <p className="text-xs text-[var(--color-fg-muted)] leading-relaxed">
+                    US Investing Championship 2회 우승(1997 155%, 2021 334%).
+                    Trend Template 8조건 + VCP(Volatility Contraction Pattern: 변동성 수축 → 거래량 감소 → 돌파).
+                  </p>
+                </div>
+                <div className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-4">
+                  <div className="text-sm font-semibold mb-1">William O&apos;Neil — CAN SLIM</div>
+                  <p className="text-xs text-[var(--color-fg-muted)] leading-relaxed">
+                    AAII 1998~2021 누적 수익률 +2,763%(S&amp;P +727%) 검증.
+                    Cup &amp; Handle 패턴 + Pivot Point 돌파 + 7~8% 손절 룰.
+                  </p>
+                </div>
+                <div className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-4">
+                  <div className="text-sm font-semibold mb-1">Stan Weinstein — Stage Analysis</div>
+                  <p className="text-xs text-[var(--color-fg-muted)] leading-relaxed">
+                    Stage 1(베이스) → 2(상승) → 3(천장) → 4(하락) 4단계 사이클.
+                    매수는 *오직 Stage 2 초입* — 30주(150일) 이평선 위 + 이평선 상승 전환.
+                  </p>
+                </div>
+                <div className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-4">
+                  <div className="text-sm font-semibold mb-1">Nicolas Darvas — Darvas Box</div>
+                  <p className="text-xs text-[var(--color-fg-muted)] leading-relaxed">
+                    1958~1960 $36,000 → $2.45M (출장 다니며 전보로만 매매).
+                    박스권 상단 돌파 매수 → 새 박스 하단 손절. 신고가 + 거래량 동반.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Minervini Trend Template */}
+            <div>
+              <h3 className="font-semibold mb-3">✅ Minervini Trend Template — 매수 후보 8조건</h3>
+              <p className="text-sm text-[var(--color-fg-muted)] mb-3">
+                <b>8개 모두 충족</b>해야 스윙 매수 후보. 하나라도 빠지면 *건드리지 않는다*. 한국 시장에도 그대로 적용 가능.
+              </p>
+              <ol className="space-y-2 text-sm list-decimal pl-5">
+                <li>주가가 <b>50일·150일·200일 이평선 모두 위</b>에 있다.</li>
+                <li><b>150일 이평선 &gt; 200일 이평선</b> (정배열).</li>
+                <li>200일 이평선이 <b>최소 1개월 이상 상승 추세</b> (실전은 4~5개월 권장).</li>
+                <li><b>50일 이평선 &gt; 150일 &gt; 200일</b> (완전 정배열).</li>
+                <li>현재가가 <b>50일 이평선 위</b>에 있다.</li>
+                <li>현재가가 <b>52주 최저가 대비 +30% 이상</b> (보통 +100% 이상이 더 강함).</li>
+                <li>현재가가 <b>52주 최고가 대비 -25% 이내</b> (가까울수록 강함).</li>
+                <li>상대강도(RS) 상위 30% 이상 — 시장 대비 강한 종목.</li>
+              </ol>
+            </div>
+
+            {/* VCP 패턴 */}
+            <div>
+              <h3 className="font-semibold mb-3">📐 VCP — 변동성 수축 패턴 (Minervini)</h3>
+              <div className="rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-4 mb-3">
+                <p className="text-sm leading-relaxed">
+                  스윙 매매의 <b>최강 엔트리 패턴</b>. 강한 상승 후 횡보 구간에서 <b>2~4번의 조정</b>이
+                  점점 작아지고 거래량도 점점 줄어들다가, *완전히 마른 상태*에서 거래량 폭증 + 돌파.
+                </p>
+              </div>
+              <ul className="space-y-2 text-sm">
+                <li><b>조정 1차</b>: -20~35% (가장 깊은 조정)</li>
+                <li><b>조정 2차</b>: -10~20% (얕아짐)</li>
+                <li><b>조정 3차</b>: -5~10% (더 얕아짐)</li>
+                <li><b>마지막</b>: -3~5% 횡보 + 거래량 50일 평균의 50% 미만</li>
+                <li><b>돌파</b>: 박스 상단(피벗) 돌파 + 거래량 50일 평균의 <b>140% 이상</b>(이상적: 200%+)</li>
+              </ul>
+            </div>
+
+            {/* 엔트리 룰 */}
+            <div>
+              <h3 className="font-semibold mb-3">🎯 엔트리 룰 — 언제 매수하나</h3>
+              <div className="space-y-3">
+                <div className="rounded-[var(--radius-sm)] border border-green-500/30 bg-green-500/5 p-4">
+                  <div className="font-semibold text-sm mb-1">A. 돌파 매수 (Breakout)</div>
+                  <p className="text-xs text-[var(--color-fg-muted)] leading-relaxed">
+                    피벗 포인트(박스 상단/저항선) 돌파 + 거래량 50일 평균의 1.5~2배 이상.
+                    돌파 후 <b>1~3% 이내</b>에서만 매수 — 과도하게 추격하면 손절폭이 커진다.
+                  </p>
+                </div>
+                <div className="rounded-[var(--radius-sm)] border border-green-500/30 bg-green-500/5 p-4">
+                  <div className="font-semibold text-sm mb-1">B. 눌림목 매수 (Pullback)</div>
+                  <p className="text-xs text-[var(--color-fg-muted)] leading-relaxed">
+                    이미 추세 진행 중인 종목이 <b>10일 또는 20일 이평선</b>까지 눌렸다가 반등할 때.
+                    이평선 터치 + 양봉 + 거래량 회복 3박자.
+                  </p>
+                </div>
+                <div className="rounded-[var(--radius-sm)] border border-green-500/30 bg-green-500/5 p-4">
+                  <div className="font-semibold text-sm mb-1">C. Stage 2 진입 (Weinstein)</div>
+                  <p className="text-xs text-[var(--color-fg-muted)] leading-relaxed">
+                    오랜 횡보(Stage 1) 후 30주 이평선 위로 첫 돌파 + 30주 이평선 자체가 상승 전환.
+                    *큰 한 사이클의 시작* — 가장 안정적인 엔트리.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* 손절 / 익절 */}
+            <div>
+              <h3 className="font-semibold mb-3">🛡️ 손절 · 익절 — 진입보다 중요한 룰</h3>
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="rounded-[var(--radius-sm)] border-2 border-red-500/40 bg-red-500/5 p-4">
+                  <div className="font-semibold text-sm mb-2">손절 (Stop Loss)</div>
+                  <ul className="space-y-1.5 text-xs text-[var(--color-fg-muted)]">
+                    <li>• <b>O&apos;Neil 룰: -7~8% 무조건 손절</b> (예외 없음)</li>
+                    <li>• Minervini 룰: -5~7% (더 타이트)</li>
+                    <li>• 손절가는 매수 *동시에* 설정 — 사후 결정 금지</li>
+                    <li>• 손절 후 같은 종목 다시 매수 가능 (단, 새 셋업 형성 시)</li>
+                    <li>• <b>물타기 절대 금지</b> — 하락 중 추가 매수는 손실 확대</li>
+                  </ul>
+                </div>
+                <div className="rounded-[var(--radius-sm)] border-2 border-blue-500/40 bg-blue-500/5 p-4">
+                  <div className="font-semibold text-sm mb-2">익절 (Take Profit)</div>
+                  <ul className="space-y-1.5 text-xs text-[var(--color-fg-muted)]">
+                    <li>• <b>+20~25%</b> 도달 시 부분 익절(절반)</li>
+                    <li>• 나머지는 <b>10일 이평선 종가 이탈</b>까지 보유 (트레일링)</li>
+                    <li>• <b>리스크/리워드 최소 1:2</b>, 이상적 1:3</li>
+                    <li>• Climax Run(8~10일 연속 양봉 + 거래량 폭발)은 *천장 신호* — 매도</li>
+                    <li>• 손익비 양호하면 +50% 이상도 가능 (Minervini는 평균 +30% 익절)</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            {/* 포지션 사이징 */}
+            <div>
+              <h3 className="font-semibold mb-3">📊 포지션 사이징 — 한 번에 얼마 넣나</h3>
+              <div className="rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-4">
+                <p className="text-sm mb-3">
+                  <b>핵심 공식</b>: 한 매매에서 잃을 수 있는 돈은 <b>전체 자본의 0.5~1%</b>.
+                </p>
+                <div className="text-xs text-[var(--color-fg-muted)] space-y-2">
+                  <p>예시: 스윙 계좌 1,000만원, 한 매매 최대 손실 1% = 10만원.</p>
+                  <p>매수가 50,000원, 손절가 47,000원(-6%) → 주당 손실 3,000원.</p>
+                  <p>포지션 크기 = 10만원 / 3,000원 = <b>33주 = 약 165만원</b> (계좌의 16.5%).</p>
+                  <p className="pt-2 border-t border-[var(--color-border)]"><b>동시 보유 종목: 최대 4~6개</b> (Minervini는 평소 4종목, 강세장만 6~8종목).</p>
+                </div>
+              </div>
+            </div>
+
+            {/* 종목 선정 */}
+            <div>
+              <h3 className="font-semibold mb-3">🔍 종목 풀(Universe) — 어디서 찾나</h3>
+              <ul className="space-y-2 text-sm">
+                <li className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3">
+                  <b>52주 신고가 근접 종목</b> — 네이버 금융 → 시세 → 신고가 (52주). 약한 종목은 신고가에 못 간다.
+                </li>
+                <li className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3">
+                  <b>거래대금 상위 100위</b> — 시가총액 1조 이상 + 일평균 거래대금 100억 이상. *유동성이 곧 안전*.
+                </li>
+                <li className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3">
+                  <b>실적 서프라이즈(어닝 모멘텀)</b> — 분기 EPS YoY +25% 이상 + 매출 +20% 이상 (O&apos;Neil CAN SLIM C/A).
+                </li>
+                <li className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3">
+                  <b>섹터 리더</b> — 강한 섹터(반도체/2차전지/AI/조선 등 순환) 안의 1~3등 종목만.
+                </li>
+                <li className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3">
+                  <b>기관·외국인 동반 순매수</b> — 5일 이상 동반 순매수 종목 우선.
+                </li>
+              </ul>
+            </div>
+
+            {/* 한국 시장 특화 */}
+            <div>
+              <h3 className="font-semibold mb-3">🇰🇷 한국 시장 특화 룰</h3>
+              <ul className="space-y-2 text-sm">
+                <li className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3">
+                  <b>상한가 다음날</b>: 통계적으로 갭상 후 음봉 마감 빈도 높음. <b>상한가 종목 추격 매수 금지</b>.
+                </li>
+                <li className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3">
+                  <b>신용잔고율 급증</b>: 신용잔고율 5% 이상 + 1개월 내 2배 증가 = 신용 청산 위험. 회피.
+                </li>
+                <li className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3">
+                  <b>공매도 잔고 상위</b>: KRX 공매도 잔고 비율 5% 이상 종목은 추가 하락 압력 — 매수 보류.
+                </li>
+                <li className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3">
+                  <b>테마 순환</b>: 한국은 테마 사이클이 2~4주. 새 테마 초기 1주차 매수, 3주차부터 매도 시작.
+                </li>
+                <li className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3">
+                  <b>옵션 만기일(둘째주 목요일)</b>: 변동성 폭증. *전일·당일 신규 매수 자제*.
+                </li>
+                <li className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3">
+                  <b>코스닥 라이트</b>: 시가총액 1,000억 미만 종목은 작전·이상거래 빈번. *유동성 풍부한 코스피 중대형주 우선*.
+                </li>
+              </ul>
+            </div>
+
+            {/* 시장 환경 필터 */}
+            <div>
+              <h3 className="font-semibold mb-3">🌡️ 시장 환경 필터 — 스윙 매매 가능 여부</h3>
+              <div className="overflow-x-auto rounded-[var(--radius-sm)] border border-[var(--color-border)]">
+                <table className="w-full text-sm">
+                  <thead className="bg-[var(--color-bg-subtle)]">
+                    <tr>
+                      <th className="text-left p-2">시장 상태</th>
+                      <th className="text-left p-2">행동</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-t border-[var(--color-border)]">
+                      <td className="p-2">코스피 200일 이평선 위 + 상승 전환</td>
+                      <td className="p-2 text-[var(--color-fg-muted)]"><b>정상 매매</b>. 풀 포지션 가능.</td>
+                    </tr>
+                    <tr className="border-t border-[var(--color-border)]">
+                      <td className="p-2">코스피 200일 이평선 위 + 횡보</td>
+                      <td className="p-2 text-[var(--color-fg-muted)]">포지션 50%만. 손절 더 타이트하게.</td>
+                    </tr>
+                    <tr className="border-t border-[var(--color-border)]">
+                      <td className="p-2">코스피 200일 이평선 아래</td>
+                      <td className="p-2 text-[var(--color-fg-muted)]"><b>스윙 매매 중단</b>. 70%+ 종목이 약세 — 확률 게임에서 진다.</td>
+                    </tr>
+                    <tr className="border-t border-[var(--color-border)]">
+                      <td className="p-2">V-KOSPI 30 이상</td>
+                      <td className="p-2 text-[var(--color-fg-muted)]">신규 진입 보류. 보유 종목만 관리.</td>
+                    </tr>
+                    <tr className="border-t border-[var(--color-border)]">
+                      <td className="p-2">3일 연속 분산일(Distribution Day: 거래량 늘며 -0.2%↓)</td>
+                      <td className="p-2 text-[var(--color-fg-muted)]">기관 매도 신호. 비중 축소.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* 주간 루틴 */}
+            <div>
+              <h3 className="font-semibold mb-3">📅 주간 루틴 — 시간 가성비</h3>
+              <ul className="space-y-2 text-sm">
+                <li><b>주말 (60분)</b>: 시장 환경 점검(코스피 일봉/주봉) + 관심종목 스크리닝(Trend Template) → 다음주 매매 후보 5~10개 선정.</li>
+                <li><b>장중 (10~20분 × 2회)</b>: 09:30·14:30 보유 종목 손절가/익절가 알람 확인. *호가창 들여다보지 않기*.</li>
+                <li><b>장 마감 후 (15분)</b>: 보유 종목 일봉 + 거래량 점검. 손절/익절 트리거 위반 종목 처리 계획.</li>
+                <li><b>매일</b>: 매매 일지 1줄(왜 샀나/팔았나/감정 상태). 1년 후 자신을 가장 빠르게 성장시키는 자산.</li>
+              </ul>
+            </div>
+
+            {/* 흔한 실수 */}
+            <div>
+              <h3 className="font-semibold mb-3">⚠️ 통계적으로 95%가 하는 실수</h3>
+              <ul className="space-y-2 text-sm">
+                <li className="rounded-[var(--radius-sm)] bg-red-500/5 border border-red-500/20 p-3">✕ <b>손절 미루기</b> — &quot;곧 오를 거야&quot; → -20%, -30%까지 늘어남. 손절은 *기계적으로*.</li>
+                <li className="rounded-[var(--radius-sm)] bg-red-500/5 border border-red-500/20 p-3">✕ <b>물타기</b> — 하락 중 추가 매수. 평단가만 낮춰 *상승 확률은 그대로*.</li>
+                <li className="rounded-[var(--radius-sm)] bg-red-500/5 border border-red-500/20 p-3">✕ <b>너무 잦은 매매(overtrading)</b> — 셋업 없을 땐 *현금 보유*. Minervini도 1년 중 절반은 현금.</li>
+                <li className="rounded-[var(--radius-sm)] bg-red-500/5 border border-red-500/20 p-3">✕ <b>약세장 매매</b> — 시장이 하락 추세인데 스윙 매매. 70% 종목이 따라 내린다.</li>
+                <li className="rounded-[var(--radius-sm)] bg-red-500/5 border border-red-500/20 p-3">✕ <b>리벤지 매매</b> — 손절 직후 다른 종목으로 만회 시도. 감정 매매는 *연쇄 손실*로 이어짐.</li>
+                <li className="rounded-[var(--radius-sm)] bg-red-500/5 border border-red-500/20 p-3">✕ <b>익절 후 재진입 못 함</b> — 팔고 더 오르면 *원래 매수가 위에서* 못 산다. 새 셋업 형성 시만 재진입.</li>
+                <li className="rounded-[var(--radius-sm)] bg-red-500/5 border border-red-500/20 p-3">✕ <b>레버리지/신용</b> — 스윙 매매 초기 *절대 금지*. 손실 시 회복 불가능.</li>
+              </ul>
+            </div>
+
+            {/* 마인드셋 */}
+            <div className="rounded-[var(--radius)] bg-[var(--color-bg-subtle)] border border-[var(--color-border)] p-6">
+              <h3 className="font-semibold mb-3">🧠 마인드셋 — 거장들의 공통점</h3>
+              <ul className="space-y-2 text-sm text-[var(--color-fg-muted)]">
+                <li>• <b>승률이 아니라 손익비</b>: Minervini 승률 50% 미만. 평균 익절 +30%, 평균 손절 -6% → 손익비 5:1.</li>
+                <li>• <b>틀렸을 때 빨리 인정</b>: 손절은 *내 분석이 틀렸다*는 사실에 대한 비용. 자존심이 가장 비싸다.</li>
+                <li>• <b>예측하지 말고 반응한다</b>: 차트는 *지금* 무엇이 일어나는지 보여줌. 미래 예측은 시장의 영역.</li>
+                <li>• <b>현금도 포지션</b>: 셋업 없을 땐 현금 100%가 정답. 매매 안 하는 게 *가장 안전한 매매*인 경우 많음.</li>
+                <li>• <b>오늘의 결정이 평생의 시스템을 만든다</b>: 한 번 룰 어기면 다음에도 어김. *한 번도 어기지 않는 것*이 시스템.</li>
+              </ul>
+            </div>
+
+            {/* 추천 자료 */}
+            <div>
+              <h3 className="font-semibold mb-3">📖 더 깊이 — 검증된 원전</h3>
+              <ul className="space-y-1.5 text-sm text-[var(--color-fg-muted)]">
+                <li>• <b>Trade Like a Stock Market Wizard</b> — Mark Minervini (SEPA · VCP 원전)</li>
+                <li>• <b>How to Make Money in Stocks</b> — William O&apos;Neil (CAN SLIM 원전)</li>
+                <li>• <b>Secrets for Profiting in Bull and Bear Markets</b> — Stan Weinstein (Stage Analysis 원전)</li>
+                <li>• <b>How I Made $2,000,000 in the Stock Market</b> — Nicolas Darvas (Darvas Box 원전)</li>
+                <li>• <b>Reminiscences of a Stock Operator</b> — Edwin Lefèvre (Jesse Livermore 회고)</li>
+                <li>• <b>Market Wizards</b> 시리즈 — Jack Schwager (실전 트레이더 인터뷰집)</li>
+              </ul>
+            </div>
+
+            {/* 출구 */}
+            <div className="rounded-[var(--radius)] border-2 border-amber-500/40 bg-amber-500/5 p-6">
+              <h3 className="font-semibold mb-2">⚖️ 마지막 점검</h3>
+              <p className="text-sm leading-relaxed text-[var(--color-fg-muted)]">
+                스윙 매매는 <b>풀타임 직업 수준의 시간·감정 비용</b>이 든다.
+                같은 시간을 본업·EPS 추세 장기투자(이 페이지 1~5원칙)에 쓰면 *훨씬 안정적*으로 자산이 커진다.
+                그래도 하고 싶다면: <b>전체 자산의 10% 별도 계좌, 6개월 룰 100% 준수 후 자본 추가</b>.
+                6개월간 룰 한 번이라도 어기면 *스윙 매매에 안 맞는 사람*이다 — 미련 없이 장기투자로 돌아온다.
+              </p>
+            </div>
+          </section>
+        )}
 
         <footer className="mt-16 pt-6 border-t border-[var(--color-border)] text-xs text-[var(--color-fg-muted)] text-center">
           이 페이지는 색인되지 않습니다 (robots disallow). 진입: S키 5회.
