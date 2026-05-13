@@ -25,10 +25,11 @@ const STORAGE = {
   flashHard: "stock-flash-hard",
 };
 
-type TabKey = "overview" | "p1" | "p2" | "p3" | "p4" | "p5" | "crash" | "swing" | "timing" | "masters" | "glossary" | "quiz" | "flash";
+type TabKey = "overview" | "daily" | "p1" | "p2" | "p3" | "p4" | "p5" | "crash" | "swing" | "timing" | "masters" | "glossary" | "quiz" | "flash";
 
 const TABS: { key: TabKey; label: string; emoji: string }[] = [
   { key: "overview", label: "시작", emoji: "✨" },
+  { key: "daily", label: "매일 체크", emoji: "🔗" },
   { key: "p1", label: "큰 그림", emoji: "🌍" },
   { key: "p2", label: "EPS 추세", emoji: "📈" },
   { key: "p3", label: "거래대금", emoji: "💰" },
@@ -285,159 +286,6 @@ export default function StockPage() {
               </div>
             </div>
 
-            {/* 매일 체크 링크 */}
-            <div>
-              <h2 className="text-xl font-semibold mb-2">🔗 매일 체크 — 한눈에 보는 데이터 소스</h2>
-              <p className="text-sm text-[var(--color-fg-muted)] mb-4">
-                장 시작 전 5분 · 장 마감 후 5분 · 주말 10분, 이 링크들만 순서대로 확인하면 5원칙 점검 끝.
-                전부 무료, 대부분 회원가입 없이 열림.
-              </p>
-
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-sm font-semibold mb-2 text-[var(--color-accent)]">① 시장 환경 (장 시작 전 필수)</h3>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    <a href="https://m.stock.naver.com/domestic/index/VKOSPI/total" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
-                      <div className="text-sm font-medium">V-KOSPI 변동성지수 ↗</div>
-                      <div className="text-xs text-[var(--color-fg-muted)]">네이버 모바일 증권 · 20↓ 평온 / 30↑ 공포 진입</div>
-                    </a>
-                    <a href="https://data.krx.co.kr/contents/MDC/MAIN/main/index.cmd" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
-                      <div className="text-sm font-medium">KRX 정보데이터시스템 ↗</div>
-                      <div className="text-xs text-[var(--color-fg-muted)]">외국인·기관 순매수, 파생 포지션 공식</div>
-                    </a>
-                    <a href="https://kr.investing.com/markets/" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
-                      <div className="text-sm font-medium">인베스팅닷컴 마켓 ↗</div>
-                      <div className="text-xs text-[var(--color-fg-muted)]">세계 지수·금리·달러·원자재 한 화면</div>
-                    </a>
-                    <a href="https://edition.cnn.com/markets/fear-and-greed" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
-                      <div className="text-sm font-medium">CNN Fear &amp; Greed ↗</div>
-                      <div className="text-xs text-[var(--color-fg-muted)]">미국 시장 공포·탐욕 7개 지표 종합</div>
-                    </a>
-                    <a href="https://www.cboe.com/tradable_products/vix/" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
-                      <div className="text-sm font-medium">VIX (미국 변동성) ↗</div>
-                      <div className="text-xs text-[var(--color-fg-muted)]">CBOE 공식 · 20↓ 평온 / 30↑ 공포</div>
-                    </a>
-                    <a href="https://fred.stlouisfed.org/" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
-                      <div className="text-sm font-medium">FRED 경제지표 ↗</div>
-                      <div className="text-xs text-[var(--color-fg-muted)]">금리·실업률·CPI·장단기금리차 원본</div>
-                    </a>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-sm font-semibold mb-2 text-[var(--color-accent)]">② 섹터 · 거래대금 · 수급 (원칙 1·3)</h3>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    <a href="https://finance.naver.com/sise/sise_group.naver?type=upjong" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
-                      <div className="text-sm font-medium">네이버 업종별 수익률 ↗</div>
-                      <div className="text-xs text-[var(--color-fg-muted)]">한국 섹터 1·6개월 수익률 정렬</div>
-                    </a>
-                    <a href="https://finance.naver.com/sise/sise_quant.naver" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
-                      <div className="text-sm font-medium">네이버 거래상위 ↗</div>
-                      <div className="text-xs text-[var(--color-fg-muted)]">거래대금 1~50위 실시간</div>
-                    </a>
-                    <a href="https://data.krx.co.kr/contents/MDC/MDI/mdiLoader/index.cmd?menuId=MDC0201020203" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
-                      <div className="text-sm font-medium">KRX 투자자별 매매동향 ↗</div>
-                      <div className="text-xs text-[var(--color-fg-muted)]">외국인·기관 순매수 일별 (공식)</div>
-                    </a>
-                    <a href="https://www.sectorspdrs.com/sector-tracker" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
-                      <div className="text-sm font-medium">S&amp;P Sector Tracker ↗</div>
-                      <div className="text-xs text-[var(--color-fg-muted)]">미국 11개 섹터 ETF 수익률 (세계 메인 플로우)</div>
-                    </a>
-                    <a href="https://finviz.com/groups.ashx?g=sector&v=210&o=perf6m" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
-                      <div className="text-sm font-medium">Finviz 섹터 히트맵 ↗</div>
-                      <div className="text-xs text-[var(--color-fg-muted)]">미국 섹터·산업 6M 성과 시각화</div>
-                    </a>
-                    <a href="https://finance.naver.com/sise/sise_high.naver?type=H_YR" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
-                      <div className="text-sm font-medium">네이버 52주 신고가 ↗</div>
-                      <div className="text-xs text-[var(--color-fg-muted)]">스윙 종목 풀 — 약한 종목은 신고가에 못 옴</div>
-                    </a>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-sm font-semibold mb-2 text-[var(--color-accent)]">③ EPS 컨센서스 · 공시 (원칙 2)</h3>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    <a href="https://comp.fnguide.com/SVO2/ASP/SVD_main.asp" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
-                      <div className="text-sm font-medium">FnGuide 컴퍼니가이드 ↗</div>
-                      <div className="text-xs text-[var(--color-fg-muted)]">12M Fwd EPS 컨센서스 추세, 무료</div>
-                    </a>
-                    <a href="https://kind.krx.co.kr/" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
-                      <div className="text-sm font-medium">KIND (KRX 상장공시) ↗</div>
-                      <div className="text-xs text-[var(--color-fg-muted)]">상장사 공시·IR·실적 발표 일정 (DART 보완)</div>
-                    </a>
-                    <a href="https://dart.fss.or.kr/" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
-                      <div className="text-sm font-medium">DART 전자공시 ↗</div>
-                      <div className="text-xs text-[var(--color-fg-muted)]">국내 모든 공시 원본 (사업·반기·분기보고서)</div>
-                    </a>
-                    <a href="https://www.sec.gov/search-filings" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
-                      <div className="text-sm font-medium">SEC EDGAR ↗</div>
-                      <div className="text-xs text-[var(--color-fg-muted)]">미국 공시 (10-K, 10-Q, 8-K) 통합 검색</div>
-                    </a>
-                    <a href="https://markets.hankyung.com/" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
-                      <div className="text-sm font-medium">한경 마켓 ↗</div>
-                      <div className="text-xs text-[var(--color-fg-muted)]">증권사 리포트 무료 모음</div>
-                    </a>
-                    <a href="https://finance.yahoo.com/calendar/earnings" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
-                      <div className="text-sm font-medium">Yahoo 어닝 캘린더 ↗</div>
-                      <div className="text-xs text-[var(--color-fg-muted)]">미국 실적 발표 일정 + 컨센서스</div>
-                    </a>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-sm font-semibold mb-2 text-[var(--color-accent)]">④ 파생 · 만기 · 매크로 캘린더 (원칙 4)</h3>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    <a href="https://data.krx.co.kr/contents/MDC/MDI/mdiLoader/index.cmd?menuId=MDC0301010301" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
-                      <div className="text-sm font-medium">KRX 파생 투자자별 거래실적 ↗</div>
-                      <div className="text-xs text-[var(--color-fg-muted)]">외국인 선물 누적 포지션 (만기 영향 사전 감지)</div>
-                    </a>
-                    <a href="https://kr.investing.com/economic-calendar/" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
-                      <div className="text-sm font-medium">인베스팅 경제 캘린더 ↗</div>
-                      <div className="text-xs text-[var(--color-fg-muted)]">CPI · FOMC · 고용지표 시간순</div>
-                    </a>
-                    <a href="https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
-                      <div className="text-sm font-medium">FOMC 일정 ↗</div>
-                      <div className="text-xs text-[var(--color-fg-muted)]">미국 연준 금리 결정 원본 일정</div>
-                    </a>
-                    <a href="https://www.cmegroup.com/markets/interest-rates/cme-fedwatch-tool.html" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
-                      <div className="text-sm font-medium">CME FedWatch ↗</div>
-                      <div className="text-xs text-[var(--color-fg-muted)]">선물 가격이 가리키는 금리 인하·동결 확률</div>
-                    </a>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-sm font-semibold mb-2 text-[var(--color-accent)]">⑤ 차트 · 스크리너 · 글로벌</h3>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    <a href="https://www.tradingview.com/chart/" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
-                      <div className="text-sm font-medium">TradingView ↗</div>
-                      <div className="text-xs text-[var(--color-fg-muted)]">차트 분석 표준 · 한국 종목도 지원</div>
-                    </a>
-                    <a href="https://finviz.com/screener.ashx" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
-                      <div className="text-sm font-medium">Finviz Screener ↗</div>
-                      <div className="text-xs text-[var(--color-fg-muted)]">미국 종목 펀더멘털·기술적 동시 필터</div>
-                    </a>
-                    <a href="https://stockanalysis.com/" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
-                      <div className="text-sm font-medium">Stock Analysis ↗</div>
-                      <div className="text-xs text-[var(--color-fg-muted)]">미국 종목 재무 10년치 무료</div>
-                    </a>
-                    <a href="https://kr.investing.com/currencies/usd-krw" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
-                      <div className="text-sm font-medium">USD/KRW 환율 차트 ↗</div>
-                      <div className="text-xs text-[var(--color-fg-muted)]">인베스팅닷컴 실시간 (수출주 영향 모니터링)</div>
-                    </a>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-4 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-4 text-xs text-[var(--color-fg-muted)]">
-                <b className="text-[var(--color-fg)]">💡 추천 루틴 (총 20분/일)</b>
-                <ul className="mt-2 space-y-1 list-disc pl-4">
-                  <li><b>장 시작 전 (08:50, 5분)</b>: ① 시장 환경 4개 (V-KOSPI · CNN F&amp;G · 인베스팅 · 경제 캘린더)</li>
-                  <li><b>장 마감 후 (15:40, 5분)</b>: ② 섹터·거래대금·수급 3개 (업종별 · 거래상위 · KRX 매매동향)</li>
-                  <li><b>주말 (10분)</b>: ③ EPS 컨센서스 추세 점검 + ④ 다음주 캘린더 (FOMC · CPI · 어닝) 확인</li>
-                </ul>
-              </div>
-            </div>
 
             {/* 민지니에게 */}
             <div className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-6">
@@ -1590,6 +1438,161 @@ export default function StockPage() {
                 <li>본업이 없고 매매 시간 6h+ → <b>데이트레이딩</b>(스캘핑은 권장 X). 단, 6개월 시뮬레이션 후 실전.</li>
                 <li>위 어디에도 안 맞는다 → <b>지수 ETF 적립식</b>. KODEX200·TIGER S&amp;P500·QQQ 분산.</li>
               </ol>
+            </div>
+          </section>
+        )}
+
+        {tab === "daily" && (
+          <section className="space-y-8">
+            <header className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-6">
+              <h2 className="text-xl font-bold mb-2">🔗 매일 체크 — 한눈에 보는 데이터 소스</h2>
+              <p className="text-sm leading-relaxed text-[var(--color-fg-muted)]">
+                장 시작 전 5분 · 장 마감 후 5분 · 주말 10분, 이 링크들만 순서대로 확인하면 5원칙 점검 끝.
+                전부 무료, 대부분 회원가입 없이 열림.
+              </p>
+            </header>
+
+            <div>
+              <h3 className="text-sm font-semibold mb-2 text-[var(--color-accent)]">① 시장 환경 (장 시작 전 필수)</h3>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <a href="https://m.stock.naver.com/domestic/index/VKOSPI/total" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
+                  <div className="text-sm font-medium">V-KOSPI 변동성지수 ↗</div>
+                  <div className="text-xs text-[var(--color-fg-muted)]">네이버 모바일 증권 · 20↓ 평온 / 30↑ 공포 진입</div>
+                </a>
+                <a href="https://data.krx.co.kr/contents/MDC/MAIN/main/index.cmd" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
+                  <div className="text-sm font-medium">KRX 정보데이터시스템 ↗</div>
+                  <div className="text-xs text-[var(--color-fg-muted)]">외국인·기관 순매수, 파생 포지션 공식</div>
+                </a>
+                <a href="https://kr.investing.com/markets/" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
+                  <div className="text-sm font-medium">인베스팅닷컴 마켓 ↗</div>
+                  <div className="text-xs text-[var(--color-fg-muted)]">세계 지수·금리·달러·원자재 한 화면</div>
+                </a>
+                <a href="https://edition.cnn.com/markets/fear-and-greed" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
+                  <div className="text-sm font-medium">CNN Fear &amp; Greed ↗</div>
+                  <div className="text-xs text-[var(--color-fg-muted)]">미국 시장 공포·탐욕 7개 지표 종합</div>
+                </a>
+                <a href="https://www.cboe.com/tradable_products/vix/" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
+                  <div className="text-sm font-medium">VIX (미국 변동성) ↗</div>
+                  <div className="text-xs text-[var(--color-fg-muted)]">CBOE 공식 · 20↓ 평온 / 30↑ 공포</div>
+                </a>
+                <a href="https://fred.stlouisfed.org/" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
+                  <div className="text-sm font-medium">FRED 경제지표 ↗</div>
+                  <div className="text-xs text-[var(--color-fg-muted)]">금리·실업률·CPI·장단기금리차 원본</div>
+                </a>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-sm font-semibold mb-2 text-[var(--color-accent)]">② 섹터 · 거래대금 · 수급 (원칙 1·3)</h3>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <a href="https://finance.naver.com/sise/sise_group.naver?type=upjong" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
+                  <div className="text-sm font-medium">네이버 업종별 수익률 ↗</div>
+                  <div className="text-xs text-[var(--color-fg-muted)]">한국 섹터 1·6개월 수익률 정렬</div>
+                </a>
+                <a href="https://finance.naver.com/sise/sise_quant.naver" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
+                  <div className="text-sm font-medium">네이버 거래상위 ↗</div>
+                  <div className="text-xs text-[var(--color-fg-muted)]">거래대금 1~50위 실시간</div>
+                </a>
+                <a href="https://data.krx.co.kr/contents/MDC/MDI/mdiLoader/index.cmd?menuId=MDC0201020203" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
+                  <div className="text-sm font-medium">KRX 투자자별 매매동향 ↗</div>
+                  <div className="text-xs text-[var(--color-fg-muted)]">외국인·기관 순매수 일별 (공식)</div>
+                </a>
+                <a href="https://www.sectorspdrs.com/sector-tracker" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
+                  <div className="text-sm font-medium">S&amp;P Sector Tracker ↗</div>
+                  <div className="text-xs text-[var(--color-fg-muted)]">미국 11개 섹터 ETF 수익률 (세계 메인 플로우)</div>
+                </a>
+                <a href="https://finviz.com/groups.ashx?g=sector&v=210&o=perf6m" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
+                  <div className="text-sm font-medium">Finviz 섹터 히트맵 ↗</div>
+                  <div className="text-xs text-[var(--color-fg-muted)]">미국 섹터·산업 6M 성과 시각화</div>
+                </a>
+                <a href="https://finance.naver.com/sise/sise_high.naver?type=H_YR" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
+                  <div className="text-sm font-medium">네이버 52주 신고가 ↗</div>
+                  <div className="text-xs text-[var(--color-fg-muted)]">스윙 종목 풀 — 약한 종목은 신고가에 못 옴</div>
+                </a>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-sm font-semibold mb-2 text-[var(--color-accent)]">③ EPS 컨센서스 · 공시 (원칙 2)</h3>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <a href="https://comp.fnguide.com/SVO2/ASP/SVD_main.asp" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
+                  <div className="text-sm font-medium">FnGuide 컴퍼니가이드 ↗</div>
+                  <div className="text-xs text-[var(--color-fg-muted)]">12M Fwd EPS 컨센서스 추세, 무료</div>
+                </a>
+                <a href="https://kind.krx.co.kr/" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
+                  <div className="text-sm font-medium">KIND (KRX 상장공시) ↗</div>
+                  <div className="text-xs text-[var(--color-fg-muted)]">상장사 공시·IR·실적 발표 일정 (DART 보완)</div>
+                </a>
+                <a href="https://dart.fss.or.kr/" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
+                  <div className="text-sm font-medium">DART 전자공시 ↗</div>
+                  <div className="text-xs text-[var(--color-fg-muted)]">국내 모든 공시 원본 (사업·반기·분기보고서)</div>
+                </a>
+                <a href="https://www.sec.gov/search-filings" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
+                  <div className="text-sm font-medium">SEC EDGAR ↗</div>
+                  <div className="text-xs text-[var(--color-fg-muted)]">미국 공시 (10-K, 10-Q, 8-K) 통합 검색</div>
+                </a>
+                <a href="https://markets.hankyung.com/" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
+                  <div className="text-sm font-medium">한경 마켓 ↗</div>
+                  <div className="text-xs text-[var(--color-fg-muted)]">증권사 리포트 무료 모음</div>
+                </a>
+                <a href="https://finance.yahoo.com/calendar/earnings" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
+                  <div className="text-sm font-medium">Yahoo 어닝 캘린더 ↗</div>
+                  <div className="text-xs text-[var(--color-fg-muted)]">미국 실적 발표 일정 + 컨센서스</div>
+                </a>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-sm font-semibold mb-2 text-[var(--color-accent)]">④ 파생 · 만기 · 매크로 캘린더 (원칙 4)</h3>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <a href="https://data.krx.co.kr/contents/MDC/MDI/mdiLoader/index.cmd?menuId=MDC0301010301" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
+                  <div className="text-sm font-medium">KRX 파생 투자자별 거래실적 ↗</div>
+                  <div className="text-xs text-[var(--color-fg-muted)]">외국인 선물 누적 포지션 (만기 영향 사전 감지)</div>
+                </a>
+                <a href="https://kr.investing.com/economic-calendar/" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
+                  <div className="text-sm font-medium">인베스팅 경제 캘린더 ↗</div>
+                  <div className="text-xs text-[var(--color-fg-muted)]">CPI · FOMC · 고용지표 시간순</div>
+                </a>
+                <a href="https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
+                  <div className="text-sm font-medium">FOMC 일정 ↗</div>
+                  <div className="text-xs text-[var(--color-fg-muted)]">미국 연준 금리 결정 원본 일정</div>
+                </a>
+                <a href="https://www.cmegroup.com/markets/interest-rates/cme-fedwatch-tool.html" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
+                  <div className="text-sm font-medium">CME FedWatch ↗</div>
+                  <div className="text-xs text-[var(--color-fg-muted)]">선물 가격이 가리키는 금리 인하·동결 확률</div>
+                </a>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-sm font-semibold mb-2 text-[var(--color-accent)]">⑤ 차트 · 스크리너 · 글로벌</h3>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <a href="https://www.tradingview.com/chart/" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
+                  <div className="text-sm font-medium">TradingView ↗</div>
+                  <div className="text-xs text-[var(--color-fg-muted)]">차트 분석 표준 · 한국 종목도 지원</div>
+                </a>
+                <a href="https://finviz.com/screener.ashx" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
+                  <div className="text-sm font-medium">Finviz Screener ↗</div>
+                  <div className="text-xs text-[var(--color-fg-muted)]">미국 종목 펀더멘털·기술적 동시 필터</div>
+                </a>
+                <a href="https://stockanalysis.com/" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
+                  <div className="text-sm font-medium">Stock Analysis ↗</div>
+                  <div className="text-xs text-[var(--color-fg-muted)]">미국 종목 재무 10년치 무료</div>
+                </a>
+                <a href="https://kr.investing.com/currencies/usd-krw" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
+                  <div className="text-sm font-medium">USD/KRW 환율 차트 ↗</div>
+                  <div className="text-xs text-[var(--color-fg-muted)]">인베스팅닷컴 실시간 (수출주 영향 모니터링)</div>
+                </a>
+              </div>
+            </div>
+
+            <div className="rounded-[var(--radius)] border-2 border-amber-500/40 bg-amber-500/5 p-6">
+              <h3 className="font-semibold mb-3">💡 추천 루틴 (총 20분/일)</h3>
+              <ul className="space-y-2 text-sm text-[var(--color-fg-muted)]">
+                <li>• <b>장 시작 전 (08:50, 5분)</b>: ① 시장 환경 4개 (V-KOSPI · CNN F&amp;G · 인베스팅 · 경제 캘린더)</li>
+                <li>• <b>장 마감 후 (15:40, 5분)</b>: ② 섹터·거래대금·수급 3개 (업종별 · 거래상위 · KRX 매매동향)</li>
+                <li>• <b>주말 (10분)</b>: ③ EPS 컨센서스 추세 점검 + ④ 다음주 캘린더 (FOMC · CPI · 어닝) 확인</li>
+              </ul>
             </div>
           </section>
         )}
