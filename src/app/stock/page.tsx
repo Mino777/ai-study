@@ -25,7 +25,7 @@ const STORAGE = {
   flashHard: "stock-flash-hard",
 };
 
-type TabKey = "overview" | "p1" | "p2" | "p3" | "p4" | "p5" | "crash" | "swing" | "masters" | "glossary" | "quiz" | "flash";
+type TabKey = "overview" | "p1" | "p2" | "p3" | "p4" | "p5" | "crash" | "swing" | "timing" | "masters" | "glossary" | "quiz" | "flash";
 
 const TABS: { key: TabKey; label: string; emoji: string }[] = [
   { key: "overview", label: "시작", emoji: "✨" },
@@ -36,6 +36,7 @@ const TABS: { key: TabKey; label: string; emoji: string }[] = [
   { key: "p5", label: "분산 룰", emoji: "🧺" },
   { key: "crash", label: "폭락 매뉴얼", emoji: "🚨" },
   { key: "swing", label: "스윙 매매", emoji: "⚡" },
+  { key: "timing", label: "타이밍 매트릭스", emoji: "⏱️" },
   { key: "masters", label: "투자 거장", emoji: "👑" },
   { key: "glossary", label: "용어 사전", emoji: "📖" },
   { key: "quiz", label: "퀴즈", emoji: "❓" },
@@ -1168,6 +1169,273 @@ export default function StockPage() {
                 그래도 하고 싶다면: <b>전체 자산의 10% 별도 계좌, 6개월 룰 100% 준수 후 자본 추가</b>.
                 6개월간 룰 한 번이라도 어기면 *스윙 매매에 안 맞는 사람*이다 — 미련 없이 장기투자로 돌아온다.
               </p>
+            </div>
+          </section>
+        )}
+
+        {tab === "timing" && (
+          <section className="space-y-8">
+            <header className="rounded-[var(--radius)] border-2 border-blue-500/40 bg-blue-500/5 p-6">
+              <h2 className="text-xl font-bold mb-2">⏱️ 매수·매도 타이밍 매트릭스 — 모든 전략 한눈에</h2>
+              <p className="text-sm leading-relaxed text-[var(--color-fg-muted)]">
+                보유 기간 <b>분 단위 ~ 10년+</b>까지 5개 전략을 한 표에 정리. 어느 전략이 *나에게* 맞는지 결정하는
+                자기 진단부터 시작 → 전략별 매수/매도 트리거 → 공통 안전판 → 함정 매트릭스 순.
+                <br /><b>핵심 원칙</b>: 한 사람이 동시에 여러 전략을 섞으면 망한다. <b>한 계좌 = 한 전략 = 한 시간프레임</b>.
+              </p>
+            </header>
+
+            {/* 자기 진단 */}
+            <div>
+              <h3 className="font-semibold mb-3">🧭 자기 진단 — 어느 전략이 나에게 맞나</h3>
+              <div className="overflow-x-auto rounded-[var(--radius-sm)] border border-[var(--color-border)]">
+                <table className="w-full text-xs">
+                  <thead className="bg-[var(--color-bg-subtle)]">
+                    <tr>
+                      <th className="text-left p-2">조건</th>
+                      <th className="text-left p-2">스캘핑</th>
+                      <th className="text-left p-2">데이트레이딩</th>
+                      <th className="text-left p-2">스윙</th>
+                      <th className="text-left p-2">포지션</th>
+                      <th className="text-left p-2">장기 (1~5원칙)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-[var(--color-fg-muted)]">
+                    <tr className="border-t border-[var(--color-border)]"><td className="p-2">하루 매매 시간</td><td className="p-2">6h+ 풀집중</td><td className="p-2">3~6h</td><td className="p-2">30~60min</td><td className="p-2">주 1~2시간</td><td className="p-2">월 1~2시간</td></tr>
+                    <tr className="border-t border-[var(--color-border)]"><td className="p-2">최소 자본</td><td className="p-2">5천만+</td><td className="p-2">3천만+</td><td className="p-2">1천만+</td><td className="p-2">5백만+</td><td className="p-2">제한 없음</td></tr>
+                    <tr className="border-t border-[var(--color-border)]"><td className="p-2">본업 병행</td><td className="p-2 text-red-400">불가</td><td className="p-2 text-red-400">불가</td><td className="p-2">제한적</td><td className="p-2 text-green-400">가능</td><td className="p-2 text-green-400">권장</td></tr>
+                    <tr className="border-t border-[var(--color-border)]"><td className="p-2">감정 통제</td><td className="p-2">초인 수준</td><td className="p-2">매우 강함</td><td className="p-2">강함</td><td className="p-2">중간</td><td className="p-2">낮아도 OK</td></tr>
+                    <tr className="border-t border-[var(--color-border)]"><td className="p-2">평균 손익비</td><td className="p-2">1:1.2</td><td className="p-2">1:1.5</td><td className="p-2">1:2~3</td><td className="p-2">1:3~5</td><td className="p-2">1:5+</td></tr>
+                    <tr className="border-t border-[var(--color-border)]"><td className="p-2">과세/수수료 부담</td><td className="p-2 text-red-400">매우 큼</td><td className="p-2 text-red-400">큼</td><td className="p-2">중간</td><td className="p-2">작음</td><td className="p-2 text-green-400">최소</td></tr>
+                    <tr className="border-t border-[var(--color-border)]"><td className="p-2">실증 수익자 비율</td><td className="p-2">~1%</td><td className="p-2">~3%</td><td className="p-2">~10%</td><td className="p-2">~25%</td><td className="p-2">~70%(10년+)</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <p className="text-xs text-[var(--color-fg-muted)] mt-2">
+                * 실증 수익자 비율: NBER 2020(대만), Barber & Odean 2014, Vanguard 장기 패시브 통계 기반 추정.
+                직장인 기본값은 <b>장기(1~5원칙) + 보조로 포지션 또는 스윙(별도 계좌 10%)</b>.
+              </p>
+            </div>
+
+            {/* 전략별 보유 기간 / 핵심 신호 */}
+            <div>
+              <h3 className="font-semibold mb-3">📊 전략별 보유 기간 + 핵심 신호</h3>
+              <div className="overflow-x-auto rounded-[var(--radius-sm)] border border-[var(--color-border)]">
+                <table className="w-full text-xs">
+                  <thead className="bg-[var(--color-bg-subtle)]">
+                    <tr>
+                      <th className="text-left p-2">전략</th>
+                      <th className="text-left p-2">보유</th>
+                      <th className="text-left p-2">차트 단위</th>
+                      <th className="text-left p-2">매수 핵심 신호</th>
+                      <th className="text-left p-2">매도 핵심 신호</th>
+                      <th className="text-left p-2">손절 폭</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-[var(--color-fg-muted)]">
+                    <tr className="border-t border-[var(--color-border)] align-top">
+                      <td className="p-2 font-semibold">스캘핑</td>
+                      <td className="p-2">초~분</td>
+                      <td className="p-2">1·5분봉, 호가창</td>
+                      <td className="p-2">호가 매수벽 형성 + 1분봉 첫 양봉 + 거래량 폭증</td>
+                      <td className="p-2">매수벽 소멸 / 첫 음봉 / +0.3~1% 즉시</td>
+                      <td className="p-2">-0.2~0.5%</td>
+                    </tr>
+                    <tr className="border-t border-[var(--color-border)] align-top">
+                      <td className="p-2 font-semibold">데이트레이딩</td>
+                      <td className="p-2">당일 청산</td>
+                      <td className="p-2">5·15분봉</td>
+                      <td className="p-2">시초가 갭상 + VWAP 상단 안착 / 15분봉 첫 추세 돌파</td>
+                      <td className="p-2">VWAP 이탈 / 15:20 강제 청산</td>
+                      <td className="p-2">-1~2%</td>
+                    </tr>
+                    <tr className="border-t border-[var(--color-border)] align-top">
+                      <td className="p-2 font-semibold">스윙</td>
+                      <td className="p-2">2일~4주</td>
+                      <td className="p-2">일봉</td>
+                      <td className="p-2">VCP 돌파 + 거래량 50일 평균 1.5배+ / 10·20일 이평 눌림목 반등</td>
+                      <td className="p-2">10일 이평 종가 이탈 / +20~25% 부분 익절</td>
+                      <td className="p-2">-5~8%</td>
+                    </tr>
+                    <tr className="border-t border-[var(--color-border)] align-top">
+                      <td className="p-2 font-semibold">포지션</td>
+                      <td className="p-2">2~12개월</td>
+                      <td className="p-2">주봉</td>
+                      <td className="p-2">Stage 2 진입(30주 이평 돌파+상승전환) + 분기 EPS YoY +25%</td>
+                      <td className="p-2">30주 이평 종가 이탈 / EPS 컨센 3개월 연속 하향</td>
+                      <td className="p-2">-15%</td>
+                    </tr>
+                    <tr className="border-t border-[var(--color-border)] align-top">
+                      <td className="p-2 font-semibold">장기 (1~5원칙)</td>
+                      <td className="p-2">1년~10년+</td>
+                      <td className="p-2">월봉, 펀더멘털</td>
+                      <td className="p-2">12M Fwd EPS 3개월+ 상향 추세 + 섹터 글로벌 6M 상위 + 동반 순매수</td>
+                      <td className="p-2">EPS 추세 3개월 하향 / 비중 룰 위반 / -15% 룰</td>
+                      <td className="p-2">-15% (1회 점검)</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* 매수 트리거 카드 */}
+            <div>
+              <h3 className="font-semibold mb-3">🟢 매수 트리거 — 전략별 정제 룰</h3>
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="rounded-[var(--radius-sm)] border border-green-500/30 bg-green-500/5 p-4">
+                  <div className="text-sm font-semibold mb-2">스캘핑 — 호가 + 1분봉</div>
+                  <ul className="text-xs space-y-1 text-[var(--color-fg-muted)]">
+                    <li>① 거래대금 1·2위 + 시총 1조+ + 스프레드 1tick</li>
+                    <li>② 매수 호가 잔량 매도 호가 잔량의 2배+ 형성</li>
+                    <li>③ 1분봉 직전 봉 거래량 평균 3배 + 양봉</li>
+                    <li>④ 진입 즉시 -0.3% 손절 + +0.5~1% 익절 동시 예약</li>
+                  </ul>
+                </div>
+                <div className="rounded-[var(--radius-sm)] border border-green-500/30 bg-green-500/5 p-4">
+                  <div className="text-sm font-semibold mb-2">데이트레이딩 — 갭 + VWAP</div>
+                  <ul className="text-xs space-y-1 text-[var(--color-fg-muted)]">
+                    <li>① 시초 갭상 +2~5% (시장 영향 없는 단독 호재)</li>
+                    <li>② 09:00~09:30 첫 5분봉 고점 돌파 + VWAP 위 안착</li>
+                    <li>③ 거래대금 누적 100억+ (오전 1시간 내)</li>
+                    <li>④ 15:20 강제 청산 ・ 다음날 갭 리스크 회피</li>
+                  </ul>
+                </div>
+                <div className="rounded-[var(--radius-sm)] border border-green-500/30 bg-green-500/5 p-4">
+                  <div className="text-sm font-semibold mb-2">스윙 — VCP / Pullback</div>
+                  <ul className="text-xs space-y-1 text-[var(--color-fg-muted)]">
+                    <li>① Trend Template 8조건 통과(스윙 탭)</li>
+                    <li>② VCP 돌파 + 거래량 50일 평균 1.5~2배</li>
+                    <li>③ 또는 10·20일 이평 눌림목 + 양봉 + 거래량 회복</li>
+                    <li>④ 손절 -7%, 익절 +20% 부분/10일 이평 트레일링</li>
+                  </ul>
+                </div>
+                <div className="rounded-[var(--radius-sm)] border border-green-500/30 bg-green-500/5 p-4">
+                  <div className="text-sm font-semibold mb-2">포지션 — Stage 2 + 어닝 모멘텀</div>
+                  <ul className="text-xs space-y-1 text-[var(--color-fg-muted)]">
+                    <li>① 주봉 30주 이평 돌파 + 30주 이평 자체 상승 전환</li>
+                    <li>② 직전 분기 EPS YoY +25%, 매출 +20%</li>
+                    <li>③ 섹터 6M 상대강도 상위 25%</li>
+                    <li>④ 분할 매수 3회 (돌파 / +5% / 첫 눌림목)</li>
+                  </ul>
+                </div>
+                <div className="rounded-[var(--radius-sm)] border border-green-500/30 bg-green-500/5 p-4 md:col-span-2">
+                  <div className="text-sm font-semibold mb-2">장기 — 5원칙 동시 통과 (이 페이지 1~5원칙 탭)</div>
+                  <ul className="text-xs space-y-1 text-[var(--color-fg-muted)]">
+                    <li>① 세계 돈 흐름 = 한국 돈 흐름 = 6M 수익률 상위 섹터, 셋 일치</li>
+                    <li>② 12M Fwd EPS 3개월+ 상향 추세</li>
+                    <li>③ 거래대금 20일 평균 2배+ 신규 자금 유입 + 외국인·기관 동반 매수</li>
+                    <li>④ V-KOSPI &lt; 30 + 외국인 선물 누적 -10,000계약 미만</li>
+                    <li>⑤ 한 섹터 ≤40% / 한 종목 ≤20% 비중 룰 통과</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            {/* 매도 트리거 카드 */}
+            <div>
+              <h3 className="font-semibold mb-3">🔴 매도 트리거 — 전략별 정제 룰</h3>
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="rounded-[var(--radius-sm)] border border-red-500/30 bg-red-500/5 p-4">
+                  <div className="text-sm font-semibold mb-2">즉시 매도 (모든 전략 공통)</div>
+                  <ul className="text-xs space-y-1 text-[var(--color-fg-muted)]">
+                    <li>• 매수 근거(트리거)가 사라졌다 → 결과와 무관하게 청산</li>
+                    <li>• 손절가 종가 이탈 → 다음 시초가 시장가</li>
+                    <li>• 회사 본질 변화(분식회계, CEO 교체, 사업 구조 변경)</li>
+                  </ul>
+                </div>
+                <div className="rounded-[var(--radius-sm)] border border-red-500/30 bg-red-500/5 p-4">
+                  <div className="text-sm font-semibold mb-2">스캘핑 / 데이트레이딩</div>
+                  <ul className="text-xs space-y-1 text-[var(--color-fg-muted)]">
+                    <li>• 스캘핑: +0.5~1% 익절 / 매수벽 소멸 즉시</li>
+                    <li>• 데이트레이딩: VWAP 종가 이탈 / 15:20 강제 청산</li>
+                    <li>• 둘 다: <b>오버나이트 보유 절대 금지</b></li>
+                  </ul>
+                </div>
+                <div className="rounded-[var(--radius-sm)] border border-red-500/30 bg-red-500/5 p-4">
+                  <div className="text-sm font-semibold mb-2">스윙</div>
+                  <ul className="text-xs space-y-1 text-[var(--color-fg-muted)]">
+                    <li>• +20~25% 도달 → 절반 익절, 나머지 트레일링</li>
+                    <li>• 10일 이평 종가 이탈 → 잔량 청산</li>
+                    <li>• Climax Run(8~10일 연속 양봉 + 거래량 폭증) → 천장</li>
+                    <li>• 분산일(Distribution Day) 3일 누적 → 비중 축소</li>
+                  </ul>
+                </div>
+                <div className="rounded-[var(--radius-sm)] border border-red-500/30 bg-red-500/5 p-4">
+                  <div className="text-sm font-semibold mb-2">포지션</div>
+                  <ul className="text-xs space-y-1 text-[var(--color-fg-muted)]">
+                    <li>• 주봉 30주 이평 종가 이탈</li>
+                    <li>• 분기 어닝 미스 + 가이던스 하향</li>
+                    <li>• 상대강도 상위 25%에서 탈락</li>
+                  </ul>
+                </div>
+                <div className="rounded-[var(--radius-sm)] border border-red-500/30 bg-red-500/5 p-4 md:col-span-2">
+                  <div className="text-sm font-semibold mb-2">장기 (1~5원칙)</div>
+                  <ul className="text-xs space-y-1 text-[var(--color-fg-muted)]">
+                    <li>• 12M Fwd EPS 컨센서스 3개월 연속 하향 (단발 1회는 노이즈)</li>
+                    <li>• 섹터가 글로벌 6M 상위 → 중하위로 추락</li>
+                    <li>• -15% 도달 → <b>분석 재점검 1회</b>(즉시 손절 아님). 근거 살아있으면 보유, 깨졌으면 청산</li>
+                    <li>• 비중 룰 위반(한 종목 &gt;25%) → 비중 조정 매도</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            {/* 공통 안전판 */}
+            <div>
+              <h3 className="font-semibold mb-3">🛡️ 모든 전략 공통 안전판</h3>
+              <ul className="space-y-2 text-sm">
+                <li className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3">
+                  <b>한 매매 최대 손실 ≤ 자본 1%</b> — 포지션 사이즈는 <i>(자본 × 1%) ÷ (매수가 - 손절가)</i>로 역산.
+                </li>
+                <li className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3">
+                  <b>손절가는 매수와 동시에</b> — 사후 결정 금지. 예약 주문으로 자동화.
+                </li>
+                <li className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3">
+                  <b>손익비 최소 1:2</b> — 안 되면 진입 자체 X. 승률 낮아도 손익비로 이긴다.
+                </li>
+                <li className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3">
+                  <b>시장 환경 필터</b> — 코스피 200일 이평 아래면 *모든 신규 매매 중단*. 70% 종목이 약세.
+                </li>
+                <li className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3">
+                  <b>매매 일지</b> — 왜 샀나/팔았나/감정 1줄. 시장이 아니라 <i>자기</i>를 통계화하는 도구.
+                </li>
+                <li className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3">
+                  <b>한 계좌 = 한 전략</b> — 장기/스윙/단기 섞으면 손실난 단기를 장기로 둔갑시키는 자기기만 시작.
+                </li>
+              </ul>
+            </div>
+
+            {/* 함정 매트릭스 */}
+            <div>
+              <h3 className="font-semibold mb-3">⚠️ 전략별 가장 흔한 함정</h3>
+              <div className="overflow-x-auto rounded-[var(--radius-sm)] border border-[var(--color-border)]">
+                <table className="w-full text-xs">
+                  <thead className="bg-[var(--color-bg-subtle)]">
+                    <tr>
+                      <th className="text-left p-2">전략</th>
+                      <th className="text-left p-2">치명적 함정</th>
+                      <th className="text-left p-2">처방</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-[var(--color-fg-muted)]">
+                    <tr className="border-t border-[var(--color-border)]"><td className="p-2">스캘핑</td><td className="p-2">수수료/세금이 수익을 갉아먹음. 100전 60승해도 적자.</td><td className="p-2">월 수수료 시뮬 먼저. 손익비 1:1 미만이면 즉시 중단.</td></tr>
+                    <tr className="border-t border-[var(--color-border)]"><td className="p-2">데이트레이딩</td><td className="p-2">손실 종목을 &quot;다음날 갭 반등 기대&quot;로 들고 가서 스윙으로 변질.</td><td className="p-2">15:20 강제 청산 룰. 어기는 순간 데이트레이더 자격 박탈.</td></tr>
+                    <tr className="border-t border-[var(--color-border)]"><td className="p-2">스윙</td><td className="p-2">손절 미루기 → -7%가 -30% 됨. 그 종목 하나로 1년 망함.</td><td className="p-2">손절 자동 예약. 장중 절대 안 본다.</td></tr>
+                    <tr className="border-t border-[var(--color-border)]"><td className="p-2">포지션</td><td className="p-2">EPS 하향이 시작됐는데도 &quot;장기니까&quot;라며 보유.</td><td className="p-2">주봉 30주 이평 + 컨센서스 추세는 *반응 신호*. 신념 신호 아님.</td></tr>
+                    <tr className="border-t border-[var(--color-border)]"><td className="p-2">장기</td><td className="p-2">단기 변동성에 계속 매매로 변질 → 결국 단기 트레이더 통계로 수렴.</td><td className="p-2">월 1회만 점검. MTS 알림 끄기. 주봉/월봉만 본다.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* 의사결정 트리 */}
+            <div className="rounded-[var(--radius)] border-2 border-blue-500/40 bg-blue-500/5 p-6">
+              <h3 className="font-semibold mb-3">🧩 한 줄 의사결정 트리</h3>
+              <ol className="text-sm space-y-2 text-[var(--color-fg-muted)] list-decimal pl-5">
+                <li>본업이 있다 → <b>장기(1~5원칙)</b> 풀 자본. 끝.</li>
+                <li>본업이 있고 추가 도전 → 자본의 <b>10%만 별도 계좌로 스윙</b>. 6개월 룰 100% 준수 검증.</li>
+                <li>본업이 없고 매매 시간 6h+ → <b>데이트레이딩</b>(스캘핑은 권장 X). 단, 6개월 시뮬레이션 후 실전.</li>
+                <li>위 어디에도 안 맞는다 → <b>지수 ETF 적립식</b>. KODEX200·TIGER S&amp;P500·QQQ 분산.</li>
+              </ol>
             </div>
           </section>
         )}
