@@ -1455,9 +1455,9 @@ export default function StockPage() {
             <div>
               <h3 className="text-sm font-semibold mb-2 text-[var(--color-accent)]">① 시장 환경 (장 시작 전 필수)</h3>
               <div className="grid gap-2 sm:grid-cols-2">
-                <a href="https://m.stock.naver.com/domestic/index/VKOSPI/total" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
+                <a href="https://kr.investing.com/indices/kospi-volatility" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
                   <div className="text-sm font-medium">V-KOSPI 변동성지수 ↗</div>
-                  <div className="text-xs text-[var(--color-fg-muted)]">네이버 모바일 증권 · 20↓ 평온 / 30↑ 공포 진입</div>
+                  <div className="text-xs text-[var(--color-fg-muted)]">인베스팅닷컴 · 20↓ 평온 / 30↑ 공포 진입</div>
                 </a>
                 <a href="https://data.krx.co.kr/contents/MDC/MAIN/main/index.cmd" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
                   <div className="text-sm font-medium">KRX 정보데이터시스템 ↗</div>
