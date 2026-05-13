@@ -1457,7 +1457,7 @@ export default function StockPage() {
               <div className="grid gap-2 sm:grid-cols-2">
                 <a href="https://kr.investing.com/indices/kospi-volatility" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
                   <div className="text-sm font-medium">V-KOSPI 변동성지수 ↗</div>
-                  <div className="text-xs text-[var(--color-fg-muted)]">인베스팅닷컴 · 20↓ 평온 / 30↑ 공포 진입</div>
+                  <div className="text-xs text-[var(--color-fg-muted)]">인베스팅닷컴 · 20↓ 안정 / 30↑ 고변동 구간 (방향 무관 진폭 클 것으로 가격됨 — 신규 진입 보류)</div>
                 </a>
                 <a href="https://data.krx.co.kr/contents/MDC/MAIN/main/index.cmd" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
                   <div className="text-sm font-medium">KRX 정보데이터시스템 ↗</div>
@@ -1473,7 +1473,7 @@ export default function StockPage() {
                 </a>
                 <a href="https://www.cboe.com/tradable_products/vix/" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
                   <div className="text-sm font-medium">VIX (미국 변동성) ↗</div>
-                  <div className="text-xs text-[var(--color-fg-muted)]">CBOE 공식 · 20↓ 평온 / 30↑ 공포</div>
+                  <div className="text-xs text-[var(--color-fg-muted)]">CBOE 공식 · 20↓ 안정 / 30↑ 고변동 (방향 무관, 보통 하락장과 동반)</div>
                 </a>
                 <a href="https://fred.stlouisfed.org/" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
                   <div className="text-sm font-medium">FRED 경제지표 ↗</div>
