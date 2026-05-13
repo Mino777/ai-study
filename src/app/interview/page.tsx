@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { AI_OPS_CASES, AI_OPS_CATEGORY_LABELS } from "./ai-ops-cases";
+import { SETUP_BLOCKS, FEATURE_LOGS, PHASE_LABELS, FEATURE_CATEGORY_LABELS } from "./ai-ops-setup";
 import { IOS_QUESTIONS, FDE_QUESTIONS, CULTURE_QUESTIONS, PHASE_PROBLEMS, COMPANY_STRATEGIES, HIRING_INSIGHTS, PROCESS_STAGES, ASSIGNMENT_CHECKLIST, ALGO_GUIDES, BIG_O_GUIDE, BIG_O_COMPARISON, SYSTEM_DESIGN_CASES, FDE_DESIGN_CASES, SD_FRAMEWORK_STEPS, SD_CLARIFYING_QUESTIONS, SD_API_COMPARISON, ASSIGNMENT_DAILY_TIPS, FDE_ASSIGNMENT_DAILY_TIPS, CULTURE_DAILY_TIPS, TECH_DAILY_TOPICS, FDE_TECH_DAILY_TOPICS, CS_TOPICS, CS_DAILY_TOPICS, FDE_CS_DAILY_TOPICS, FDE_ALGO_TEMPLATES, CAREER_PAGES, TIMER_PRESETS, QUIZ_BANK, INTERVIEW_DAY_PLAYBOOK, SALARY_TIPS, RED_FLAGS, ONBOARDING_PLAYBOOK, MOCK_FEEDBACK_CRITERIA, COMPANY_CODING_STYLES, TOSS_7DAY_PLAN, TOSS_CORE_VALUES, TOSS_INTERVIEW_FAQ, TOSS_IOS_TOPICS, TOSS_INTERVIEW_FORMAT, TOSS_NIGHT_SHIFT_TIPS, TOSS_RESOURCES, type InterviewQuestion } from "./constants";
 
 /* ═══════════════════════════════════════════════════════════ */
@@ -392,6 +393,7 @@ export default function InterviewPage() {
   const [quizHistory, setQuizHistory] = useState<Record<string, { answer: number; correct: boolean; date: string }>>({});
   const [quizSelection, setQuizSelection] = useState<Record<string, number | null>>({});
   const [dailyMissions, setDailyMissions] = useState<Record<string, boolean>>({});
+  const [aiopsSubTab, setAiopsSubTab] = useState<"cases" | "setup" | "features">("cases");
 
   // Load from localStorage
   useEffect(() => {
@@ -2950,20 +2952,177 @@ export default function InterviewPage() {
         {activeTab === "aiops" && (
           <>
             {/* HERO */}
-            <section className="mb-10">
+            <section className="mb-8">
               <div className="rounded-2xl border border-accent/25 bg-gradient-to-br from-accent/5 to-transparent p-7">
-                <p className="text-xs font-code text-accent/70 uppercase tracking-[0.18em] mb-2">AI 운영 사례 박제</p>
+                <p className="text-xs font-code text-accent/70 uppercase tracking-[0.18em] mb-2">AI 운영 — 풀 셋업 + 작업 경험</p>
                 <h1 className="font-display text-2xl md:text-3xl font-bold text-text/90 mb-3 leading-tight">
-                  &quot;AI를 어떻게 운영해 봤어요?&quot; — STAR 형식으로 답할 수 있는 케이스 {AI_OPS_CASES.length}건
+                  &quot;AI를 어떻게 운영해 봤어요?&quot; — 셋업 {SETUP_BLOCKS.length}블록 · 피쳐 로그 {FEATURE_LOGS.length}건 · STAR 케이스 {AI_OPS_CASES.length}건
                 </h1>
                 <p className="text-sm text-text/55 leading-relaxed">
-                  실무에서 AI 워커·하네스를 돌리며 수집한 사례. 저널을 새로 쓸 때마다 <code className="px-1.5 py-0.5 rounded bg-surface/50 text-accent/80 text-xs font-code">src/app/interview/ai-ops-cases.ts</code> 상단에 case 1건씩 누적.
-                  회사명·도메인 용어는 모두 익명화(<span className="text-accent/70">moneyflow</span>).
+                  moneyflow (iOS 앱, RIBs + SwiftUI) 프로젝트에 적용된 AI 하네스 전체 — Foundation부터 Compound까지 7 phase, 그리고 Promo Series (FR-01~07) 7개 화면 자율 사이클의 실전 경험. 회사명·도메인 용어는 모두 익명화.
                 </p>
               </div>
             </section>
 
-            {/* CASES */}
+            {/* SUB-TABS */}
+            <div className="flex gap-1 mb-8 overflow-x-auto pb-1 -mx-1 px-1">
+              {([
+                { key: "setup" as const, label: `🏗 셋업 풀가이드 (${SETUP_BLOCKS.length})` },
+                { key: "features" as const, label: `📋 피쳐 작업 로그 (${FEATURE_LOGS.length})` },
+                { key: "cases" as const, label: `🎯 STAR 케이스 (${AI_OPS_CASES.length})` },
+              ]).map((st) => (
+                <button
+                  key={st.key}
+                  onClick={() => setAiopsSubTab(st.key)}
+                  className={`shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
+                    aiopsSubTab === st.key
+                      ? "bg-accent/20 text-accent border border-accent/40"
+                      : "bg-surface/20 text-text/50 hover:text-text/80 border border-transparent"
+                  }`}
+                >
+                  {st.label}
+                </button>
+              ))}
+            </div>
+
+            {/* ─── SETUP BLOCKS ─── */}
+            {aiopsSubTab === "setup" && (
+              <section className="mb-10 space-y-10">
+                {PHASE_LABELS.map((ph) => {
+                  const blocks = SETUP_BLOCKS.filter((b) => b.phase === ph.phase);
+                  if (blocks.length === 0) return null;
+                  return (
+                    <div key={ph.phase}>
+                      <h2 className="font-display text-xl md:text-2xl font-bold text-text/85 mb-1 flex items-center gap-3">
+                        <span className="text-2xl">{ph.emoji}</span>
+                        <span className="text-text/40 font-code text-base">Phase {ph.phase}</span>
+                        <span>{ph.label}</span>
+                      </h2>
+                      <p className="text-xs text-text/40 mb-5 ml-11 font-code uppercase tracking-wider">
+                        {blocks[0].phaseTitle}
+                      </p>
+                      <div className="space-y-5 ml-11">
+                        {blocks.map((b) => (
+                          <article key={b.id} className="rounded-xl border border-border/30 bg-surface/15 p-5 md:p-6">
+                            <h3 className="font-display text-base md:text-lg font-bold text-text/90 mb-3 leading-snug">{b.title}</h3>
+                            <p className="text-sm text-text/65 leading-relaxed mb-4">{b.what}</p>
+
+                            <div className="grid md:grid-cols-2 gap-3 mb-4">
+                              <div className="rounded-lg border border-border/20 bg-surface/20 p-3">
+                                <p className="text-[10px] font-code text-text/40 uppercase tracking-[0.15em] mb-2">왜</p>
+                                <p className="text-xs text-text/65 leading-relaxed">{b.why}</p>
+                              </div>
+                              <div className="rounded-lg border border-purple-500/20 bg-purple-500/5 p-3">
+                                <p className="text-[10px] font-code text-purple-400/70 uppercase tracking-[0.15em] mb-2">면접 답변 angle</p>
+                                <p className="text-xs text-text/75 leading-relaxed italic">{b.interviewAngle}</p>
+                              </div>
+                            </div>
+
+                            <div className="rounded-lg border border-border/20 bg-surface/20 p-3 mb-3">
+                              <p className="text-[10px] font-code text-text/40 uppercase tracking-[0.15em] mb-2">어떻게 셋업했나</p>
+                              <ul className="space-y-1">
+                                {b.how.map((h, j) => (
+                                  <li key={j} className="text-xs text-text/65 leading-relaxed flex gap-2">
+                                    <span className="text-accent/60 shrink-0">{j + 1}.</span>
+                                    <span>{h}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+
+                            {b.files && (
+                              <div className="mb-3 flex flex-wrap gap-1.5">
+                                {b.files.map((f) => (
+                                  <code key={f} className="px-1.5 py-0.5 rounded bg-surface/40 text-accent/70 text-[10px] font-code">
+                                    {f}
+                                  </code>
+                                ))}
+                              </div>
+                            )}
+
+                            {b.measurement && (
+                              <div className="rounded-lg border border-green-500/20 bg-green-500/5 p-3 mb-3">
+                                <p className="text-[10px] font-code text-green-400/70 uppercase tracking-[0.15em] mb-1">측정 효과</p>
+                                <p className="text-xs font-bold text-green-300/90">{b.measurement}</p>
+                              </div>
+                            )}
+
+                            {b.pitfalls && b.pitfalls.length > 0 && (
+                              <details className="rounded-lg border border-orange-500/20 bg-orange-500/5 p-3">
+                                <summary className="cursor-pointer text-[10px] font-code text-orange-400/80 uppercase tracking-[0.15em] hover:text-orange-300">
+                                  함정 / 폐기 경험 ({b.pitfalls.length})
+                                </summary>
+                                <ul className="space-y-1.5 mt-2">
+                                  {b.pitfalls.map((p, j) => (
+                                    <li key={j} className="text-xs text-text/65 leading-relaxed flex gap-2">
+                                      <span className="text-orange-400/60 shrink-0">⚠️</span>
+                                      <span>{p}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </details>
+                            )}
+                          </article>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </section>
+            )}
+
+            {/* ─── FEATURE LOGS ─── */}
+            {aiopsSubTab === "features" && (
+              <section className="mb-10">
+                <div className="rounded-xl border border-border/30 bg-surface/10 p-5 mb-6">
+                  <p className="text-sm text-text/65 leading-relaxed">
+                    <strong className="text-text/85">Promo Series (FR-01~07)</strong> 7개 화면을 2시간 자율 사이클로 구현·검증하면서 마주친 실전 경험 {FEATURE_LOGS.length}건.
+                    각 항목은 <span className="text-accent/70">scope → trap → fix → insight</span> 4단 구조 — 면접에서 그대로 talking point로 사용 가능.
+                    검증 가능 AC PASS율 <strong className="text-green-300/90">90% (45/50)</strong>, BLOCKED carry-over <strong className="text-orange-300/90">28건</strong>.
+                  </p>
+                </div>
+                <div className="space-y-4">
+                  {FEATURE_LOGS.map((f, i) => (
+                    <article key={f.id} className="rounded-xl border border-border/30 bg-surface/15 p-5 md:p-6">
+                      <header className="mb-4">
+                        <div className="flex items-center flex-wrap gap-2 mb-2">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-code font-bold uppercase bg-accent/15 text-accent/80 tracking-wider">
+                            #{String(i + 1).padStart(2, "0")}
+                          </span>
+                          <span className="px-2 py-0.5 rounded text-[10px] font-code uppercase bg-blue-500/10 text-blue-400/70 tracking-wider">
+                            {FEATURE_CATEGORY_LABELS[f.category]}
+                          </span>
+                          <code className="px-1.5 py-0.5 rounded bg-surface/40 text-text/55 text-[10px] font-code">{f.ticketId}</code>
+                        </div>
+                        <h3 className="font-display text-base md:text-lg font-bold text-text/90 leading-snug">{f.title}</h3>
+                      </header>
+                      <div className="grid md:grid-cols-2 gap-3">
+                        <div className="rounded-lg border border-border/20 bg-surface/20 p-3">
+                          <p className="text-[10px] font-code text-text/40 uppercase tracking-[0.15em] mb-1">① Scope</p>
+                          <p className="text-xs text-text/65 leading-relaxed">{f.scope}</p>
+                        </div>
+                        <div className="rounded-lg border border-red-500/20 bg-red-500/5 p-3">
+                          <p className="text-[10px] font-code text-red-400/70 uppercase tracking-[0.15em] mb-1">② Trap</p>
+                          <p className="text-xs text-text/70 leading-relaxed">{f.trap}</p>
+                        </div>
+                        <div className="rounded-lg border border-green-500/20 bg-green-500/5 p-3">
+                          <p className="text-[10px] font-code text-green-400/70 uppercase tracking-[0.15em] mb-1">③ Fix</p>
+                          <p className="text-xs text-text/70 leading-relaxed">{f.fix}</p>
+                        </div>
+                        <div className="rounded-lg border border-purple-500/20 bg-purple-500/5 p-3">
+                          <p className="text-[10px] font-code text-purple-400/70 uppercase tracking-[0.15em] mb-1">④ Insight (면접 talking point)</p>
+                          <p className="text-xs text-text/75 leading-relaxed italic">{f.insight}</p>
+                        </div>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* ─── STAR CASES (기존) ─── */}
+            {aiopsSubTab === "cases" && (
+            <>
             <section className="mb-10 space-y-6">
               {AI_OPS_CASES.map((c, i) => (
                 <article key={c.id} className="rounded-2xl border border-border/30 bg-surface/15 p-6 md:p-7">
@@ -3069,6 +3228,8 @@ export default function InterviewPage() {
                 </ol>
               </div>
             </section>
+            </>
+            )}
           </>
         )}
 
