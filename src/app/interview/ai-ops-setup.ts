@@ -101,6 +101,38 @@ export const SETUP_BLOCKS: SetupBlock[] = [
       "프롬프트 신뢰 0 가정. settings.json deny 19종으로 시크릿 파일·pbxproj·force push·supply chain·sudo를 OS 레벨 차단. 그리고 정규식 매칭이 약한 부분은 PreToolUse 훅으로 이중 가드.",
   },
   {
+    id: "orchestrator-read-guard",
+    phase: 2,
+    phaseTitle: "Permission & Guard — 절대 못 하게 만들 것",
+    title: "Orchestrator *.swift Read 직접 차단 (P0 가드)",
+    what: "메인(Orchestrator) pane에서 Swift 파일 직접 Read 시도 시 exit 2 차단 → Worker-1 위임 강제.",
+    why: "Orchestrator가 광역 코드 탐색을 직접 하면 컨텍스트 폭주 + 4-pane 위계 무력화. 메모리룰만으론 한 번씩 위반.",
+    how: [
+      "pretooluse-orchestrator-guard.sh — pane 환경변수($TMUX_PANE 또는 slug)로 orchestrator 식별",
+      "*.swift Read 호출 매칭 시 exit 2 + stderr로 '/leader 로 위임하세요' 안내",
+      "ORCHESTRATOR_ESCALATE=1 환경변수로 XS 작업(5줄 이하 핀포인트) 예외 우회",
+      "테스트 스크립트 5/5 PASS로 회귀 보장 (.test.sh 동봉)",
+    ],
+    files: [".claude/hooks/pretooluse-orchestrator-guard.sh", ".claude/hooks/pretooluse-orchestrator-guard.test.sh"],
+    interviewAngle:
+      "권한 분리(Advisor/Executor)를 컨벤션이 아닌 실행 게이트로 박은 후속 패치. CLAUDE.md에 적어둔 'Orchestrator는 광역 grep 금지' 룰이 한 번 뚫린 직후 PreToolUse 훅으로 escalate. 테스트 스크립트까지 동봉해서 가드 자체가 회귀 안 나게 박제.",
+  },
+  {
+    id: "test-missing-precommit",
+    phase: 2,
+    phaseTitle: "Permission & Guard — 절대 못 하게 만들 것",
+    title: "테스트 누락 pre-commit 게이트 (P0)",
+    what: "신규 Swift 코드 추가 시 대응 테스트 없으면 커밋 차단.",
+    why: "CLAUDE.md '테스트 코드 필수' 룰을 한 번이라도 뚫리면 다음 사이클부터 테스트 부재가 누적된다. 행동 게이트로 차단.",
+    how: [
+      "pre-commit이 staged Swift 파일에서 신규 클래스/함수 감지",
+      "대응 *Tests.swift / .testTarget 파일 변경 여부 확인",
+      "누락 시 exit 1 + 명시적 에러 메시지로 사용자에게 노출 (silent failure 방지)",
+    ],
+    interviewAngle:
+      "테스트 누락은 시간이 지날수록 회수 비용 폭증. AI 워커는 '컴파일 통과 + 동작 확인'까지만 보고 테스트 작성을 잊기 쉬워서 pre-commit 게이트로 강제. exit 1로 사용자에게 명시 노출 — silent skip 방지가 핵심.",
+  },
+  {
     id: "pretooluse-hooks",
     phase: 2,
     phaseTitle: "Permission & Guard — 절대 못 하게 만들 것",
@@ -151,6 +183,44 @@ export const SETUP_BLOCKS: SetupBlock[] = [
     ],
     interviewAngle:
       "단일 Claude 세션으론 RIBs 아키텍처 100KLOC가 한 번에 안 들어옵니다. tmux 4-pane으로 CTO/Leader/Worker-2(구현)/Worker-3(QA)로 역할 분리. Worker-1을 Advisor only로 박은 게 핵심 — 권한 분리는 컨벤션이 아니라 실행 게이트로 박제해야 합니다.",
+  },
+  {
+    id: "inbox-async-queue",
+    phase: 3,
+    phaseTitle: "Orchestration — 멀티 에이전트 구조",
+    title: "파일 기반 비동기 inbox 큐 (P1) — 워커→메인 채널 손실 방지",
+    what: "워커가 보낸 이벤트를 JSONL로 디스크에 append, 메인은 tail -F로 폴링 — tmux dispatch 누락 0건.",
+    why: "tmux notify-main만 의존하면 race / 워커 sleep 중 손실 가능. 파일 큐는 best-effort + atomic append로 손실 방지.",
+    how: [
+      "inbox-push.sh — 워커가 JSONL append. pane slug 기반 파일명 (예: proj_1_2.jsonl). flock 또는 atomic append로 병렬 안전",
+      "inbox-tail.sh — 메인이 tail -F 래퍼로 폴링. jq pretty + 파일 생성 대기",
+      "notify-main.sh 성공/실패 양쪽에 inbox 이중 채널 추가 → tmux 채널 죽어도 inbox는 살아있음",
+      ".claude/inbox/ gitignore (런타임 산출물)",
+      "exit 0 보장 — 메인 채널 손실 방지가 목적이므로 push 실패가 워커 작업을 중단시키면 안 됨",
+    ],
+    files: [".claude/scripts/inbox-push.sh", ".claude/scripts/inbox-tail.sh", ".claude/inbox/"],
+    pitfalls: [
+      "exit 0 보장이 핵심 — push 실패가 워커 fail로 전파되면 큐 자체가 실패점이 됨",
+      "tmux + inbox 이중 채널이라야 race / sleep 중 손실 모두 커버",
+    ],
+    interviewAngle:
+      "비동기 dispatch 검증을 'tmux notify-main 단일 채널' → '파일 inbox 이중 채널'로 진화. tmux race 케이스를 보강하면서 inbox push 자체가 실패해도 워커는 계속 도는 best-effort 설계가 핵심.",
+  },
+  {
+    id: "skill-trigger-tuning",
+    phase: 3,
+    phaseTitle: "Orchestration — 멀티 에이전트 구조",
+    title: "스킬 trigger miss 자동 로깅 + 튜닝 도구 (P2)",
+    what: "UserPromptSubmit 훅으로 매 프롬프트의 스킬 trigger 여부를 로깅 → trigger miss 패턴 분석.",
+    why: "스킬 라우팅 규칙은 시간이 지나면 drift. '왜 /ios-review가 안 trigger 됐지?'를 사후 추적 가능해야 룰 갱신할 수 있다.",
+    how: [
+      "skill-trigger-log.sh — UserPromptSubmit hook으로 프롬프트 + matched skills JSONL append",
+      "skill-trigger-tune.sh — 로그 분석 도구. 'review' 키워드 N회 출현했는데 /ios-review N-M회만 trigger → miss 패턴 추출",
+      "miss 패턴을 CLAUDE.md Skill routing 섹션에 룰 추가로 환원",
+    ],
+    files: [".claude/hooks/skill-trigger-log.sh", ".claude/scripts/skill-trigger-tune.sh"],
+    interviewAngle:
+      "스킬 라우팅을 한 번 박제하고 끝이 아니라 *어떤 프롬프트에서 trigger miss가 나는지*를 자동 로깅. 룰 갱신을 데이터 기반으로 — gstack /plan-tune과 동일한 결.",
   },
   {
     id: "agent-workflow-triggers",
@@ -214,6 +284,41 @@ export const SETUP_BLOCKS: SetupBlock[] = [
       "AI가 풀빌드를 매번 돌리면 30초 × 자율 사이클 N회 = 토큰 + 시간 폭사. 변경 타입을 자동 감지해서 3단계로 라우팅: Cmd+S Hot Reload (1초) / 풀빌드 / 구조 변경. CAS로 24~77% 추가 단축.",
   },
 
+  {
+    id: "mcp-preload-whitelist",
+    phase: 4,
+    phaseTitle: "Build System — 30초 빌드를 1초로",
+    title: "MCP 도구 사전 로드 화이트리스트 (P2)",
+    what: "세션 시작 시 자주 쓰는 MCP 도구를 ToolSearch select로 사전 로드 → 첫 호출 지연 제거.",
+    why: "MCP 도구는 deferred — 첫 호출 시 schema fetch에 수 초 지연. 빌드/QA 사이클 초반 hot path 도구는 미리 로드.",
+    how: [
+      "preload-mcp-tools.sh — ToolSearch select 안내 메시지 출력",
+      "session-start.sh 마지막 단계에 통합 (drift 체크 후)",
+      "화이트리스트 9개: XcodeBuildMCP 7개 (build_sim, test_sim, install_app_sim 등) + TaskCreate + Monitor + WebSearch",
+      "ADR 문서로 화이트리스트 변경 이력 추적 (docs/architecture/2026-05-13-mcp-preload-whitelist.md)",
+    ],
+    files: [".claude/scripts/preload-mcp-tools.sh", "docs/architecture/2026-05-13-mcp-preload-whitelist.md"],
+    interviewAngle:
+      "MCP는 deferred load라 첫 호출이 느림. SessionStart에서 핫패스 9개를 미리 안내해두면 빌드/QA 사이클 초반 지연 제거. ADR로 화이트리스트 변경 이력을 추적해서 갈수록 어떤 도구가 핫패스인지 보임.",
+  },
+  {
+    id: "spm-cache-warm",
+    phase: 4,
+    phaseTitle: "Build System — 30초 빌드를 1초로",
+    title: "SPM 캐시 워밍 스크립트 (P2) — cold build 측정",
+    what: "worktree 신규 진입 시 SPM resolve + 1차 빌드 자동화 → cold build 시간 측정 + 단축.",
+    why: "worktree 새로 만들면 DerivedData/SPM 캐시 cold. 매번 사람이 'resolve 돌리고 1번 빌드' 하면 ROI 깎임.",
+    how: [
+      "spm-cache-warm.sh — DerivedData 공유 검증 + resolvePackageDependencies + 1차 빌드",
+      "옵션: --resolve-only / --no-build / --scheme / --config",
+      "측정 매트릭스 박제 (docs/solutions/spm-warm-results-2026-05-13.md)",
+    ],
+    files: [".claude/scripts/spm-cache-warm.sh", "docs/solutions/spm-warm-results-2026-05-13.md"],
+    measurement: "resolve 55초 (95% 단축) / incremental build 183초 (85% 단축). 목표 30% 대폭 초과 PASS.",
+    interviewAngle:
+      "worktree 분기 비용 = cold build 시간. 워밍 스크립트 + 측정 매트릭스를 박제해두면 'worktree 새로 팔까 말까'를 비용 기반으로 판단 가능. 30% 단축 목표 대비 85~95% 실측 — 측정이 직관을 압도한 사례.",
+  },
+
   // ───── Phase 5: QA Automation ─────
   {
     id: "qa-3tier-split",
@@ -258,6 +363,29 @@ export const SETUP_BLOCKS: SetupBlock[] = [
     ],
     interviewAngle:
       "기획서 PPT를 직접 SPEC.md로 변환하고 frontmatter에 RIBs entry point/Figma/레이어를 박으면, AI agent가 brief에서 FR-ID만 받아도 즉시 작업 시작합니다. AC 단위 채점이 평가의 명확성을 만들어요.",
+  },
+
+  {
+    id: "spec-extractor-2pass",
+    phase: 5,
+    phaseTitle: "QA Automation — 28분 사이클 → 5-10분",
+    title: "spec-extractor 자동 캡처 + auto-crop + 2-pass vision (Description 정확도 0%→85%)",
+    what: "기획서 PPT를 DRM PDF 환경에서 macOS screencapture로 자동 캡처 → auto-crop → 2-pass Claude vision 재read.",
+    why: "DRM PDF는 다운로드 불가. 원격 데스크톱 캡처 + 자동 크롭 없이는 SPEC 추출 정확도가 곤두박질.",
+    how: [
+      "capture-remote-slide.sh / capture-remote-slides.sh — macOS screencapture + osascript 키스트로크로 PDF 페이지 자동 advance (pgdn/right/down/enter)",
+      "auto-crop-pdf-page.sh — row chrome(median<100 OR stddev<15)로 작업표시줄/타이틀바 제거, col chrome(순백 픽셀 <10%)로 사이드바 제거. 1920x1080 → 1585x1037 (~20% 노이즈 컷)",
+      "crop-spec-region.sh --bbox x1,y1,x2,y2 + --sharpen (contrast +20% + unsharp mask)",
+      "2-pass crop 디폴트 ON — Pass 1: bbox로 영역 식별 → Pass 2: crop + sharpen 재read. Description OCR 정확도 0% → 85%+",
+    ],
+    files: [".claude/scripts/capture-remote-slide.sh", ".claude/scripts/auto-crop-pdf-page.sh", ".claude/scripts/crop-spec-region.sh", ".claude/skills/spec-extractor"],
+    measurement: "FR-02 p22 Description 컬럼 추출 정확도 0% → 85%+. 동일 입력 PNG 기준 측정.",
+    pitfalls: [
+      "DRM 환경은 원격 데스크톱 캡처 외 옵션 없음 — Windows 작업표시줄/Adobe 사이드바 제거가 정확도의 50%",
+      "1-pass vision은 폰트 작은 컬럼(예: Description)에서 0%. 2-pass crop + sharpen 필수",
+    ],
+    interviewAngle:
+      "DRM PDF 환경에서 SPEC 추출은 매번 사람이 캡처 → 크롭 → vision 호출하면 ROI 0. 캡처/크롭/2-pass vision 파이프라인을 자동화해서 Description 같은 작은 폰트 컬럼 정확도를 0% → 85%로. *입력 품질이 50%, vision 호출이 50%* — 두 단계 모두 자동화.",
   },
 
   // ───── Phase 6: Compound Knowledge ─────
