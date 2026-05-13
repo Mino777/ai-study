@@ -1,0 +1,192 @@
+---
+title: "iOS Harness Journal 015 — 컴파운드: QA smoke pack 28→7분, Mock 토글 silent fallback, 하네스 notify-main 신뢰도 v2, Worker 역할 재정의"
+category: ios-ai
+series: ios-ai-journal
+date: "2026-05-13"
+tags: [ios-harness-journal, qa-automation, ax-fingerprint, deeplink, sequence-dsl, mock-toggle, silent-failure, harness-reliability, multi-agent, dispatch, compound]
+confidence: 4
+last_verified: "2026-05-13"
+applicable_to: ["any"]
+connections:
+  - ios-ai/ios-ai-journal-014-memory-to-behavior-guard
+  - ios-ai/ios-ai-journal-007-claude-hooks-silent-failure
+  - ios-ai/ios-ai-journal-013-spec-driven-pipeline
+  - ios-ai/ios-ai-journal-012-ui-test-smoke-forensic-split
+  - harness-engineering/ai-agent-start-here
+status: complete
+type: entry
+description: >-
+  iOS 워커(moneyflow) 2일치 스프린트 컴파운드 회고. UI QA 풀 사이클 28분 → smoke 5-10분으로
+  자른 Sequence DSL + Deeplink 강제 + AX fingerprint 패키지, DEBUG 빌드에서 mock 토글이
+  nil일 때 실서버로 fallback 안 되던 silent 버그, notify-main.sh fgrep + 2초 대기 검증 강화 v2,
+  Worker 역할을 leader=Advisor / worker-2=실행으로 재정의한 4건을 한 저널에 박제.
+quiz:
+  - question: "UI QA 풀 사이클이 길어질수록 AI 워커의 'PASS' 보고를 더 의심해야 하는 이유는?"
+    choices:
+      - "긴 사이클은 timeout으로 끝나서 결과가 무효라서"
+      - "신호 대 노이즈 비율이 낮아져, 워커가 빌드 통과만 봐도 PASS로 적는 silent skip 비율이 올라가기 때문"
+      - "Xcode가 캐시를 자주 무효화해서 결과를 못 믿어서"
+      - "사이클이 길면 simulator가 자동 종료되어서"
+    answer: 1
+    explanation: >-
+      AI 워커는 '관측 가능한 신호'가 모호할수록 텍스트 합리화로 결과를 메꾸는 경향이 있다.
+      사이클이 길수록 인내심 임계점에 도달해 'PASS'라고 적어버리는 silent skip이 늘어난다.
+      smoke/forensic 분리 + AX tree hash 같은 구조 신호로 게이트를 옮기는 것이 해법.
+  - question: "DEBUG 빌드에서 mock 토글이 nil일 때 실서버 fallback이 깨졌다. 부분 fix 1건만 적용하면 어떤 일이 벌어지나?"
+    choices:
+      - "다른 파일은 패턴이 달라 안전하다"
+      - "같은 가정(nil = mock on)이 박힌 다른 Repository에서 회귀가 재발한다"
+      - "Swift 컴파일러가 잡아준다"
+      - "TestFlight 빌드에서만 재현된다"
+    answer: 1
+    explanation: >-
+      '부분 fix는 재발 신호' — 동일한 잘못된 default 가정이 박힌 pattern family를 grep으로
+      일괄 수색하지 않으면 다른 파일에서 똑같이 터진다. 이 케이스에서도 5개 Repository에서
+      같은 패턴이 발견됐다.
+  - question: "Claude Code PreToolUse 훅 notify-main.sh의 검증을 fgrep + 2초 대기로 강화한 이유는?"
+    choices:
+      - "정규식 grep이 느려서 성능 최적화"
+      - "race condition으로 dispatch가 끝나기 전에 검증이 돌아 false negative가 났기 때문"
+      - "fgrep은 대소문자를 무시해서 더 정확해서"
+      - "2초 대기가 Claude API rate limit 회피 패턴"
+    answer: 1
+    explanation: >-
+      fgrep은 정규식 메타문자 false positive를 막고, 2초 대기는 비동기 dispatch가 채널에
+      도달하기 전에 검증이 도는 race condition을 해소한다. 검증 신호의 진실성은 타이밍과
+      매칭 모드 양쪽 모두에 달려 있다.
+---
+
+# iOS Harness Journal 015 — 2일치 컴파운드 (QA · Mock · Harness · Worker)
+
+> **TL;DR** — 2026-05-12~13 이틀 동안 moneyflow(iOS 가계부 앱) 워커에서 동시에 도는 4개의 작은 불(QA 28분 사이클, mock silent fallback, notify-main race, worker 역할 모호함)을 같은 결로 끌어내려 한 저널에 박제. 컴파운드 회고이므로 한 토픽 깊이보단 *연결 구조*에 집중.
+
+## 0. 왜 한 저널로 묶었나
+
+각각 작은 패치였지만, 회고하고 보니 한 가지 메타 원칙으로 묶였다:
+
+> **AI 워커의 "보고문"을 못 믿겠다 — 검증 게이트를 관측 가능한 구조 신호로 옮긴다.**
+
+- QA 사이클은 "워커가 PASS라고 적었나" → "AX tree hash가 일치하나"
+- Mock 토글은 "워커가 mock 켰다고 적었나" → "Repository 분기가 실제로 어디로 갔나"
+- notify-main 훅은 "dispatch 성공했다 stdout" → "채널에 메시지가 fgrep으로 잡히나 + 2초 대기"
+- Worker 역할은 "leader가 알아서 하겠지" → "Advisor / 실행자 분리 박제"
+
+네 개가 같은 결이라는 걸 깨달은 게 이 저널의 핵심.
+
+---
+
+## 1. QA smoke pack — 28분 → 5–10분
+
+### 문제
+신규 화면이 누적되면서 UI 회귀 QA 1사이클이 28분까지 늘었다. 사이클이 길어지자 워커가 **빌드만 통과해도 'PASS'로 마무리하는 silent skip 비율이 올라갔다.** Journal 012(smoke/forensic split)에서 이미 분리를 시작했지만, smoke 자체가 여전히 진입 경로 탐색에 시간을 다 쓰고 있었다.
+
+### 패키지 (5-pack)
+1. **Sequence DSL** — 화면 진입 경로를 bash로 선언형 박제. `tap "재테크" -> wait_for ".*홈" -> tap "예약" -> ...` 대신 sequence 파일 1개.
+2. **Deeplink 강제 진입** — 진입 경로 분기를 우회. 시작 화면 → 타깃 화면 1 hop.
+3. **AX tree fingerprint** — `ui-screen-fingerprint.sh`로 화면의 accessibility tree를 정규화 후 SHA1 해시. 텍스트 매칭이 아닌 *구조 매칭*.
+4. **smoke vs forensic 명확 분리** — smoke=5–10분(dev loop), forensic=28분(nightly only).
+5. **fingerprint 미스매치 시 exit 2** — Claude Code 훅 규약으로 워커 컨텍스트에 stderr 주입. silent skip 차단.
+
+### 결과
+- smoke 사이클 **5–10분** 적중 (목표 5분, 실측 7분대)
+- forensic은 nightly로만 — dev loop 부담 0
+- "워커 PASS 보고문 + 빌드 통과"만 보고 머지하던 패턴이 fingerprint 게이트로 자동 차단됨
+
+### 전이성
+**smoke/forensic 분리 + 구조 해시 검증**은 Android e2e, 웹 Playwright, 백엔드 contract test에 그대로 적용된다. 핵심은 신호를 텍스트(워커가 적은 PASS)에서 구조(AX tree / DOM tree / response schema)로 옮기는 것.
+
+---
+
+## 2. Mock 토글 silent fallback — 부분 fix 함정
+
+### 증상
+DEBUG 빌드에서 mock 토글을 끄면 실서버로 가야 하는데, mock fixture 4종을 추가하면서 분기 로직이 **`toggle == .on`** 대신 **`toggle != .off`**로 박혀 있었다. nil이 들어오면 `nil != .off`라서 mock 분기로 빠짐. 결과: dev 환경 통합 테스트가 *언제나* mock으로만 돌았고, 그 사실을 3주 동안 아무도 몰랐다.
+
+### 첫 fix가 부분 fix였던 이유
+첫 커밋에서 BridgeRepository 1개만 고쳤는데, 메모리룰 **"부분 fix는 재발 신호"**에 따라 반사적으로 grep family를 돌렸다.
+
+```bash
+rg -n 'toggle\s*!=\s*\.off' Sources/
+```
+
+→ 4개 Repository에서 같은 패턴 발견. 같은 커밋에서 일괄 정리.
+
+### 근본 원인
+토글 enum의 default 시멘틱이 **"opt-in fallback"이 아니라 "opt-out fallback"**으로 박혀 있었다. 즉 "기본값 = mock 켜진 상태"였고, 실서버로 가려면 명시적으로 `.off`를 박아야 했다. 이건 enum 정의 시점의 의미론 버그.
+
+### 후속 조치
+- enum 정의 위치에 주석 박제: `// nil = OFF (실서버). .on = mock 강제.`
+- `.claude/rules/` 에 "feature flag nil semantics" 룰 1줄 추가 후보 (다음 compound에서)
+
+### 전이성
+feature flag · A/B 토글 · env switch 전반에서 *default가 무엇인지*를 enum 정의 위치에서 강제하지 않으면 똑같은 함정이 반복된다. 특히 mock/real 토글은 "mock이 default여야 안전한 도메인"과 "real이 default여야 안전한 도메인"이 다르다 — 정의 시점에 의도를 박제해야 한다.
+
+---
+
+## 3. notify-main.sh 검증 강화 v2 — race condition
+
+### 증상
+허브↔워커 dispatch 훅 `notify-main.sh`가 dispatch 직후 stdout만 보고 "성공"으로 판정했는데, 채널에 실제 메시지가 도달하기 전에 검증이 끝나는 race condition으로 *워커가 dispatch 받기 전에 hub가 다음 단계로 진행*하는 경우가 있었다.
+
+### v2 패치
+1. **`grep` → `fgrep`** — 메시지 본문에 정규식 메타문자가 들어가도 false positive 0
+2. **2초 대기** — 비동기 dispatch가 채널에 도달할 시간 확보
+3. **fail block의 unbound CAPTURE 변수 제거** (ad11b7577) — bash strict mode에서 fail 분기가 다른 에러로 가려지던 버그까지 같이 정리
+
+### 결과
+- dispatch 검증 false PASS 사라짐
+- fail시 진짜 fail 메시지가 표면화 (이전엔 unbound 에러로 가려졌음)
+
+### 메모리룰 연결
+이 패치는 **"자동 수정 도구는 자기 검증 없이 신뢰 X"** 룰과 직접 연결된다. notify-main은 본질적으로 "dispatch가 됐다고 적힌 stdout"을 검증하는 도구인데, idempotent하지 않으면 silent 누적 손상이 생긴다.
+
+---
+
+## 4. Worker 역할 재정의 — leader=Advisor, worker-2=실행
+
+### 문제
+다중 워커 환경(leader + worker-2)에서 leader가 "오케스트레이션 + 실행"을 모두 들고 있다 보니, 두 워커가 동일 파일을 동시 편집하거나, leader가 worker-2에 dispatch 후에도 같은 작업을 직접 해버리는 경합이 생겼다.
+
+### 재정의
+- **leader = Advisor 전용** — 계획·검증·dispatch만. 실행 코드 편집 금지.
+- **worker-2 = 실행 전용** — 코드 편집·빌드·테스트. 계획 권한 없음.
+- 역할은 `.claude/rules/worker-roles.md`에 박제 (메모리 아닌 행동 가드).
+
+### 결과
+- 동일 파일 동시 편집 사고 0건 (이전엔 주 2~3건)
+- leader 응답 길이가 짧아지고(advisory only) 워커는 한 가지에 집중
+
+### 전이성
+멀티 에이전트 시스템에서 *권한 분리*는 단순 컨벤션이 아니라 실행 게이트로 박제돼야 한다. "메모리에 적었으니 알아서 하겠지"는 한 번이라도 위반되면 행동 가드로 escalate(메모리룰 #3).
+
+---
+
+## 5. 4건을 잇는 메타 패턴
+
+| 케이스 | 진실성을 옮긴 곳 (FROM → TO) |
+|--------|------------------------------|
+| QA smoke pack | "워커 PASS 보고문" → "AX tree SHA1" |
+| Mock silent fallback | "워커 mock 켰다 적었음" → "Repository 분기 실측 + grep family" |
+| notify-main v2 | "dispatch stdout 성공" → "fgrep 매칭 + 2초 대기" |
+| Worker 역할 | "leader 알아서 함" → "Advisor / Executor 행동 게이트" |
+
+모두 **AI가 *적은* 신호 → *관측 가능한 구조* 신호**로 게이트를 옮긴 패턴.
+
+이게 일관되게 보이기 시작했으니 다음 스프린트에서 룰 1줄로 박제할 만하다:
+
+> 🪓 **Iron Rule**: AI 워커의 PASS 보고문은 그 자체로 신호가 아니다. 모든 머지 게이트는 워커가 *적지 않은* 구조 신호로 검증한다.
+
+---
+
+## 6. 후속 큐
+
+- [ ] enum default semantics 룰을 `.claude/rules/feature-flag-defaults.md`에 박제
+- [ ] AX fingerprint 매칭 룰을 Android 워커(aidy)에 이식 가능한지 검토
+- [ ] notify-main v3 — fgrep 매칭 + dispatch echo round-trip (2초 대기 제거)
+- [ ] Worker 역할 분리 패턴을 다른 멀티 워커 setup으로 일반화 (tarosaju)
+
+---
+
+## 7. /interview 박제
+
+이 저널의 1번(QA smoke pack), 2번(Mock silent) 케이스는 `/interview` 페이지 **AI 운영** 탭에 STAR 형식으로 추가됐다. 면접 첫 문장 + 측정 수치 + 근본 원인 + 전이성까지 박제. 저널 ↔ 케이스 양방향 링크 유지.

@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback, useMemo } from "react";
+import { AI_OPS_CASES, AI_OPS_CATEGORY_LABELS } from "./ai-ops-cases";
 import { IOS_QUESTIONS, FDE_QUESTIONS, CULTURE_QUESTIONS, PHASE_PROBLEMS, COMPANY_STRATEGIES, HIRING_INSIGHTS, PROCESS_STAGES, ASSIGNMENT_CHECKLIST, ALGO_GUIDES, BIG_O_GUIDE, BIG_O_COMPARISON, SYSTEM_DESIGN_CASES, FDE_DESIGN_CASES, SD_FRAMEWORK_STEPS, SD_CLARIFYING_QUESTIONS, SD_API_COMPARISON, ASSIGNMENT_DAILY_TIPS, FDE_ASSIGNMENT_DAILY_TIPS, CULTURE_DAILY_TIPS, TECH_DAILY_TOPICS, FDE_TECH_DAILY_TOPICS, CS_TOPICS, CS_DAILY_TOPICS, FDE_CS_DAILY_TOPICS, FDE_ALGO_TEMPLATES, CAREER_PAGES, TIMER_PRESETS, QUIZ_BANK, INTERVIEW_DAY_PLAYBOOK, SALARY_TIPS, RED_FLAGS, ONBOARDING_PLAYBOOK, MOCK_FEEDBACK_CRITERIA, COMPANY_CODING_STYLES, TOSS_7DAY_PLAN, TOSS_CORE_VALUES, TOSS_INTERVIEW_FAQ, TOSS_IOS_TOPICS, TOSS_INTERVIEW_FORMAT, TOSS_NIGHT_SHIFT_TIPS, TOSS_RESOURCES, type InterviewQuestion } from "./constants";
 
 /* ═══════════════════════════════════════════════════════════ */
@@ -373,7 +374,7 @@ function formatDate(day: number): string {
 
 export default function InterviewPage() {
   const [track, setTrack] = useState<TrackKey>("ios");
-  const [activeTab, setActiveTab] = useState<"overview" | "daily" | "coding" | "assignment" | "cs" | "tech" | "quiz" | "culture" | "toss7">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "daily" | "coding" | "assignment" | "cs" | "tech" | "quiz" | "culture" | "toss7" | "aiops">("overview");
   const [toss7Day, setToss7Day] = useState<number>(1);
   const [toss7Tasks, setToss7Tasks] = useState<Record<string, boolean>>({});
   const [quizIndex, setQuizIndex] = useState(0);
@@ -748,6 +749,7 @@ export default function InterviewPage() {
             { key: "quiz" as const, label: "퀴즈" },
             { key: "culture" as const, label: "인성면접" },
             { key: "toss7" as const, label: "🔥 토스 7일" },
+            { key: "aiops" as const, label: "AI 운영" },
           ]).map((tab) => (
             <button
               key={tab.key}
@@ -2943,6 +2945,132 @@ export default function InterviewPage() {
             </>
           );
         })()}
+
+        {/* ═══════════ TAB: AI 운영 (익명화 STAR 케이스 박제) ═══════════ */}
+        {activeTab === "aiops" && (
+          <>
+            {/* HERO */}
+            <section className="mb-10">
+              <div className="rounded-2xl border border-accent/25 bg-gradient-to-br from-accent/5 to-transparent p-7">
+                <p className="text-xs font-code text-accent/70 uppercase tracking-[0.18em] mb-2">AI 운영 사례 박제</p>
+                <h1 className="font-display text-2xl md:text-3xl font-bold text-text/90 mb-3 leading-tight">
+                  &quot;AI를 어떻게 운영해 봤어요?&quot; — STAR 형식으로 답할 수 있는 케이스 {AI_OPS_CASES.length}건
+                </h1>
+                <p className="text-sm text-text/55 leading-relaxed">
+                  실무에서 AI 워커·하네스를 돌리며 수집한 사례. 저널을 새로 쓸 때마다 <code className="px-1.5 py-0.5 rounded bg-surface/50 text-accent/80 text-xs font-code">src/app/interview/ai-ops-cases.ts</code> 상단에 case 1건씩 누적.
+                  회사명·도메인 용어는 모두 익명화(<span className="text-accent/70">moneyflow</span>).
+                </p>
+              </div>
+            </section>
+
+            {/* CASES */}
+            <section className="mb-10 space-y-6">
+              {AI_OPS_CASES.map((c, i) => (
+                <article key={c.id} className="rounded-2xl border border-border/30 bg-surface/15 p-6 md:p-7">
+                  {/* HEADER */}
+                  <header className="mb-5">
+                    <div className="flex items-center flex-wrap gap-2 mb-3">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-code font-bold uppercase bg-accent/15 text-accent/80 tracking-wider">
+                        Case {String(AI_OPS_CASES.length - i).padStart(2, "0")}
+                      </span>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-code uppercase bg-surface/50 text-text/55 tracking-wider">
+                        {AI_OPS_CATEGORY_LABELS[c.category]}
+                      </span>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-code uppercase bg-blue-500/10 text-blue-400/70 tracking-wider">
+                        {c.project}
+                      </span>
+                      <span className="text-[11px] font-code text-text/35 ml-auto">{c.date}</span>
+                    </div>
+                    <h2 className="font-display text-lg md:text-xl font-bold text-text/90 mb-3 leading-snug">{c.title}</h2>
+                    <div className="rounded-xl border border-accent/25 bg-accent/5 p-4">
+                      <p className="text-[10px] font-code text-accent/70 uppercase tracking-[0.15em] mb-2">면접 첫 문장 (20초)</p>
+                      <p className="text-sm text-text/80 leading-relaxed italic">&ldquo;{c.oneliner}&rdquo;</p>
+                    </div>
+                  </header>
+
+                  {/* STAR GRID */}
+                  <div className="grid md:grid-cols-2 gap-4 mb-5">
+                    <div className="rounded-xl border border-border/25 bg-surface/20 p-4">
+                      <p className="text-[10px] font-code text-text/40 uppercase tracking-[0.15em] mb-2">S — 상황</p>
+                      <p className="text-sm text-text/70 leading-relaxed">{c.situation}</p>
+                    </div>
+                    <div className="rounded-xl border border-border/25 bg-surface/20 p-4">
+                      <p className="text-[10px] font-code text-text/40 uppercase tracking-[0.15em] mb-2">T/A — 접근</p>
+                      <ul className="space-y-1.5">
+                        {c.action.map((a, j) => (
+                          <li key={j} className="text-sm text-text/70 leading-relaxed flex gap-2">
+                            <span className="text-accent/60 shrink-0">·</span>
+                            <span>{a}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div className="rounded-xl border border-green-500/20 bg-green-500/5 p-4">
+                      <p className="text-[10px] font-code text-green-400/70 uppercase tracking-[0.15em] mb-2">R — 결과</p>
+                      <ul className="space-y-1.5 mb-3">
+                        {c.result.map((r, j) => (
+                          <li key={j} className="text-sm text-text/75 leading-relaxed flex gap-2">
+                            <span className="text-green-400/60 shrink-0">✓</span>
+                            <span>{r}</span>
+                          </li>
+                        ))}
+                      </ul>
+                      <div className="pt-3 border-t border-green-500/15">
+                        <p className="text-[10px] font-code text-green-400/60 uppercase tracking-[0.15em] mb-1">측정</p>
+                        <p className="text-sm font-bold text-green-300/90">{c.measurement}</p>
+                      </div>
+                    </div>
+                    <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 p-4">
+                      <p className="text-[10px] font-code text-purple-400/70 uppercase tracking-[0.15em] mb-2">전이성 (다른 도메인 적용)</p>
+                      <p className="text-sm text-text/75 leading-relaxed">{c.transferable}</p>
+                    </div>
+                  </div>
+
+                  {/* FOLLOW-UP DEFENSE */}
+                  {c.rootCause && (
+                    <details className="rounded-xl border border-orange-500/20 bg-orange-500/5 p-4 mb-4">
+                      <summary className="cursor-pointer text-[10px] font-code text-orange-400/80 uppercase tracking-[0.15em] hover:text-orange-300">
+                        면접관 후속 질문 방어 — &quot;왜 발생했죠?&quot;
+                      </summary>
+                      <p className="text-sm text-text/70 leading-relaxed mt-3">{c.rootCause}</p>
+                    </details>
+                  )}
+
+                  {/* META */}
+                  <footer className="flex items-center flex-wrap gap-2 pt-4 border-t border-border/15">
+                    {c.stack.map((s) => (
+                      <span key={s} className="px-2 py-0.5 rounded text-[10px] font-code bg-surface/40 text-text/55">
+                        {s}
+                      </span>
+                    ))}
+                    {c.journalSlug && (
+                      <a
+                        href={`/wiki/${c.journalSlug}`}
+                        className="ml-auto text-[11px] font-code text-accent/70 hover:text-accent transition-colors"
+                      >
+                        관련 저널 →
+                      </a>
+                    )}
+                  </footer>
+                </article>
+              ))}
+            </section>
+
+            {/* HOW TO ADD */}
+            <section className="mb-10">
+              <div className="rounded-xl border border-border/30 bg-surface/15 p-5">
+                <p className="text-[10px] font-code text-text/40 uppercase tracking-[0.15em] mb-3">📝 케이스 추가 방법</p>
+                <ol className="space-y-1.5 text-sm text-text/60 leading-relaxed list-decimal list-inside">
+                  <li>저널 작성 직후 <code className="px-1.5 py-0.5 rounded bg-surface/40 text-accent/70 text-xs font-code">src/app/interview/ai-ops-cases.ts</code> 열기</li>
+                  <li><code className="px-1.5 py-0.5 rounded bg-surface/40 text-accent/70 text-xs font-code">AI_OPS_CASES</code> 배열 맨 앞에 case 객체 1건 추가</li>
+                  <li><strong className="text-text/80">measurement</strong> 필드에 정량 수치 필수 — 없으면 작성 보류</li>
+                  <li>회사명/도메인 용어는 무조건 익명화 (memory rule: company project name guard)</li>
+                  <li><code className="px-1.5 py-0.5 rounded bg-surface/40 text-accent/70 text-xs font-code">journalSlug</code>로 저널과 양방향 연결</li>
+                </ol>
+              </div>
+            </section>
+          </>
+        )}
 
       </main>
     </div>
