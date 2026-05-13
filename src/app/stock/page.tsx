@@ -361,17 +361,17 @@ export default function StockPage() {
                       <div className="text-sm font-medium">FnGuide 컴퍼니가이드 ↗</div>
                       <div className="text-xs text-[var(--color-fg-muted)]">12M Fwd EPS 컨센서스 추세, 무료</div>
                     </a>
-                    <a href="https://comp.wisereport.co.kr/" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
-                      <div className="text-sm font-medium">와이즈리포트 ↗</div>
-                      <div className="text-xs text-[var(--color-fg-muted)]">컨센서스 변경 이력 차트</div>
+                    <a href="https://kind.krx.co.kr/" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
+                      <div className="text-sm font-medium">KIND (KRX 상장공시) ↗</div>
+                      <div className="text-xs text-[var(--color-fg-muted)]">상장사 공시·IR·실적 발표 일정 (DART 보완)</div>
                     </a>
                     <a href="https://dart.fss.or.kr/" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
                       <div className="text-sm font-medium">DART 전자공시 ↗</div>
                       <div className="text-xs text-[var(--color-fg-muted)]">국내 모든 공시 원본 (사업·반기·분기보고서)</div>
                     </a>
-                    <a href="https://www.sec.gov/edgar/search-and-access" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
+                    <a href="https://www.sec.gov/search-filings" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
                       <div className="text-sm font-medium">SEC EDGAR ↗</div>
-                      <div className="text-xs text-[var(--color-fg-muted)]">미국 공시 (10-K, 10-Q, 8-K)</div>
+                      <div className="text-xs text-[var(--color-fg-muted)]">미국 공시 (10-K, 10-Q, 8-K) 통합 검색</div>
                     </a>
                     <a href="https://markets.hankyung.com/" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
                       <div className="text-sm font-medium">한경 마켓 ↗</div>
@@ -421,9 +421,9 @@ export default function StockPage() {
                       <div className="text-sm font-medium">Stock Analysis ↗</div>
                       <div className="text-xs text-[var(--color-fg-muted)]">미국 종목 재무 10년치 무료</div>
                     </a>
-                    <a href="https://www.koreaexim.go.kr/ir/HPHKIR026M01" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
-                      <div className="text-sm font-medium">한국수출입은행 환율 ↗</div>
-                      <div className="text-xs text-[var(--color-fg-muted)]">USD/KRW 공식 환율 (수출주 영향 모니터링)</div>
+                    <a href="https://kr.investing.com/currencies/usd-krw" target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 hover:border-[var(--color-accent)] transition-colors">
+                      <div className="text-sm font-medium">USD/KRW 환율 차트 ↗</div>
+                      <div className="text-xs text-[var(--color-fg-muted)]">인베스팅닷컴 실시간 (수출주 영향 모니터링)</div>
                     </a>
                   </div>
                 </div>
