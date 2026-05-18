@@ -1,6 +1,6 @@
 {
-  "totalQueries": 35,
-  "lastUpdated": "2026-05-03T14:17:39.261Z",
+  "totalQueries": 36,
+  "lastUpdated": "2026-05-13T13:59:24.292Z",
   "hits": {
     "solutions/mdx/2026-04-16-mermaid-br-in-unquoted-node-labels": 2,
     "solutions/mdx/2026-04-16-mermaid-cylinder-nested-parens": 2,
@@ -13,7 +13,7 @@
     "tokenomics/claude-code-token-levers-catalog": 2,
     "frontend-ai/frontend-ai-patterns": 1,
     "tokenomics/claude-code-token-levers-applied-log": 1,
-    "retros/2026-04-16": 1,
+    "retros/2026-04-16": 2,
     "harness-engineering/aidy-journal-000-architect-worker-baseline": 3,
     "harness-engineering/llm-first-wiki-principles": 1,
     "harness-engineering/ai-agent-start-here": 3,
@@ -25,11 +25,11 @@
     "agents/hermes-agent-analysis": 3,
     "evaluation/agent-self-evaluation-bias-countermeasures": 2,
     "agents/multi-agent-pipeline": 1,
-    "harness-engineering/architect-flow-map-via-aidy-architect": 2,
+    "harness-engineering/architect-flow-map-via-aidy-architect": 3,
     "retros/2026-04-17-session-6": 1,
     "prompt-engineering/chain-of-thought": 2,
     "harness-engineering/parallel-agent-batch-modification-pattern": 1,
-    "harness-engineering/tmux-flush-automation-pattern": 1,
+    "harness-engineering/tmux-flush-automation-pattern": 2,
     "ios-ai/ios-legacy-to-ai-ready": 2,
     "harness-engineering/dev-setup-tips-log": 1,
     "retros/2026-04-13": 1,
@@ -51,6 +51,7 @@
     "harness-engineering/harness-journal-025-jit-retrieval-poc-phase1": 1,
     "tokenomics/prompt-caching-cost-reduction": 1,
     "solutions/workflow/2026-04-13-cross-session-review-protocol": 1,
-    "agents/agent-architectures": 1
+    "agents/agent-architectures": 1,
+    "retros/2026-04-17": 1
   }
 }
