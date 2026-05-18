@@ -91,30 +91,30 @@ interface ReviewObject {
 
 ```mermaid
 graph TD
-    subgraph "User"
-        A[User: "코드베이스 리팩토링 요청"] --> B
+    subgraph user1 ["User"]
+        A["User: 코드베이스 리팩토링 요청"] --> B
     end
 
-    subgraph "Agent System"
-        B["Agent: 계획 수립"] --> C{Tool Call 필요: 'readFile'}
-        C --> D["Trace: 'readFile' 기록"]
-        D --> E{Tool Call 필요: 'writeFile'}
-        E --> F["Approval Queue: 'writeFile' 검토 요청"]
+    subgraph agentSys1 ["Agent System"]
+        B["Agent: 계획 수립"] --> C{"Tool Call 필요: readFile"}
+        C --> D["Trace: readFile 기록"]
+        D --> E{"Tool Call 필요: writeFile"}
+        E --> F["Approval Queue: writeFile 검토 요청"]
     end
 
-    subgraph SupervisionSurfaceHu["Supervision Surface Human"]
-        F --> G{Human: 변경 사항 검토}
-        G -- 승인 --> H["Agent: 'writeFile' 실행"]
+    subgraph supervisionHuman ["Supervision Surface Human"]
+        F --> G{"Human: 변경 사항 검토"}
+        G -- 승인 --> H["Agent: writeFile 실행"]
         G -- 거절 --> I["Agent: 계획 수정 및 재시도"]
     end
 
-    subgraph "Agent System"
-        H --> J["Trace: 'writeFile' 성공 기록"]
+    subgraph agentSys2 ["Agent System"]
+        H --> J["Trace: writeFile 성공 기록"]
         J --> K["Agent: 테스트 실행 및 검증"]
-        K --> L["Run Queue: 'Review-ready' 상태로 변경"]
+        K --> L["Run Queue: Review-ready 상태로 변경"]
     end
 
-    subgraph "User"
+    subgraph user2 ["User"]
         L --> M["User: 최종 결과물 승인 및 Merge"]
     end
 ```

@@ -24,8 +24,6 @@ quiz:
 
 > 이 엔트리는 Blake Crosley의 [AI Agent Review Packets Are the New Final Answer](https://blakecrosley.com/blog/review-packets-are-the-new-final-answer)을 정독하고 핵심을 추출한 것이다.
 
-이 엔트리는 Blake Crosley의 [AI Agent Review Packets Are the New Final Answer](https://blakewcrosley.com/blog/ai-agent-review-packets-are-the-new-final-answer/)를 정독하고 핵심을 추출한 것이다.
-
 ### 왜 중요한가: "최종 답변"의 시대는 끝났다
 
 과거의 AI는 질문에 대한 "최종 답변(Final Answer)"을 텍스트로 제공하는 것만으로 충분했다. 하지만 오늘날의 AI 에이전트는 파일 수정, 코드 배포, 데이터베이스 변경 등 실제 세계에 영향을 미치는 복잡한 작업을 수행한다. "번역을 완료하고 배포했습니다"라는 에이전트의 마지막 한 문장은 더 이상 신뢰의 근거가 될 수 없다. 작업의 *결과*가 아니라, 그 결과를 만들기까지의 *과정*을 증명해야 하기 때문이다.
@@ -58,7 +56,7 @@ graph TD
     end
 
     subgraph evidenceAggregation ["Evidence Aggregation"]
-        C -- Trace --> F[Traces & Spans];
+        C -- Trace --> F["Traces & Spans"];
         D -- Trace --> F;
         E -- Decision --> G[Approval Records];
         F & G --> H{Review Packet Builder};

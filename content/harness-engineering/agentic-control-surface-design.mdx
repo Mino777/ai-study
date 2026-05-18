@@ -24,8 +24,6 @@ quiz:
 
 > 이 엔트리는 Blake Crosley의 [Agentic Design Is Control Surface Design](https://blakecrosley.com/blog/agentic-design-control-surface)을 정독하고 핵심을 추출한 것이다.
 
-이 엔트리는 Blake Crosley의 [Agentic Design Is Control Surface Design](https://www.latent.space/p/agentic-design)을 정독하고 핵심을 추출한 것이다.
-
 ## 왜 중요한가: 사용자는 프롬프터가 아닌 '오퍼레이터'다
 
 AI 에이전트 인터페이스 디자인은 단순히 더 똑똑한 챗봇 UI를 만드는 것이 아니다. 에이전트가 자율적으로 파일을 수정하고, 돈을 쓰고, 프로덕션 상태를 변경하는 시대에는 디자인의 패러다임이 **컨트롤 서페이스(Control Surface)** 설계 문제로 전환된다.
@@ -60,11 +58,11 @@ stateDiagram-v2
     Planning --> Acting: 경로 확정
     Searching --> Planning: 정보 확보
     Acting --> Verifying: 작업 완료
-    Acting --> Blocked: "권한 없음·실패"
-    Blocked --> Planning: "사용자 개입 후"
-    Verifying --> Done: "검증 성공"
+    Acting --> Blocked: 권한 없음·실패
+    Blocked --> Planning: 사용자 개입 후
+    Verifying --> Done: 검증 성공
     Verifying --> Recovering: 검증 실패
-    Recovering --> Planning: "가정 수정 후"
+    Recovering --> Planning: 가정 수정 후
     Done --> [*]
 ```
 

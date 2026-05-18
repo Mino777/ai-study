@@ -132,7 +132,7 @@ graph TD
     end
 
     subgraph Server
-        G --> H[Multi-Stream · Micro-Turn Decoder]
+        G --> H["Multi-Stream · Micro-Turn Decoder"]
         H --> I["Interaction Model e.g. TML-Interaction-Small"]
         J["Background Model (Reasoning, Tool Use)"] -- Streams back results --> I
         I -- Manages --> J
@@ -140,8 +140,8 @@ graph TD
         K --> L[WebSocket Stream]
     end
 
-    subgraph clientIosmacos["Client iOS/macOS"]
-        L --> M{Streaming Response · Decoder & Renderer}
+    subgraph clientIosmacosOut["Client iOS/macOS"]
+        L --> M{"Streaming Response · Decoder & Renderer"}
         M --> N["UI Update: Text"]
         M --> O["UI Update: Image"]
         M --> P["UI Update: Voice"]
