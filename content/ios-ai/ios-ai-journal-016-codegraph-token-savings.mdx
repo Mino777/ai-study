@@ -1,0 +1,217 @@
+---
+title: "iOS Harness Journal 016 — CodeGraph 도입: 호출그래프 + 토큰 400배 절감, 그리고 Node 25 WASM Zone OOM 함정"
+category: ios-ai
+series: ios-ai-journal
+date: "2026-05-18"
+tags: [ios-harness-journal, codegraph, mcp, code-intelligence, tokenomics, jit-retrieval, node-wasm, liftoff, harness-tooling]
+confidence: 4
+last_verified: "2026-05-18"
+applicable_to: ["any"]
+connections:
+  - ios-ai/ios-ai-journal-015-compound-qa-mock-harness-worker
+  - ios-ai/ios-flow-map-via-aidy-ios
+  - harness-engineering/harness-journal-025-jit-retrieval-poc-phase1
+  - tokenomics/claude-code-token-levers-catalog
+status: complete
+type: entry
+description: >-
+  moneyflow(iOS 1,773 Swift 파일) 워커에 codegraph MCP를 박제한 회고.
+  호출그래프(callers/callees/impact) + JIT 컨텍스트가 풀린 한편, Node 25 V8 turboshaft가
+  tree-sitter WASM을 컴파일하다 Zone OOM(`exit 133`)으로 ~6%에서 죽는 함정을
+  `node --liftoff-only` 래퍼로 박제. 벤치마크는 정직하게: 속도는 tuned grep과 비등(~1.5x 이내),
+  진짜 실익은 (1) 에이전트 토큰 400배 절감 (2) 호출그래프 (3) naive grep 함정 제거 3가지.
+quiz:
+  - question: "codegraph index가 ~6%에서 `exit 133` + Zone OOM으로 죽는 원인은?"
+    choices:
+      - "JS heap이 부족해서 — `--max-old-space-size`로 늘리면 해결"
+      - "tree-sitter WASM이 100개 누적 시 V8 turboshaft가 tier-up 컴파일하다 Zone(컴파일러 영역) OOM"
+      - "DB 락 충돌 — `.codegraph/codegraph.lock` 잔존"
+      - "MCP 서버가 stdin을 못 받아서"
+    answer: 1
+    explanation: >-
+      Zone OOM은 *V8 컴파일러 영역*의 메모리 부족이지 JS heap이 아니다.
+      `--max-old-space-size`, `NODE_OPTIONS=--liftoff-only` 둘 다 효과 없고
+      (NODE_OPTIONS는 V8 플래그 거부), 해법은 `node --liftoff-only <bin>` —
+      WASM 최적화 티어를 끄고 baseline만 사용해서 컴파일 메모리 자체를 안 잡게 한다.
+  - question: "벤치마크에서 'codegraph가 grep보다 250~450배 빠르다'고 광고하는 건 왜 과장인가?"
+    choices:
+      - "캐시 워밍을 안 해서"
+      - "그 비교는 naive grep(빌드 산출물 미제외) 기준 — `.build`/`DerivedData` 순회 폭주 함정이 가려져 있음. tuned grep 대비는 비등(~1.5x 이내)"
+      - "실제로는 더 빠르다, 측정 오류"
+      - "Swift만 빠르고 Objective-C는 느려서"
+    answer: 1
+    explanation: >-
+      130초 → 0.4초 차이는 거의 전부 `--exclude-dir=.build --exclude-dir=DerivedData` 빠진
+      grep의 자폭이다. tuned grep을 똑같이 측정하면 codegraph와 ~1.5배 이내. 도입 가치는
+      속도가 아니라 (a) 출력 토큰 절감 (b) 호출그래프 (c) naive 함정 제거 — 정직하게 적시.
+  - question: "에이전트 입장에서 codegraph 도입의 *최대* 실익은?"
+    choices:
+      - "탐색 속도 단축"
+      - "심볼 검색의 컨텍스트 토큰 비용 — 호출처 검색 출력이 540KB/2,491라인 → 1.3KB/31라인으로 ~400배 감소"
+      - "Mermaid 다이어그램 자동 생성"
+      - "Swift 6 strict concurrency 검증"
+    answer: 1
+    explanation: >-
+      grep은 *전체 출력*을 에이전트 컨텍스트로 밀어넣는다. codegraph는 시맨틱하게 필요한
+      위치만 반환 — 에이전트 컨텍스트 윈도우 60% 임계값 도달까지의 헤드룸을 직접 늘린다.
+      "빠르다"보다 "싸다(토큰)"가 진짜 레버.
+---
+
+# iOS Harness Journal 016 — CodeGraph 도입
+
+> **TL;DR** — moneyflow(iOS, Swift 1,773파일) 워커에 `@colbymchenry/codegraph` MCP를 박제. 호출그래프(callers/callees/impact)와 JIT 컨텍스트 수집을 풀었고, 동시에 Node 25 V8 turboshaft가 tree-sitter WASM을 컴파일하다 Zone OOM으로 죽는 함정을 `node --liftoff-only` 래퍼로 우회. 벤치마크는 정직하게: 속도 광고는 과장, 진짜 실익은 토큰 400배 절감 + 호출그래프 + naive 함정 제거.
+
+## 0. 왜 도입했나
+
+Journal 010~012에서 워커 풀과 QA 분리는 풀었지만, 한 가지 무거운 마찰이 남아 있었다.
+
+> **워커가 신규 작업을 받을 때마다 `grep -rn` / `find`로 컨텍스트를 수집한다. 출력이 500KB를 넘어가면 컨텍스트가 한 번에 60% 임계값을 친다.**
+
+특히 1,773 Swift 파일 규모에서 호출처 찾기(`application(_:open:)`을 누가 부르나)는 정의상 grep으로 불가능한 질문이다. 텍스트 매칭으로는 `application(open:`, `application(_ app:`, override, extension 분산을 못 잡는다. *시맨틱 + 그래프*가 필요했다.
+
+## 1. 패키지 — codegraph MCP 8 도구
+
+`.mcp.json`에 `@colbymchenry/codegraph` 추가. 에이전트에 노출되는 도구 8개:
+
+| 도구 | 용도 | 대체 가능한 grep | 토큰 차이 |
+|------|------|------------------|-----------|
+| `codegraph_search` | 심볼 이름/부분 일치 | ⚠️ 가능 (낡은 패턴) | 비슷 |
+| `codegraph_callers` | **누가 이 메서드를 부르나** | ❌ 불가 | — |
+| `codegraph_callees` | **이 메서드가 뭘 부르나** | ❌ 불가 | — |
+| `codegraph_context` | 태스크 단위 컨텍스트 수집 | ⚠️ 부분 (전체 출력 폭주) | 3배 절감 |
+| `codegraph_impact` | 변경이 어느 테스트/파일에 영향 | ❌ 불가 | — |
+| `codegraph_node` | 클래스/함수 노드 상세 | ⚠️ 부분 | 비슷 |
+| `codegraph_files` | 인덱싱된 파일 구조 | ✅ 가능 | — |
+| `codegraph_status` | 인덱스 통계 | — | — |
+
+핵심은 **callers/callees/impact 3종** — grep으로 시뮬레이션 불가능한 질문에 답한다. 나머지는 grep 대체.
+
+## 2. Node 25 V8 turboshaft Zone OOM — 함정과 박제
+
+도입 첫날 모든 게 실패했다. `codegraph index .`가 진행률 ~6%에서 죽었다.
+
+```
+Fatal process out of memory: Zone
+zsh: exit 133
+```
+
+### 시도한 것들 (전부 무효)
+
+| 시도 | 결과 | 이유 |
+|------|------|------|
+| `NODE_OPTIONS=--max-old-space-size=8192 codegraph index .` | 죽음 | JS heap 확장 — Zone OOM은 *컴파일러 영역* 메모리 |
+| `NODE_OPTIONS=--liftoff-only codegraph index .` | 죽음 | NODE_OPTIONS는 V8 컴파일러 플래그를 거부 (보안) |
+| `codegraph index . --threads=1` | 죽음 | 스레드 수와 무관, 컴파일 시점 폭주 |
+
+### 근본 원인
+
+tree-sitter는 WASM 파서. **Node 25.8.2의 V8 turboshaft가 WASM을 ~100개 누적 시 tier-up 최적화 컴파일하면서 Zone(컴파일러 메모리 영역)을 OOM**시킨다. JS heap이 아니라 V8 *내부* 메모리 풀이라서 사용자 측 옵션으로 못 늘린다.
+
+### 해법 — `node --liftoff-only` 래퍼
+
+```bash
+# .claude/scripts/codegraph.sh (핵심)
+CODEGRAPH_BIN="$(npm ls -g --parseable @colbymchenry/codegraph)/dist/cli.js"
+exec node --liftoff-only "$CODEGRAPH_BIN" "$@"
+```
+
+`--liftoff-only`는 WASM 최적화 티어(turbofan/turboshaft)를 끄고 **baseline 컴파일러(liftoff)만** 사용 — 컴파일 비용 자체가 사라져서 OOM이 안 난다. 성능 손실은 인덱싱 1회 11.5초로 미체감.
+
+이 플래그는 *반드시* `node` 직접 호출로만 먹힌다. `npx`나 PATH의 `codegraph` 바이너리 호출로는 안 통한다. 그래서 래퍼 스크립트에 박제하고 운영 문서에 "절대 직접 호출 금지"를 못 박았다.
+
+### 이런 함정은 왜 자주 못 보나
+
+대부분의 Node 도구는 WASM 파서를 안 쓴다. tree-sitter 기반 도구(codegraph, ast-grep, semgrep wasm backend)만 이 경로를 탄다. 그리고 Node 24까지는 같은 코드가 정상 동작했다 — Node 25에서 turboshaft가 default-on 되면서 새로 노출된 함정이다.
+
+## 3. 자동 동기화 훅 — mark-dirty + sync-if-dirty
+
+인덱스가 stale하면 `codegraph_*` 답이 거짓말을 한다 (지운 메서드를 callers에 표시). 그렇다고 매 커밋마다 풀 인덱싱하면 11.5초가 무겁다. 두 단계로 분리:
+
+```bash
+# PostToolUse Write|Edit → mark only (O(1))
+echo "$EVENT" >> .codegraph/.dirty
+
+# SessionStart → sync if dirty (변경 파일만 증분, 백그라운드)
+if [[ -s .codegraph/.dirty ]]; then
+  ( bash .claude/scripts/codegraph.sh sync . >/dev/null 2>&1 & )
+  : > .codegraph/.dirty
+fi
+```
+
+- **PostToolUse는 절대 sync 호출 안 함** — 매 편집 후 11초 블로킹은 작업 흐름 파괴
+- **SessionStart에서만 sync** — 다음 세션 시작 직전에 한 번만, 백그라운드로
+- **dirty가 없으면 무동작** — 읽기 전용 세션 비용 0
+
+이 패턴은 [Harness Journal 002 inline test gate](/wiki/harness-engineering/harness-journal-002-inline-test-gate)와 결이 같다 — *비싸지만 가끔 필요한 검증을 자연스러운 트리거에 박제*.
+
+## 4. 벤치마크 — 정직하게
+
+같은 5 시나리오를 (a) naive grep (b) tuned grep (c) codegraph 셋으로 측정.
+
+### 탐색 시간 (wall-time, 단위: ms)
+
+| 시나리오 | naive grep¹ | tuned grep² | codegraph |
+|----------|------------:|------------:|----------:|
+| 심볼: BridgeInteractor | 131,359 | 742 | **340** |
+| 심볼: AppRootInteractor | 125,285 | 384 | **356** |
+| 심볼: OnewayHotDealReactor³ | 129,497 | 413 | **520** |
+| 호출처: application(open:) | 151,607 | 431 | **405** |
+| 컨텍스트: 딥링크 워크플로 | 137,743 | 401 | **343** |
+
+¹ `grep -rn '<symbol>' .` — `.build`/`DerivedData` 미제외, 빌드 산출물 순회로 폭주
+² `grep -rn --exclude-dir=.build --exclude-dir=DerivedData --include='*.swift' '<symbol>' .`
+³ moneyflow 도메인 reactor (이름은 무관)
+
+### 출력량 (= 에이전트 토큰 비용)
+
+| 시나리오 | grep 출력 | codegraph 출력 | 절감 배수 |
+|----------|----------:|---------------:|----------:|
+| 호출처: application(open:) | 540,402 B / 2,491 라인 | 1,348 B / 31 라인 | **~400배** |
+| 컨텍스트: 딥링크 워크플로 | 35,183 B / 372 라인 | 11,762 B / 402 라인 | ~3배 |
+
+### 정직 판정
+
+- **속도**: 잘 튜닝된 grep과 ~1.5배 이내. "압도적으로 빠르다"는 광고 카피 수준의 과장.
+- **naive grep 대비**: 250~450배 — 단, 이건 `--exclude-dir` 빠진 grep의 자폭이라 codegraph 공로가 아님.
+- **출력 토큰**: 호출처 검색에서 *400배 절감*. 컨텍스트 윈도우 헤드룸 직접 확장.
+- **시맨틱 정확도**: `grep "application(_ app"` = 0건(시그니처 불일치) / `codegraph query application` = 31건 정확.
+- **호출그래프**: callers/callees/impact는 grep 불가 — **codegraph 전용**.
+
+**최종**: 도입 가치는 속도가 아니라 (1) 에이전트 토큰 절감 (2) 호출그래프 (3) naive 검색 함정 제거. 이 셋이 진짜 레버. 마케팅이 자주 (1)이 아닌 "속도"를 강조하는데, 우리 사용 시나리오에서는 (1)이 99%다.
+
+## 5. 워크플로 변화 — 새 작업 진입 시 첫 도구
+
+도입 전:
+
+```
+1. 워커가 Read /spec/FR-XX.md
+2. grep으로 관련 클래스 5~10개 찾기 (출력 200KB)
+3. 각각 Read (전체 파일)
+4. 작업 시작 — 컨텍스트 이미 40~50%
+```
+
+도입 후:
+
+```
+1. 워커가 Read /spec/FR-XX.md
+2. codegraph_context "FR-XX의 핵심 도메인" → 11KB 마크다운 1회
+3. callers/callees로 영향 범위 한정 → 필요한 파일만 Read
+4. 작업 시작 — 컨텍스트 20~25%
+```
+
+체감 차이: 같은 스프린트 1 사이클 내 워커가 컨텍스트 60% 임계 도달하는 비율이 *체감상* 절반 이하로 떨어졌다. 정량 측정은 다음 컴파운드에서.
+
+## 6. 전이성
+
+- **언어 무관**: tree-sitter 파서가 있는 모든 언어(Swift, TS, Go, Rust, Python, Kotlin) 대상 동일 패턴 적용 가능.
+- **WASM Zone OOM 함정**: Node 25 + tree-sitter WASM을 쓰는 모든 도구에 동일. ast-grep, semgrep WASM backend 등도 같은 회피책 필요할 가능성.
+- **"속도 광고 검증"**: 신규 도구 도입 시 *naive 비교*와 *tuned 비교*를 분리해 측정. naive 대비 250배는 거의 항상 사용자 도구 미설정의 자폭이다.
+- **자동 동기화 = mark-dirty + lazy sync**: index/cache 패턴 전반에 적용. SessionStart는 IDE/CLI 도구 모두 자연스러운 lazy 트리거.
+
+## 7. 남은 의문
+
+- **호출그래프의 정확도 ground truth 측정 부재** — 31건 callers가 *실제로 다 부르나*를 수동 검증 안 했다. false positive/negative 비율이 다음 회고 후보.
+- **multi-target Swift** (Tuist, SPM mix)에서 인덱서가 어떤 타깃 컨벤션으로 묶나 미검증.
+- **PR 단위 impact diff** — `codegraph impact <changed-files>`를 CI에 박으면 "이 PR이 건드릴 테스트" 자동 제안. 시도 안 함.
+
+다음 저널은 워커 풀 운영 튜닝(모델 분리, ready 폴링, 동적 큐 가드)에서 마저 박제한다.
