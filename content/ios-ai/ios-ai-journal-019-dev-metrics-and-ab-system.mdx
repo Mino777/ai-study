@@ -1,0 +1,201 @@
+---
+title: "iOS Harness Journal 019 — 자율 사이클 측정 시스템 + 자동 A/B 테스트: 측정 없이 튜닝 없다"
+category: ios-ai
+series: ios-ai-journal
+date: "2026-05-14"
+tags: [ios-harness-journal, measurement, telemetry, ab-testing, dev-metrics, hooks, observability, harness-tooling]
+confidence: 4
+last_verified: "2026-05-14"
+applicable_to: ["any"]
+connections:
+  - ios-ai/ios-ai-journal-018-asymmetric-worker-pool
+  - ios-ai/ios-ai-journal-015-compound-qa-mock-harness-worker
+  - tokenomics/claude-code-token-levers-applied-log
+  - harness-engineering/ai-agent-start-here
+status: complete
+type: entry
+description: >-
+  하네스 튜닝 결정을 추측이 아니라 측정으로 하기 위해 통합 dev-metrics 대시보드 + 9개 hook 기반
+  텔레메트리 + A/B 등록·집계·결정 파이프라인을 박제. PostToolUse(Bash/Skill/Write) + PreToolUse(Bash)
+  + Stop + PreCompact + UserPromptSubmit hook이 jsonl 로그로 흘러들어가고, ab-decide.sh가
+  ADOPT/REVERT/CONTINUE를 compound-growth.jsonl에 기록. 자율 사이클이 *자기 자신의 측정 대상*이 됨.
+quiz:
+  - question: "Claude Code 하네스에서 측정 데이터를 jsonl 로그 파일로 누적하는 이유는?"
+    choices:
+      - "JSON이 빠르다"
+      - "append-only + line-delimited라 동시 쓰기 안전(flock), 시계열 분석 용이, 손실 없음 — 신호 채널과 분석 채널을 분리하기 위함"
+      - "Claude Code가 jsonl만 지원"
+      - "BigQuery import 호환 때문"
+    answer: 1
+    explanation: >-
+      hook은 다수 워커가 동시에 발화한다. csv는 헤더 충돌, json은 전체 재기록 위험. jsonl은
+      각 hook이 한 줄씩 flock으로 append하면 끝 — 가장 단순하고 손실 없는 시계열 텔레메트리 포맷.
+      대시보드는 별도 프로세스가 같은 파일을 *read-only*로 집계 → 신호와 분석이 분리됨.
+  - question: "ab-decide.sh가 ADOPT/REVERT/CONTINUE 3 상태로 결정하는 이유는?"
+    choices:
+      - "이진 결정은 잡음 흡수가 안 됨 — '아직 모르겠다'(CONTINUE) 상태를 명시해 *측정 충분 시점*까지 결정을 미룰 수 있어야 진짜 A/B"
+      - "테스트 코드 호환성"
+      - "ADOPT/REVERT만으로는 다양성이 부족"
+      - "registry.json 스키마 제약"
+    answer: 0
+    explanation: >-
+      이진 결정은 표본 수 부족인데도 강제로 한쪽을 선택하게 만들어 false adoption/revert를 늘린다.
+      CONTINUE는 'N회 더 측정 후 재결정'을 정식화 — 추측을 측정으로 미루는 메커니즘. 결정 자체를
+      compound-growth.jsonl에 박제하면 *결정의 이력*까지 자산이 됨.
+  - question: "PreCompact hook에서 세션 상태를 저장하는 이유는?"
+    choices:
+      - "Claude Code가 자동으로 함"
+      - "context window가 자동 압축되면서 사라지는 누적 상태(작업 진행/측정값/결정 보류 항목)를 다음 세션이 1시간 이내라면 복원하기 위함"
+      - "토큰 비용 절감"
+      - "디버깅 용도"
+    answer: 1
+    explanation: >-
+      compaction은 컨텍스트 윈도우 한도 도달 시 강제 발화 — *측정 도중* 발화하면 누적이 사라진다.
+      PreCompact에서 jsonl로 박제, SessionStart에서 1h 이내 state 복원 → 측정/결정 연속성이
+      compaction에 끊기지 않는다. "측정 없이 튜닝 없다"의 *시간축* 안전망.
+---
+
+# iOS Harness Journal 019 — 자율 사이클 측정 시스템 + 자동 A/B
+
+> **TL;DR** — 하네스 튜닝의 모든 결정은 *측정 데이터로* 정한다는 원칙을 실행 인프라로 박제. 9개 hook이 jsonl 로그로 텔레메트리를 흘리고, 통합 `dev-metrics.sh` 대시보드가 7일/커스텀 기간 단위로 집계. A/B 시스템은 `ab-register.sh`(가설) → `ab-use-count.sh`(노출) → `ab-compare.sh`(비교) → `ab-decide.sh`(ADOPT/REVERT/CONTINUE)의 4단계로, 결정 이력 자체가 `compound-growth.jsonl`에 자산화. 자율 사이클이 *자기 자신의 측정 대상*이 된다.
+
+## 0. 왜 이걸 만들었나
+
+Journal 018에서 비대칭 워커 풀 ADR을 측정 데이터(Impl 35%/Verify 52%/Lead 13%)로 정당화했다. 그런데 그 측정은 *수동*이었다 — 자율 사이클 끝나고 사람이 시계 보면서 계산했다. 다음 결정도 그렇게 할 수는 없었다.
+
+> **측정 없이 튜닝 없다. 측정이 수동이면 튜닝도 안 일어난다. 측정을 자동화해야 결정이 일어난다.**
+
+이게 dev-metrics + A/B 시스템의 한 줄짜리 motivation.
+
+## 1. 텔레메트리 — 9 hook으로 jsonl 시계열 박제
+
+`.claude/logs/`에 hook별 jsonl이 쌓인다. 각 hook은 발화 시 한 줄 `flock` append.
+
+| Hook | 트리거 | 기록 | 파일 |
+|------|--------|------|------|
+| `post-build-log.sh` | PostToolUse(Bash) — xcodebuild 패턴 매치 | 빌드 wall-time / 캐시 hit 여부 / 결과 | `build.jsonl` |
+| `pre-commit-quality-log.sh` | PreToolUse(Bash) — git commit | 변경 LOC / .swift 파일 수 / 테스트 동반 여부 | `commit-quality.jsonl` |
+| `wo-cycle-log.sh` | PostToolUse(Write) — work-orders/done/*.md | WO 생성→완료 사이클 시간 | `wo-cycle.jsonl` |
+| `post-skill-hit-log.sh` | PostToolUse(Skill) | invoked skill 이름 / 발화 컨텍스트 | `skill-hit.jsonl` |
+| `skill-trigger-log.sh` | UserPromptSubmit | 사용자 문구 + 어떤 skill 라우팅됐는지 | `skill-trigger.jsonl` |
+| `pre-compact-save.sh` | PreCompact | 워커 perf snapshot + 진행 상태 | `compact-state.jsonl` + `compact-state/<ts>.json` |
+| `compound-growth-log.sh` | manual (compound 종료 시) | 컴파운드 회고당 박제된 자산 수 | `compound-growth.jsonl` |
+| `mock-coverage.sh` | manual + Stop hook | Repository mock vs real 분기 분포 | `mock-coverage.jsonl` |
+| `stop-cost-log.sh` | Stop | 세션 종료 토큰/비용 + 모델 | `cost.jsonl` |
+
+### 왜 jsonl인가
+
+- **append-only + line-delimited** → flock 한 줄 append로 동시성 안전. csv는 헤더 충돌, json은 전체 재기록.
+- **시계열 분석 자연** — `jq -c .` 스트리밍, `awk` 통계, python `pandas.read_json(lines=True)` 그대로.
+- **신호 / 분석 채널 분리** — hook은 *쓰기만*, 대시보드는 *읽기만*. 분석이 신호 채널을 막을 일이 없다.
+
+## 2. 통합 대시보드 — `dev-metrics.sh`
+
+```bash
+bash .claude/scripts/dev-metrics.sh --days 7
+bash .claude/scripts/dev-metrics.sh --section build --days 30
+bash .claude/scripts/dev-metrics.sh --section verify
+```
+
+7 섹션: `build / quality / wo / verify / skill / perf / cost`. 각 섹션이 해당 jsonl 한두 개를 집계.
+
+샘플 출력:
+
+```
+╔════════════════════════════════════════════════════════════╗
+║  moneyflow Dev Metrics Dashboard — 최근 7일               ║
+╚════════════════════════════════════════════════════════════╝
+
+═══ Build (n=42) ═══
+  cold avg:  87s   warm avg: 12s   cache hit: 71%
+  실패율:    4.8% (2/42)
+  최장:      218s — feature/foo, commit abc1234
+
+═══ WO Cycle (n=18) ═══
+  평균:      ~25분   p50: 22분   p90: 41분
+  long-tail: 3건 > 60분 (전부 verify-bound)
+```
+
+핵심 — `dev-metrics.sh`는 *추가 인프라 없이* jsonl만 읽어 집계한다. 측정 채널이 hook에 박혀 있으면 대시보드는 부수적.
+
+## 3. A/B 시스템 — 4단 파이프라인
+
+같은 측정 인프라 위에 *변경 자체*를 A/B로 비교하는 4단계.
+
+```
+ab-register.sh  → 가설(어떤 변경 / 측정 대상 / 성공 기준) 등록 (ab-registry.json)
+      ↓
+ab-use-count.sh → 해당 변경이 N회 노출/사용된 후
+      ↓
+ab-compare.sh   → before/after 측정값 비교
+      ↓
+ab-decide.sh    → ADOPT / REVERT / CONTINUE → compound-growth.jsonl
+```
+
+### 왜 3 상태 결정인가
+
+이진(ADOPT/REVERT)으로 강제하면 표본 부족인데도 한쪽을 고르게 된다 → false adoption/revert. **CONTINUE**가 있어야 *"아직 모르겠다, N회 더 측정 후 재결정"*이 정식 상태로 박힌다.
+
+`ab-decide.sh --verdict CONTINUE --notes "n=4, p90 차이 noise 가능"`은 가설이 죽지 않고 살아 있는 상태. 다음 사이클에서 표본 채워 재결정.
+
+### 예시 — `--liftoff-only` 래퍼 (Journal 016)
+
+```
+ab-register.sh \
+  --id codegraph-liftoff \
+  --hypothesis "node --liftoff-only가 V8 Zone OOM 회피 (인덱싱 성공률)" \
+  --metric "codegraph_index_success_rate" \
+  --baseline 0.0 \
+  --target 0.95
+
+# 5회 인덱싱 시도 → 5/5 성공
+ab-decide.sh --id codegraph-liftoff --verdict ADOPT \
+  --notes "5/5 성공, baseline 0/N. 래퍼 박제 확정."
+```
+
+결정 자체가 `compound-growth.jsonl`에 박혀 *다음 사이클의 회고 자산*이 된다.
+
+## 4. PreCompact — 측정의 시간축 안전망
+
+자율 사이클이 길어지면 context window 한도 도달 → 자동 compaction. **측정 도중 compaction이 발화하면 누적 상태가 사라진다.**
+
+```bash
+# .claude/hooks/pre-compact-save.sh
+SNAP="$LOG_DIR/compact-state/$(date +%Y%m%dT%H%M%S).json"
+# 진행 중 WO, 측정 누적, 결정 보류 항목을 jsonl로 박제
+jq -n --argjson wos "$(...)" --argjson pending "$(...)" \
+   '{ts: now, wos: $wos, pending: $pending}' > "$SNAP"
+
+# .claude/hooks/session-start.sh
+# 1h 이내 state 파일이 있으면 자동 복원 안내
+LAST=$(ls -t "$LOG_DIR/compact-state/"*.json 2>/dev/null | head -1)
+if [[ -n "$LAST" && $(($(date +%s) - $(stat -f %m "$LAST"))) -lt 3600 ]]; then
+  echo "📥 1h 이내 compact-state 복원 가능: $LAST"
+fi
+```
+
+이게 없으면 자율 사이클 도중 compaction 1번에 측정 데이터 1시간 분량이 *조용히* 증발한다. 측정 인프라의 *시간축* 안전망.
+
+## 5. 메타 원칙
+
+> **하네스 자체가 측정 대상이 되어야 다음 결정이 *추측*에서 *측정*으로 옮겨간다.**
+
+각 hook 1개는 사소해 보이지만, 9개가 jsonl로 흘러들어가면 *하네스 운영 데이터셋*이 만들어진다. 이 데이터셋이 있어야:
+
+- Journal 018(비대칭 워커 풀) 같은 토폴로지 결정이 측정으로 정당화
+- Journal 017(opus/sonnet 분리) 같은 자리별 튜닝이 비용 데이터로 검증
+- 새로 도입할 변경(예: 5-pane verify)을 A/B로 정식 비교
+
+## 6. 도입 비용
+
+- **로그 폭증** — 9 hook × 일 평균 발화 100회 = 일 900줄. 30일 후 27K줄. 주간 rotate + gzip archive 필요 (현 미적용).
+- **hook 발화 비용** — 각 hook은 5초 이내 (harness-meta 룰). 측정으로는 평균 ~200ms. 트리거 누락은 silent failure → 주간 `skill-weekly-report.sh`로 hit-rate 모니터.
+- **결정 피로** — A/B 가설을 너무 많이 열면 CONTINUE 적체. *동시 5개 이내* 운영 가이드.
+
+## 7. 전이성
+
+- **AI 에이전트 일반**: 같은 9-hook 패턴(빌드/품질/사이클/skill/cost/compact) 그대로 적용 가능
+- **CI/CD**: GitHub Actions의 job_name + jsonl artifact 업로드 → 동일 대시보드
+- **사람 개발 팀**: PR merge time, review turnaround, test flake rate 등도 jsonl로 박제 → 같은 결의 대시보드. *측정 없이 튜닝 없다*는 사람 팀에도 동일.
+
+다음 저널(020)에서 *이 측정 데이터가 한 차례 더 짧아진 verify 사이클*(Maestro MCP + test-without-building)을 박제한다.
