@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { AI_OPS_CASES, AI_OPS_CATEGORY_LABELS } from "./ai-ops-cases";
 import { SETUP_BLOCKS, FEATURE_LOGS, PHASE_LABELS, FEATURE_CATEGORY_LABELS } from "./ai-ops-setup";
-import { IOS_QUESTIONS, FDE_QUESTIONS, CULTURE_QUESTIONS, PHASE_PROBLEMS, COMPANY_STRATEGIES, HIRING_INSIGHTS, PROCESS_STAGES, ASSIGNMENT_CHECKLIST, ALGO_GUIDES, BIG_O_GUIDE, BIG_O_COMPARISON, SYSTEM_DESIGN_CASES, FDE_DESIGN_CASES, SD_FRAMEWORK_STEPS, SD_CLARIFYING_QUESTIONS, SD_API_COMPARISON, ASSIGNMENT_DAILY_TIPS, FDE_ASSIGNMENT_DAILY_TIPS, CULTURE_DAILY_TIPS, TECH_DAILY_TOPICS, FDE_TECH_DAILY_TOPICS, CS_TOPICS, CS_DAILY_TOPICS, FDE_CS_DAILY_TOPICS, FDE_ALGO_TEMPLATES, CAREER_PAGES, TIMER_PRESETS, QUIZ_BANK, INTERVIEW_DAY_PLAYBOOK, SALARY_TIPS, RED_FLAGS, ONBOARDING_PLAYBOOK, MOCK_FEEDBACK_CRITERIA, COMPANY_CODING_STYLES, TOSS_7DAY_PLAN, TOSS_CORE_VALUES, TOSS_INTERVIEW_FAQ, TOSS_IOS_TOPICS, TOSS_INTERVIEW_FORMAT, TOSS_NIGHT_SHIFT_TIPS, TOSS_RESOURCES, COTE_7DAY_PLAN, type InterviewQuestion } from "./constants";
+import { IOS_QUESTIONS, FDE_QUESTIONS, CULTURE_QUESTIONS, PHASE_PROBLEMS, COMPANY_STRATEGIES, HIRING_INSIGHTS, PROCESS_STAGES, ASSIGNMENT_CHECKLIST, ALGO_GUIDES, BIG_O_GUIDE, BIG_O_COMPARISON, SYSTEM_DESIGN_CASES, FDE_DESIGN_CASES, SD_FRAMEWORK_STEPS, SD_CLARIFYING_QUESTIONS, SD_API_COMPARISON, ASSIGNMENT_DAILY_TIPS, FDE_ASSIGNMENT_DAILY_TIPS, CULTURE_DAILY_TIPS, TECH_DAILY_TOPICS, FDE_TECH_DAILY_TOPICS, CS_TOPICS, CS_DAILY_TOPICS, FDE_CS_DAILY_TOPICS, FDE_ALGO_TEMPLATES, CAREER_PAGES, TIMER_PRESETS, QUIZ_BANK, INTERVIEW_DAY_PLAYBOOK, SALARY_TIPS, RED_FLAGS, ONBOARDING_PLAYBOOK, MOCK_FEEDBACK_CRITERIA, COMPANY_CODING_STYLES, TOSS_7DAY_PLAN, TOSS_CORE_VALUES, TOSS_INTERVIEW_FAQ, TOSS_IOS_TOPICS, TOSS_INTERVIEW_FORMAT, TOSS_NIGHT_SHIFT_TIPS, TOSS_RESOURCES, COTE_7DAY_PLAN, COTE_SOLVE_SOP, COTE_TYPE_FORMULAS, type InterviewQuestion } from "./constants";
 
 /* ═══════════════════════════════════════════════════════════ */
 /*  TYPES                                                      */
@@ -2991,6 +2991,52 @@ export default function InterviewPage() {
                     <div className="h-full bg-gradient-to-r from-sky-500 to-purple-400 transition-all" style={{ width: `${progress}%` }} />
                   </div>
                 </div>
+              </section>
+
+              {/* SOLVE FORMULA — 코테 풀이 공식 */}
+              <section className="mb-8">
+                <details open className="rounded-2xl border-2 border-sky-500/25 bg-sky-500/5 overflow-hidden">
+                  <summary className="px-6 py-4 cursor-pointer hover:bg-sky-500/10 transition-colors font-display font-bold text-text/85 text-base select-none">
+                    🎯 코테 풀이 공식 — 문제를 딱 보면 이 순서대로
+                  </summary>
+                  <div className="px-6 pb-6 pt-1">
+                    <p className="text-xs text-text/50 leading-relaxed mb-4">
+                      토익을 스킬로 풀듯, 코테도 매번 같은 절차로 푼다. 어떤 문제든 STEP 1~6을 기계적으로 따라가고, 유형을 찍었으면 그 유형의 공식대로 전개한다.
+                    </p>
+                    {/* 6단계 SOP */}
+                    <div className="space-y-2 mb-6">
+                      {COTE_SOLVE_SOP.map((s, i) => (
+                        <div key={i} className="rounded-xl border border-border/30 bg-surface/20 p-4">
+                          <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                            <span className="text-xs font-code font-black text-sky-400">{s.step}</span>
+                            <span className="text-sm font-bold text-text/85">{s.title}</span>
+                            <span className="text-[10px] font-code text-text/35 ml-auto">{s.time}</span>
+                          </div>
+                          <p className="text-xs text-text/60 leading-relaxed">{s.detail}</p>
+                          <p className="text-xs text-sky-400/75 leading-relaxed mt-1.5">→ {s.tip}</p>
+                        </div>
+                      ))}
+                    </div>
+                    {/* 유형별 전개 공식 */}
+                    <h4 className="font-display text-sm font-bold uppercase tracking-[0.15em] text-text/45 mb-3">유형별 전개 공식</h4>
+                    <div className="grid sm:grid-cols-2 gap-2">
+                      {COTE_TYPE_FORMULAS.map((f, i) => (
+                        <div key={i} className="rounded-xl border border-border/30 bg-surface/20 p-4">
+                          <p className="text-sm font-bold text-text/85 mb-0.5">{f.type}</p>
+                          <p className="text-[11px] text-text/50 leading-relaxed mb-2">키워드: {f.trigger}</p>
+                          <ol className="space-y-1">
+                            {f.steps.map((st, j) => (
+                              <li key={j} className="text-xs text-text/65 leading-relaxed flex gap-1.5">
+                                <span className="font-code font-bold text-sky-400/70 shrink-0">{j + 1}</span>
+                                <span>{st}</span>
+                              </li>
+                            ))}
+                          </ol>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </details>
               </section>
 
               {/* DAY SELECTOR */}
