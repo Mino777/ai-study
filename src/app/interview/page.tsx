@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { AI_OPS_CASES, AI_OPS_CATEGORY_LABELS } from "./ai-ops-cases";
 import { SETUP_BLOCKS, FEATURE_LOGS, PHASE_LABELS, FEATURE_CATEGORY_LABELS } from "./ai-ops-setup";
-import { IOS_QUESTIONS, FDE_QUESTIONS, CULTURE_QUESTIONS, PHASE_PROBLEMS, COMPANY_STRATEGIES, HIRING_INSIGHTS, PROCESS_STAGES, ASSIGNMENT_CHECKLIST, ALGO_GUIDES, BIG_O_GUIDE, BIG_O_COMPARISON, SYSTEM_DESIGN_CASES, FDE_DESIGN_CASES, SD_FRAMEWORK_STEPS, SD_CLARIFYING_QUESTIONS, SD_API_COMPARISON, ASSIGNMENT_DAILY_TIPS, FDE_ASSIGNMENT_DAILY_TIPS, CULTURE_DAILY_TIPS, TECH_DAILY_TOPICS, FDE_TECH_DAILY_TOPICS, CS_TOPICS, CS_DAILY_TOPICS, FDE_CS_DAILY_TOPICS, FDE_ALGO_TEMPLATES, CAREER_PAGES, TIMER_PRESETS, QUIZ_BANK, INTERVIEW_DAY_PLAYBOOK, SALARY_TIPS, RED_FLAGS, ONBOARDING_PLAYBOOK, MOCK_FEEDBACK_CRITERIA, COMPANY_CODING_STYLES, TOSS_7DAY_PLAN, TOSS_CORE_VALUES, TOSS_INTERVIEW_FAQ, TOSS_IOS_TOPICS, TOSS_INTERVIEW_FORMAT, TOSS_NIGHT_SHIFT_TIPS, TOSS_RESOURCES, type InterviewQuestion } from "./constants";
+import { IOS_QUESTIONS, FDE_QUESTIONS, CULTURE_QUESTIONS, PHASE_PROBLEMS, COMPANY_STRATEGIES, HIRING_INSIGHTS, PROCESS_STAGES, ASSIGNMENT_CHECKLIST, ALGO_GUIDES, BIG_O_GUIDE, BIG_O_COMPARISON, SYSTEM_DESIGN_CASES, FDE_DESIGN_CASES, SD_FRAMEWORK_STEPS, SD_CLARIFYING_QUESTIONS, SD_API_COMPARISON, ASSIGNMENT_DAILY_TIPS, FDE_ASSIGNMENT_DAILY_TIPS, CULTURE_DAILY_TIPS, TECH_DAILY_TOPICS, FDE_TECH_DAILY_TOPICS, CS_TOPICS, CS_DAILY_TOPICS, FDE_CS_DAILY_TOPICS, FDE_ALGO_TEMPLATES, CAREER_PAGES, TIMER_PRESETS, QUIZ_BANK, INTERVIEW_DAY_PLAYBOOK, SALARY_TIPS, RED_FLAGS, ONBOARDING_PLAYBOOK, MOCK_FEEDBACK_CRITERIA, COMPANY_CODING_STYLES, TOSS_7DAY_PLAN, TOSS_CORE_VALUES, TOSS_INTERVIEW_FAQ, TOSS_IOS_TOPICS, TOSS_INTERVIEW_FORMAT, TOSS_NIGHT_SHIFT_TIPS, TOSS_RESOURCES, COTE_7DAY_PLAN, type InterviewQuestion } from "./constants";
 
 /* ═══════════════════════════════════════════════════════════ */
 /*  TYPES                                                      */
@@ -375,9 +375,11 @@ function formatDate(day: number): string {
 
 export default function InterviewPage() {
   const [track, setTrack] = useState<TrackKey>("ios");
-  const [activeTab, setActiveTab] = useState<"overview" | "daily" | "coding" | "assignment" | "cs" | "tech" | "quiz" | "culture" | "toss7" | "aiops">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "daily" | "coding" | "assignment" | "cs" | "tech" | "quiz" | "culture" | "toss7" | "cote7" | "aiops">("overview");
   const [toss7Day, setToss7Day] = useState<number>(1);
   const [toss7Tasks, setToss7Tasks] = useState<Record<string, boolean>>({});
+  const [cote7Day, setCote7Day] = useState<number>(1);
+  const [cote7Tasks, setCote7Tasks] = useState<Record<string, boolean>>({});
   const [quizIndex, setQuizIndex] = useState(0);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [checkedTasks, setCheckedTasks] = useState<Record<string, boolean>>({});
@@ -413,6 +415,8 @@ export default function InterviewPage() {
       if (quiz) setQuizHistory(JSON.parse(quiz));
       const t7 = localStorage.getItem("interview-toss7-tasks");
       if (t7) setToss7Tasks(JSON.parse(t7));
+      const c7 = localStorage.getItem("interview-cote7-tasks");
+      if (c7) setCote7Tasks(JSON.parse(c7));
       const dm = localStorage.getItem("interview-daily-missions");
       if (dm) setDailyMissions(JSON.parse(dm));
     } catch { /* noop */ }
@@ -429,9 +433,10 @@ export default function InterviewPage() {
       localStorage.setItem("interview-company-ddays", JSON.stringify(companyDdays));
       localStorage.setItem("interview-quiz-history", JSON.stringify(quizHistory));
       localStorage.setItem("interview-toss7-tasks", JSON.stringify(toss7Tasks));
+      localStorage.setItem("interview-cote7-tasks", JSON.stringify(cote7Tasks));
       localStorage.setItem("interview-daily-missions", JSON.stringify(dailyMissions));
     } catch { /* noop */ }
-  }, [checkedTasks, revealedCards, solvedProblems, hardCards, companyDdays, quizHistory, toss7Tasks, dailyMissions, mounted]);
+  }, [checkedTasks, revealedCards, solvedProblems, hardCards, companyDdays, quizHistory, toss7Tasks, cote7Tasks, dailyMissions, mounted]);
 
   // Timer countdown
   useEffect(() => {
@@ -751,6 +756,7 @@ export default function InterviewPage() {
             { key: "quiz" as const, label: "퀴즈" },
             { key: "culture" as const, label: "인성면접" },
             { key: "toss7" as const, label: "🔥 토스 7일" },
+            { key: "cote7" as const, label: "⚡ 7일 코테" },
             { key: "aiops" as const, label: "AI 운영" },
           ]).map((tab) => (
             <button
@@ -2941,6 +2947,202 @@ export default function InterviewPage() {
                   <p className="text-sm text-text/55 leading-relaxed">
                     7일 밤샘은 비추천. 가능하면 14-21일로 늘리고, 수면 5시간 이상 확보하길. 이 플랜은 &quot;시간 없을 때 최선&quot;의 선택지다.
                     Day 7만큼은 무조건 3시간 이상 자야 면접에서 머리가 돈다.
+                  </p>
+                </div>
+              </section>
+            </>
+          );
+        })()}
+
+        {/* ═══════════ TAB: 7일 코테 압축 쪽집게 ═══════════ */}
+        {activeTab === "cote7" && (() => {
+          const day = COTE_7DAY_PLAN[cote7Day - 1];
+          const allChecks = COTE_7DAY_PLAN.flatMap((d) => [
+            ...d.concepts.map((_, i) => `cote-d${d.day}-c${i}`),
+            ...d.problems.map((_, i) => `cote-d${d.day}-p${i}`),
+          ]);
+          const doneCount = allChecks.filter((id) => cote7Tasks[id]).length;
+          const progress = Math.round((doneCount / allChecks.length) * 100);
+          const dayChecks = [
+            ...day.concepts.map((_, i) => `cote-d${day.day}-c${i}`),
+            ...day.problems.map((_, i) => `cote-d${day.day}-p${i}`),
+          ];
+          const dayDone = dayChecks.filter((id) => cote7Tasks[id]).length;
+          const toggle = (id: string) =>
+            setCote7Tasks((prev) => ({ ...prev, [id]: !prev[id] }));
+          return (
+            <>
+              {/* HERO */}
+              <section className="mb-10">
+                <div className="rounded-2xl border-2 border-sky-500/30 bg-gradient-to-br from-sky-500/10 via-purple-500/5 to-transparent p-8">
+                  <div className="flex items-center justify-between flex-wrap gap-4 mb-6">
+                    <div>
+                      <p className="text-xs font-code text-sky-400/60 mb-2 tracking-wider uppercase">⚡ 7-DAY CODING TEST SPRINT</p>
+                      <h2 className="text-3xl font-display font-black text-text mb-1">7일 코테 압축 쪽집게</h2>
+                      <p className="text-sm text-text/50">표준 기업 코테(프로그래머스 Lv.2~3 · 백준 실버~골드) 빈출 개념만. Python + Swift 병기.</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs font-code text-text/30 mb-1">전체 진도</p>
+                      <p className="text-4xl font-display font-black text-sky-400 tabular-nums">{progress}%</p>
+                      <p className="text-xs text-text/40">{doneCount} / {allChecks.length} 완료</p>
+                    </div>
+                  </div>
+                  <div className="h-2 rounded-full bg-surface/30 overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-sky-500 to-purple-400 transition-all" style={{ width: `${progress}%` }} />
+                  </div>
+                </div>
+              </section>
+
+              {/* DAY SELECTOR */}
+              <section className="mb-8">
+                <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
+                  {COTE_7DAY_PLAN.map((d) => {
+                    const dChecks = [
+                      ...d.concepts.map((_, i) => `cote-d${d.day}-c${i}`),
+                      ...d.problems.map((_, i) => `cote-d${d.day}-p${i}`),
+                    ];
+                    const dDone = dChecks.filter((id) => cote7Tasks[id]).length;
+                    const dProgress = Math.round((dDone / dChecks.length) * 100);
+                    const isActive = cote7Day === d.day;
+                    return (
+                      <button
+                        key={d.day}
+                        onClick={() => setCote7Day(d.day)}
+                        className={`rounded-xl border-2 p-3 transition-all cursor-pointer ${
+                          isActive ? "shadow-lg" : "hover:bg-surface/30"
+                        }`}
+                        style={{
+                          borderColor: isActive ? d.color : `${d.color}30`,
+                          background: isActive ? `${d.color}15` : "transparent",
+                        }}
+                      >
+                        <p className="text-xs font-code mb-1" style={{ color: `${d.color}aa` }}>DAY {d.day}</p>
+                        <p className="text-xs font-bold text-text/70 leading-tight mb-2">{d.theme}</p>
+                        <div className="h-1 rounded-full bg-surface/40 overflow-hidden">
+                          <div className="h-full transition-all" style={{ width: `${dProgress}%`, background: d.color }} />
+                        </div>
+                        <p className="text-[10px] font-code text-text/30 mt-1 tabular-nums">{dDone}/{dChecks.length}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+
+              {/* DAY DETAIL */}
+              <section className="mb-8">
+                <div className="rounded-2xl border-2 p-6" style={{ borderColor: `${day.color}40`, background: `${day.color}08` }}>
+                  <div className="flex items-center gap-3 mb-3">
+                    <span className="text-xs font-code font-bold tracking-wider uppercase" style={{ color: day.color }}>DAY {day.day} · {day.theme}</span>
+                    <span className="text-xs font-code text-text/30 tabular-nums">{dayDone}/{dayChecks.length}</span>
+                  </div>
+                  <h3 className="text-2xl font-display font-bold text-text mb-2">{day.title}</h3>
+                  <p className="text-sm text-text/60 leading-relaxed">{day.goal}</p>
+                </div>
+              </section>
+
+              {/* CONCEPTS */}
+              <section className="mb-8">
+                <h4 className="font-display text-base font-bold uppercase tracking-[0.15em] text-text/45 mb-3">핵심 개념</h4>
+                <div className="space-y-3">
+                  {day.concepts.map((c, i) => {
+                    const id = `cote-d${day.day}-c${i}`;
+                    const done = !!cote7Tasks[id];
+                    return (
+                      <div
+                        key={id}
+                        className={`rounded-xl border p-5 transition-all ${
+                          done ? "border-green-500/40 bg-green-500/5" : "border-border/30 bg-surface/20"
+                        }`}
+                      >
+                        <button
+                          onClick={() => toggle(id)}
+                          className="w-full flex items-start gap-3 text-left cursor-pointer mb-3"
+                        >
+                          <span className={`mt-0.5 w-5 h-5 rounded-md flex items-center justify-center text-xs font-black shrink-0 ${
+                            done ? "bg-green-500 text-white" : "bg-surface/60 text-text/30"
+                          }`}>{done ? "✓" : ""}</span>
+                          <div className="flex-1">
+                            <p className="text-base font-display font-bold text-text">{c.name}</p>
+                            <p className="text-sm text-text/65 leading-relaxed mt-1">{c.idea}</p>
+                          </div>
+                        </button>
+                        <div className="pl-8 space-y-2">
+                          <p className="text-xs text-text/55 leading-relaxed">
+                            <span className="font-code font-bold" style={{ color: day.color }}>언제? </span>{c.signal}
+                          </p>
+                          <p className="text-xs font-code text-text/40">⏱ {c.complexity}</p>
+                          <div className="grid sm:grid-cols-2 gap-2 pt-1">
+                            <div>
+                              <p className="text-[10px] font-code font-bold text-text/40 mb-1 uppercase tracking-wider">Python</p>
+                              <pre className="rounded-lg bg-surface/40 border border-border/20 p-3 overflow-x-auto"><code className="font-code text-[11px] leading-relaxed text-text/75 whitespace-pre">{c.python}</code></pre>
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-code font-bold text-text/40 mb-1 uppercase tracking-wider">Swift</p>
+                              <pre className="rounded-lg bg-surface/40 border border-border/20 p-3 overflow-x-auto"><code className="font-code text-[11px] leading-relaxed text-text/75 whitespace-pre">{c.swift}</code></pre>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+
+              {/* PROBLEMS */}
+              <section className="mb-8">
+                <h4 className="font-display text-base font-bold uppercase tracking-[0.15em] text-text/45 mb-3">빈출 문제</h4>
+                <div className="space-y-2">
+                  {day.problems.map((p, i) => {
+                    const id = `cote-d${day.day}-p${i}`;
+                    const done = !!cote7Tasks[id];
+                    return (
+                      <button
+                        key={id}
+                        onClick={() => toggle(id)}
+                        className={`w-full text-left rounded-xl border p-4 transition-all flex items-start gap-3 cursor-pointer ${
+                          done ? "border-green-500/40 bg-green-500/10" : "border-border/30 bg-surface/20 hover:bg-surface/40"
+                        }`}
+                      >
+                        <span className={`mt-0.5 w-5 h-5 rounded-md flex items-center justify-center text-xs font-black shrink-0 ${
+                          done ? "bg-green-500 text-white" : "bg-surface/60 text-text/30"
+                        }`}>{done ? "✓" : ""}</span>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 flex-wrap mb-1">
+                            <p className={`text-sm font-bold ${done ? "text-text/40 line-through" : "text-text/80"}`}>{p.title}</p>
+                            <span className="text-[10px] font-code px-1.5 py-0.5 rounded bg-surface/60 text-text/45">{p.source}</span>
+                            <span className="text-[10px] font-code px-1.5 py-0.5 rounded" style={{ background: `${day.color}20`, color: `${day.color}cc` }}>{p.pattern}</span>
+                          </div>
+                          <p className="text-xs text-text/60 leading-relaxed">💡 {p.keyIdea}</p>
+                          {p.trap && <p className="text-xs text-orange-400/70 leading-relaxed mt-1">⚠️ {p.trap}</p>}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+
+              {/* PITFALLS */}
+              <section className="mb-10">
+                <div className="rounded-xl border border-orange-500/25 bg-orange-500/5 p-5">
+                  <p className="text-xs font-code font-bold text-orange-400/70 mb-3 uppercase tracking-wider">⚠️ 자주 틀리는 함정</p>
+                  <ul className="space-y-2">
+                    {day.pitfalls.map((pf, i) => (
+                      <li key={i} className="text-sm text-text/65 leading-relaxed flex gap-2">
+                        <span className="text-orange-400/50 shrink-0">·</span>
+                        <span>{pf}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </section>
+
+              {/* DISCLAIMER */}
+              <section className="mb-10">
+                <div className="rounded-xl border border-sky-500/25 bg-sky-500/5 p-5">
+                  <p className="text-xs font-code font-bold text-sky-400/70 mb-2 uppercase tracking-wider">⚡ 사용법</p>
+                  <p className="text-sm text-text/55 leading-relaxed">
+                    하루 1 Day씩 7일. 개념 코드는 손으로 한 번 따라 치고, 빈출 문제는 직접 풀어본 뒤 체크하라.
+                    문제는 출처(프로그래머스/백준)에서 제목으로 검색하면 된다. 시간이 더 있으면 Day 7 모의고사를 2~3회 반복하는 게 가장 효율이 높다.
                   </p>
                 </div>
               </section>
