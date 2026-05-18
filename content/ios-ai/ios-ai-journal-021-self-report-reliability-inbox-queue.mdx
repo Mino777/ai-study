@@ -1,0 +1,188 @@
+---
+title: "iOS Harness Journal 021 — 자가 보고 신뢰성: phantom 잔존, SHA drift, silent drop, 그리고 inbox queue 이중 채널"
+category: ios-ai
+series: ios-ai-journal
+date: "2026-05-13"
+tags: [ios-harness-journal, ipc, reliability, false-positive, sha-drift, silent-failure, inbox-queue, dispatch, harness-reliability]
+confidence: 4
+last_verified: "2026-05-13"
+applicable_to: ["any"]
+connections:
+  - ios-ai/ios-ai-journal-015-compound-qa-mock-harness-worker
+  - ios-ai/ios-ai-journal-017-worker-pool-ops-tuning
+  - ios-ai/ios-ai-journal-007-claude-hooks-silent-failure
+  - ios-ai/ios-ai-journal-014-memory-to-behavior-guard
+status: complete
+type: entry
+description: >-
+  자율 사이클이 길어질수록 워커의 "보고문" 자체가 거짓말을 하는 빈도가 늘어난다. notify-main.sh가
+  input box 잔존을 history로 오판하는 phantom false positive, pre-commit auto-routing의 silent drop,
+  워커 보고 SHA ≠ 실제 git log SHA(머지백 후 재작성 drift) 3건을 같은 결로 박제. 해법은
+  파일 기반 inbox 큐(`.jsonl` append-only + flock) *이중 채널* — tmux send-keys 단일 채널을
+  durable log로 백업해 신호 손실 0.
+quiz:
+  - question: "notify-main.sh가 'dispatch 성공'이라고 보고하는데 메인 LLM은 메시지를 못 받은 경우가 생기는 근본 원인은?"
+    choices:
+      - "Claude Code 버그"
+      - "tmux send-keys 기반 IPC는 *in-band 채널*이라 pane busy 시 큐잉이 없음 — input box에 잔존하면 stdout 성공으로 보이지만 LLM 컨텍스트엔 안 들어감"
+      - "Enter 누락 — 그게 진짜 원인"
+      - "Claude API rate limit"
+    answer: 1
+    explanation: >-
+      tmux pane은 LLM 입력 stream과 같은 채널을 공유한다. 발신자는 'send-keys 성공'을 받지만 수신자가 busy면
+      입력이 input box에 적힌 채 끝나고 *처리되지 않는다*. IPC가 in-band면 '보냈다 ≠ 받았다'. 백업 채널이 필요.
+  - question: "워커가 보고한 commit SHA와 실제 git log SHA가 다른 *예측 가능한* 원인은?"
+    choices:
+      - "Worker가 거짓말함"
+      - "pre-commit auto-routing이 보호 경로 단독 커밋을 chore/claude-setup으로 머지백 → 머지백 단계에서 SHA 재작성"
+      - "GitHub API 지연"
+      - "Vercel auto-deploy가 SHA 재작성"
+    answer: 1
+    explanation: >-
+      auto-routing은 머지백을 cherry-pick/rebase 비슷한 작업으로 처리해 SHA가 바뀐다. 워커는
+      *자기가 commit한 시점의 SHA*를 보고하고, 머지백 후 그 SHA는 사라진다. 추적이 깨지지 않으려면
+      머지백 후 *최종 SHA를 워커에게 echo*해 갱신하게 해야 한다.
+  - question: "in-band IPC 채널 단일 의존을 해소하는 *durable* 대안은?"
+    choices:
+      - "Redis pub/sub"
+      - "append-only JSONL 파일 + flock + tail consumer — 파일시스템 자체가 durable, 동시성은 flock, 순서는 append-only로 보장. 신호 채널 / 분석 채널 분리"
+      - "shared memory"
+      - "WebSocket"
+    answer: 1
+    explanation: >-
+      외부 인프라(Redis)는 의존성 비용. 단일 머신 / 워크트리 기준에서는 jsonl + flock이 가장 가벼운 durable IPC.
+      append-only면 손실 없고 tail로 *메인이 idle 회복 시* 누락분 흡수. 보조 채널이 *본 채널을 막지 않게* push는
+      exit 0 best-effort로 박제.
+---
+
+# iOS Harness Journal 021 — 자가 보고 신뢰성
+
+> **TL;DR** — 자율 사이클이 길어질수록 워커의 "보고문" 신뢰도가 떨어진다. 세 가지 false positive 패턴을 한 결로 박제: (1) `notify-main.sh`가 input box 잔존을 history로 오판하는 phantom 잔존, (2) pre-commit auto-routing의 보호 경로 silent drop, (3) 워커 보고 SHA ≠ 실제 git log SHA(머지백 후 재작성). 해법은 tmux send-keys 단일 채널을 *jsonl append-only + flock* inbox 큐로 *이중 채널화* — 신호 손실 0, 분석 채널은 별도.
+
+## 0. 공통 결 — IPC가 in-band면 '보냈다 = 받았다'가 거짓
+
+워커 풀에서 발생하는 false positive 3건은 표면적으로 다르지만 같은 결이다:
+
+> **신호 채널이 LLM/CLI 입력과 같은 스트림에 있으면, 수신자 busy 상태에서 발신자만 '성공'이라 적는다.**
+
+tmux `send-keys`, pre-commit `stderr`, 워커 보고 SHA — 전부 *발신 시점*에서는 성공이지만 *수신/머지백 후*에 사라지거나 바뀐다. 단일 in-band 채널을 *durable* 보조 채널로 백업하는 게 일관된 해법.
+
+## 1. Phantom 잔존 — `notify-main.sh` false positive
+
+### 증상
+워커-3가 `bash .claude/scripts/notify-main.sh "DONE" "FR-05 PASS"`를 실행하고 성공으로 끝남. 메인 pane stderr도 "✅ dispatch sent". 하지만 메인 LLM 컨텍스트에는 메시지가 안 들어가 있어서 *다음 작업이 시작 안 됨* → 사이클 데드락.
+
+### 근본 원인
+tmux `send-keys` Enter가 *입력 박스에 텍스트만 적고* Enter는 별도로 전송되는 시퀀스인데, 메인 pane이 busy(다른 tool 호출 중)면 Enter가 즉시 적용되지 않고 input box에 텍스트 잔존. `notify-main.sh`의 verify 로직은 send 직후 stdout grep으로 검증 → input box 텍스트도 같은 스트림에 보이니 *history로 오판*하고 성공 보고.
+
+```bash
+# (단순화) 잘못된 verify
+echo "$MSG" | tmux load-buffer -b notify -
+tmux paste-buffer -b notify -t "$MAIN_PANE"
+tmux send-keys -t "$MAIN_PANE" Enter
+sleep 0.5
+tmux capture-pane -p -t "$MAIN_PANE" | grep -q "$MSG" && echo "✅ delivered"
+# ↑ input box에 잔존해도 grep은 매칭됨 → false positive
+```
+
+### 부분 해결 (Journal 015) → 한계
+Journal 015에서 fgrep + 2초 대기로 *race condition* 부분은 해소. 그래도 메인 pane이 *2초 이상* busy면 동일 false positive 재발.
+
+### 진짜 해법 — 이중 채널 (inbox)
+
+`.claude/inbox/<pane_slug>.jsonl`에 같은 메시지를 동시 push. tmux 채널이 실패해도 inbox에는 ground truth가 남음.
+
+```bash
+# .claude/scripts/inbox-push.sh — 워커 → 메인 (best-effort)
+PANE_SLUG=$(echo "$TARGET_PANE" | tr ':.' '_')   # session:1.1 → session_1_1
+INBOX="$REPO/.claude/inbox/${PANE_SLUG}.jsonl"
+EVENT=$(jq -n --arg ts "$(date -Iseconds)" \
+              --arg from "$FROM" --arg type "$TYPE" --arg msg "$MSG" \
+              '{ts:$ts, from:$from, type:$type, msg:$msg}')
+flock "$INBOX.lock" -c "echo '$EVENT' >> '$INBOX'"
+exit 0   # 보조 채널이 본 채널을 막지 않도록 best-effort
+```
+
+`notify-main.sh`는 성공/실패 양쪽 경로에서 inbox에 동시 push → **이중 채널**. 메인이 idle 회복 시 `inbox-tail.sh`로 누락분 흡수.
+
+### 자기 증명
+이 P1-1 작업 자체의 "DONE" 알림이 tmux 채널만 썼다면 손실 가능했음. 인박스로 도달해서 작업이 마무리됨 — *큐 시스템이 자기 자신의 안전망*.
+
+## 2. Pre-commit auto-routing — 보호 경로 silent drop
+
+### 증상
+워커가 `.claude/hooks/foo.sh` 단독 수정 후 commit. pre-commit이 보호 경로를 감지해 chore/claude-setup 브랜치로 *auto-routing*. 머지백 후 워커는 "commit abc1234 완료"라고 보고했는데, 메인 브랜치에는 그 SHA가 없음.
+
+### 근본 원인
+auto-routing은 `git commit` → `git checkout chore/claude-setup` → `git cherry-pick` 또는 rebase 형식 — **머지백 단계에서 SHA가 재작성**된다. 워커는 *자기 commit 시점의 SHA*를 보고하고, 그 SHA는 머지백 후 사라짐.
+
+추가로, 보호 경로 + 비보호 경로 *혼합* commit일 때 auto-routing이 보호 경로만 분리 머지하면서 비보호 변경이 *silent drop*된 사례 1회 (메모리 `feedback_pre_commit_mixed_protected_silent_failure`).
+
+### 해법 — 머지백 후 최종 SHA echo
+
+```bash
+# .githooks/pre-commit (단순화)
+if auto_routing_needed; then
+  ORIG_SHA="$(git rev-parse HEAD)"
+  perform_auto_routing
+  FINAL_SHA="$(git rev-parse chore/claude-setup)"
+
+  # 워커가 받아서 보고를 갱신하도록 stdout에 명시 출력
+  echo "🔁 AUTO_ROUTED: $ORIG_SHA → $FINAL_SHA (branch: chore/claude-setup)"
+fi
+```
+
+워커 보고 템플릿에 `AUTO_ROUTED` 매처 추가 — 매칭되면 최종 SHA로 갱신.
+
+### 메타 원칙
+> **자동 변환(머지백/squash/rebase)은 항상 *변환 후 최종 식별자*를 변환자가 echo해야 한다.**
+
+자동 변환이 보고 식별자를 *조용히 바꾸면* 추적 깨짐. PR 추적, retro, A/B 결정(Journal 019) 전부 SHA 기준이라 drift는 광범위 손상.
+
+## 3. SHA Drift — 워커 보고 vs 실제 git log
+
+위 2번의 일반화. 자동 변환 도구(머지백, squash merge, ai-review.yml, rebase)는 다 *SHA 재작성자*. 워커가 보고한 SHA가 머지 후에도 살아 있다는 가정은 거의 항상 거짓.
+
+### 패턴 박제 — 모든 자동 변환 도구에 `FINAL_SHA echo` 의무
+
+| 도구 | 변환 동작 | echo 의무 |
+|------|-----------|-----------|
+| pre-commit auto-routing | cherry-pick to protected branch | `AUTO_ROUTED: orig → final` |
+| `ai-review.yml` (auto squash merge) | squash → main | PR comment에 final SHA |
+| 사람 `git rebase -i` | 변경 SHA | (수동) 회고에 박제 |
+| `wt-branch` worktree squash | 변경 SHA | merge-back script가 echo |
+
+[Harness Journal 003 squash merge trap](/wiki/harness-engineering/harness-journal-003-squash-merge-trap-pattern)이 *사람*에게 발생한 버전, 이 저널은 *워커 보고문*에 발생한 버전이다.
+
+## 4. 메타 해법 — 이중 채널 패턴
+
+세 함정 전부에 같은 해법이 통한다:
+
+> **신호 채널 1개 + durable 분석 채널 1개 = false positive 방어선.**
+
+| 함정 | 신호 채널 | 분석 채널 |
+|------|-----------|-----------|
+| Phantom 잔존 | tmux send-keys | `.claude/inbox/<pane>.jsonl` |
+| Pre-commit silent drop | `git commit` stdout | `commit-quality.jsonl` (Journal 019) + auto-routing echo |
+| SHA drift | 워커 보고 텍스트 | `compound-growth.jsonl` final SHA echo |
+
+분석 채널은 *append-only + flock + tail consumer* 형태(JSONL). 신호 채널이 실패해도 분석 채널은 ground truth.
+
+## 5. 도입 비용 / 한계
+
+- **로그 누적** — 워커별 inbox 무제한 append. 주간 rotate + gzip archive (현재 미적용)
+- **best-effort push 함정** — `exit 0` 보장이 잘못 박히면 *실패도 알리지 않음*. 별도 모니터링(주간 `inbox-health.sh`) 필요
+- **다중 머신** — 단일 워크트리 가정. 분산 시 NFS lock 신뢰성 이슈 → 그 시점이 오면 NATS/Redis 고려
+- **워커 보고 템플릿 강제력 부재** — `AUTO_ROUTED` echo는 워커가 *읽어서 갱신*해야 함. LLM이 무시하면 SHA drift 재발 — 코드 게이트(post-merge hook이 PR description 자동 패치) 후보
+
+## 6. 전이성
+
+- **CI/CD 자동 변환** — squash/rebase merge 도구 전체에 동일 패턴
+- **Microservices async dispatch** — Kafka/SQS 같은 외부 큐 없이 만든 in-house dispatch도 동일 함정 (특히 *발신 성공 = 처리 성공* 가정)
+- **사람 협업** — "Slack에 보냈다 = 봤다"가 거짓인 것과 같은 결. 영수증/이중 채널이 진실성을 만든다
+
+## 7. 패턴 요약
+
+> **신뢰할 수 없는 보고는 *없는 보고보다 나쁘다*. 워커가 거짓말을 *할 수 없게* 채널을 설계해야 한다 — 사람의 정직성에 의존하는 시스템은 절대 정직하지 않다.**
+
+이 원칙이 Journal 015(QA AX fingerprint), 017(post-commit 자동화 후퇴), 019(측정 시스템), 020(test-without-building 시끄러운 폴백), 그리고 이 저널(이중 채널) 다섯 개를 관통한다. AI 에이전트 운영의 일관된 결.

@@ -1,0 +1,145 @@
+---
+title: "iOS Harness Journal 018 — 비대칭 워커 풀 ADR: 측정 데이터로 Impl:Verify = 1:2 (5-pane)"
+category: ios-ai
+series: ios-ai-journal
+date: "2026-05-13"
+tags: [ios-harness-journal, worker-pool, tmux, topology-design, measurement-driven, verifier-pool, adr, parallel-verify]
+confidence: 4
+last_verified: "2026-05-13"
+applicable_to: ["any"]
+connections:
+  - ios-ai/ios-ai-journal-010-ai-orchestration-tmux-worker-pool
+  - ios-ai/ios-ai-journal-015-compound-qa-mock-harness-worker
+  - ios-ai/ios-ai-journal-017-worker-pool-ops-tuning
+  - harness-engineering/ai-agent-start-here
+status: complete
+type: entry
+description: >-
+  moneyflow(iOS) 4-pane 워커 풀의 처리량을 7 FR 자율 사이클(2h)로 측정한 결과 Impl 35% / Verify 52% /
+  Lead 13%로 Verify가 항상 병목임을 확인. Verifier-A/B 분리(5-pane, Impl:Verify = 1:2)
+  ADR을 박제해 직선 2h → ~70분 추정. 토폴로지를 *추측*이 아니라 *측정*으로 정하는 패턴.
+quiz:
+  - question: "4-pane 워커 풀에서 Verifier만 2개로 확장하고 Implementer는 1개로 둔 정당성은?"
+    choices:
+      - "Verifier가 더 빠른 모델을 써서"
+      - "구현은 동시 진행 시 머지 충돌 위험 → 1개 직렬화가 안전, 검증은 시뮬 단위 격리 + read-only → 안전한 병렬화"
+      - "tmux pane 4개가 화면에 맞아서 1개만 더 추가"
+      - "Verifier는 LLM 호출이 적어서"
+    answer: 1
+    explanation: >-
+      자원 격리 비용이 비대칭이다. Implementer 다중화는 *공유 자원(git working tree)*에 충돌을 만들지만,
+      Verifier 다중화는 시뮬레이터/빌드 산출물을 별 디렉토리로 격리하면 안전한 read-only 병렬화가 가능.
+      비용 비대칭이 분명한 자리는 토폴로지도 비대칭으로 두는 게 옳다.
+  - question: "워커 풀 토폴로지 결정을 ADR로 박제할 때 *반드시 동반해야 할* 항목은?"
+    choices:
+      - "Mermaid 다이어그램"
+      - "측정 데이터(단계별 평균 소요 + 비율) — 추측이 아니라 측정이 결정의 근거여야 함"
+      - "예상 비용 절감 %"
+      - "롤백 절차"
+    answer: 1
+    explanation: >-
+      토폴로지는 측정 없는 추측으로 결정하면 늘 한쪽이 비최적. 'Verify가 더 오래 걸린다'는 *체감*이 아니라
+      자율 사이클 N 회 측정 데이터(Impl 35% / Verify 52% / Lead 13%)로 입증되어야 ADR의 결정이 정당화된다.
+      나머지 항목은 부수적.
+  - question: "직선 직렬 처리 → pipeline parallelism → 비대칭 풀로 진화하는 순서에서 비대칭 풀이 들어가는 시점은?"
+    choices:
+      - "처음부터 — 항상 더 빠르므로"
+      - "pipeline parallelism으로도 못 따라잡는 *단계 자체가 본질적 병목*임이 측정으로 드러난 시점"
+      - "절대 들어가지 않음 — 복잡도 증가"
+      - "verify 도구가 시뮬 격리를 지원하는 시점"
+    answer: 1
+    explanation: >-
+      병렬 토폴로지는 복잡도 비용이 있다. pre-fetch / pipeline 같은 *직선 토폴로지 안의 최적화*로
+      해결 가능하면 그게 먼저. 그래도 한 단계가 압도적 시간을 먹는다는 게 측정으로 확인되면 그때 그 단계만
+      비대칭 다중화. 시뮬 격리는 가능 *조건*이지 도입 *트리거*가 아님.
+---
+
+# iOS Harness Journal 018 — 비대칭 워커 풀 ADR
+
+> **TL;DR** — 4-pane(Orchestrator + Lead + Impl + Verify) 풀의 처리량을 7 FR 자율 사이클(~2h)로 측정. **Impl 35% / Verify 52% / Lead 13%** — Verify가 항상 병목. Verifier만 2개로 분리(Impl:Verify = 1:2, 5-pane) ADR을 박제해 직선 2h → ~70분 추정. 토폴로지를 추측이 아니라 *측정*으로 정한 회고.
+
+## 0. 왜 ADR로 박제했나
+
+Journal 010/017에서 워커 풀 구조와 운영 튜닝을 다뤘지만, *왜 4-pane이고 왜 그 비율인지*는 측정 없이 굳어 있었다. 자율 사이클을 두 번 돌려보니 worker-3(Verify)만 항상 마지막에 끝났다 — 직관적 의심을 측정으로 검증할 시점이었다.
+
+## 1. 측정 — 직선형 병목 패턴
+
+자율 사이클(FR-01~07, 2h)에서 단계별 평균 소요와 비율:
+
+| 단계 | 평균 소요 | 비율 |
+|------|-----------|------|
+| Implementation (Worker-2) | ~8분 / FR | 35% |
+| Verification (Worker-3) | ~12분 / FR | 52% |
+| Lead 종합 + dispatch (Worker-1) | ~3분 / FR | 13% |
+
+**Verify가 Impl의 1.5배.** Worker-3 단일 pane이 모든 FR을 직렬 처리하는 동안 Worker-2는 다음 FR brief를 *대기*만 한다. "Verify가 오래 걸린다"는 체감이 *왜* 그런지 = "단계 자체가 1.5배 무겁다 + 다중화 안 됨"이 측정으로 분리되었다.
+
+## 2. 부분 완화 — Pipeline Parallelism (현행 적용분)
+
+Worker-1이 다음 FR brief를 Worker-2 free 직전 *pre-fetch*해서 dispatch idle을 줄이는 기법은 이미 적용 중.
+
+- 효과: 직선 직렬 대비 ~20% 단축
+- 한계: Verifier는 여전히 단일 → **검증의 본질적 무거움은 못 줄임**
+
+Pipeline parallelism은 *단계 간* 대기를 없애지 *단계 자체*를 빠르게 안 만든다. Verify가 52%인 한 천장은 ~12분 × 7 = 84분 근방.
+
+## 3. ADR — Impl 1 : Verify 2 (5-pane)
+
+```
+Orchestrator(1.1) → Lead(1.2) ─┬→ Implementer(1.3)
+                                ├→ Verifier-A(1.4)
+                                └→ Verifier-B(1.5)  ← 신규
+```
+
+### 비대칭 정당성
+
+| 자리 | 다중화 비용 | 다중화 이득 | 판정 |
+|------|-------------|-------------|------|
+| Implementer | **높음** — git working tree 공유 충돌, 머지 컨플릭트, 의도 분기 | 적음 (한 번에 한 FR 구현만 안전) | **1개 유지** |
+| Verifier | **낮음** — 시뮬레이터 별 인스턴스, 빌드 산출물 별 디렉토리(`DerivedData/<verifier>/`), read-only | 큼 (병렬 검증 = 단계 시간 절반) | **2개로 확장** |
+
+**비용 비대칭이 자리마다 다른데 토폴로지가 대칭이면 어딘가 비최적이다.** 토폴로지 자체를 비대칭으로 두는 게 옳은 매핑.
+
+### 처리량 추정
+
+7 FR 사이클 기준:
+
+| 구성 | 추정 소요 | 비고 |
+|------|-----------|------|
+| 4-pane 직선 | ~2h 30m | pre-fetch 미적용 |
+| 4-pane + pre-fetch | ~2h | 현행 |
+| 5-pane (V=2) | **~70m** | Verify 50% 단축 (12분 → 6분 / FR) |
+| 5-pane + DerivedData 공유 + sim-pool 풀링 | ~55m | 다음 단계 |
+
+## 4. 도입 비용 — 잊지 말 것
+
+- **터미널 화면 폭** — 5-pane은 가로 220 columns 이상 필요. 작은 디스플레이에서 깨짐. 자동 감지 + degrade-to-4pane 분기 필요.
+- **시뮬레이터 풀** — Verifier별로 별 UDID 예약(`CLAUDE_RESERVED_SIM_UDID` env). 동시 부팅 메모리 측정 미완.
+- **DerivedData 별 경로** — `DerivedData/<verifier_id>/` 분리. 디스크 사용량 2배 증가.
+- **dispatch 라우팅 복잡도** — Lead가 Verifier-A/B 중 idle인 쪽으로 라우팅하는 로직 추가. 단순 round-robin부터 시작.
+
+## 5. 메타 원칙 — 토폴로지 결정의 진실
+
+> **토폴로지는 추측으로 정하지 말고 측정으로 정한다.**
+
+- "Verify가 오래 걸린다"는 *체감* → 측정 없이 결정하면 V=3까지 키워놓고 *실제 병목은 sim 부팅*이었던 함정이 흔함
+- 측정으로 "단계 자체가 무거운가" vs "단계 간 대기가 큰가"를 분리 → 전자는 *다중화*, 후자는 *pipeline*
+- ADR은 *측정 데이터 + 결정 + 추정 + 도입 비용*을 한 문서에 박제. 다음에 똑같은 결정 다시 안 하게.
+
+## 6. 전이성
+
+이 패턴은 AI 에이전트 풀에 한정되지 않는다:
+
+- **CI 파이프라인 단계**: build / test / deploy 중 어디가 50%+ 인지 측정 → 그 단계만 매트릭스 분할
+- **마이크로서비스 capacity planning**: 요청 처리 단계별 latency 분포 → 무거운 단계만 replica 증설
+- **개발 팀 구성**: 백엔드 1 / 프론트 2 / QA 3 같은 비대칭 팀 = 같은 결의 인적 자원 매핑
+
+핵심은 *대칭이 default가 아니다*. 부하 곡선이 비대칭이면 토폴로지도 비대칭으로 따라가는 게 옳다.
+
+## 7. 후속 측정 항목
+
+- 5-pane 첫 사이클: V=1 대비 *실제* 단축률 (추정 50% 적중 여부)
+- DerivedData 격리 시 cold build 회수 비용 (Verifier 부팅 cold/warm 비율)
+- Verifier-A/B 부하 분산 (Lead 라우팅 로직의 실제 분배율)
+
+다음 저널(019)에서 *이런 측정을 자동화하는 dev-metrics 대시보드 + A/B 시스템*을 박제한다.
