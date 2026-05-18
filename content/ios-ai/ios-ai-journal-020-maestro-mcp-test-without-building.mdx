@@ -1,0 +1,190 @@
+---
+title: "iOS Harness Journal 020 — Verify 사이클 혁신: Maestro MCP + test-without-building, 좌표 추측에서 텍스트 기반 탭으로"
+category: ios-ai
+series: ios-ai-journal
+date: "2026-05-14"
+tags: [ios-harness-journal, maestro, ios-simulator-mcp, xcodebuildmcp, test-without-building, ui-test, verify-cycle, hot-reload]
+confidence: 4
+last_verified: "2026-05-14"
+applicable_to: ["any"]
+connections:
+  - ios-ai/ios-ai-journal-018-asymmetric-worker-pool
+  - ios-ai/ios-ai-journal-012-ui-test-smoke-forensic-split
+  - ios-ai/ios-uikit-swiftui-inject-hot-reload-infra
+  - ios-ai/ios-harness-setup-xcodebuildmcp
+status: complete
+type: entry
+description: >-
+  Journal 018에서 측정으로 드러난 Verify 병목(52%)을 단계 자체로도 줄이기 위해 (1) UI 요소 탐색을
+  좌표 추측에서 텍스트/접근성 트리 기반(Maestro MCP, ios-simulator-mcp)으로 전환, (2) 코드 변경 없는
+  재검증을 풀빌드(3~5분) → `xcodebuild test-without-building`(~3초)로 분기. Hot reload + Inject까지
+  포함한 verify cycle의 4단 분기(test-without-building / hot reload / 풀빌드 / 신규 파일) 박제.
+quiz:
+  - question: "UI 요소를 '좌표 (x=148, y=412) 탭' 대신 'tapOn: \"확인\"' 텍스트 매칭으로 바꾼 핵심 이득은?"
+    choices:
+      - "Maestro 문법이 더 짧아서"
+      - "화면 회전/스케일/시뮬레이터 종 변경에 깨지지 않음(좌표 의존 제거) + 라벨 변경 시 yaml이 *의미 있게* 깨져서 즉시 발견"
+      - "성능 향상"
+      - "accessibility 인증 통과"
+    answer: 1
+    explanation: >-
+      좌표 기반은 *비의도적으로* 깨진다 — 화면 크기 바뀌면 같은 라벨이 다른 위치에 와도 yaml은 그대로 작동(엉뚱한 곳 탭).
+      텍스트 기반은 *의도대로* 깨진다 — 라벨이 사라지면 즉시 명확한 에러. 좋은 자동화는 깨질 때 *왜 깨졌는지* 보여줘야 한다.
+  - question: "코드 변경 없는 재검증을 `xcodebuild test-without-building`으로 분기한 가장 큰 단축 비율은?"
+    choices:
+      - "~10% (5분 → 4.5분)"
+      - "~98% (3~5분 → ~3초) — 변경 없으면 빌드 자체를 안 함, .xctestrun + 동일 시뮬 UDID 조건"
+      - "~50%"
+      - "변화 없음 — 빌드 캐시가 알아서 단축"
+    answer: 1
+    explanation: >-
+      DerivedData에 .xctestrun이 남아 있고 시뮬 UDID가 같으면 빌드 단계 전체를 건너뛰고 test bundle만 실행.
+      재검증 사이클(검증 yaml 수정, mock 변경 후 재실행)이 가장 자주 도는 케이스 — 이 분기 하나가
+      verify 사이클 단축의 최대 레버.
+  - question: "Hot reload(Inject) / test-without-building / 풀빌드 / 신규 파일 4단 분기를 두는 이유는?"
+    choices:
+      - "Inject가 모든 케이스를 못 다뤄서"
+      - "각 분기의 *적용 가능 조건*과 *시간 비용*이 비대칭 — 가장 싼 분기부터 시도해야 평균 사이클이 짧아짐"
+      - "Xcode 26 호환성"
+      - "ios-simulator-mcp가 강제"
+    answer: 1
+    explanation: >-
+      Hot reload는 SwiftUI body 변경에만 ~1s. test-without-building은 변경 없을 때만 ~3s. 풀빌드는 항상
+      가능하지만 3~5분. 신규 .swift 파일 추가는 풀빌드 1회 필수. 조건이 비대칭이면 분기를 두고 *조건 만족 우선순위*로
+      가장 싼 경로부터 시도하는 게 옳은 매핑.
+---
+
+# iOS Harness Journal 020 — Verify 사이클 혁신
+
+> **TL;DR** — Journal 018에서 Verify가 52% 병목으로 드러난 후, *단계 자체*를 줄이기 위해 두 가지를 박제: (1) UI 탐색을 좌표 추측 → 텍스트/접근성 트리(Maestro, ios-simulator-mcp) 기반으로 전환, (2) 코드 변경 없는 재검증을 `xcodebuild test-without-building`으로 분기(풀빌드 3~5분 → ~3초, **~98% 단축**). Hot reload(Inject) 포함 4단 분기 박제. 같은 사이클을 *조건에 맞는 가장 싼 경로*로 라우팅.
+
+## 0. 단계 자체를 빠르게
+
+Journal 018 ADR은 *Verify를 다중화*해서 병렬로 줄이는 접근이었다. 하지만 다중화 비용(시뮬 풀, DerivedData 격리)이 있으니 *단계 자체*도 줄여야 두 길이 곱해진다.
+
+이 저널은 단계 자체를 줄이는 두 레버:
+
+1. **요소 탐색 방식** — 좌표 추측 → 텍스트/AX tree
+2. **재검증 분기** — 빌드 재활용 + Hot reload + 풀빌드 4단
+
+## 1. 좌표 추측 금지 — 텍스트/AX 기반 탭
+
+### 기존 함정
+초기 verify 스크립트는 `snapshot_ui` 결과에서 텍스트 위치를 *좌표로 추출*해 `tap(x, y)` 호출. 시뮬레이터 종/방향/스케일이 바뀌면 같은 라벨이 다른 좌표에 와도 yaml은 그대로 — *엉뚱한 위치를 탭*하면서 silent fail.
+
+### 우선순위 변경
+
+```
+[1] Maestro: tapOn "확인"           — 텍스트 직접 매칭, 좌표 무관
+[2] ios-simulator-mcp ui_find_element — accessibility tree 식별자 기반
+[3] ios-simulator-mcp ui_describe_screen — ~10 토큰으로 화면 구조 파악
+[4] (폴백) XcodeBuildMCP snapshot_ui + 좌표 tap — 위 3개 실패 시
+```
+
+### "좋은 자동화는 의도대로 깨진다"
+
+- 좌표 기반 = 화면 바뀌어도 yaml은 작동 (잘못된 위치 탭) → **silent 회귀**
+- 텍스트 기반 = 라벨이 사라지면 즉시 명확한 에러 → **시끄러운 회귀**
+
+같은 사양 변경에 대해 *어느 방식이 더 빨리 사람에게 알려주나*가 자동화 도구 선택의 진짜 기준.
+
+### Maestro 플로우 박제 위치
+
+`.claude/maestro/` 디렉토리에 yaml 3개:
+
+| 파일 | 시나리오 | 비고 |
+|------|----------|------|
+| `login-to-main.yaml` | 로그인 → 메인 진입 | 인증 시드 |
+| `<feature>-to-<screen>.yaml` | 특정 기능 진입 경로 | 도메인 별로 yaml 추가 |
+| `<feature>-flow.yaml` | 1차 인터랙션 시나리오 | smoke 등급 |
+
+각 yaml은 **단일 진입점 + 단일 검증**. 큰 yaml은 회귀 시 *어디서 깨졌는지* 추적이 어려움 — 작게 쪼개고 sequence DSL로 묶는다.
+
+## 2. 4단 verify 분기 — 가장 싼 경로 우선
+
+| 분기 | 적용 조건 | 시간 | 누적 효율 |
+|------|-----------|------|-----------|
+| **Hot reload (Inject)** | SwiftUI View body만 변경 + Inject 셋업 + 앱 부팅 중 | ~1s | 5~15s → 1s |
+| **test-without-building** | 코드 변경 0 + `.xctestrun` 존재 + 동일 시뮬 UDID | **~3s** | 3~5분 → 3s (~98% ↓) |
+| **풀빌드** | 위 둘 모두 미해당 | 3~5분 | baseline |
+| **신규 파일 1회 풀빌드** | 새 .swift 추가 | 5~7분 (1회) | Inject 인덱스 신규 등록 |
+
+### test-without-building 분기 (`xcodebuild test-without-building`)
+
+```bash
+XCTESTRUN=$(find ~/Library/Developer/Xcode/DerivedData -name "*.xctestrun" \
+  -newer .git/ORIG_HEAD 2>/dev/null | head -1)
+
+if [ -n "$XCTESTRUN" ]; then
+  xcodebuild test-without-building \
+    -xctestrun "$XCTESTRUN" \
+    -destination "id=$UDID" 2>&1 | xcbeautify
+fi
+```
+
+- `find -newer .git/ORIG_HEAD`로 *최근 빌드된* xctestrun 자동 선택. 오래된 캐시 false positive 회피.
+- UDID 불일치 시 자동 폴백(풀빌드) — 조건 검사가 깨지면 *조용히 잘못된 결과*가 아니라 *시끄럽게 풀빌드*로 떨어져야 함.
+
+### Hot reload 분기
+
+[ios-uikit-swiftui-inject-hot-reload-infra](/wiki/ios-ai/ios-uikit-swiftui-inject-hot-reload-infra)에서 박제한 Inject 기반. View body 한정으로 ~1s 재반영.
+
+조건 검사 4종 (모두 만족 시만 분기):
+- 앱 이미 시뮬에 떠 있음 (`xcrun simctl listapps`)
+- 변경 파일이 SwiftUI View body 한정 (RIBs/Reactor/UseCase 미변경)
+- Inject 셋업 OK (`verify-inject-setup.sh --quiet` exit 0)
+- 변경 View에 `@ObserveInjection` + `.enableInjection()` 부착
+
+하나라도 어그러지면 풀빌드로 폴백. **silent hot reload 실패가 가장 비싸다** — "변경 안 됐다"고 사람이 혼란.
+
+## 3. 라우팅 의사 결정 트리
+
+```
+변경 감지
+  ↓
+변경 .swift 파일 0개?
+  ├ YES → test-without-building 시도 → 성공? PASS / 실패? 풀빌드
+  └ NO ↓
+  변경이 SwiftUI View body 한정 + Inject 셋업 OK?
+    ├ YES → Hot reload → 검증 PASS / 시그널 없으면 풀빌드
+    └ NO → 풀빌드
+```
+
+매 사이클이 *조건에 맞는 가장 싼 경로*로 자동 라우팅. 사람이 분기 선택을 안 해도 됨.
+
+## 4. 측정 결과 (Journal 019 dev-metrics에서 본)
+
+verify 7일 집계 (도입 전후 비교, 표본 n=42):
+
+| 항목 | 도입 전 | 도입 후 | 변화 |
+|------|--------:|--------:|-----:|
+| 평균 verify 사이클 | ~12분 | ~4분 | -67% |
+| p50 | 10분 | 2.5분 | -75% |
+| p90 | 18분 | 9분 | -50% |
+| 좌표 추측 silent fail | 3건/주 | 0건 | — |
+
+p50 단축이 p90보다 크다 — *자주 도는 재검증* 케이스(test-without-building 적중)가 평균을 끌어내림. p90은 여전히 풀빌드 케이스(신규 파일 + 첫 사이클)가 차지.
+
+## 5. 메타 원칙
+
+> **사이클을 짧게 만들려면 사이클을 *하나*로 보지 말고 *조건별 가장 싼 경로*로 분기한다.**
+
+- 단일 경로는 항상 평균이 worst-case에 가깝다.
+- 조건 검사가 *정확*하면 분기는 *시끄럽게* 폴백한다(silent shortcut 없음).
+- 분기 추가는 복잡도 비용이지만, 도입 측정(Journal 019 jsonl)으로 정당화 가능하면 ROI 양호.
+
+## 6. 도입 비용 / 함정
+
+- **`.xctestrun` 신뢰성** — Xcode 업데이트 후 schema 변경 케이스 1회 경험. `-xctestrun` 인자가 silent로 무시되어 *옛 결과로 PASS*. 해결: `xcodebuild` 버전 + xctestrun mtime을 verify 로그에 박제.
+- **Maestro JAVA_HOME** — Maestro는 JVM 의존. 셋업 매번 `JAVA_HOME` 재설정으로 *알 수 없는 에러*. `feedback_maestro_java_path` 메모리에 박제 + setup 스크립트에 강제.
+- **Hot reload false PASS** — 변경이 *반영 안 됐는데* 콘솔 `🔥 ✅ Hot reload complete`가 떠서 사람이 OK라 판단. 해결: 변경 후 *특정 라벨/색상 변화*까지 yaml로 검증(visual baseline diff).
+
+## 7. 전이성
+
+- **Android**: Espresso `onView(withText(...))` + `gradle test --offline`로 같은 패턴
+- **웹 Playwright**: `getByRole / getByText` + 빌드 결과물 재활용
+- **백엔드 contract test**: 빌드 캐시 + 변경 없는 endpoint는 schema 비교만으로 재검증 스킵
+
+핵심은 *"빠른 분기 조건을 명시"* + *"폴백을 시끄럽게"* — 도구가 무엇이든 같다.
+
+다음 저널(021)에서 verify 사이클의 결과가 *주 채널 손실로 사라지는* 함정과 inbox queue fallback을 박제한다.
