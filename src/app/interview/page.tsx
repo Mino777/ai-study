@@ -3066,11 +3066,17 @@ export default function InterviewPage() {
                             <p className="text-sm text-text/65 leading-relaxed mt-1">{c.idea}</p>
                           </div>
                         </button>
-                        <div className="pl-8 space-y-2">
+                        <div className="pl-8 space-y-3">
+                          <div className="rounded-lg p-3" style={{ background: `${day.color}10` }}>
+                            <p className="text-xs text-text/70 leading-relaxed">
+                              <span className="font-bold" style={{ color: day.color }}>💡 쉽게 말하면 — </span>{c.analogy}
+                            </p>
+                          </div>
+                          <pre className="rounded-lg bg-surface/40 border border-border/20 p-3 overflow-x-auto"><code className="font-code text-[11px] leading-relaxed text-text/70 whitespace-pre">{c.visual}</code></pre>
                           <p className="text-xs text-text/55 leading-relaxed">
                             <span className="font-code font-bold" style={{ color: day.color }}>언제? </span>{c.signal}
                           </p>
-                          <p className="text-xs font-code text-text/40">⏱ {c.complexity}</p>
+                          <p className="text-xs font-code text-text/45">⏱ 속도 — {c.complexity}</p>
                           <div className="grid sm:grid-cols-2 gap-2 pt-1">
                             <div>
                               <p className="text-[10px] font-code font-bold text-text/40 mb-1 uppercase tracking-wider">Python</p>
@@ -3096,26 +3102,44 @@ export default function InterviewPage() {
                     const id = `cote-d${day.day}-p${i}`;
                     const done = !!cote7Tasks[id];
                     return (
-                      <button
+                      <div
                         key={id}
-                        onClick={() => toggle(id)}
-                        className={`w-full text-left rounded-xl border p-4 transition-all flex items-start gap-3 cursor-pointer ${
-                          done ? "border-green-500/40 bg-green-500/10" : "border-border/30 bg-surface/20 hover:bg-surface/40"
+                        className={`rounded-xl border p-4 transition-all ${
+                          done ? "border-green-500/40 bg-green-500/10" : "border-border/30 bg-surface/20"
                         }`}
                       >
-                        <span className={`mt-0.5 w-5 h-5 rounded-md flex items-center justify-center text-xs font-black shrink-0 ${
-                          done ? "bg-green-500 text-white" : "bg-surface/60 text-text/30"
-                        }`}>{done ? "✓" : ""}</span>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 flex-wrap mb-1">
-                            <p className={`text-sm font-bold ${done ? "text-text/40 line-through" : "text-text/80"}`}>{p.title}</p>
-                            <span className="text-[10px] font-code px-1.5 py-0.5 rounded bg-surface/60 text-text/45">{p.source}</span>
-                            <span className="text-[10px] font-code px-1.5 py-0.5 rounded" style={{ background: `${day.color}20`, color: `${day.color}cc` }}>{p.pattern}</span>
+                        <div className="flex items-start gap-3">
+                          <button
+                            onClick={() => toggle(id)}
+                            aria-label="완료 체크"
+                            className={`mt-0.5 w-5 h-5 rounded-md flex items-center justify-center text-xs font-black shrink-0 cursor-pointer transition-colors ${
+                              done ? "bg-green-500 text-white" : "bg-surface/60 text-text/30 hover:bg-surface"
+                            }`}
+                          >{done ? "✓" : ""}</button>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 flex-wrap mb-1">
+                              <p className={`text-sm font-bold ${done ? "text-text/40 line-through" : "text-text/80"}`}>{p.title}</p>
+                              <span className={`text-[10px] font-code px-1.5 py-0.5 rounded ${
+                                p.platform === "leetcode" ? "bg-orange-500/15 text-orange-400/80" : "bg-sky-500/15 text-sky-400/80"
+                              }`}>{p.source}</span>
+                              <span className="text-[10px] font-code px-1.5 py-0.5 rounded" style={{ background: `${day.color}20`, color: `${day.color}cc` }}>{p.pattern}</span>
+                            </div>
+                            <p className="text-xs text-text/60 leading-relaxed">💡 {p.keyIdea}</p>
+                            {p.trap && <p className="text-xs text-orange-400/70 leading-relaxed mt-1">⚠️ {p.trap}</p>}
                           </div>
-                          <p className="text-xs text-text/60 leading-relaxed">💡 {p.keyIdea}</p>
-                          {p.trap && <p className="text-xs text-orange-400/70 leading-relaxed mt-1">⚠️ {p.trap}</p>}
                         </div>
-                      </button>
+                        {p.url && (
+                          <a
+                            href={p.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-3 ml-8 inline-flex items-center gap-1.5 text-xs font-code font-bold px-3 py-1.5 rounded-lg border transition-all hover:bg-surface/40"
+                            style={{ borderColor: `${day.color}40`, color: `${day.color}cc` }}
+                          >
+                            문제 풀러 가기 ↗
+                          </a>
+                        )}
+                      </div>
                     );
                   })}
                 </div>

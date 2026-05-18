@@ -3400,25 +3400,29 @@ export const TOSS_INTERVIEW_FAQ = [
 
 export interface CoteConcept {
   name: string;
-  idea: string;       // 한 줄 핵심
-  signal: string;     // "이런 문제면 이 패턴" 신호
-  complexity: string; // 시간복잡도
+  idea: string;       // 비전공자도 바로 이해되는 한 줄
+  analogy: string;    // 일상 비유
+  visual: string;     // ASCII 그림
+  signal: string;     // 이런 문제면 이 패턴
+  complexity: string; // 쉬운 말로 푼 시간복잡도
   python: string;
   swift: string;
 }
 
 export interface CoteProblem {
   title: string;
-  source: string;    // 출처 + 난이도 (예: "프로그래머스 Lv.2")
-  pattern: string;   // 적용 패턴
-  keyIdea: string;   // 핵심 풀이 아이디어 한 줄
-  trap?: string;     // 자주 빠지는 함정
+  source: string;     // 출처 + 난이도 (예: "프로그래머스 Lv.2", "LeetCode Easy")
+  platform?: "programmers" | "leetcode";
+  url?: string;       // 문제 직링크
+  pattern: string;    // 적용 패턴
+  keyIdea: string;    // 핵심 풀이 아이디어 한 줄
+  trap?: string;      // 자주 빠지는 함정
 }
 
 export interface Cote7Day {
   day: number;
   color: string;
-  theme: string;     // 짧은 주제 (탭 셀렉터용)
+  theme: string;
   title: string;
   goal: string;
   concepts: CoteConcept[];
@@ -3432,130 +3436,186 @@ export const COTE_7DAY_PLAN: Cote7Day[] = [
     color: "#38bdf8",
     theme: "자료구조",
     title: "자료구조 기본기 + 시간복잡도 감각",
-    goal: "N 제한만 보고 허용 복잡도를 역산하는 감각을 만들고, 스택·큐를 손에 익힌다. 코테의 모든 문제는 여기서 시작한다.",
+    goal: "데이터를 담는 그릇(스택·큐)을 손에 익히고, '이 풀이가 제한 시간 안에 끝날까?'를 미리 가늠하는 감각을 만든다. 코테의 모든 문제는 여기서 시작한다.",
     concepts: [
       {
-        name: "시간복잡도 역산",
-        idea: "N 제한을 보고 쓸 수 있는 알고리즘을 거꾸로 정한다. 보통 1초 ≈ 1억(10^8) 연산.",
-        signal: "문제 맨 아래 '제한사항'의 N 범위. 풀이 시작 전 무조건 먼저 본다.",
-        complexity: "N≤10^6 → O(N)/O(N log N) · N≤10^4 → O(N^2) · N≤20 → O(2^N) 가능",
-        python: "# N ≤ 1,000,000  → O(N log N)까지 OK (정렬)\n# N ≤ 10,000     → O(N^2) OK (이중 루프)\n# N ≤ 20         → O(2^N) 완전탐색 OK\n# 풀이 전 항상: '이 N이면 무슨 복잡도까지 되지?'",
-        swift: "// 동일 — 언어 무관, 제한사항 N으로 알고리즘 역산\n// Swift는 상수가 커서 Python 기준보다 약간 빡빡할 때가 있다",
+        name: "시간복잡도 — 얼마나 빨리 끝나나",
+        idea: "데이터가 많아질 때 프로그램이 얼마나 느려지는지를 가늠하는 척도. 코테는 제한 시간이 있어서 이게 가장 중요하다.",
+        analogy: "책 100권에서 한 권 찾기와 10,000권에서 찾기는 다르다. '데이터가 늘면 시간이 어떻게 늘어날까'를 풀기 전에 미리 따져보는 것이다.",
+        visual: `데이터가 10배로 늘면, 걸리는 시간은?
+
+  O(N)      →  10배      (그럭저럭 OK)
+  O(N²)     →  100배     (위험! 시간초과)
+  O(log N)  →  거의 그대로 (최고)`,
+        signal: "문제 맨 아래 '제한사항'에 적힌 숫자. 풀이를 시작하기 전에 무조건 먼저 본다.",
+        complexity: "N = 입력 개수. O(N)은 N에 비례, O(N²)은 N의 제곱에 비례(금방 느려짐), O(log N)은 N이 커져도 거의 안 느려짐.",
+        python: "# N 제한을 보고 쓸 수 있는 풀이를 거꾸로 정한다\n# N ≤ 1,000,000  → O(N log N)까지 OK (정렬)\n# N ≤ 10,000     → O(N^2) OK (이중 루프)\n# N ≤ 20         → O(2^N) 다 해보기 OK\n# 보통 1초 ≈ 1억(10^8)번 연산이 기준",
+        swift: "// 동일 — 언어와 무관하게 제한사항 N으로 역산\n// Swift는 상수가 커서 Python 기준보다\n// 살짝 빡빡할 때가 있다",
       },
       {
-        name: "스택 (Stack)",
-        idea: "마지막에 넣은 게 먼저 나온다(LIFO). 짝 맞추기·되돌리기·직전 상태 추적에 쓴다.",
-        signal: "괄호 검사, '직전 것과 비교', 중첩 구조, 되돌리기(undo).",
-        complexity: "push / pop O(1)",
-        python: "stack = []\nstack.append(x)      # push\ntop = stack[-1]      # peek\nstack.pop()          # pop\nif not stack: ...    # 비었는지",
-        swift: "var stack: [Int] = []\nstack.append(x)        // push\nlet top = stack.last   // peek (Optional)\nstack.popLast()        // pop\nif stack.isEmpty { }   // 비었는지",
+        name: "스택 (Stack) — 쌓아 올린 접시",
+        idea: "마지막에 넣은 것을 가장 먼저 꺼낸다. 위로 쌓고, 위에서 뺀다.",
+        analogy: "식당에 쌓아둔 접시 더미. 새 접시는 맨 위에 올리고, 쓸 때도 맨 위 접시부터 집는다. 맨 아래 접시는 가장 늦게 나온다.",
+        visual: `   넣기 ↓        ↑ 꺼내기
+        ┌───────┐
+        │   3   │ ← 맨 위 (가장 최근)
+        │   2   │
+        │   1   │ ← 맨 아래 (가장 오래됨)
+        └───────┘`,
+        signal: "괄호 짝 맞추기, '바로 앞 것과 비교', 중첩 구조, 되돌리기(undo).",
+        complexity: "넣기·빼기 모두 O(1) — 개수와 상관없이 항상 즉시.",
+        python: "stack = []\nstack.append(x)      # 위에 쌓기 (push)\ntop = stack[-1]      # 맨 위 보기 (peek)\nstack.pop()          # 맨 위 빼기 (pop)\nif not stack: ...    # 비었는지 확인",
+        swift: "var stack: [Int] = []\nstack.append(x)        // 위에 쌓기\nlet top = stack.last   // 맨 위 보기 (Optional)\nstack.popLast()        // 맨 위 빼기\nif stack.isEmpty { }   // 비었는지 확인",
       },
       {
-        name: "큐 / 덱 (Queue / Deque)",
-        idea: "먼저 넣은 게 먼저 나온다(FIFO). 양 끝 삽입·삭제가 O(1)인 deque를 기본으로 쓴다.",
-        signal: "BFS, 순서대로 처리, 회전(rotate), 앞뒤 양쪽에서 빼기.",
-        complexity: "deque 양끝 O(1) · 일반 list.pop(0)은 O(N) 금지",
-        python: "from collections import deque\nq = deque([1, 2, 3])\nq.append(4)      # 뒤에 넣기\nq.popleft()      # 앞에서 빼기 O(1)\nq.appendleft(0)  # 앞에 넣기",
-        swift: "// Swift엔 내장 Deque 없음 → 인덱스 포인터로 큐 흉내\nvar q = [1, 2, 3], head = 0\nq.append(4)              // enqueue\nlet front = q[head]; head += 1   // dequeue O(1)\nlet empty = head >= q.count",
+        name: "큐 (Queue) — 맛집 대기 줄",
+        idea: "먼저 들어온 것이 먼저 나간다. 새치기 없는 줄서기.",
+        analogy: "맛집 앞 대기 줄. 먼저 줄 선 사람이 먼저 입장한다. 양쪽 끝에서 넣고 빼는 것은 '덱(deque)'이라 부른다.",
+        visual: `   나감 ←  [1][2][3][4]  ← 들어옴
+        (먼저 온 1)      (방금 온 4)
+   먼저 온 사람이 먼저 나간다`,
+        signal: "BFS(물결 탐색), 순서대로 처리, 회전, 앞뒤 양쪽에서 빼기.",
+        complexity: "deque는 양 끝 넣기·빼기 O(1). 일반 리스트의 맨앞 빼기는 O(N)이라 느림.",
+        python: "from collections import deque\nq = deque([1, 2, 3])\nq.append(4)      # 뒤에 넣기\nq.popleft()      # 앞에서 빼기 (O(1))\nq.appendleft(0)  # 앞에 넣기",
+        swift: "// Swift엔 내장 Deque가 없음 → 인덱스로 큐 흉내\nvar q = [1, 2, 3], head = 0\nq.append(4)                    // 뒤에 넣기\nlet front = q[head]; head += 1 // 앞에서 빼기 O(1)\nlet empty = head >= q.count",
       },
     ],
     problems: [
-      { title: "올바른 괄호", source: "프로그래머스 Lv.2", pattern: "스택", keyIdea: "'(' 만나면 push, ')' 만나면 pop. 끝에 스택이 비어야 정답.", trap: "')'인데 스택이 비어 있으면 즉시 false." },
-      { title: "기능개발", source: "프로그래머스 Lv.2", pattern: "큐", keyIdea: "앞 작업이 끝나야 뒤가 배포된다. 앞에서부터 완료일 비교.", trap: "한 번에 여러 개가 같이 배포되는 묶음 처리." },
-      { title: "같은 숫자는 싫어", source: "프로그래머스 Lv.1", pattern: "스택", keyIdea: "직전 원소와 다를 때만 결과에 추가 — 스택 top 비교.", },
-      { title: "프로세스", source: "프로그래머스 Lv.2", pattern: "큐 + 우선순위", keyIdea: "deque로 돌리며 뒤에 더 높은 우선순위가 있으면 다시 뒤로 보낸다.", trap: "Day 6의 힙으로도 풀린다 — 두 풀이 비교해 보기." },
+      { title: "올바른 괄호", source: "프로그래머스 Lv.2", platform: "programmers", url: "https://school.programmers.co.kr/learn/courses/30/lessons/12909", pattern: "스택", keyIdea: "'(' 만나면 쌓고, ')' 만나면 하나 뺀다. 끝에 스택이 비어 있어야 정답.", trap: "')'인데 뺄 게 없으면 즉시 false." },
+      { title: "기능개발", source: "프로그래머스 Lv.2", platform: "programmers", url: "https://school.programmers.co.kr/learn/courses/30/lessons/42586", pattern: "큐", keyIdea: "앞 작업이 끝나야 뒤가 배포된다. 앞에서부터 완료일을 비교.", trap: "한 번에 여러 개가 같이 배포되는 묶음 처리." },
+      { title: "같은 숫자는 싫어", source: "프로그래머스 Lv.1", platform: "programmers", url: "https://school.programmers.co.kr/learn/courses/30/lessons/12906", pattern: "스택", keyIdea: "바로 앞 숫자와 다를 때만 결과에 추가 — 스택 맨 위와 비교." },
+      { title: "프로세스", source: "프로그래머스 Lv.2", platform: "programmers", url: "https://school.programmers.co.kr/learn/courses/30/lessons/42587", pattern: "큐 + 우선순위", keyIdea: "줄을 돌리며 뒤에 더 급한 작업이 있으면 다시 맨 뒤로 보낸다.", trap: "Day 6의 힙으로도 풀린다 — 두 풀이를 비교해 보기." },
+      { title: "Valid Parentheses", source: "LeetCode Easy", platform: "leetcode", url: "https://leetcode.com/problems/valid-parentheses/", pattern: "스택", keyIdea: "여는 괄호는 쌓고, 닫는 괄호는 맨 위와 짝이 맞는지 확인.", trap: "닫는 괄호가 먼저 나오면 false." },
+      { title: "Daily Temperatures", source: "LeetCode Medium", platform: "leetcode", url: "https://leetcode.com/problems/daily-temperatures/", pattern: "스택(모노톤)", keyIdea: "아직 '더 따뜻한 날'을 못 찾은 날의 인덱스를 스택에 쌓아 추적.", trap: "끝까지 더 따뜻한 날이 없는 날은 0." },
     ],
     pitfalls: [
-      "Python: list.pop(0) / list.insert(0, x)는 O(N)이라 큐로 쓰면 시간초과 — 반드시 deque.",
-      "풀이를 코드부터 짜지 말 것. 제한사항 N → 허용 복잡도 → 자료구조 순으로 1분 설계.",
-      "스택/큐가 빈 상태에서 pop하면 에러 — 빈 검사 먼저.",
+      "Python: list.pop(0)·list.insert(0, x)는 O(N)이라 큐로 쓰면 시간초과 — 반드시 deque.",
+      "코드부터 짜지 말 것. 제한사항 N → 허용 복잡도 → 자료구조 순으로 1분만 설계하고 시작.",
+      "스택·큐가 빈 상태에서 빼면 에러 — 빈지 확인을 먼저.",
     ],
   },
   {
     day: 2,
     color: "#34d399",
     theme: "해시 · 정렬",
-    title: "해시(딕셔너리/셋) + 정렬 커스텀 키",
-    goal: "'존재하는가/몇 개인가'를 O(1)로 답하는 해시와, 원하는 기준으로 줄 세우는 커스텀 정렬을 장착한다. 코테 출제 1순위 영역.",
+    title: "해시(빠른 찾기) + 정렬(줄 세우기)",
+    goal: "'있는가/몇 개인가'를 한순간에 답하는 해시와, 원하는 기준으로 데이터를 줄 세우는 정렬을 장착한다. 코테 출제 1순위 영역.",
     concepts: [
       {
-        name: "해시 — 딕셔너리 / 셋",
-        idea: "키로 즉시 찾기(O(1)). 카운팅·중복 제거·존재 여부 판정의 만능 도구.",
+        name: "해시 — 똑똑한 색인",
+        idea: "이름표를 붙여두면 전체를 뒤지지 않고 한 번에 찾는다.",
+        analogy: "사전에서 단어 찾기. 1쪽부터 넘기지 않고 'ㄱ' 색인으로 바로 펼친다. 사물함도 번호만 알면 즉시 연다.",
+        visual: `일반 배열: "사과 있나?" → 처음부터 끝까지 확인 (느림)
+해시(셋):  "사과 있나?" → '사과' 칸만 콕 확인 (즉시!)
+
+   { 사과: O,  바나나: O,  포도: O }`,
         signal: "'몇 번 나왔나', '있나 없나', '짝이 맞나', 중복 제거.",
-        complexity: "삽입 / 조회 평균 O(1)",
-        python: "from collections import Counter\ncnt = Counter(['a','b','a'])   # {'a':2,'b':1}\ncnt['a']                       # 2 (없는 키도 0)\nseen = set()\nif x in seen: ...              # O(1) 존재 확인\nseen.add(x)",
-        swift: "var cnt: [String: Int] = [:]\nfor s in arr { cnt[s, default: 0] += 1 }   // 카운팅\nvar seen = Set<Int>()\nif seen.contains(x) { }        // O(1)\nseen.insert(x)",
+        complexity: "넣기·찾기 평균 O(1) — 데이터가 아무리 많아도 거의 즉시.",
+        python: "from collections import Counter\ncnt = Counter(['a','b','a'])   # {'a':2,'b':1}\ncnt['a']                       # 2 (없는 키는 0)\nseen = set()\nif x in seen: ...              # O(1) 존재 확인\nseen.add(x)",
+        swift: "var cnt: [String: Int] = [:]\nfor s in arr { cnt[s, default: 0] += 1 }  // 개수 세기\nvar seen = Set<Int>()\nif seen.contains(x) { }        // O(1) 존재 확인\nseen.insert(x)",
       },
       {
-        name: "정렬 + 커스텀 키",
-        idea: "기본 정렬은 오름차순. key로 정렬 기준을, 다중 기준은 튜플로 준다.",
+        name: "정렬 — 기준 정해 줄 세우기",
+        idea: "데이터를 순서대로 줄 세운다. 기본은 작은 것부터, 원하는 기준으로도 가능.",
+        analogy: "학생을 키 순으로 세우기. 키가 같으면 이름 순으로. '무슨 기준으로 세울까'를 정하는 게 핵심.",
+        visual: `정렬 전:  [3][1][4][1][5]
+정렬 후:  [1][1][3][4][5]   ← 작은 것부터
+역순:     [5][4][3][1][1]   ← 큰 것부터`,
         signal: "'~순으로 정렬', '같으면 ~기준', 우선순위가 여러 개.",
-        complexity: "O(N log N)",
+        complexity: "O(N log N) — N이 2배면 시간은 2배보다 살짝 더. 충분히 빠름.",
         python: "arr.sort(key=lambda x: (-x[1], x[0]))\n# 1순위 x[1] 내림차순, 2순위 x[0] 오름차순\nnums.sort(reverse=True)        # 단순 내림차순",
         swift: "// 다중 기준: 1순위 .1 내림차순, 2순위 .0 오름차순\narr.sort { a, b in a.1 != b.1 ? a.1 > b.1 : a.0 < b.0 }\nlet asc = nums.sorted()         // 단순 오름차순\nlet desc = nums.sorted(by: >)   // 단순 내림차순",
       },
       {
-        name: "투포인터 / 슬라이딩 윈도우",
-        idea: "정렬된 배열·연속 구간 문제에서 두 포인터를 좁히거나 창을 밀어 O(N)에 푼다.",
+        name: "투포인터 — 양쪽에서 좁히기",
+        idea: "줄의 양 끝에서 손가락 두 개로 가운데를 향해 좁혀가며 답을 찾는다.",
+        analogy: "정렬된 책장의 양 끝에서 두 사람이 가운데로 다가오며 조건에 맞는 책을 찾는 것.",
+        visual: `[1][3][5][7][9]   목표: 두 수의 합 = 10
+ L→         ←R
+ 1+9 = 10  →  찾았다!
+(합이 작으면 L 오른쪽, 크면 R 왼쪽)`,
         signal: "'연속 부분 구간', '두 수의 합', 정렬된 배열에서 쌍 찾기.",
-        complexity: "O(N)",
+        complexity: "O(N) — 두 포인터가 한 번씩만 지나가므로 매우 빠름.",
         python: "lo, hi = 0, len(a) - 1\nwhile lo < hi:\n    s = a[lo] + a[hi]\n    if s == target: break\n    elif s < target: lo += 1\n    else: hi -= 1",
         swift: "var lo = 0, hi = a.count - 1\nwhile lo < hi {\n    let s = a[lo] + a[hi]\n    if s == target { break }\n    else if s < target { lo += 1 } else { hi -= 1 }\n}",
       },
     ],
     problems: [
-      { title: "완주하지 못한 선수", source: "프로그래머스 Lv.1", pattern: "해시 카운팅", keyIdea: "Counter(participant) - Counter(completion)에 남는 1명.", trap: "동명이인 — 정렬 비교 말고 카운팅으로." },
-      { title: "폰켓몬", source: "프로그래머스 Lv.1", pattern: "셋", keyIdea: "set으로 종류 수를 세고, 가질 수 있는 N/2와 min.", },
-      { title: "가장 큰 수", source: "프로그래머스 Lv.2", pattern: "커스텀 정렬", keyIdea: "문자열로 바꿔 x*3 기준 내림차순 정렬 후 이어붙인다.", trap: "결과가 '000'이면 '0' 하나로 — int 변환 후 다시 str." },
-      { title: "H-Index", source: "프로그래머스 Lv.2", pattern: "정렬", keyIdea: "내림차순 정렬 후 citations[i] >= i+1인 마지막 i를 찾는다.", },
+      { title: "완주하지 못한 선수", source: "프로그래머스 Lv.1", platform: "programmers", url: "https://school.programmers.co.kr/learn/courses/30/lessons/42576", pattern: "해시 카운팅", keyIdea: "참가자 명단 개수에서 완주자 명단 개수를 빼면 1명이 남는다.", trap: "동명이인 — 정렬 비교 말고 개수로 센다." },
+      { title: "폰켓몬", source: "프로그래머스 Lv.1", platform: "programmers", url: "https://school.programmers.co.kr/learn/courses/30/lessons/1845", pattern: "셋", keyIdea: "셋으로 종류 수를 세고, 가질 수 있는 N/2와 비교해 작은 값." },
+      { title: "가장 큰 수", source: "프로그래머스 Lv.2", platform: "programmers", url: "https://school.programmers.co.kr/learn/courses/30/lessons/42746", pattern: "커스텀 정렬", keyIdea: "문자열로 바꿔 'x를 3번 이어붙인 값' 기준으로 정렬 후 합친다.", trap: "결과가 '000'이면 '0' 하나로 — 숫자 변환 후 다시 문자열." },
+      { title: "H-Index", source: "프로그래머스 Lv.2", platform: "programmers", url: "https://school.programmers.co.kr/learn/courses/30/lessons/42747", pattern: "정렬", keyIdea: "내림차순 정렬 후 'citations[i] >= i+1'을 만족하는 마지막 i." },
+      { title: "Two Sum", source: "LeetCode Easy", platform: "leetcode", url: "https://leetcode.com/problems/two-sum/", pattern: "해시맵", keyIdea: "'목표 - 현재값'을 해시맵에서 찾으며 한 번에 통과 — O(N).", trap: "같은 원소를 두 번 쓰면 안 됨." },
+      { title: "Valid Anagram", source: "LeetCode Easy", platform: "leetcode", url: "https://leetcode.com/problems/valid-anagram/", pattern: "해시 카운팅", keyIdea: "두 문자열의 글자별 개수가 같으면 애너그램.", trap: "길이가 다르면 바로 false." },
     ],
     pitfalls: [
-      "정렬 후 비교 vs 해시 카운팅 — 동명이인/중복이 있으면 해시가 안전하고 빠르다.",
-      "'가장 큰 수'의 x*3 트릭: 자릿수가 달라도 비교되도록 충분히 반복해 붙인 뒤 비교.",
-      "Swift 다중 기준 정렬은 한 줄에 욱여넣지 말고 if로 단계 비교 — 실수가 준다.",
+      "정렬 후 비교 vs 해시 카운팅 — 중복·동명이인이 있으면 해시가 더 안전하고 빠르다.",
+      "'가장 큰 수'의 이어붙이기 트릭: 자릿수가 달라도 비교되도록 충분히 반복해 붙인 뒤 비교.",
+      "Swift 다중 기준 정렬은 한 줄에 욱여넣지 말고 if로 단계 비교 — 실수가 줄어든다.",
     ],
   },
   {
     day: 3,
     color: "#a3e635",
     theme: "완전탐색 · 그리디",
-    title: "완전탐색(브루트포스) + 그리디",
-    goal: "N이 작으면 다 해보고, 정렬+탐욕 선택으로 빠르게 푸는 두 축을 익힌다. '완탐 되는데 그리디로 헤매기'를 막는다.",
+    title: "완전탐색(다 해보기) + 그리디(매번 최선)",
+    goal: "경우가 적으면 전부 시도하고, 정렬+탐욕 선택으로 빠르게 푸는 두 축을 익힌다. '완전탐색이면 되는데 그리디로 헤매는' 실수를 막는다.",
     concepts: [
       {
-        name: "완전탐색 / 순열·조합",
-        idea: "경우의 수가 작으면 전부 시도한다. itertools로 순열·조합을 즉시 생성.",
-        signal: "N≤20 정도로 작다, '모든 경우', '가능한 조합'.",
-        complexity: "순열 O(N!) · 조합 O(2^N) — N 작을 때만",
+        name: "완전탐색 — 다 해보기",
+        idea: "경우의 수가 적으면 그냥 전부 시도해본다. 가장 확실한 방법.",
+        analogy: "자물쇠 비밀번호가 3자리면 000부터 999까지 다 눌러본다. 경우가 적으면 이게 제일 마음 편하다.",
+        visual: `가능한 모든 경우를 빠짐없이 시도
+
+  경우1 ✓확인   경우2 ✓확인   경우3 ✓확인 ...
+        → 그중 정답을 고른다
+
+  (단, 경우의 수가 적을 때만!)`,
+        signal: "N이 작다(보통 20 이하), '모든 경우', '가능한 조합'.",
+        complexity: "순열 O(N!), 조합 O(2^N) — N이 작을 때만 쓸 수 있음.",
         python: "from itertools import permutations, combinations, product\nfor p in permutations(arr, 2): ...   # 순서 O\nfor c in combinations(arr, 2): ...   # 순서 X\nfor pr in product([0,1], repeat=n): ...  # 중복 허용",
-        swift: "// Swift엔 순열 내장 없음 → 재귀 백트래킹으로 직접\nfunc perm(_ a: [Int], _ pick: [Int]) {\n    if pick.count == 2 { /* 사용 */ ; return }\n    for i in a.indices {\n        var rest = a; rest.remove(at: i)\n        perm(rest, pick + [a[i]])\n    }\n}",
+        swift: "// Swift엔 순열 내장 없음 → 재귀로 직접\nfunc perm(_ a: [Int], _ pick: [Int]) {\n    if pick.count == 2 { /* 사용 */ return }\n    for i in a.indices {\n        var rest = a; rest.remove(at: i)\n        perm(rest, pick + [a[i]])\n    }\n}",
       },
       {
-        name: "백트래킹",
-        idea: "가능성 없는 가지는 즉시 쳐내며 깊이우선으로 탐색한다.",
-        signal: "'조건 만족하는 모든 해', 가지치기로 줄일 수 있는 완전탐색.",
-        complexity: "최악 O(분기^깊이) — 가지치기로 실제는 훨씬 작음",
-        python: "def bt(depth, state):\n    if done(state):\n        record(state); return\n    for nxt in candidates(state):\n        if not promising(nxt): continue  # 가지치기\n        bt(depth + 1, state + [nxt])",
-        swift: "func bt(_ depth: Int, _ state: [Int]) {\n    if done(state) { record(state); return }\n    for nxt in candidates(state) {\n        if !promising(nxt) { continue }\n        bt(depth + 1, state + [nxt])\n    }\n}",
+        name: "백트래킹 — 아니다 싶으면 되돌아가기",
+        idea: "한 길로 가보다가 안 되겠으면 갈림길로 되돌아와 다른 길을 시도한다.",
+        analogy: "미로에서 막다른 길을 만나면 갈림길로 되돌아간다. 가망 없는 길은 더 들어가지 않는다.",
+        visual: `         시작
+        ↙      ↘
+      가능      불가능 ✗ ← 여기서 되돌아감
+     ↙    ↘
+   정답!   막힘 ✗ ← 되돌아가 다른 길로`,
+        signal: "'조건을 만족하는 모든 해', 가지치기로 줄일 수 있는 완전탐색.",
+        complexity: "최악은 크지만, 가망 없는 가지를 쳐내면 실제로는 훨씬 작아진다.",
+        python: "def bt(state):\n    if done(state):\n        record(state); return\n    for nxt in candidates(state):\n        if not promising(nxt): continue  # 가지치기\n        bt(state + [nxt])",
+        swift: "func bt(_ state: [Int]) {\n    if done(state) { record(state); return }\n    for nxt in candidates(state) {\n        if !promising(nxt) { continue }\n        bt(state + [nxt])\n    }\n}",
       },
       {
-        name: "그리디",
-        idea: "매 순간 가장 좋아 보이는 선택을 한다. 단, 그게 전체 최적이라는 근거가 있어야 한다.",
+        name: "그리디 — 매 순간 최선을 선택",
+        idea: "지금 당장 가장 좋아 보이는 것을 고른다. 단, 그게 결국 전체 최선이라는 근거가 있어야 한다.",
+        analogy: "거스름돈을 줄 때 큰 동전부터 준다. 500원 → 100원 → 10원. 매번 가장 큰 걸 고르면 동전 개수가 최소가 된다.",
+        visual: `거스름돈 770원 만들기:
+  [500]            → 270 남음
+  [100][100]       → 70 남음
+  [50][10][10]     → 0
+  매 순간 가장 큰 동전 = 최소 개수`,
         signal: "'최소/최대로 만들어라' + 정렬하면 선택이 자명해질 때.",
-        complexity: "보통 정렬 O(N log N) + 1패스 O(N)",
+        complexity: "보통 정렬 O(N log N) + 한 번 훑기 O(N).",
         python: "arr.sort()                 # 보통 정렬이 먼저\ncount = 0\nfor x in arr:\n    if can_take(x):        # 탐욕 선택\n        count += 1; take(x)",
         swift: "let sorted = arr.sorted()\nvar count = 0\nfor x in sorted where canTake(x) {\n    count += 1; take(x)\n}",
       },
     ],
     problems: [
-      { title: "모의고사", source: "프로그래머스 Lv.1", pattern: "완전탐색", keyIdea: "찍는 패턴 3개를 순환시키며 정답과 비교, 최고 득점자 추출.", },
-      { title: "소수 찾기", source: "프로그래머스 Lv.2", pattern: "완전탐색 + 에라토스테네스", keyIdea: "숫자 조각들의 모든 순열을 만들어 각각 소수 판정, set으로 중복 제거.", trap: "'011'='11' — int 변환으로 중복 제거." },
-      { title: "체육복", source: "프로그래머스 Lv.1", pattern: "그리디", keyIdea: "앞 번호부터 빌려준다 — 작은 번호 학생에게 우선 배정.", trap: "도난당했지만 여벌 있는 학생 먼저 처리." },
-      { title: "큰 수 만들기", source: "프로그래머스 Lv.2", pattern: "그리디 + 스택", keyIdea: "스택에서 '뒤 숫자가 더 크면 앞을 버린다'를 k번까지.", trap: "k가 남으면 뒤에서 잘라낸다." },
+      { title: "모의고사", source: "프로그래머스 Lv.1", platform: "programmers", url: "https://school.programmers.co.kr/learn/courses/30/lessons/42840", pattern: "완전탐색", keyIdea: "찍는 패턴 3개를 순환시키며 정답과 비교, 최고 득점자를 추출." },
+      { title: "소수 찾기", source: "프로그래머스 Lv.2", platform: "programmers", url: "https://school.programmers.co.kr/learn/courses/30/lessons/42839", pattern: "완전탐색 + 소수", keyIdea: "숫자 조각의 모든 순열을 만들어 각각 소수인지 판정, 셋으로 중복 제거.", trap: "'011'='11' — 숫자 변환으로 중복 제거." },
+      { title: "체육복", source: "프로그래머스 Lv.1", platform: "programmers", url: "https://school.programmers.co.kr/learn/courses/30/lessons/42862", pattern: "그리디", keyIdea: "앞 번호 학생부터 빌려준다 — 작은 번호에 우선 배정.", trap: "도난당했지만 여벌 있는 학생을 먼저 처리." },
+      { title: "큰 수 만들기", source: "프로그래머스 Lv.2", platform: "programmers", url: "https://school.programmers.co.kr/learn/courses/30/lessons/42883", pattern: "그리디 + 스택", keyIdea: "스택에서 '뒤 숫자가 더 크면 앞을 버린다'를 k번까지 반복.", trap: "k가 남으면 뒤에서 잘라낸다." },
+      { title: "Container With Most Water", source: "LeetCode Medium", platform: "leetcode", url: "https://leetcode.com/problems/container-with-most-water/", pattern: "투포인터", keyIdea: "양 끝에서 시작, 더 낮은 쪽을 안으로 옮기며 최대 넓이 갱신.", trap: "옮길 때마다 너비는 항상 줄어든다 — 높이로 만회해야." },
+      { title: "Best Time to Buy and Sell Stock", source: "LeetCode Easy", platform: "leetcode", url: "https://leetcode.com/problems/best-time-to-buy-and-sell-stock/", pattern: "그리디", keyIdea: "지금까지의 최저가를 추적하며 최대 이익을 갱신.", trap: "한 번만 사고팔 수 있음." },
     ],
     pitfalls: [
-      "그리디는 반례를 항상 의심하라 — '정렬하면 자명한가?'가 안 보이면 DP/완탐을 먼저 고려.",
-      "완전탐색 가능 여부는 감이 아니라 N으로 판단 — N≤20이면 2^N도 OK.",
+      "그리디는 반례를 항상 의심하라 — '정렬하면 자명한가?'가 안 보이면 DP/완전탐색을 먼저 고려.",
+      "완전탐색 가능 여부는 감이 아니라 N으로 판단 — N이 20 이하면 2^N도 OK.",
       "Python 재귀는 itertools로 대체 가능하면 대체 (실수·속도 모두 유리).",
     ],
   },
@@ -3563,133 +3623,199 @@ export const COTE_7DAY_PLAN: Cote7Day[] = [
     day: 4,
     color: "#fbbf24",
     theme: "BFS · DFS",
-    title: "그래프 탐색 — BFS / DFS / 격자",
-    goal: "코테 최빈출 영역. 최단거리는 BFS, 모든 경로·연결요소는 DFS. 격자(2D 배열)도 그래프로 본다.",
+    title: "그래프 탐색 — BFS(물결) / DFS(외길) / 격자",
+    goal: "코테 최빈출 영역. 최단 거리는 BFS, 모든 경로·연결 덩어리는 DFS. 2차원 지도도 그래프로 본다.",
     concepts: [
       {
-        name: "BFS (너비우선 — 최단거리)",
-        idea: "가까운 곳부터 동심원처럼 퍼진다. 가중치 없는 그래프의 최단거리는 무조건 BFS.",
-        signal: "'최소 이동/거리/횟수', 격자 미로, 단계별 전파.",
-        complexity: "O(V + E)",
+        name: "BFS — 물결처럼 퍼지기",
+        idea: "출발점에서 가까운 곳부터 동심원으로 퍼져나간다. 최단 거리에 강하다.",
+        analogy: "잔잔한 물에 돌을 던지면 물결이 동심원으로 퍼진다. 가까운 곳이 먼저 젖는다 — 그래서 '최단 거리'가 보장된다.",
+        visual: `          [출발]
+         ↙   ↓   ↘
+       [1]  [1]  [1]   ← 1칸 거리 (먼저 도착)
+        ↓         ↓
+       [2]       [2]   ← 2칸 거리 (그 다음)`,
+        signal: "'최소 이동/거리/횟수', 미로, 단계별로 퍼지는 전파.",
+        complexity: "O(점의 수 + 연결의 수) — 모든 곳을 한 번씩만 방문.",
         python: "from collections import deque\ndef bfs(start):\n    q = deque([start]); dist = {start: 0}\n    while q:\n        cur = q.popleft()\n        for nx in graph[cur]:\n            if nx not in dist:        # 방문 = 큐 넣을 때\n                dist[nx] = dist[cur] + 1\n                q.append(nx)",
         swift: "var q = [start], head = 0\nvar dist = [start: 0]\nwhile head < q.count {\n    let cur = q[head]; head += 1\n    for nx in graph[cur] ?? [] where dist[nx] == nil {\n        dist[nx] = dist[cur]! + 1\n        q.append(nx)\n    }\n}",
       },
       {
-        name: "DFS (깊이우선 — 경로/연결)",
-        idea: "한 방향으로 끝까지 갔다가 되돌아온다. 모든 경로 탐색·연결요소 세기에 적합.",
-        signal: "'모든 경우의 수', '연결된 덩어리 개수', 경로 존재 여부.",
-        complexity: "O(V + E)",
+        name: "DFS — 한 길 끝까지 가보기",
+        idea: "한 방향으로 끝까지 갔다가, 막히면 되돌아와 다른 길로 간다.",
+        analogy: "미로에서 한쪽 벽에 손을 대고 길을 끝까지 따라간다. 막다른 길이면 되돌아온다.",
+        visual: `   [출발]
+     ↓  (한 길 끝까지 직진)
+   [A] → [B] → [C] 막힘
+     ↓  (되돌아와 다른 길)
+   [D] → [E]`,
+        signal: "'모든 경우의 수', '연결된 덩어리 개수', 경로가 있는지 여부.",
+        complexity: "O(점의 수 + 연결의 수) — BFS와 같음.",
         python: "import sys\nsys.setrecursionlimit(10**6)   # 깊은 재귀 대비\ndef dfs(cur):\n    visited.add(cur)\n    for nx in graph[cur]:\n        if nx not in visited:\n            dfs(nx)",
         swift: "var visited = Set<Int>()\nfunc dfs(_ cur: Int) {\n    visited.insert(cur)\n    for nx in graph[cur] ?? [] where !visited.contains(nx) {\n        dfs(nx)\n    }\n}",
       },
       {
-        name: "격자 탐색 (2D 그래프)",
-        idea: "2차원 배열은 그래프다. 상하좌우 4방향을 이웃으로 보고 BFS/DFS.",
-        signal: "지도/미로/섬, 'board[i][j]', 상하좌우 이동.",
-        complexity: "O(행 × 열)",
+        name: "격자 탐색 — 지도도 그래프다",
+        idea: "2차원 표(지도)의 각 칸을 점으로, 상하좌우 칸을 연결로 본다.",
+        analogy: "보드게임 판. 한 칸에서 위·아래·왼쪽·오른쪽 칸으로 이동한다. 미로 찾기와 섬 개수 세기가 모두 이것.",
+        visual: `            [위]
+             ↑
+   [왼] ← [현재] → [오른]
+             ↓
+           [아래]
+   한 칸에서 갈 수 있는 4방향`,
+        signal: "지도·미로·섬, 'board[i][j]', 상하좌우 이동.",
+        complexity: "O(행 × 열) — 모든 칸을 한 번씩 방문.",
         python: "dx, dy = [-1,1,0,0], [0,0,-1,1]\nfor d in range(4):\n    nx, ny = x + dx[d], y + dy[d]\n    if 0 <= nx < R and 0 <= ny < C and grid[nx][ny] == 1:\n        ...   # 범위 체크 먼저, 그 다음 값 체크",
         swift: "let dx = [-1,1,0,0], dy = [0,0,-1,1]\nfor d in 0..<4 {\n    let nx = x + dx[d], ny = y + dy[d]\n    guard nx >= 0, nx < R, ny >= 0, ny < C else { continue }\n    if grid[nx][ny] == 1 { /* ... */ }\n}",
       },
     ],
     problems: [
-      { title: "타겟 넘버", source: "프로그래머스 Lv.2", pattern: "DFS", keyIdea: "각 수를 +/- 둘 다 분기 — 끝에서 합이 target이면 카운트.", },
-      { title: "게임 맵 최단거리", source: "프로그래머스 Lv.2", pattern: "BFS 격자", keyIdea: "(0,0)에서 BFS, 도착 칸의 거리. 못 가면 -1.", trap: "최단거리이므로 DFS로 풀면 틀린다." },
-      { title: "네트워크", source: "프로그래머스 Lv.3", pattern: "DFS 연결요소", keyIdea: "방문 안 한 노드에서 DFS 시작한 횟수 = 네트워크 개수.", },
-      { title: "단어 변환", source: "프로그래머스 Lv.3", pattern: "BFS", keyIdea: "한 글자 차이 단어를 간선으로 — begin→target 최단 변환 횟수.", trap: "target이 words에 없으면 0." },
+      { title: "타겟 넘버", source: "프로그래머스 Lv.2", platform: "programmers", url: "https://school.programmers.co.kr/learn/courses/30/lessons/43165", pattern: "DFS", keyIdea: "각 수를 +/- 둘 다로 분기 — 끝에서 합이 target이면 카운트." },
+      { title: "게임 맵 최단거리", source: "프로그래머스 Lv.2", platform: "programmers", url: "https://school.programmers.co.kr/learn/courses/30/lessons/1844", pattern: "BFS 격자", keyIdea: "(0,0)에서 BFS, 도착 칸까지의 거리. 못 가면 -1.", trap: "최단 거리이므로 DFS로 풀면 틀린다." },
+      { title: "네트워크", source: "프로그래머스 Lv.3", platform: "programmers", url: "https://school.programmers.co.kr/learn/courses/30/lessons/43162", pattern: "DFS 연결요소", keyIdea: "방문 안 한 컴퓨터에서 DFS를 시작한 횟수 = 네트워크 개수." },
+      { title: "단어 변환", source: "프로그래머스 Lv.3", platform: "programmers", url: "https://school.programmers.co.kr/learn/courses/30/lessons/43163", pattern: "BFS", keyIdea: "한 글자만 다른 단어를 연결로 — begin→target 최단 변환 횟수.", trap: "target이 단어 목록에 없으면 0." },
+      { title: "Number of Islands", source: "LeetCode Medium", platform: "leetcode", url: "https://leetcode.com/problems/number-of-islands/", pattern: "DFS/BFS 격자", keyIdea: "땅을 만나면 카운트 +1, 이어진 땅을 전부 방문 표시.", trap: "대각선은 인접이 아님 — 상하좌우만." },
+      { title: "Pacific Atlantic Water Flow", source: "LeetCode Medium", platform: "leetcode", url: "https://leetcode.com/problems/pacific-atlantic-water-flow/", pattern: "DFS", keyIdea: "두 바다 경계에서 거꾸로 DFS, 양쪽 모두 닿는 칸의 교집합.", trap: "높이가 같거나 높은 칸으로만 역방향 이동." },
     ],
     pitfalls: [
-      "최단거리 = BFS. DFS로 풀면 최단이 보장 안 돼 틀린다 — 이거 하나만 기억해도 절반은 산다.",
-      "BFS 방문 체크는 '큐에 넣는 시점'에. pop 시점에 하면 같은 노드가 중복으로 큐에 쌓인다.",
-      "격자는 범위 체크(0≤nx<R)를 grid[nx][ny] 접근보다 먼저 — 순서 바뀌면 인덱스 에러.",
-      "Python 재귀 DFS는 sys.setrecursionlimit 안 올리면 깊은 그래프에서 RecursionError.",
+      "최단 거리 = BFS. DFS로 풀면 최단이 보장 안 돼 틀린다 — 이거 하나만 기억해도 절반은 산다.",
+      "BFS 방문 체크는 '큐에 넣는 시점'에. 빼는 시점에 하면 같은 칸이 큐에 중복으로 쌓인다.",
+      "격자는 범위 체크(0≤nx<R)를 grid[nx][ny] 접근보다 먼저 — 순서가 바뀌면 인덱스 에러.",
+      "Python 재귀 DFS는 setrecursionlimit를 안 올리면 깊은 그래프에서 에러.",
     ],
   },
   {
     day: 5,
     color: "#fb923c",
     theme: "DP",
-    title: "다이나믹 프로그래밍 (DP)",
-    goal: "겁먹기 쉬운 영역이지만 패턴은 단순하다. '겹치는 부분 문제 + 점화식'. 작은 케이스를 손으로 적어 점화식을 잡는다.",
+    title: "다이나믹 프로그래밍 — 한 번 푼 건 적어두기",
+    goal: "이름은 무섭지만 핵심은 단순하다. '같은 계산을 또 하지 않도록 답을 적어두기'. 작은 경우를 손으로 적어 규칙(점화식)을 잡는다.",
     concepts: [
       {
-        name: "DP 1차원",
-        idea: "큰 문제를 작은 문제의 답으로 정의한다. dp[i] = i까지의 답, 점화식으로 채운다.",
-        signal: "'경우의 수', '최대/최소 합', 완전탐색인데 값이 중복 계산될 때.",
-        complexity: "O(N) ~ O(N × 상태)",
+        name: "DP — 한 번 푼 건 적어두기",
+        idea: "작은 문제의 답을 적어두고, 큰 문제를 풀 때 다시 계산하지 않고 꺼내 쓴다.",
+        analogy: "계단 오르기. '5번째 칸까지 가는 법'을 알면 '6번째'는 거기서 한 칸 더. 매번 처음부터 세지 않고 직전 답을 재활용한다.",
+        visual: `계단 오르는 경우의 수 (1칸 또는 2칸씩):
+
+  1층:1   2층:2   3층:3   4층:5   5층:8
+                        ↑ 직전 둘을 더함 (3+5=8)
+  한 번 구한 값은 칸에 적어두고 재사용`,
+        signal: "'경우의 수', '최대/최소 합', 완전탐색인데 같은 계산이 반복될 때.",
+        complexity: "보통 O(N) ~ O(N × 상태 수) — 각 칸을 한 번씩만 채움.",
         python: "dp = [0] * (n + 1)\ndp[1] = 1\nfor i in range(2, n + 1):\n    dp[i] = dp[i-1] + dp[i-2]   # 계단/피보나치형\nreturn dp[n]",
-        swift: "var dp = [Int](repeating: 0, count: n + 1)\ndp[1] = 1\nfor i in 2...n {\n    dp[i] = dp[i-1] + dp[i-2]\n}\nreturn dp[n]",
+        swift: "var dp = [Int](repeating: 0, count: n + 1)\ndp[1] = 1\nif n >= 2 {\n    for i in 2...n { dp[i] = dp[i-1] + dp[i-2] }\n}\nreturn dp[n]",
       },
       {
-        name: "DP 2차원 (격자 / 2변수)",
-        idea: "상태가 두 개면 2차원 표. 각 칸을 위·왼쪽 등 이웃 칸의 답으로 채운다.",
-        signal: "격자 경로 수, 'i번째 항목 + 용량 j' (배낭), 두 문자열 비교.",
-        complexity: "O(행 × 열)",
+        name: "DP 2차원 — 표 채우기",
+        idea: "신경 쓸 상태가 두 개면 표를 그려서 칸칸이 채운다.",
+        analogy: "엑셀 표. 각 칸의 값이 '위 칸 + 왼쪽 칸'처럼 이웃에서 정해진다. 왼쪽 위부터 차례로 채우면 끝.",
+        visual: `길 찾기 (오른쪽·아래로만 이동, 칸의 수 = 경로 수):
+
+   1 → 1 → 1
+   ↓   ↓   ↓
+   1 → 2 → 3
+   ↓   ↓   ↓
+   1 → 3 → 6   ← 위(3) + 왼쪽(3)`,
+        signal: "격자 경로 수, '항목 i + 용량 j'(배낭), 두 문자열 비교.",
+        complexity: "O(행 × 열) — 표의 모든 칸을 한 번씩.",
         python: "dp = [[0]*C for _ in range(R)]\ndp[0][0] = 1\nfor i in range(R):\n    for j in range(C):\n        if i: dp[i][j] += dp[i-1][j]\n        if j: dp[i][j] += dp[i][j-1]",
         swift: "var dp = [[Int]](repeating: [Int](repeating: 0, count: C), count: R)\ndp[0][0] = 1\nfor i in 0..<R {\n    for j in 0..<C {\n        if i > 0 { dp[i][j] += dp[i-1][j] }\n        if j > 0 { dp[i][j] += dp[i][j-1] }\n    }\n}",
       },
       {
-        name: "점화식 잡는 법",
-        idea: "'마지막 선택'을 기준으로 쪼갠다. dp[i]를 정의 → dp[i]가 dp[i-1]·dp[i-2]…로 어떻게 만들어지는지.",
+        name: "점화식 — 규칙 찾기",
+        idea: "'지금 답'이 '더 작은 답'으로 어떻게 만들어지는지 규칙을 적는 것.",
+        analogy: "작은 경우(1, 2, 3번째)를 직접 손으로 적어보면 '아, 직전 둘을 더하면 되네' 같은 규칙이 눈에 보인다.",
+        visual: `안 풀리면 작은 값을 손으로 적어본다:
+
+  N=1 → 1
+  N=2 → 2
+  N=3 → 3    ← 1+2 ?
+  N=4 → 5    ← 2+3 !  규칙 발견
+  dp[N] = dp[N-1] + dp[N-2]`,
         signal: "점화식이 안 보이면 N=1,2,3,4를 손으로 적어 규칙을 본다.",
         complexity: "—",
         python: "# 1. dp[i]가 '무엇'인지 한 문장으로 정의\n# 2. i번째에서 할 수 있는 '마지막 선택'을 나열\n# 3. 각 선택이 어떤 dp[더 작은 i]에서 오는지\n# 4. 초기값(dp[0], dp[1])과 경계 확정",
-        swift: "// 언어 무관 — 점화식은 종이에서 나온다\n// 작은 입력을 직접 손으로 계산 → 규칙 발견 → 코드",
+        swift: "// 언어 무관 — 점화식은 종이에서 나온다\n// 작은 입력을 직접 손으로 계산\n// → 규칙 발견 → 코드",
       },
     ],
     problems: [
-      { title: "정수 삼각형", source: "프로그래머스 Lv.3", pattern: "2D DP", keyIdea: "dp[i][j] = triangle[i][j] + max(위 왼쪽, 위 오른쪽).", trap: "양 끝 칸은 위쪽 이웃이 하나뿐 — 경계 처리." },
-      { title: "등굣길", source: "프로그래머스 Lv.3", pattern: "격자 DP", keyIdea: "dp[i][j] = 위 + 왼쪽 경로 수. 물 잠긴 칸은 0.", trap: "결과를 1,000,000,007로 나머지 연산." },
-      { title: "땅따먹기", source: "프로그래머스 Lv.2", pattern: "DP", keyIdea: "dp[i][j] = land[i][j] + (직전 행에서 j 빼고 max).", },
-      { title: "N으로 표현", source: "프로그래머스 Lv.3", pattern: "DP + 집합", keyIdea: "dp[k] = N을 k번 써서 만들 수 있는 수들의 집합.", trap: "5552 같은 이어붙이기 + 두 집합 사칙연산 조합." },
+      { title: "정수 삼각형", source: "프로그래머스 Lv.3", platform: "programmers", url: "https://school.programmers.co.kr/learn/courses/30/lessons/43105", pattern: "2차원 DP", keyIdea: "각 칸 = 자기 값 + (위 왼쪽, 위 오른쪽 중 큰 값).", trap: "양 끝 칸은 위쪽 이웃이 하나뿐 — 경계 처리." },
+      { title: "등굣길", source: "프로그래머스 Lv.3", platform: "programmers", url: "https://school.programmers.co.kr/learn/courses/30/lessons/42898", pattern: "격자 DP", keyIdea: "각 칸 = 위 + 왼쪽 경로 수. 물에 잠긴 칸은 0.", trap: "결과를 1,000,000,007로 나머지 연산." },
+      { title: "땅따먹기", source: "프로그래머스 Lv.2", platform: "programmers", url: "https://school.programmers.co.kr/learn/courses/30/lessons/12913", pattern: "DP", keyIdea: "각 칸 = 자기 값 + (직전 행에서 같은 열 빼고 최댓값)." },
+      { title: "N으로 표현", source: "프로그래머스 Lv.3", platform: "programmers", url: "https://school.programmers.co.kr/learn/courses/30/lessons/42895", pattern: "DP + 집합", keyIdea: "dp[k] = N을 k번 써서 만들 수 있는 수들의 집합.", trap: "5552 같은 이어붙이기 + 두 집합의 사칙연산 조합." },
+      { title: "Coin Change", source: "LeetCode Medium", platform: "leetcode", url: "https://leetcode.com/problems/coin-change/", pattern: "DP", keyIdea: "dp[금액] = min(dp[금액-동전] + 1)을 작은 금액부터 채운다.", trap: "만들 수 없는 금액은 -1로 표시." },
+      { title: "House Robber", source: "LeetCode Easy", platform: "leetcode", url: "https://leetcode.com/problems/house-robber/", pattern: "DP", keyIdea: "dp[i] = max(직전까지 최대, 이번 집 + 두 칸 전까지 최대).", trap: "인접한 집을 동시에 털 수 없음." },
     ],
     pitfalls: [
-      "점화식이 안 보이면 코드 멈추고 N=1~5를 손으로 적어라 — DP는 종이 싸움이다.",
+      "점화식이 안 보이면 코드를 멈추고 N=1~5를 손으로 적어라 — DP는 종이 싸움이다.",
       "초기값(dp[0], dp[1])과 경계(첫 행/열)를 빠뜨려 틀리는 경우가 절반 이상.",
       "큰 수가 나오면 문제에 '나머지로 출력' 조건이 있는지 확인 — 등굣길류 단골.",
-      "완전탐색으로 짰는데 시간초과면 '같은 인자로 또 호출되나?'를 보라 — 그렇다면 메모이제이션.",
+      "완전탐색으로 짰는데 시간초과면 '같은 인자로 또 호출되나?'를 보라 — 그렇다면 메모이제이션(DP).",
     ],
   },
   {
     day: 6,
     color: "#f472b6",
     theme: "이분탐색 · 힙",
-    title: "이분탐색 + 우선순위 큐 + 누적합",
-    goal: "정렬·단조성을 이용해 O(N) 이하로 떨어뜨리는 세 무기. 특히 '답을 이분탐색하는' 파라메트릭 서치는 합격을 가른다.",
+    title: "이분탐색(반씩 버리기) + 힙 + 누적합",
+    goal: "정렬·규칙성을 이용해 속도를 확 끌어올리는 세 무기. 특히 '답 자체를 이분탐색하는' 파라메트릭 서치는 합격을 가른다.",
     concepts: [
       {
-        name: "이분탐색 / 파라메트릭 서치",
-        idea: "정렬된 곳에서 절반씩 버린다. 답 자체가 단조적이면 '답의 범위'를 이분탐색한다.",
-        signal: "'최소를 최대로 / 최대를 최소로', 'X 이하로 가능한가?'가 단조적일 때.",
-        complexity: "O(log N) — 파라메트릭은 O(N log(범위))",
+        name: "이분탐색 — 반씩 버리기",
+        idea: "정렬된 데이터에서 가운데를 보고 절반을 통째로 버린다.",
+        analogy: "사전에서 단어 찾기. 한가운데를 펼쳐 찾는 단어가 앞쪽이면 뒤 절반은 통째로 무시. 또 반, 또 반.",
+        visual: `[1][3][5][7][9][11][13]   목표: 9
+            ↑가운데(7) → 9가 더 큼, 왼쪽 버림
+        [9][11][13]
+         ↑가운데(11) → 9가 더 작음, 오른쪽 버림
+        [9]  찾았다!`,
+        signal: "'최소를 최대로 / 최대를 최소로', 'X 이하로 가능한가?'가 단계적으로 변할 때.",
+        complexity: "O(log N) — 데이터가 백만 개여도 약 20번만에 끝.",
         python: "lo, hi = 0, max_answer\nwhile lo < hi:\n    mid = (lo + hi) // 2\n    if possible(mid):   # mid로 조건 만족?\n        hi = mid        # 더 줄여본다\n    else:\n        lo = mid + 1\nreturn lo",
         swift: "var lo = 0, hi = maxAnswer\nwhile lo < hi {\n    let mid = (lo + hi) / 2\n    if possible(mid) { hi = mid }\n    else { lo = mid + 1 }\n}\nreturn lo",
       },
       {
-        name: "우선순위 큐 (힙)",
-        idea: "항상 최소(또는 최대)를 O(log N)에 꺼낸다. 매번 '가장 작은 것'이 필요할 때.",
-        signal: "'가장 작은/큰 것을 반복해서', K번째, 합치기.",
-        complexity: "push / pop O(log N)",
-        python: "import heapq\nh = []\nheapq.heappush(h, 3)\nheapq.heappush(h, 1)\nsmallest = heapq.heappop(h)   # 1 (최소힙)\n# 최대힙: 값에 -1 곱해 넣고 꺼낼 때 다시 -1",
-        swift: "// ⚠️ Swift 표준 라이브러리엔 Heap 없음 (swift-collections 패키지에만)\n// 코테에선 직접 구현하거나, 작으면 매번 sorted()로 대체\nvar h = [3, 1, 4]\nh.sort()                       // 작은 입력이면 이걸로 버틴다\nlet smallest = h.removeFirst()",
+        name: "힙 (우선순위 큐) — 1등이 항상 위로",
+        idea: "무엇을 넣든 항상 가장 작은(또는 큰) 것이 맨 위로 올라온다.",
+        analogy: "응급실. 줄 선 순서가 아니라 가장 위급한 환자가 먼저 치료받는다. 새 환자가 와도 위급도 순으로 자동 정렬.",
+        visual: `넣은 순서:  5, 1, 8, 3
+꺼낼 때:    1 → 3 → 5 → 8
+   항상 가장 작은 것이 맨 위로 자동 정렬
+        ┌─ 1 ─┐
+        3     5
+        8`,
+        signal: "'가장 작은/큰 것을 반복해서 꺼낸다', K번째, 여러 개 합치기.",
+        complexity: "넣기·빼기 O(log N) — 정렬을 매번 다시 하는 것보다 훨씬 빠름.",
+        python: "import heapq\nh = []\nheapq.heappush(h, 3)\nheapq.heappush(h, 1)\nsmallest = heapq.heappop(h)   # 1 (최소힙)\n# 최대힙: 값에 -1을 곱해 넣고, 꺼낼 때 다시 -1",
+        swift: "// ⚠️ Swift 표준 라이브러리엔 Heap이 없음\n// 코테에선 직접 구현하거나, 작으면 매번 sorted()로 대체\nvar h = [3, 1, 4]\nh.sort()                       // 작은 입력이면 이걸로 버틴다\nlet smallest = h.removeFirst()",
       },
       {
-        name: "누적합 (Prefix Sum)",
-        idea: "구간 합을 미리 더해두면 어떤 구간이든 O(1)에 답한다.",
-        signal: "'구간 합을 여러 번', range sum 쿼리가 반복될 때.",
-        complexity: "전처리 O(N) · 구간 질의 O(1)",
+        name: "누적합 — 미리 더해두기",
+        idea: "구간의 합을 자주 물어보면, 처음부터의 합을 미리 더해둔다.",
+        analogy: "1~12월 매출에서 '3~7월 합'을 자주 물으면, 미리 '1월부터 N월까지 누적'을 적어두면 뺄셈 한 번으로 끝난다.",
+        visual: `원본:    [2][4][1][3][5]
+누적합:  [2][6][7][10][15]
+
+  3번째까지 합 = 누적[3] = 7   (즉시!)
+  2~4 구간 합 = 누적[4] - 누적[1]`,
+        signal: "'구간 합을 여러 번 물어봄', 같은 범위 질의가 반복될 때.",
+        complexity: "전처리 O(N) 한 번, 그 뒤 구간 질의는 O(1).",
         python: "prefix = [0] * (n + 1)\nfor i in range(n):\n    prefix[i+1] = prefix[i] + a[i]\n# 구간 [l, r] 합 = prefix[r+1] - prefix[l]",
         swift: "var prefix = [Int](repeating: 0, count: n + 1)\nfor i in 0..<n { prefix[i+1] = prefix[i] + a[i] }\n// [l, r] 합 = prefix[r+1] - prefix[l]",
       },
     ],
     problems: [
-      { title: "입국심사", source: "프로그래머스 Lv.3", pattern: "파라메트릭 서치", keyIdea: "'시간 T 안에 n명 가능?'을 이분탐색 — 답(시간)을 탐색 대상으로.", trap: "hi를 충분히 크게(가장 느린 심사관 × n)." },
-      { title: "더 맵게", source: "프로그래머스 Lv.2", pattern: "힙", keyIdea: "최소 2개를 꺼내 섞어 다시 넣기, 최솟값이 K 이상 될 때까지.", trap: "더 못 섞는데 K 미만이면 -1." },
-      { title: "예산", source: "프로그래머스 Lv.3", pattern: "이분탐색", keyIdea: "상한액을 이분탐색 — 그 상한으로 몇 부서 지원 가능한지.", },
-      { title: "디스크 컨트롤러", source: "프로그래머스 Lv.3", pattern: "힙", keyIdea: "현재 처리 가능한 작업 중 소요시간 최소를 힙으로 골라 SJF.", trap: "요청 시각 정렬 + 대기 큐 힙, 두 단계." },
+      { title: "입국심사", source: "프로그래머스 Lv.3", platform: "programmers", url: "https://school.programmers.co.kr/learn/courses/30/lessons/43238", pattern: "파라메트릭 서치", keyIdea: "'시간 T 안에 n명 가능?'을 이분탐색 — 답(시간)을 탐색 대상으로.", trap: "hi를 충분히 크게(가장 느린 심사관 × n)." },
+      { title: "더 맵게", source: "프로그래머스 Lv.2", platform: "programmers", url: "https://school.programmers.co.kr/learn/courses/30/lessons/42626", pattern: "힙", keyIdea: "가장 안 매운 2개를 꺼내 섞어 다시 넣기, 최솟값이 K 이상 될 때까지.", trap: "더 못 섞는데 K 미만이면 -1." },
+      { title: "예산", source: "프로그래머스 Lv.3", platform: "programmers", url: "https://school.programmers.co.kr/learn/courses/30/lessons/12982", pattern: "그리디/정렬", keyIdea: "신청 금액을 작은 것부터 더해가며 예산을 넘기 직전까지." },
+      { title: "디스크 컨트롤러", source: "프로그래머스 Lv.3", platform: "programmers", url: "https://school.programmers.co.kr/learn/courses/30/lessons/42627", pattern: "힙", keyIdea: "지금 처리 가능한 작업 중 소요시간이 가장 짧은 것을 힙으로 골라 처리.", trap: "요청 시각 정렬 + 대기 큐 힙, 두 단계." },
+      { title: "Kth Largest Element in an Array", source: "LeetCode Medium", platform: "leetcode", url: "https://leetcode.com/problems/kth-largest-element-in-an-array/", pattern: "힙", keyIdea: "크기 k인 최소힙을 유지 — 맨 위가 곧 k번째 큰 값.", trap: "'k번째로 큰 값'이지 'k번째 서로 다른 값'이 아님." },
+      { title: "Top K Frequent Elements", source: "LeetCode Medium", platform: "leetcode", url: "https://leetcode.com/problems/top-k-frequent-elements/", pattern: "힙 / 버킷", keyIdea: "빈도를 센 뒤 가장 자주 나온 k개를 힙으로 뽑는다.", trap: "모든 원소의 빈도가 같을 수도 있음." },
     ],
     pitfalls: [
       "파라메트릭 서치의 핵심: '무엇을 이분탐색하나?' = 보통 '답 그 자체'(시간·크기·개수).",
-      "이분탐색 경계(lo<hi vs lo<=hi, hi=mid vs hi=mid-1)는 한 가지 형태를 외워서 고정으로 써라.",
+      "이분탐색 경계(lo<hi vs lo<=hi, hi=mid vs hi=mid-1)는 한 가지 형태를 외워 고정으로 써라.",
       "Swift는 힙이 없다 — N이 작으면 sorted()로 우회, 크면 힙을 직접 구현해야 함을 미리 각오.",
       "최대힙이 필요할 때 Python heapq는 값에 -1을 곱해 넣고 꺼낼 때 되돌린다.",
     ],
@@ -3702,40 +3828,62 @@ export const COTE_7DAY_PLAN: Cote7Day[] = [
     goal: "지식이 아니라 '시험 운영'을 연습하는 날. 시간 제한을 걸고 풀며, 유형 판별·시간 배분·함정 회피를 몸에 익힌다.",
     concepts: [
       {
-        name: "유형 30초 판별법",
-        idea: "문제를 읽자마자 N 제한 + 키워드로 알고리즘을 찍는다. Day 1~6이 다 여기로 모인다.",
-        signal: "'최단/최소 이동'→BFS · '모든 경우'+작은N→완탐 · '경우의 수/최대합'→DP · '최소를 최대로'→파라메트릭 · '몇 개/있나'→해시.",
-        complexity: "판별 자체에 30초 이상 쓰지 말 것",
-        python: "# 1) 제한사항 N 확인 → 허용 복잡도\n# 2) 키워드로 유형 후보 2개로 압축\n# 3) 입출력 형식 확인\n# 4) 종이에 풀이 스케치 → 그 다음에 코딩",
-        swift: "// 언어 무관 — 코딩 전 '읽기·판별·스케치'에 5분을 투자하면\n// 디버깅 20분을 아낀다",
+        name: "유형 30초에 알아채기",
+        idea: "문제를 읽자마자 'N 제한 + 키워드'로 어떤 도구를 쓸지 빠르게 찍는다.",
+        analogy: "의사가 증상만 듣고 어느 과인지 판단하듯, 문제의 '증상'으로 알고리즘을 빠르게 분류한다.",
+        visual: `키워드  →  꺼낼 도구
+
+ "최단 거리/이동"      →  BFS
+ "모든 경우" + 작은 N  →  완전탐색
+ "경우의 수 / 최대합"  →  DP
+ "최소를 최대로"       →  이분탐색
+ "몇 개 / 있나 없나"   →  해시`,
+        signal: "Day 1~6에서 배운 패턴이 전부 여기로 모인다.",
+        complexity: "판별 자체에 30초 이상 쓰지 말 것.",
+        python: "# 1) 제한사항 N 확인 → 허용 복잡도\n# 2) 키워드로 유형 후보를 2개로 압축\n# 3) 입출력 형식 확인\n# 4) 종이에 풀이 스케치 → 그 다음에 코딩",
+        swift: "// 언어 무관 — 코딩 전 '읽기·판별·스케치'에\n// 5분을 투자하면 디버깅 20분을 아낀다",
       },
       {
-        name: "시간 배분 전략",
-        idea: "3문제 90분이면 쉬운 것부터. 한 문제에 막히면 들고 있지 말고 넘어간다.",
-        signal: "한 문제에 25분 넘게 진척이 없다 → 다음 문제로, 부분점수라도 확보.",
-        complexity: "쉬움→중간→어려움 순, 마지막 10분은 검토",
-        python: "# 90분 / 3문제 예시\n# 0~25분  : 가장 쉬운 문제 (확실히 만점)\n# 25~60분 : 중간 문제\n# 60~80분 : 어려운 문제 (부분점수 노림)\n# 80~90분 : 엣지케이스 검토 + 제출",
-        swift: "// 막혔을 때: 완전탐색/브루트포스로라도 부분점수\n// 0점보다 30점이 낫다 — 빈 제출 금지",
+        name: "시간 배분 — 쉬운 것부터",
+        idea: "쉬운 문제로 점수를 먼저 확보하고, 어려운 건 나중에. 한 문제에 매몰되지 않는다.",
+        analogy: "시험은 1번부터 순서대로가 아니라 풀리는 문제부터. 막히면 별표 치고 넘어간다.",
+        visual: `90분 / 3문제 배분 예시
+
+ ┌────────┬───────────┬──────────┐
+ │ 쉬움    │ 중간       │ 어려움    │
+ │ 0-25분  │ 25-60분    │ 60-85분  │
+ └────────┴───────────┴──────────┘
+       마지막 5분: 검토 · 제출`,
+        signal: "한 문제에 25분 넘게 진척이 없으면 다음 문제로.",
+        complexity: "쉬움 → 중간 → 어려움 순, 마지막은 검토.",
+        python: "# 막혔을 때: 완전탐색/브루트포스로라도 부분점수\n# 0점보다 30점이 낫다 — 빈 제출 금지",
+        swift: "// 면접 코테는 '완벽한 1문제'보다 '푼 문제 수'\n// 안 풀리면 미련 없이 넘기고 나중에 돌아온다",
       },
       {
-        name: "막혔을 때 탈출법",
-        idea: "최적해가 안 보이면 일단 정답이 보장되는 느린 풀이부터 짠다. 그 다음 최적화.",
-        signal: "최적 알고리즘이 안 떠오를 때, 시간초과가 날 걸 알지만 로직은 맞을 때.",
-        complexity: "느려도 맞는 풀이 → 부분점수 → 시간 남으면 최적화",
-        python: "# 1) 완전탐색으로 '맞는 답'을 먼저 만든다\n# 2) 중복 계산 보이면 메모이제이션 (→ DP)\n# 3) 정렬·이분탐색·해시로 병목 제거\n# 막힌 채 30분 < 부분점수 제출",
-        swift: "// 면접 코테는 '완벽한 1문제'보다 '푼 문제 수'\n// 안 풀리면 미련 없이 넘기고 돌아온다",
+        name: "막히면 — 느려도 맞는 답부터",
+        idea: "최적해가 안 보이면 일단 '느리지만 정답인' 풀이라도 짠다. 0점보다 부분점수.",
+        analogy: "레시피가 기억 안 나면 일단 먹을 수 있게는 만든다. 완벽한 0접시보다 평범한 1접시가 낫다.",
+        visual: `1단계: 완전탐색으로 '맞는 답' 확보  → 부분점수
+2단계: 중복 계산이 보이면 메모    → DP로 진화
+3단계: 정렬·이분탐색으로 속도 개선
+
+  막힌 채 30분  <  부분점수 제출`,
+        signal: "최적 알고리즘이 안 떠오를 때, 시간초과는 알지만 로직은 맞을 때.",
+        complexity: "느려도 맞는 풀이 → 부분점수 → 시간 남으면 최적화.",
+        python: "# 1) 완전탐색으로 '맞는 답'을 먼저 만든다\n# 2) 중복 계산 보이면 메모이제이션 (→ DP)\n# 3) 정렬·이분탐색·해시로 병목 제거",
+        swift: "// 완벽주의는 코테의 적\n// '제출한 부분점수' > '머릿속의 만점'",
       },
     ],
     problems: [
-      { title: "모의 세트 A — 구현 1 + 탐색 1 + DP/그리디 1", source: "직접 구성 · 90분 타이머", pattern: "혼합", keyIdea: "Day 1·4·5 대표 문제를 하나씩 골라 시간 재고 연속으로 푼다.", trap: "타이머 없이 풀면 연습 효과 절반 — 반드시 시간 제한." },
+      { title: "모의 세트 A — 구현 1 + 탐색 1 + DP/그리디 1", source: "직접 구성 · 90분 타이머", pattern: "혼합", keyIdea: "Day 1·4·5의 대표 문제를 하나씩 골라 시간을 재고 연속으로 푼다.", trap: "타이머 없이 풀면 연습 효과가 절반 — 반드시 시간 제한." },
       { title: "틀린 문제 다시 풀기", source: "Day 1~6 오답 노트", pattern: "복습", keyIdea: "이번 주 막혔던 문제만 모아 풀이를 안 보고 재도전.", trap: "답을 외우지 말고 '왜 그 패턴인지'를 설명할 수 있어야 한다." },
-      { title: "모의 세트 B — 시간 단축 재도전", source: "이미 푼 문제 · 시간 절반", pattern: "혼합", keyIdea: "Day 2·3·6 문제를 절반 시간 안에 — 손에 익히는 마무리.", },
+      { title: "모의 세트 B — 시간 단축 재도전", source: "이미 푼 문제 · 시간 절반", pattern: "혼합", keyIdea: "Day 2·3·6 문제를 절반 시간 안에 — 손에 익히는 마무리." },
     ],
     pitfalls: [
       "제출 전 체크: 입출력 형식 맞나 / 변수명·인덱스 / 시간복잡도 / return 빠뜨림.",
       "엣지 케이스 3종 세트: 빈 입력 · 원소 1개 · 최댓값(제한 상한) — 제출 전 머릿속으로라도 돌려본다.",
-      "Python: 재귀 깊으면 setrecursionlimit, 입력 많으면 sys.stdin / input() 대신 빠른 입력.",
-      "한 문제에 매몰되지 말 것 — 푼 문제 수가 점수다. 25분 룰을 지켜라.",
+      "Python: 재귀가 깊으면 setrecursionlimit, 입력이 많으면 빠른 입력(sys.stdin) 사용.",
+      "한 문제에 매몰되지 말 것 — 푼 문제 수가 곧 점수다. 25분 룰을 지켜라.",
       "긴장하면 쉬운 문제도 틀린다 — Day 7은 3시간 이상 자고 컨디션부터 챙긴다.",
     ],
   },
