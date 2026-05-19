@@ -22,11 +22,11 @@ quiz:
   - question: "`grep -qE \"--no-verify\"`가 차단되지 않는 이유는?"
     choices:
       - "grep이 정규식을 지원하지 않아서"
-      - "`--no-verify`가 grep 자체의 옵션으로 해석돼 패턴 인자가 사라지기 때문"
+      - "`--no-verify`가 grep의 unknown long option으로 해석돼 grep이 exit 2(에러)로 종료, `if grep ...; then` 블록이 실행되지 않기 때문"
       - "bash 따옴표 이스케이프 문제"
       - "PATH에 grep이 없어서"
     answer: 1
-    explanation: "GNU grep은 `--`로 시작하는 문자열을 옵션으로 먼저 파싱한다. `--no-verify`는 grep이 인식하는 옵션이 아니므로 에러는 아니지만 패턴 인자가 비어버려 매칭이 0이다. `grep -qE -e \"--no-verify\"`로 `-e`를 명시하면 그 뒤가 명시적으로 패턴 인자가 된다."
+    explanation: "grep은 `--`로 시작하는 인자를 long option으로 먼저 파싱한다. `--no-verify`는 grep이 모르는 옵션 → stderr에 'invalid option' + exit code 2. 셸의 `if grep ...; then` 은 exit 0만 truthy로 본다 → 블록 미실행 → 차단 우회. 실측: `echo \"git push --no-verify\" | grep -qE \"--no-verify\"; echo $?` → 2. `grep -qE -e \"--no-verify\"`로 `-e`를 명시하면 그 뒤가 무조건 패턴 인자 → exit 0 정상 매칭."
   - question: "메모리 룰만으로 '--no-verify 금지'를 강제하기 어려운 이유는?"
     choices:
       - "메모리는 *상기*에 의존 — 한 번이라도 위반되면 즉시 PreToolUse hook으로 escalate해야"
@@ -121,21 +121,33 @@ exit 0
 ```bash
 # 잘못된 버전
 echo "git push --no-verify" | grep -qE "--no-verify"
-# → grep이 "--no-verify"를 자기 옵션으로 파싱 시도
-# → grep 옵션 아님 → 패턴 인자 비어버림
-# → 매칭 0, 차단 실패
+# → grep이 "--no-verify"를 unknown long option으로 파싱
+# → stderr: "invalid option --no-verify"
+# → exit code 2 (에러)
+# → `if grep ...; then` 은 exit 0만 truthy → 블록 미실행 → 차단 우회
 ```
 
 ```bash
 # 픽스된 버전
 echo "git push --no-verify" | grep -qE -e "--no-verify"
-# → -e 뒤가 명시적 패턴 인자
-# → 정상 매칭 → exit 2 차단
+# → -e 뒤가 무조건 패턴 인자로 해석됨
+# → 정상 매칭, exit 0
+# → if 블록 실행 → hook이 exit 2로 차단
+```
+
+실측:
+```
+$ echo "git push --no-verify" | grep -qE "--no-verify"; echo $?
+# ugrep: invalid option --no-verify ...
+2
+
+$ echo "git push --no-verify" | grep -qE -e "--no-verify"; echo $?
+0
 ```
 
 `--`로 시작하는 패턴이 하나라도 있으면 **모든 패턴**에 `-e`를 붙여야 한다. (DANGEROUS_PATTERNS 배열 중 하나만 `--`로 시작해도 해당 iteration에서 우회됨)
 
-> ⚠️ 이 버그는 *조용한 실패*다. 차단 메시지가 안 떠도 사용자는 "오, 막혔겠지" 가정하고 넘어간다. 실제로는 모든 `--no-verify` 가 통과. **자동 수정 도구는 idempotent + 자기 검증이 없으면 silent 누적 손상을 만든다** ([feedback_self_modifying_tools](/wiki/harness-engineering) 메모리 패턴과 동일).
+> ⚠️ stderr에는 'invalid option' 노이즈가 뜨지만 hook은 무시한 채 정상 통과로 처리된다. 차단 의도가 *조용히 무력화*되는 것이 핵심 위험. **자동 수정 도구는 idempotent + 자기 검증이 없으면 silent 누적 손상을 만든다** ([feedback_self_modifying_tools](/wiki/harness-engineering) 메모리 패턴과 동일).
 
 ## 차단 대상 정당화
 
