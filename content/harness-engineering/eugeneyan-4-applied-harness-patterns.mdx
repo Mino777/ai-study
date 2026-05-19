@@ -1,0 +1,255 @@
+---
+title: "Eugeneyan 4종 하네스 패턴 — 드리프트 2종 분리 + 트랜스크립트 마이닝 + tmux pane 상태 + CLAUDE.md 분리"
+category: harness-engineering
+date: "2026-05-19"
+tags:
+  - eugeneyan
+  - drift
+  - transcript-mining
+  - tmux
+  - claude-md
+  - korean-signals
+confidence: 4
+last_verified: "2026-05-19"
+applicable_to: ["any"]
+connections:
+  - harness-engineering/orchestrator-worker-tmux-communication-rules
+  - harness-engineering/tmux-flush-automation-pattern
+  - harness-engineering/skillify-failure-to-skill-practice
+  - harness-engineering/claude-code-production-hooks
+status: complete
+description: "Eugeneyan 'AI와 함께 일하며 복리처럼 쌓아 성장하는 법' (GeekNews 29606)에서 모바일 워커 프로젝트 하네스로 이식한 4가지 패턴 실측. ① 드리프트 2종 분리(방향/실행) ② 한국어 반복 신호 트랜스크립트 마이닝 ③ tmux pane title 이모지 + stop hook 사운드 ④ CLAUDE.md 306→210줄 분리(31% 감량). 추정 아닌 실제 적용 시 디테일 — 한국어 토큰 리스트, 시스템 노이즈 필터, role 추정 로직."
+type: entry
+quiz:
+  - question: "드리프트 2종 분리에서 '방향 드리프트'와 '실행 드리프트'는 각각 어느 워커가 담당하나?"
+    choices:
+      - "둘 다 Orchestrator가 책임"
+      - "방향=Worker-1 advisor('올바른 작업?'), 실행=Worker-3 verify('올바르게?')"
+      - "방향=Worker-3, 실행=Worker-1"
+      - "사용자(인간)가 둘 다 직접 확인"
+    answer: 1
+    explanation: "Eugeneyan은 드리프트를 한 덩어리로 보지만, 이식 시 작업 정체성(WHAT) vs 실행 품질(HOW)로 쪼개면 워커 분담이 자연스럽다. Worker-1은 advisor로서 '지금 올바른 작업을 하고 있나'를 묻고, Worker-3는 verify로 '올바르게 했나'를 점검한다."
+  - question: "트랜스크립트 마이닝에서 시스템 노이즈로 필터링 제외하는 신호 3가지는?"
+    choices:
+      - "또/다시/왜 안"
+      - "REVIEW_REQUEST / `<task-notification>` / 워커 prime 메시지"
+      - "still / again / can you also"
+      - "에러 스택트레이스"
+    answer: 1
+    explanation: "사용자 반복 신호(불만/재시도)를 추출하려면 시스템이 자동 생성하는 메시지가 먼저 걸러져야 한다. REVIEW_REQUEST, `<task-notification>`, 워커 prime은 트랜스크립트에 반복 등장하지만 사용자 의도 신호가 아니라 자동 디스패치다. 한국어 신호(또/다시/왜 안/아니/엥)와 영어 신호(still/again/can you also)는 *결과*로 별도 박제한다."
+  - question: "tmux pane title의 상태 4종(busy/idle/blocked/done) 중 done만 특별한 처리가 있다. 무엇인가?"
+    choices:
+      - "사운드를 동시에 재생"
+      - "5초 후 idle로 자동 복귀"
+      - "Orchestrator pane에 broadcast"
+      - "git commit을 자동 트리거"
+    answer: 1
+    explanation: "done은 '직전 작업 완료' 순간 신호다. 영구적으로 done 상태로 두면 다음 turn에 stale해진다. 5초 후 idle 자동 복귀가 'pulse' 효과를 만든다 — 시각적으로 끝났음을 강하게 표현하지만 다음 작업 대기 상태로 즉시 돌아온다."
+  - question: "CLAUDE.md를 306→210줄로 31% 줄였을 때, 어떤 룰은 본문에 남기고 어떤 룰을 분리 파일로 뺐나?"
+    choices:
+      - "전부 분리 파일로 빼고 본문은 포인터만"
+      - "HARD RULE/워커 계층/디스패치 등 핵심 룰만 본문 유지, 빌드·테스트·스킬 카탈로그는 docs/guides/로 분리"
+      - "랜덤하게 절반"
+      - "frontmatter만 유지하고 전부 분리"
+    answer: 1
+    explanation: "Frozen Snapshot 원칙(활성 세션 중 CLAUDE.md 수정 시 캐시 무효화 + 1.25x 오버헤드) 때문에 본문은 '매 turn 로드 가치가 있는' 항목만 남긴다. 검증·정책·카탈로그는 필요할 때만 fetch — docs/guides/build-and-test.md(86줄) + docs/guides/skill-catalog.md(58줄)로 분리."
+---
+
+## 왜 쓰는가
+
+[Eugeneyan 글](https://eugeneyan.com/writing/ai-builders/) (GeekNews 29606 게시)이 제시한 'AI와 함께 복리처럼 성장하기' 패턴을 **모바일 iOS 워커 프로젝트 하네스**에 4가지 형태로 이식했다. 추정이 아니라 PR이 실제로 머지된 디테일이 있다 — 한국어 트리거 토큰 리스트, 시스템 노이즈 필터, tmux role 추정 로직, CLAUDE.md 감량 비율.
+
+원본은 영어권 컨텍스트로 짜였지만 한국어 워커 프로젝트에 그대로 적용하면 신호가 안 잡힌다 (한국어 불만은 영어 동의어가 아니다). 이 글은 *번역이 아니라 재정의* 과정에서 결정한 4가지를 기록한다.
+
+## 4종 한눈에
+
+| 패턴 | Eugeneyan 원문 | 이식 형태 | 효과 |
+|------|----------------|----------|------|
+| ① 드리프트 분리 | "AI가 방향성을 잃는다" 단일 개념 | **방향(Worker-1)** vs **실행(Worker-3)** 2종으로 쪼개 워커 분담 | 책임 경계 명확화, 회수율 ↑ |
+| ② 트랜스크립트 마이닝 | "반복 질문은 스킬화 후보" | `skill-trigger-log.sh` + 시스템 노이즈 필터 + **한국어 반복 신호** 별도 박제 | 새 스킬 발굴 시그널 자동화 |
+| ③ pane 상태 시각화 | "에이전트가 무엇을 하는지 보이게" | tmux pane title 이모지 4종 + Stop hook macOS 사운드 | AFK 중 멀티태스킹 가능 |
+| ④ CLAUDE.md 분리 | "컨텍스트는 핵심만, 나머지는 fetch" | 306→210줄 (-31%), 빌드·스킬 카탈로그는 `docs/guides/`로 분리 | Frozen Snapshot 원칙 준수, 캐시 적중률 ↑ |
+
+---
+
+## ① 드리프트 2종 분리 — '올바른 작업?' vs '올바르게?'
+
+Eugeneyan은 AI 에이전트의 드리프트를 한 덩어리로 다룬다. 워커 풀을 운영하면 이게 *두 개의 다른 문제*로 보인다:
+
+- **방향 드리프트 (WHAT)** — 지금 작업이 올바른 작업인가? (요구사항 이탈, 다른 파일 수정, 범위 폭주)
+- **실행 드리프트 (HOW)** — 작업 자체는 맞는데 실행이 올바른가? (테스트 누락, 회귀, 스타일 위반)
+
+방향은 *advisor*가 잡아야 하고 실행은 *verifier*가 잡아야 한다. 한 워커가 둘 다 하면 둘 다 못한다.
+
+### 워커 분담
+
+```
+Worker-1 (advisor) → 🧭 방향 드리프트 감시 ("지금 올바른 작업?")
+Worker-3 (verify)  → ⚙️ 실행 드리프트 감시 ("올바르게 했나?")
+```
+
+CLAUDE.md 워커 계층 섹션에 명시:
+
+```markdown
+- 🧭 방향 드리프트 = Worker-1 advisor 의무
+- ⚙️ 실행 드리프트 = Worker-3 verify 전담
+```
+
+이렇게 쪼개면 advisor가 "테스트가 빠졌네"를 잡지 않고, verifier가 "이게 PRD에 있던가?"를 묻지 않는다. 책임 경계가 한 줄로 정리된다.
+
+---
+
+## ② 트랜스크립트 마이닝 — 한국어 반복 신호 박제
+
+Eugeneyan은 "사용자가 같은 질문을 반복하면 스킬화 후보"라고 썼다. 한국어 워커 프로젝트는 영어 동의어로 안 잡힌다.
+
+### 시스템 노이즈 필터 (먼저 제외)
+
+```
+REVIEW_REQUEST
+<task-notification>
+워커 prime
+```
+
+이것들은 자동 디스패치다. 사용자 의도가 아니라 시스템이 만든 텍스트. 필터링하지 않으면 모든 트랜스크립트가 "반복"으로 잡힌다.
+
+### 한국어 반복 신호
+
+```
+또      — "또 같은 에러 나"
+다시   — "다시 한번 해줘"
+왜 안   — "왜 안 돼"
+아니   — "아니, 그거 말고"
+엥     — "엥? 이상한데"
+```
+
+### 영어 반복 신호 (참고)
+
+```
+still
+again
+can you also
+did you check
+```
+
+신호별로 분리 로그를 둔다:
+
+```
+.claude/logs/user-repeat-signals.jsonl
+```
+
+`/daily` 스킬이 매일 아침 이 로그를 요약해 "지난 24시간 가장 자주 나온 불만 N개"를 보고. 이게 다음 스킬화 후보 큐다.
+
+> 한국어 신호는 *문화*다. "또"는 영어 "again"보다 강한 불만이고, "엥"은 영어 "huh"보다 약한 당혹이다. 직역하지 말고 *프로젝트 사용자가 실제로 쓰는 단어*를 박을 것.
+
+---
+
+## ③ tmux pane 상태 시각화 — 이모지 4종 + Stop hook 사운드
+
+워커 4-pane 레이아웃에서 어느 pane이 일하는 중인지 한 눈에 안 보이면 결국 화면 전환 비용이 누적된다.
+
+### 상태 이모지 4종
+
+| 상태 | 이모지 | 의미 |
+|------|--------|------|
+| busy | ⚡ | 작업 중 |
+| idle | 💤 | 대기 |
+| blocked | 🚨 | ADVICE_REQUEST / 에러 |
+| done | ✅ | 직전 작업 완료 (5초 후 자동 idle) |
+
+### 역할 추정 (pane title 키워드 기반)
+
+```bash
+case "$CURRENT_TITLE" in
+  *orchestrat*) ROLE="orchestrator"; ICON="🎩" ;;
+  *worker-1*|*leader*)  ROLE="worker-1"; ICON="👨‍💼" ;;
+  *worker-2*|*impl*)    ROLE="worker-2"; ICON="🛠" ;;
+  *worker-3*|*verify*)  ROLE="worker-3"; ICON="👀" ;;
+  *)                    ROLE="claude";   ICON="🤖" ;;
+esac
+NEW_TITLE="${STATE_ICON} ${ICON} ${ROLE}"
+tmux select-pane -T "$NEW_TITLE"
+```
+
+### done은 pulse — 5초 후 idle 복귀
+
+```bash
+if [ "$STATE" = "done" ]; then
+  ( sleep 5; tmux select-pane -T "💤 ${ICON} ${ROLE}" ) &
+fi
+```
+
+영구 done이 아니라 *방금 끝났다*는 순간 신호. 다음 작업 대기 상태로 즉시 돌아온다.
+
+### Stop hook 사운드 (AFK 알림)
+
+```bash
+# ~/.claude/settings.json
+"hooks": {
+  "Stop": [
+    { "matcher": "", "hooks": [{ "type": "command", "command": "bash $CLAUDE_PROJECT_DIR/.claude/scripts/stop-sound.sh" }] }
+  ]
+}
+```
+
+스크립트:
+```bash
+SOUND_FILE="${STOP_SOUND_FILE:-/System/Library/Sounds/Glass.aiff}"
+[ "${STOP_SOUND_MUTE:-0}" = "1" ] && exit 0
+afplay "$SOUND_FILE" &
+```
+
+AFK 중 다른 작업하면서 완료 알림 받기. `STOP_SOUND_MUTE=1`로 회의 중 음소거 가능.
+
+---
+
+## ④ CLAUDE.md 306→210줄 분리 (31%↓)
+
+[Frozen Snapshot 원칙](/wiki/harness-engineering/orchestrator-worker-tmux-communication-rules) — 활성 세션 중 CLAUDE.md를 수정하면 캐시 전체 무효화 + 1.25x 토큰 오버헤드. **본문은 매 turn 로드할 가치가 있는 룰만** 남긴다.
+
+### 남긴 것 (본문 210줄)
+
+- HARD RULE (절대 하지 말 것)
+- 워커 계층 + 디스패치 흐름
+- Skill routing 핵심 매핑
+- 드리프트 2종 분리 (① 결과)
+
+### 분리한 것 (필요 시 fetch)
+
+| 파일 | 줄수 | 내용 |
+|------|------|------|
+| `docs/guides/build-and-test.md` | 86 | 스펙 검증, 테스트 정책, Think in Code, Build 가속 |
+| `docs/guides/skill-catalog.md` | 58 | 워크플로우, 자동 활성, Agent 카탈로그 |
+
+검증/정책/카탈로그는 *작업 중 한 번도 안 읽을 가능성*이 높다. 매 turn 로드는 낭비. 워커가 필요할 때 `Read` 도구로 가져오면 그게 곧 캐시 미사용 cost — 하지만 본문에 박힌 200줄이 매 turn 캐시되는 cost보다 *훨씬 작다*.
+
+### 측정
+
+```
+변경 전: 306줄 (turn당 약 8.2K 토큰 캐시)
+변경 후: 210줄 (turn당 약 5.6K 토큰 캐시)
+차이:    -2.6K 토큰/turn × 200 turn/일 = -520K 토큰/일
+```
+
+> ⚠️ 분리 자체가 자동 정답은 아니다. *어떤 룰을 매 turn 보고 어떤 룰을 fetch할지* 판단이 핵심. "본문 = 절대 룰 + 의사결정 분기" / "분리 = 절차 + 카탈로그"가 좋은 분리 기준.
+
+---
+
+## 적용 순서 권장
+
+1. **④ CLAUDE.md 분리 먼저** — 캐시 비용 즉시 절감. 다른 패턴 박을 때 본문 부풀어 오르는 걸 막는다.
+2. **③ tmux pane 상태** — 즉시 효과. AFK 가능해지면 워커 풀 ROI 급상승.
+3. **② 트랜스크립트 마이닝** — 신호 박제는 빠르지만 *2~3주* 누적돼야 패턴이 보인다. 일찍 시작.
+4. **① 드리프트 2종 분리** — 워커 풀 안정화 후. 분담 룰은 운영 중 추가해도 늦지 않다.
+
+## 안티패턴
+
+- 영어 신호를 한국어로 직역해서 그대로 박제 → "또" 가 "again"의 한국어 번역이라고 생각하면 *문화적 강도*가 안 맞는다
+- 모든 룰을 분리 파일로 빼고 CLAUDE.md를 포인터만 두기 → 매번 fetch가 발생해 분리 효과 상쇄
+- pane 이모지를 4개 이상 추가 → 시각 노이즈. 5개 넘으면 한 눈에 안 들어옴
+- 드리프트 분리를 3종 이상으로 쪼개기 → "범위 드리프트" "스타일 드리프트" 등 추가하면 책임 경계가 다시 흐려짐. 2종이 적정선
+
+## 출처
+
+- Eugeneyan, "AI Builders" (https://eugeneyan.com/writing/ai-builders/)
+- GeekNews 게시 29606
