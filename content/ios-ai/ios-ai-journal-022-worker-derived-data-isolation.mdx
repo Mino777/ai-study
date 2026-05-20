@@ -1,0 +1,169 @@
+---
+title: "iOS Harness Journal 022 — Worker DerivedData 격리: 5분 캐시 < 40분 lock"
+category: ios-ai
+series: ios-ai-journal
+date: "2026-05-20"
+tags: [ios-harness-journal, derivedData, xcodebuild, worker-pool, ide-lock, measurement-driven-policy, build-isolation]
+confidence: 4
+last_verified: "2026-05-20"
+applicable_to: ["any"]
+connections:
+  - ios-ai/ios-ai-journal-010-ai-orchestration-tmux-worker-pool
+  - ios-ai/ios-ai-journal-017-worker-pool-ops-tuning
+  - ios-ai/ios-ai-journal-019-dev-metrics-and-ab-system
+  - ios-ai/ios-ai-journal-020-maestro-mcp-test-without-building
+status: complete
+type: entry
+generated_by: hermes
+description: >-
+  워커 풀은 IDE와 DerivedData를 공유해 cold build를 회피해 왔다(절약 5분). 그런데 IDE를 켠 채로
+  Worker-2 + Worker-4가 동시 빌드하자 DerivedData lock 경합 → 60s timeout 반복 → 40분 stall +
+  결국 revert. 캐시 공유 효과(~5분) ≪ lock 충돌 비용(40분+). 측정 후 정책을 *공유 default* →
+  *격리 default* 로 역전. detect-xcode-derived-data.sh --mode worker 추가 + 워커 prime 스크립트
+  표준 인자 변경.
+quiz:
+  - question: "워커 풀이 IDE와 DerivedData를 공유할 때 발생하는 *실측 기반* 가장 큰 비용은?"
+    choices:
+      - "디스크 용량 부담 (~5-10GB 추가)"
+      - "Xcode IDE + Worker가 동시에 빌드하면 DerivedData lock 경합 → 60s timeout 반복 → 한 번 터지면 40분+ stall"
+      - "incremental build가 cold가 됨"
+      - "워커가 IDE의 인덱싱을 망가뜨림"
+    answer: 1
+    explanation: >-
+      cold build 회피(~5분)는 lock 경합이 안 터질 때만의 이득. 한 번이라도 경합이 터지면 timeout 60s × N회 +
+      복구 시간이 40분+ 누적 → 결국 revert. 평균이 아니라 *최악 비용*으로 결정해야 하는 비대칭 risk.
+  - question: "이 결정에서 'cache hit ratio' 같은 평균 지표 대신 *어떤 지표*가 정책을 뒤집었나?"
+    choices:
+      - "평균 빌드 시간"
+      - "P50 incremental 시간"
+      - "최악 사건 1건의 시간 손실 (40분 stall + revert) — 이는 캐시 절약 시간보다 크므로 평균이 아닌 *tail risk*로 정책 결정"
+      - "P95 빌드 시간"
+    answer: 2
+    explanation: >-
+      평균 incremental 시간만 보면 공유가 항상 이긴다. 그러나 lock 충돌은 빈도는 낮지만 *복구 비용이 비대칭*.
+      40분 stall 1회 = incremental 절약 480회 분량. 정책은 *비대칭 risk*가 있을 때 최악으로 결정.
+  - question: "공유 모드를 backward compat로 유지한 이유는?"
+    choices:
+      - "사용자가 IDE만 쓰고 워커 안 쓸 때 유효"
+      - "단일 머신 / 단일 worktree에서 IDE 끄고 워커만 돌릴 때는 공유가 여전히 incremental 가속 이득 — *기본값만 격리로 바꾸고 옵션은 남김*. 정책 후퇴(rollback)도 가능"
+      - "삭제하면 다른 스크립트 깨짐"
+      - "테스트 안 했음"
+    answer: 1
+    explanation: >-
+      backward compat은 *과거 잘 돌던 환경을 무리하게 끊지 않는다*는 신뢰 신호. 격리가 새 default지만 공유가
+      유효한 워크플로(IDE off + 단일 워커)는 여전히 존재. 기본값 전환 + 옵션 보존 = 안전한 정책 이전.
+---
+
+# iOS Harness Journal 022 — Worker DerivedData 격리
+
+> **TL;DR** — 워커 풀이 IDE와 DerivedData를 공유해 cold build를 회피하던 정책을 역전. 측정해보니 캐시 공유 효과(~5분) ≪ IDE/워커 동시 빌드 lock 충돌 비용(40분 stall + revert). `detect-xcode-derived-data.sh --mode worker`를 default로 채택. 평균이 아니라 *비대칭 risk* 기준으로 정책 결정한 사례.
+
+## 0. 기존 정책 — IDE 공유로 cold build 절약
+
+워커 풀 초기 설계는 *IDE 빌드 캐시를 워커 CLI 빌드와 공유*해 cold build 5-10분을 incremental ~30초로 단축하는 게 목표였다. ([Journal 010](/wiki/ios-ai/ios-ai-journal-010-ai-orchestration-tmux-worker-pool) 워커 풀 도입기 참고).
+
+```bash
+# detect-xcode-derived-data.sh — IDE가 사용하는 DerivedData 경로 출력
+# 워커가 build_sim 호출 시 -derivedDataPath 인자로 명시 → IDE 캐시 재사용
+DERIVED=$(bash .claude/scripts/detect-xcode-derived-data.sh)
+xcodebuild ... -derivedDataPath "$DERIVED"
+```
+
+겉보기로는 OK. 워커가 시작될 때 IDE 캐시를 그대로 받아 *바로 incremental*. 절약 ~5분/cold build × N회.
+
+## 1. 사고 — IDE + Worker 동시 빌드 40분 stall
+
+알람 모듈 fix 검증 중. IDE 켜둔 상태에서 Worker-2가 build_sim 호출, 거의 동시에 Worker-4도 같은 모듈 build_sim. **DerivedData 락 충돌**.
+
+증상:
+- `xcodebuild` 가 60초 timeout 반복
+- 캐시 일부 corrupt → cold rebuild가 강제됨
+- 워커가 stuck 상태로 들어가 다른 사이클도 막힘 (Worker-2 idle 처리 안 됨 → Journal 021의 phantom 잔존 패턴까지 발동)
+- 누적 약 **40분 stall + 결국 revert** (해당 패치 자체를 폐기)
+
+복구 비용 계산:
+- 절약했던 incremental 시간: ~5분 × 8회 ≈ 40분
+- 한 번의 lock stall: 40분
+- → **8회 절약치를 1회 사고로 다 날림**. 그리고 사고는 *재발 가능*.
+
+## 2. 측정 — 어느 쪽이 ROI?
+
+```
+정책 A (공유, 기존)
+  best case  : incremental ~30s   (절약 5min vs cold)
+  worst case : lock stall 40min+ (cache corrupt 시 cold rebuild 강제)
+
+정책 B (격리, 신규)
+  best case  : incremental ~30s   (워커 캐시도 hot)
+  worst case : cold build 5min    (워커 첫 빌드만)
+  비용       : 디스크 +5-10GB
+```
+
+격리 모드의 *최악 비용*은 cold build 5분. 공유 모드의 *최악 비용*은 lock stall 40분+ (사고 1회 발생).
+
+**평균이 아니라 worst case로 결정.** lock 충돌은 빈도 낮지만 복구 비용이 비대칭. tail risk가 결정 변수.
+
+## 3. 구현 — `--mode worker` 격리
+
+```bash
+# detect-xcode-derived-data.sh (요약)
+
+MODE="shared"   # backward compat
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --mode) MODE="$2"; shift 2 ;;
+    # ...
+  esac
+done
+
+if [[ "$MODE" == "worker" ]]; then
+  WORKER_ROOT="$HOME/Library/Developer/Xcode/DerivedData-workers/app-workers"
+  mkdir -p "$WORKER_ROOT"
+  echo "$WORKER_ROOT"
+  exit 0
+fi
+
+# shared: 기존 로직 (IDE 캐시 자동 detect)
+```
+
+워커 prime 스크립트(`prime-tmux-roles.sh`)에서 Worker-2/3 setup prompt에 `--mode worker` 인자 추가. shared mode는 옵션으로 *남겨둠* (backward compat + 단일 워커 + IDE off 환경에서는 여전히 유효).
+
+## 4. 트레이드오프 표
+
+| 항목 | shared (legacy default) | worker (new default) |
+|------|---|---|
+| 첫 빌드 | incremental 30s (IDE 캐시 재사용) | cold 3-5min |
+| IDE 동시 사용 | lock 충돌 risk | 충돌 0 |
+| 디스크 | +0 | +5-10GB |
+| Worker N 동시 빌드 | lock race ↑ | 각 격리 (안전) |
+| 사고 시 복구 | 40min+ revert | cold rebuild 5min |
+| backward compat | maintain | maintain (옵션 남김) |
+
+## 5. 메타 원칙 — 비대칭 risk는 worst case로 결정
+
+> **평균 ROI가 양수여도 worst case가 비대칭이면 평균은 거짓말한다. tail risk가 정책을 뒤집는다.**
+
+이 결정은 본 위키 [tokenomics 카탈로그](/wiki/tokenomics)의 "프로덕트 적용 기준 4 조건"과 동일 결: *안정성 확실 + 효과 측정 + 롤백 가능 + 비대칭 손실 회피*. 공유 모드는 평균 효과는 좋지만 비대칭 손실 risk가 커서 default에서 탈락.
+
+비슷한 결의 결정:
+- **이중 채널** ([Journal 021](/wiki/ios-ai/ios-ai-journal-021-self-report-reliability-inbox-queue)) — 평균 IPC는 잘 도착하지만 worst case false positive 비용이 비대칭 → durable 백업 채널 추가.
+- **build-for-testing 2단계 분리** ([Journal 020](/wiki/ios-ai/ios-ai-journal-020-maestro-mcp-test-without-building)) — 평균 시간은 합쳐도 비슷하지만 *flaky 1건 = 전체 재실행* 비대칭 → 분리해서 격리.
+
+세 결정 모두 *비대칭 risk가 평균을 이긴다*는 같은 결.
+
+## 6. 한계 / 후속
+
+- **디스크 한계** — 워커 N개 × DerivedData 5GB = 풀 8개면 40GB. 주간 cleanup 스크립트 필요 (현재 advisory만)
+- **incremental 손실** — 워커 첫 빌드는 항상 cold. 워커가 자주 restart되는 환경에서는 누적 비용 ↑ → 워커 풀 stability와 함께 봐야
+- **shared 모드 graceful sunset** — 옵션 보존 중이지만 docs에서 "default 아님" 명시. 1개월 후 *공유 모드 사용 0회* 확인되면 deprecation 후보
+
+## 7. 전이성
+
+- **CI 빌드 격리** — GitHub Actions runner도 동일 결: 빌드 잡을 격리 root에 배치. 캐시 공유는 *명시적으로* hit ratio 측정 후만
+- **monorepo Bazel/Buck** — 빌드 시스템의 lock contention은 모두 동일 패턴. 액션 단위 격리(remote cache 분리) 권장
+- **DB migration parallel runner** — 같은 DB에 동시 migration도 lock 경합 비대칭. 격리 dev DB N개가 *측정 후 항상* 더 안전
+
+## 8. 패턴 요약
+
+> **공유는 평균 이득, 격리는 worst case 안전. 비대칭 risk 환경에서 default는 격리.**
+> **공유가 필요하면 *측정으로 입증*한 후 명시적으로 켜라.**

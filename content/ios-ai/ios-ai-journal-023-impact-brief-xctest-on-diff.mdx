@@ -1,0 +1,204 @@
+---
+title: "iOS Harness Journal 023 — 변경 영향 자동 trace: impact-brief + xctest-on-diff + fixture v2"
+category: ios-ai
+series: ios-ai-journal
+date: "2026-05-20"
+tags: [ios-harness-journal, codegraph, impact-analysis, xctest, build-for-testing, mutation-testing, regression-guard, verify-cycle]
+confidence: 4
+last_verified: "2026-05-20"
+applicable_to: ["any"]
+connections:
+  - ios-ai/ios-ai-journal-016-codegraph-token-savings
+  - ios-ai/ios-ai-journal-019-dev-metrics-and-ab-system
+  - ios-ai/ios-ai-journal-020-maestro-mcp-test-without-building
+  - ios-ai/ios-ai-journal-022-worker-derived-data-isolation
+status: complete
+type: entry
+generated_by: hermes
+description: >-
+  Worker-3 verify brief에 변경 영향 분석을 *자동 주입*해 회귀 미감지 차단. codegraph --impact-brief로
+  변경 파일 → affected tests → impacted screens (SPEC primary_builder 역방향 lookup)을 JSON으로
+  뽑고, Worker-3 brief 끝에 자동 append. xctest-on-diff는 변경 모듈에 매칭되는 test target만
+  build-for-testing 2단계 분리로 실행. fixture v2는 중첩 detect 강화. gate-1 Step 3.5에
+  Mutation score (Muter on diff) 추가로 AI false-confidence 차단.
+quiz:
+  - question: "FR-02 변경이 FR-05 회귀를 일으켰지만 자동 차단 못 한 근본 원인은?"
+    choices:
+      - "테스트 부족"
+      - "Worker-3 verify brief가 '변경 파일'만 보고 그 파일이 *어떤 화면을 빌드하는지* 역방향 lookup하지 않음 — impact 표면이 좁아서 옆방 회귀를 못 봄"
+      - "Worker-2가 실수함"
+      - "codegraph가 깨짐"
+    answer: 1
+    explanation: >-
+      verify는 자기가 *본 것만* 검증한다. brief에 영향 표면이 없으면 옆방 회귀(FR-02 변경 → FR-05 dep)는
+      Worker-3 시야 밖. impact-brief는 SPEC primary_builder를 역방향 lookup해 영향 FR을 강제로 시야에 넣음.
+  - question: "xctest-on-diff가 build-for-testing을 *2단계 분리*하는 이유는?"
+    choices:
+      - "xcodebuild 버그 우회"
+      - "1단계 build-for-testing은 결정적 (xctestrun 생성), 2단계 test-without-building은 flaky 가능 — 분리하면 flaky 실패가 빌드 캐시를 무효화하지 않고 부분 재시도 가능"
+      - "디스크 절약"
+      - "병렬화"
+    answer: 1
+    explanation: >-
+      build와 test 신호가 섞이면 flaky test 1건이 전체 cold rebuild 트리거. 분리하면 build는 cache hit,
+      test만 재시도. Journal 020 'test-without-building' 패턴의 일반화 — *결정적 부분과 비결정적 부분을 격리*.
+  - question: "AI가 만든 코드의 '테스트 있는데 검증 안 되는' false-confidence를 잡는 게이트는?"
+    choices:
+      - "코드 리뷰"
+      - "Mutation testing (Muter) — 변경 파일 mutant 도입 → 통과하던 테스트가 *여전히 통과*하면 그 테스트는 의미 없음. AI가 '테스트 있어 보이게' 만들어도 mutation score가 낮으면 BLOCKER"
+      - "Snapshot testing"
+      - "Coverage %"
+    answer: 1
+    explanation: >-
+      Coverage는 *실행만* 측정 (통과 여부 무관). Mutation은 *판별력* 측정. UseCase/Repository/Reactor 변경
+      시 mutation score ≥ 60%로 게이트하면 'assert가 없는 테스트' 같은 AI 패턴을 차단할 수 있다. OKX
+      케이스에서 1657 mutant 전체 8h를 변경 diff만으로 52분 단축.
+---
+
+# iOS Harness Journal 023 — 변경 영향 자동 trace
+
+> **TL;DR** — Worker-3 verify는 자기가 *본 것만* 검증한다. brief에 영향 표면이 없으면 옆방 회귀를 놓친다. 사례 #4 (FR-02 변경 → FR-05 회귀 미감지)를 차단하기 위해 세 가지 도구를 박제: (1) `codegraph --impact-brief`로 변경 파일 → affected tests → impacted screens JSON 자동 산출, (2) `xctest-on-diff`로 변경 모듈에 매칭되는 test target만 build-for-testing 2단계 분리 실행, (3) fixture v2 + gate-1 Step 3.5 Mutation score로 AI false-confidence 게이트. 셋 다 *변경 표면을 명시적으로 확장*하는 같은 결.
+
+## 0. 사고 — FR-02 변경이 FR-05 회귀를 만들었지만 verify는 통과
+
+Worker-2가 FR-02 (예: 쿠폰 검증 UseCase) 수정. Worker-3 verify brief는 *FR-02 시나리오*만 실행 → PASS. 머지 후 발견: FR-05 (예: 추천 화면)도 같은 UseCase를 dep로 쓰고 있었고 회귀 발생.
+
+근본 원인은 단순: **verify brief에 "이 변경이 어떤 화면에 영향을 주나"가 없다.** Worker-3는 brief에 있는 시나리오만 본다. 영향 표면이 brief에 없으면 회귀는 워크플로 밖.
+
+## 1. impact-brief — 영향 표면을 brief에 자동 주입
+
+```bash
+# codegraph.sh --impact-brief <range>
+bash .claude/scripts/codegraph.sh --impact-brief HEAD~1..HEAD
+```
+
+세 단계 자동 처리:
+
+1. **changed_files** — `git diff --name-only --diff-filter=d $RANGE | grep .swift`
+2. **affected_tests** — `codegraph affected` (wrapper 통과, 직접 호출 금지)
+3. **impacted_screens** — `docs/specs/*/SPEC.md` frontmatter `primary_builder.path` 역방향 lookup
+   - 변경 파일 중에 SPEC의 `primary_builder.path`와 매칭되는 게 있나?
+   - 매칭되면 그 FR을 `impacted_screens`에 추가
+
+출력:
+```json
+{
+  "range": "HEAD~1..HEAD",
+  "changed_files": ["Domain/Sources/CouponUseCase.swift"],
+  "affected_tests": ["DomainTests/CouponUseCaseTests.swift"],
+  "impacted_screens": [
+    {"fr_id": "FR-02", "spec_path": "docs/specs/FR-02-coupon/SPEC.md", "primary_builder": "..."},
+    {"fr_id": "FR-05", "spec_path": "docs/specs/FR-05-recommend/SPEC.md", "primary_builder": "..."}
+  ]
+}
+```
+
+Worker-3 verify brief 작성 직전 자동 append:
+
+```bash
+# leader.md (Worker-3 dispatch 직전)
+RANGE="${WORKER2_COMMIT_RANGE:-HEAD~1..HEAD}"
+bash .claude/scripts/worker3-impact-brief.sh "$RANGE" >> /tmp/<slug>-verify-brief.md
+```
+
+**영향 FR 2개 이상**이면 스크립트가 회귀 가드 시나리오 권장 블록을 brief에 자동 삽입. Worker-3는 brief의 추가 시나리오 의무 실행.
+
+### 메타 원칙 — verify는 brief가 결정한다
+
+> **에이전트의 검증 범위는 자기 *지능*이 아니라 *brief*가 결정한다. brief에 영향 표면이 없으면 영향 표면은 검증 밖.**
+
+LLM이 똑똑하면 알아챌 거라는 가정은 안전망 아님. 영향 표면은 *결정적으로* brief에 들어가야 한다 ([Journal 015](/wiki/ios-ai/ios-ai-journal-015-compound-qa-mock-harness-worker) — 워커 검증은 brief 안에서만 작동).
+
+## 2. xctest-on-diff — 변경 모듈만 build-for-testing 2단계 분리 실행
+
+GAP: XCTest는 파일 존재만 검증되고 자동 실행은 manual ([Journal 020](/wiki/ios-ai/ios-ai-journal-020-maestro-mcp-test-without-building) 'test without building' 패턴 적용 분야 확장).
+
+```bash
+# 워크플로
+git diff --name-only $RANGE | grep .swift
+  → UseCase/Repository/Reactor/ViewModel/View/Interactor 추출
+  → 동일 Module 또는 동명 매칭 test target 산정
+    예: HomeTab/Sources/HomeTabReactor.swift → HomeTabTests
+
+# 2단계 분리
+xcodebuild build-for-testing ...     # 1단계: xctestrun 생성 (결정적, 캐시 가능)
+xcodebuild test-without-building \    # 2단계: 매칭 target만 실행 (-only-testing)
+  -only-testing HomeTabTests/HomeTabReactorTests \
+  ...
+```
+
+분리 이유: build와 test 신호가 섞이면 *flaky test 1건이 전체 cold rebuild 트리거*. 분리하면 build는 cache hit, test만 재시도. [Journal 022](/wiki/ios-ai/ios-ai-journal-022-worker-derived-data-isolation)의 *결정적 부분과 비결정적 부분 격리*와 같은 결.
+
+종료 코드:
+- exit 0: 통과 / dry-run / 변경 없음
+- exit 1: 테스트 실패
+- exit 2: 입력/빌드 에러
+- exit 124: 시간 cap 초과 (advisory)
+
+## 3. fixture v2 — 중첩 detect 강화
+
+기존 `check-fixture-staleness.sh`는 top-level dict key 비교만 했다. v2는:
+- data 1-depth 중첩 + dict/list 첫 element 비교
+- optional 표시 인식
+- `--advisory` / `--dry-run` / `--format std` 모드 추가
+- pre-commit Section 5에 통합
+
+목적: API response shape mismatch 같은 *조용한 fixture drift*를 commit 시점에 차단.
+
+## 4. gate-1 Step 3.5 — Mutation score (변경 파일 only)
+
+UseCase / Repository / Reactor 변경 시만 실행. AI 코드의 "테스트 있어 보이지만 검증 안 함" 패턴 차단.
+
+```bash
+# Muter 미설치 시 graceful skip (advisory). 강제 도입 X
+if command -v muter >/dev/null 2>&1; then
+  bash .claude/scripts/muter-on-diff.sh
+else
+  echo "⏭  Muter 미설치 — Step 3.5 skip (advisory)"
+fi
+```
+
+판정:
+- exit 0 (PASS, score ≥ 60%) → 다음 단계
+- exit 1 (FAIL, score < 60%) → BLOCKER, AI false-confidence 의심
+- exit 2 (SKIP) → advisory + 다음 단계
+
+환경 변수:
+- `MUTER_THRESHOLD=60`
+- `MUTER_TIME_CAP=300` (5분)
+- `MUTER_PATTERNS="UseCase|Repository|Reactor"`
+
+근거: OKX 사례 — 1657 mutant 전체 8h를 git diff + 변경 파일만으로 52분 단축. 전체 mutation은 비싸지만 *diff에만* 적용하면 ROI 양수.
+
+### 왜 coverage가 아니라 mutation?
+
+Coverage는 *실행만* 측정 (assert 유무 무관). LLM이 `XCTAssert` 없는 테스트도 통과시키는 패턴이 있는데 coverage는 그것도 100%로 측정한다. Mutation은 *판별력*을 측정 — mutant를 도입했는데도 테스트가 통과하면 그 테스트는 의미 없음.
+
+## 5. 세 도구의 공통 결 — 영향 표면 명시화
+
+| 도구 | 무엇을 명시화하나 |
+|------|---|
+| impact-brief | 변경이 *어떤 화면을 망가뜨릴 수 있나* (cross-FR dep) |
+| xctest-on-diff | 변경이 *어떤 test target에 매핑되나* (file → test) |
+| fixture v2 | response shape *어디가 stale*인가 (nested drift) |
+| gate-1 Step 3.5 (Muter) | 테스트가 *실제로 판별력 있나* (mutant score) |
+
+전부 *brief나 게이트가 명시적으로 영향 표면을 늘려서* AI/Worker가 못 보던 회귀를 시야에 강제 진입시킨다. [Journal 016](/wiki/ios-ai/ios-ai-journal-016-codegraph-token-savings) codegraph 인덱스가 *입력 표면을 줄여* 토큰 절약했다면, 이 저널은 *검증 표면을 늘려* false-confidence를 차단.
+
+## 6. 한계 / 후속
+
+- **SPEC primary_builder 부정확성** — 역방향 lookup은 SPEC 메타데이터 품질에 의존. SPEC drift 시 impact-brief가 가짜 영향 FR 포함 또는 진짜 누락. SPEC quality gate 별도 박제 필요
+- **codegraph affected 정확도** — 직접 import 외의 runtime DI는 codegraph 시야 밖. 보수적으로 over-include
+- **Mutation 시간 cap 300s** — 큰 모듈은 cap 초과 → SKIP (advisory). cap 늘리면 사이클 시간이 늘어 trade-off
+- **xctest-on-diff naming 의존** — `HomeTab` → `HomeTabTests` 컨벤션 가정. 변칙 모듈은 매핑 누락 → manifest 파일로 보완 후보
+
+## 7. 전이성
+
+- **백엔드 microservice** — 변경 endpoint → impacted service graph (impact-brief), 변경 module → contract test (xctest-on-diff), schema → consumer drift (fixture v2)
+- **frontend 모노레포** — 변경 컴포넌트 → 사용처 trace, 변경 API client → mock fixture drift, Storybook snapshot
+- **데이터 파이프라인** — 변경 transform → 영향 dashboard/report (DAG 역방향 lookup), schema drift
+
+## 8. 패턴 요약
+
+> **검증 범위는 *brief가 결정한다*. AI/Worker의 지능에 의존하지 말고, 영향 표면을 결정적으로 brief에 주입하라.**
+> **mutation > coverage. 실행이 아니라 판별을 측정해라.**

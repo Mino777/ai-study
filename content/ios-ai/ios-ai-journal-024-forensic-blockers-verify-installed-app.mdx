@@ -1,0 +1,211 @@
+---
+title: "iOS Harness Journal 024 — Forensic blocker 3종: verify-installed-app · maestro lint · post-commit reviewer"
+category: ios-ai
+series: ios-ai-journal
+date: "2026-05-20"
+tags: [ios-harness-journal, forensic, verify-installed-app, maestro, post-commit, inbox-queue, build-cache-trap, false-positive]
+confidence: 4
+last_verified: "2026-05-20"
+applicable_to: ["any"]
+connections:
+  - ios-ai/ios-ai-journal-020-maestro-mcp-test-without-building
+  - ios-ai/ios-ai-journal-021-self-report-reliability-inbox-queue
+  - ios-ai/ios-ai-journal-022-worker-derived-data-isolation
+  - ios-ai/ios-ai-journal-023-impact-brief-xctest-on-diff
+status: complete
+type: entry
+generated_by: hermes
+description: >-
+  자율 사이클 forensic 사례 5건 (#1/#2/#3/#6/#7) 차단 도구 3종 박제. (B1) verify-installed-app —
+  build 전/후 CFBundleVersion + Info.plist mtime 스냅샷 비교로 "구버전 앱을 새 빌드로 오인" 차단.
+  (B2) maestro-yaml-lint — assertVisible이 텍스트만 보는 한계 우회, 상태 단어("비활성/disabled")
+  발견 시 snapshot_ui 병행 강제. (B3) swift-review-on-commit — post-commit에서 신규 메서드 detect
+  → inbox-queue 적재 (@MainActor 누락 같은 패턴을 commit 시점에 비동기 reviewer로 검사).
+quiz:
+  - question: "build_sim 직후 install이 성공으로 보이는데 실은 *시뮬에 이미 있던 구버전*을 검증한 사례를 차단하는 가장 가벼운 가드는?"
+    choices:
+      - "매번 erase + cold install"
+      - "build 직전 CFBundleVersion + Info.plist mtime을 BEFORE 스냅샷으로 저장, build 직후 AFTER 스냅샷과 비교 — 둘 다 동일이면 캐시 히트 의심으로 exit 1"
+      - "Maestro로 화면 텍스트 확인"
+      - "GitHub Actions에서만 빌드"
+    answer: 1
+    explanation: >-
+      verify-installed-app은 *건드린 흔적*을 비교한다. CFBundleVersion + mtime + install time이 BEFORE와
+      동일하면 새 빌드가 *반영되지 않은* 상태. erase는 비싸지만 metadata diff는 거의 무료. 가장 비용
+      대비 효과 큰 forensic 가드.
+  - question: "Maestro assertVisible로 '버튼 비활성화' 검증이 통과되지만 실제로는 활성 상태인 false positive를 막는 lint 규칙은?"
+    choices:
+      - "Snapshot 비교 강제"
+      - "yaml에 '비활성/활성/disabled/enabled/회색/grayed/isEnabled' 같은 상태 단어가 있으면 같은 yaml 안에 screenshot 또는 snapshot_ui step을 *반드시 포함*해야 한다는 Rule B (FAIL)"
+      - "Maestro 버전 강제"
+      - "테스트 카운트"
+    answer: 1
+    explanation: >-
+      assertVisible은 *텍스트 존재*만 확인 — 비활성 상태든 활성 상태든 텍스트는 있다. 상태 단어가 yaml에
+      등장하면 시각적 검증(snapshot/screenshot)을 *언어 게이트*로 강제해야 false positive를 차단할 수 있다.
+      도구의 한계를 *입력 규칙으로* 메꾸는 패턴.
+  - question: "post-commit hook에서 swift-reviewer를 동기 호출하지 않고 inbox-queue로 비동기 적재하는 이유는?"
+    choices:
+      - "느리니까"
+      - "commit blocking을 피하면서도 신호를 잃지 않기 위함 — post-commit이 동기로 reviewer를 돌리면 사람의 commit 워크플로가 느려지고, 워커 commit은 *멈출 수 없으므로* 비동기 신호 채널이 필요"
+      - "Claude API 비용"
+      - "git이 막아서"
+    answer: 1
+    explanation: >-
+      post-commit은 *워커 사이클의 핫패스*. 동기 reviewer는 분 단위로 잡아먹어 워커 throughput 붕괴.
+      inbox-queue로 적재 후 메인이 polling → Agent spawn하면 commit은 즉시 끝나고 reviewer는 별 스레드에서
+      병렬 처리. Journal 021 inbox-queue 패턴의 application.
+---
+
+# iOS Harness Journal 024 — Forensic blocker 3종
+
+> **TL;DR** — 자율 사이클이 길어지면 *통과로 보이는 실패*가 누적된다. forensic 사례 5건을 차단하는 도구 3종 박제: (B1) `verify-installed-app` — build 전/후 CFBundleVersion + Info.plist mtime 비교로 캐시 히트 false-pass 차단, (B2) `maestro-yaml-lint` — assertVisible 한계를 *언어 게이트*로 메꿈 (상태 단어 발견 시 snapshot 강제), (B3) `swift-review-on-commit` — post-commit 비동기 reviewer 적재 ([Journal 021](/wiki/ios-ai/ios-ai-journal-021-self-report-reliability-inbox-queue) inbox-queue 패턴). 셋 다 *도구의 신호 한계를 메타 규칙으로 보완*하는 같은 결.
+
+## 0. 공통 결 — "성공으로 보이는 실패"는 도구 한계의 그림자
+
+forensic 사례 5건 (#1 구버전 앱 3회 검증 / #7 incremental log 미반영 / #2 fresh 시뮬 FAIL / #3 버튼 비활성 PARTIAL / #6 `@MainActor` 누락 미감지) 전부 공통:
+
+> **도구는 자기가 *볼 수 있는 신호*만 본다. 그 한계가 false positive 영역이다.**
+
+- `xcodebuild` 는 install 성공 = APK 복사 성공만 본다 (실제 *실행되는* 앱이 맞는지 아님)
+- `assertVisible` 은 텍스트 존재만 본다 (활성/비활성 무관)
+- `post-commit` 자체에는 *코드 의미* 검사 능력 없음 ((`@MainActor` 같은 행동 의무)
+
+각 도구의 한계는 *그 도구만으로는 닫을 수 없다*. 상위 레벨에서 *언어 게이트나 metadata diff* 같은 보조 신호로 메꿔야 한다.
+
+## 1. B1: `verify-installed-app` — 빌드 캐시 히트 false-pass 차단
+
+사례 #1: FR-04/05 검증을 3회 돌렸는데 모두 *구버전 앱*을 검증. DerivedData 캐시 히트로 새 빌드가 실제 install되지 않았는데 `xcodebuild` 는 성공으로 보고.
+
+### 패턴
+
+```bash
+# build 직전
+bash .claude/scripts/verify-installed-app.sh com.example.app --before \
+  > /tmp/build-before.json
+
+# build_sim 실행
+xcrun simctl install ...
+
+# build 직후 교차검증
+bash .claude/scripts/verify-installed-app.sh com.example.app --diff /tmp/build-before.json
+# exit 1 → 캐시 히트 의심
+```
+
+### 비교 항목
+
+```json
+{
+  "bundle_id": "com.example.app",
+  "installed": true,
+  "version": "1.2.3",
+  "build": "456",
+  "info_plist_mtime": "2026-05-20T12:00:00Z",
+  "container_path": "...",
+  "snapshot_ts": "..."
+}
+```
+
+FAIL 조건:
+- BEFORE에는 설치돼 있었지만 AFTER에 없음 (install 실패)
+- CFBundleVersion + CFBundleShortVersionString 동일하면서 Info.plist mtime 변화 없음 (캐시 히트)
+- 설치 시각이 BEFORE 시각 이전 (새 install 일어나지 않음)
+
+### 왜 erase보다 이쪽인가
+
+대안은 매 빌드 전 `xcrun simctl erase` — 가장 강력하지만 *느리다* (앱 1개 + 데이터 reset이 분 단위). metadata diff는 거의 무료(< 1초). erase는 통합 테스트 직전에만 켜고, 평소엔 metadata diff로 충분.
+
+### 메타 원칙
+
+> **install 성공 = 새 빌드 실행이 아니다. 도구가 둘을 구분 못 하면 *건드린 흔적*으로 검증하라.**
+
+[Journal 022](/wiki/ios-ai/ios-ai-journal-022-worker-derived-data-isolation) DerivedData 격리와 결합하면 lock 충돌도 차단되고 캐시 히트도 차단된다.
+
+## 2. B2: `maestro-yaml-lint` — assertVisible 한계의 언어 게이트
+
+사례 #2: FR-04/05 smoke가 fresh 시뮬에서 FAIL — `clearState:false` 의존으로 이전 세션 잔존 상태가 새 시뮬에서 사라짐.
+사례 #3: FR-05 "버튼 비활성화" 검증 PARTIAL — assertVisible은 텍스트만 보고 색/상태는 안 봄.
+
+### Rules
+
+```bash
+maestro-yaml-lint.sh <yaml_file> [<yaml_file> ...]
+```
+
+- **A (WARN)** — `assertVisible` 직후 step이 `screenshot` / `snapshot_ui` 없음
+- **B (FAIL)** — yaml에 `비활성|활성|disabled|enabled|회색|grayed|isEnabled` 단어 + 같은 yaml에 `screenshot` 또는 `snapshot_ui` 없음
+- **C (WARN)** — 첫 step이 `launchApp clearState:true` 가 아니고 명시적 탐색 step (assertVisible "홈"/메인) 없음
+
+종료:
+- exit 0: PASS (Rule A/C만 있으면 0)
+- exit 1: Rule B FAIL 1건 이상
+
+### 메타 원칙
+
+> **도구가 못 보는 차원은 *언어 게이트*로 메꾼다. yaml에 '비활성'이라고 쓴 시점에 시각 검증이 *반드시* 따라와야 한다.**
+
+eslint/swiftlint 스타일 — `FILE:LINE rule_id MESSAGE` — 출력. 사람 + AI 워커 둘 다 같은 룰을 본다.
+
+Rule C는 사례 #2 차단: clearState:false면 fresh 시뮬에서 진입점이 다를 수 있으니 *명시적 진입 검증* 의무. Maestro 자체엔 "이 yaml은 fresh 시뮬에서도 안전한가?" 신호가 없으므로 lint로 강제.
+
+## 3. B3: `swift-review-on-commit` — post-commit inbox-queue 적재
+
+사례 #6: FR-03 `@MainActor` 누락. commit 시점에 swift-reviewer가 동기로 안 돌면 *commit 후에 발견* → 다음 사이클에서 다시 손대야 함. 그렇다고 동기로 돌리면 commit blocking → 워커 throughput 붕괴.
+
+### 비동기 채널 패턴
+
+```bash
+# .githooks/post-commit (일부)
+CHANGED=$(git diff --name-only HEAD~1 HEAD | grep .swift)
+NEW_METHODS=$(git diff HEAD~1 HEAD -- '*.swift' | grep -E '^\+.*func ')
+if [ -n "$CHANGED" ] || [ -n "$NEW_METHODS" ]; then
+  bash .claude/scripts/swift-review-on-commit.sh \
+    --files "$CHANGED" \
+    --new-methods "$NEW_METHODS" \
+    --commit "$(git rev-parse HEAD)"
+fi
+```
+
+`swift-review-on-commit.sh` 동작:
+- 변경된 `*.swift` 파일 + 신규 추가 메서드 detect
+- `.claude/inbox/<reviewer-slug>.jsonl` 에 append-only push (flock + best-effort)
+- Worker-3 또는 메인이 polling 시 Agent spawn 처리
+- commit blocking 없음 (post-commit은 즉시 종료)
+
+### 왜 이게 [Journal 021](/wiki/ios-ai/ios-ai-journal-021-self-report-reliability-inbox-queue)의 application인가
+
+Journal 021의 핵심: *신호 채널 1 + durable 분석 채널 1 = false positive 방어선*. 여기서:
+- 신호 채널: post-commit stdout (즉시 종료)
+- 분석 채널: `.claude/inbox/*.jsonl` (async reviewer가 흡수)
+
+commit blocking 없이도 신호 손실 0. 메인이 idle일 때 누적 reviewer task를 batch로 처리.
+
+## 4. 세 도구의 공통 결
+
+| 사례 | 도구 한계 | 보완 게이트 |
+|------|---|---|
+| #1 구버전 앱 검증 | `xcodebuild install` = 복사 성공 | metadata diff (CFBundleVersion + mtime) |
+| #7 incremental log 미반영 | 동일 | 동일 (snapshot_ts 비교) |
+| #2 fresh 시뮬 FAIL | yaml에 진입점 검증 의무 부재 | Rule C: clearState:true 또는 명시 탐색 |
+| #3 버튼 비활성 PARTIAL | `assertVisible` = 텍스트만 | Rule B: 상태 단어 → snapshot 의무 |
+| #6 `@MainActor` 누락 | post-commit reviewer 미실행 | inbox-queue 비동기 적재 |
+
+전부 *상위 레벨 메타 규칙*으로 도구 한계를 메꾼다. AI/워커가 도구를 사용하는 환경에서는 *도구의 신호 표면 < 메타 규칙의 표면* 이 되어야 false positive가 줄어든다.
+
+## 5. 한계 / 후속
+
+- **verify-installed-app** — Info.plist mtime은 *파일시스템 시각*. NFS / 컨테이너 환경에서는 신뢰도 ↓. 시뮬 로컬 디스크 가정
+- **maestro-yaml-lint Rule B** — 한국어 단어 리스트 hard-code. 영문 프로젝트 / 다른 언어는 확장 필요. 단어 누락 시 false negative
+- **swift-review-on-commit inbox-queue** — async라 *언제* 반영될지 보장 없음. 핫패스 PR이 inbox에 묻혀 reviewer 누락 가능 → polling SLA 별도 게이트
+- **lint vs runtime의 분담** — Rule B (FAIL)는 commit 차단. 단어를 *진짜 의도적으로* 안 쓰는 케이스 (예: A/B 카피 테스트) advisory 모드 필요
+
+## 6. 전이성
+
+- **CI artifact 검증** — release artifact의 build metadata diff (Docker image digest, npm package version + integrity hash)
+- **e2e test 한계 메꿈** — Playwright `expect(text).toBeVisible()` 도 동일 한계. 상태 단어 lint + screenshot 의무화 가능
+- **commit hook async pattern** — 어떤 reviewer든 commit blocking이 비싸면 inbox-queue 패턴이 보편. linter / formatter / type checker / LLM reviewer 전부 적용 가능
+
+## 7. 패턴 요약
+
+> **도구가 못 보는 차원은 *상위 메타 규칙*으로 닫는다. 도구의 신호 표면 < 메타 규칙의 표면이 되어야 false positive가 사라진다.**
+> **차단(blocking)이 비싸면 *비동기 분석 채널*로 신호를 살린다 — commit은 즉시 끝나고, 검증은 별 스레드에서.**
