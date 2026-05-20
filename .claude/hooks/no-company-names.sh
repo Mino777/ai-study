@@ -74,6 +74,11 @@ case "$FILE_PATH" in
   */.gitignore)
     exit 0
     ;;
+  */Downloads/*)
+    # 로컬 분석/임시 파일 — 공개 위키에 commit 안 됨.
+    # 메모리 룰: feedback_analysis_md_path.md ("분석/임시 md 파일은 ~/Downloads에")
+    exit 0
+    ;;
 esac
 
 # 금지 패턴 (단어 경계 + 케이스 정확 매치)
