@@ -2,6 +2,25 @@
 
 모든 주목할 만한 변경사항을 이 파일에 기록합니다.
 
+## [2026-05-21] stock 단타 탭 + iOS Harness Journal 025 (안전 추론 사각지대)
+
+### Added
+- **iOS Harness Journal 025** — 안전 추론의 사각지대: 커밋되지 않은 working-tree 상태. 워커 iOS 프로젝트 스프린트 incident 3종(reset --hard 손실 / commit 안 하는 mock 토글 / 공유 시뮬 UDID) 박제. Journal 024 "도구는 볼 수 있는 신호만 본다"의 안전 버전. 양방향 연결 4건(022/024/014/git-guardrails).
+- **stock 히든 페이지 단타 루틴 탭** — M-STOCK 화면 흐름 기반 4단계 루틴. 4대 황금기준 인터랙티브 체크리스트, 1억 호가 라이브 계산기, 허매수/허매도 구분(웹 리서치 보강), 손절 룰 명시.
+
+### Fixed
+- **Journal 025 git 시맨틱 정정** — `reset --hard`(tracked uncommitted)와 `clean`(untracked) 사정권 혼동 정정. pre-push 리뷰어 캐치. 슬러그 `untracked-state` → `uncommitted-state-safety-blindspot`로 rename + 역링크 4건 갱신. 정밀 구분 표를 본문에 박아 교육 자산으로 전환.
+
+### Process
+- **Solutions 2건 박제** (workflow): content-git-semantics-untracked-vs-uncommitted, direct-to-main-push-collision-bot
+- **메모리 1건**: `feedback_git_reset_vs_clean_semantics`
+
+### Metrics
+- 엔트리: 221 → 262 (스프린트 누적, +41 vs target +4 → 10.25× planned delta, KPI exceeded · 봇 스카우트 + iOS 저널 022~025)
+- 그래프: 1547 → 1642 edges (+95), 270 nodes
+- 면접: 318 유지 (KPI 116% achieved)
+- 빌드: 그린, 71 테스트 통과, Mermaid 에러 0 유지
+
 ## [2026-05-09] auto-trade 하네스 이식 + Gemini 퀄리티 강화 + Blake 스카우트 정비
 
 ### Added
