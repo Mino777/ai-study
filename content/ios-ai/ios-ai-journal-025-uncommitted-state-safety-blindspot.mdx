@@ -1,0 +1,173 @@
+---
+title: "iOS Harness Journal 025 — 안전 추론의 사각지대: 커밋되지 않은 working-tree 상태 (reset --hard 데이터 손실 incident)"
+category: ios-ai
+series: ios-ai-journal
+date: "2026-05-21"
+tags: [ios-harness-journal, git-safety, reset-hard, unstaged, uncommitted, data-loss, stash, simulator-udid, worker-isolation, incident, blindspot]
+confidence: 4
+last_verified: "2026-05-21"
+applicable_to: ["any"]
+connections:
+  - ios-ai/ios-ai-journal-022-worker-derived-data-isolation
+  - ios-ai/ios-ai-journal-024-forensic-blockers-verify-installed-app
+  - ios-ai/ios-ai-journal-014-memory-to-behavior-guard
+  - harness-engineering/git-guardrails-pretooluse-hook-no-verify-bypass
+status: complete
+type: entry
+description: >-
+  다층 디스패치 스프린트에서 데이터 손실 incident — 메인이 "보존 파일 영향 없음"이라 잘못 안내 →
+  사용자가 git reset --hard 실행 → 커밋 안 된(unstaged) 10개 파일 변경 손실. 근본 원인은 "reset이 위험"이
+  아니라 *에이전트 안전 추론이 커밋된 상태에만 작동*했다는 것. 같은 결의 사각지대 3종 박제:
+  (A) tracked 파일의 unstaged 변경, (B) 정책상 commit 안 하는 mock 토글 — tracked 파일의 *영구 unstaged 변경*,
+  (C) 공유 시뮬 UDID 점유. 처방: 커밋 안 된 가변 상태는 명시적 백업(stash push -u) 또는 소유권 분할(UDID)로
+  가시화. reset --hard vs clean 정밀 구분 포함. Journal 024 "도구는 볼 수 있는 신호만 본다"의 안전 버전.
+quiz:
+  - question: "메인이 'git reset --hard 해도 보존 파일에 영향 없다'고 안내했지만 커밋 안 된 10개 파일 변경이 날아갔다. 가장 정확한 근본 원인은?"
+    choices:
+      - "reset --hard는 항상 위험하므로 절대 안내하면 안 된다"
+      - "에이전트의 안전 추론이 *커밋된 상태*만 보고 판단해서, 아직 커밋되지 않은(unstaged) working-tree 변경이 추론의 입력에서 통째로 빠졌다"
+      - "사용자가 명령을 잘못 입력했다"
+      - "git 버전 버그"
+    answer: 1
+    explanation: >-
+      핵심은 "reset이 위험"(이미 아는 사실)이 아니라 *에이전트가 자기가 볼 수 있는 상태에만 안전 추론을 했다*는 것.
+      커밋된 것은 추론에 들어왔지만 tracked 파일의 *커밋 안 된 변경(unstaged)*은 사각지대였다. 도구가 못 보는
+      차원을 자신 있게 "안전하다"고 말하는 순간 가장 위험하다 — Journal 024 "도구는 볼 수 있는 신호만 본다"의 안전 버전.
+  - question: "정책상 commit하지 않는 mock 토글이 reset --hard에 날아갔다. 이 파일의 정확한 git 상태와 교훈은?"
+    choices:
+      - "untracked 파일이므로 reset --hard에 원래 취약하다"
+      - "tracked 파일의 *영구 unstaged 변경*이다(파일은 git이 추적, 그 한 줄 수정만 commit 안 함). reset --hard는 tracked 파일의 커밋 안 된 변경을 폐기하므로 사정권. 옳은 정책(이 변경은 commit 안 함)이 *영구 unstaged*를 만들어 사각지대가 됐다 — `stash push -u`로 백업"
+      - "reset 대신 checkout을 쓰면 된다"
+      - "mock은 쓰지 말아야 한다"
+    answer: 1
+    explanation: >-
+      중요한 정밀: untracked 파일은 reset --hard로 *안 날아간다*(그건 git clean). 날아갔다는 건 그 파일이
+      *tracked인데 변경만 commit 안 한* 상태였다는 뜻. commit-금지 정책 자체는 옳지만, 그 결과로 변경이 영구
+      unstaged로 남아 reset --hard의 사정권에 든다. 처방은 정책을 깨는 게 아니라 파괴적 작업 전 `stash push -u`로 스냅샷.
+  - question: "워커가 사용자 전용 iPhone 17 시뮬로 빌드해 사용자 작업 흐름을 침해했다. Journal 022(DerivedData 격리)와 같은 결의 처방은?"
+    choices:
+      - "시뮬을 매번 erase"
+      - "공유 가변 리소스(시뮬)에 *소유권 분할*을 박는다 — 워커는 iPhone 16e UDID, 사용자는 iPhone 17 전용. UDID를 명시 강제"
+      - "워커를 하나로 줄인다"
+      - "빌드를 CI에서만"
+    answer: 1
+    explanation: >-
+      DerivedData든 시뮬레이터든, *공유 가변 상태에 소유권 경계가 없으면 충돌*한다. Journal 022가 DerivedData를 워커별로
+      격리했듯, 시뮬도 UDID로 소유권을 분할(워커=16e, 사용자=17)해야 점유 충돌이 사라진다. "내 시뮬"이라는 *암묵 가정*을
+      *명시 UDID*로 바꾸는 것.
+---
+
+# iOS Harness Journal 025 — 안전 추론의 사각지대
+
+> **TL;DR** — 다층 디스패치(orchestrator + worker 3) 스프린트에서 데이터 손실 incident가 났다. 메인이 "`git reset --hard` 해도 보존 파일에 영향 없다"고 **잘못 안내** → 사용자가 실행 → **커밋 안 된(unstaged) 10개 파일 변경 손실**. 근본 원인은 "reset이 위험"(이미 아는 것)이 아니라 **에이전트의 안전 추론이 *커밋된 상태*에만 작동**했다는 것. 같은 결의 사각지대 3종 박제: (A) tracked 파일의 unstaged 변경, (B) 정책상 commit 안 하는 mock 토글 — *옳은 정책이 만든 영구 unstaged 변경*, (C) 공유 시뮬 UDID 점유. 처방: 커밋 안 된 가변 상태는 *명시적 백업(`stash push -u`)* 또는 *소유권 분할(UDID)*로 가시화. [Journal 024](/wiki/ios-ai/ios-ai-journal-024-forensic-blockers-verify-installed-app) "도구는 볼 수 있는 신호만 본다"의 **안전 버전**이다.
+
+## 0. 공통 결 — 안전 추론은 *보이는 상태*에만 작동한다
+
+[Journal 024](/wiki/ios-ai/ios-ai-journal-024-forensic-blockers-verify-installed-app)는 *검증*의 사각지대를 다뤘다: "도구는 자기가 볼 수 있는 신호만 본다." 이번 incident 묶음은 그 명제의 **안전(safety) 버전**이다:
+
+> **에이전트의 *안전 추론*도 자기가 볼 수 있는 상태에만 작동한다. 아직 커밋되지 않은 working-tree 변경은 추론의 입력에서 통째로 빠지고, 바로 그 영역에서 자신 있게 "안전하다"고 말한다.**
+
+파괴적 명령(`reset --hard`, `clean -fd`, 시뮬 점유)을 다룰 때, 에이전트는 *자기 시야 안의 상태*(커밋된 것, 자기가 띄운 시뮬)만 보고 영향 범위를 계산한다. 시야 밖 상태(tracked 파일의 커밋 안 된 변경, 사용자가 점유 중인 시뮬)는 계산에서 빠진다. 그 누락이 곧 데이터 손실·충돌이다.
+
+### git 정밀 구분 — 무엇이 무엇을 죽이나
+
+이 incident를 정확히 읽으려면 세 명령의 *사정권*을 구분해야 한다(여기서 메인이 헷갈렸다):
+
+| 명령 | 사정권 (무엇을 폐기/제거) | 사정권 밖 (살아남음) |
+|------|---|---|
+| `git reset --hard <ref>` | **tracked 파일의 커밋 안 된 변경** (staged + unstaged) | **untracked 파일** (안 건드림) |
+| `git clean -fd` | **untracked 파일/디렉토리** | tracked 파일 변경 |
+| `git stash push -u` | (백업) tracked 커밋 안 된 변경 **+ untracked 파일** | — |
+
+이번 손실은 전부 **tracked 파일의 unstaged 변경**(mock 토글 활성화 "라인" 포함) — `reset --hard`의 사정권. *untracked였다면 reset엔 살아남고 `clean`에 죽었을 것*. 즉 사각지대의 정확한 이름은 "untracked"가 아니라 **"커밋되지 않은(uncommitted) 변경"**이다. `stash push -u`가 두 영역(unstaged 변경 + untracked 파일)을 다 덮으므로 처방은 동일하다.
+
+## 1. Incident A — `reset --hard`로 unstaged 10개 파일 변경 손실
+
+작업 정리 중 메인이 사용자에게 "`git reset --hard`로 정리해도 보존하려는 파일엔 영향 없다"고 안내했다. 사용자가 실행 → **tracked 파일 10개의 unstaged 변경이 폐기**됐다. 복구에 추가 시간 소요.
+
+### 무엇이 빠졌나
+
+메인의 안전 추론은 *커밋된 변경*만 영향 범위로 계산했다. `reset --hard`가 **tracked 파일의 커밋 안 된 변경(staged + unstaged)까지 되돌린다**는 사실이 안내에서 누락됐다. "보존 파일"이라는 표상(메인의 머릿속 모델)과 *실제 working-tree 상태*가 어긋났고, 어긋난 쪽이 사용자에게 그대로 전달됐다.
+
+### 처방 — 파괴적 명령 전 `stash push -u` 의무
+
+```bash
+# ❌ 사고 경로
+git reset --hard            # tracked 파일의 커밋 안 된 변경 전부 폐기
+
+# ✅ 안내/실행 전 의무 백업 (untracked까지 포함)
+git stash push -u -m "pre-reset safety snapshot $(date +%F-%H%M)"
+git reset --hard
+# 필요 시 복구: git stash pop
+```
+
+`-u`(`--include-untracked`)까지 붙이면 *unstaged 변경 + untracked 파일*을 한 번에 스냅샷한다. 추론의 사각지대였던 상태가 복구 가능한 형태로 가시화된다. 메모리에 `feedback_reset_hard_kills_unstaged` 박제 — 다음 세션이 같은 안내를 하기 전에 백업 단계를 강제.
+
+> **메타 원칙: 파괴적 작업의 영향 범위를 "안내"하지 말고, 먼저 *상태를 스냅샷*해서 가시화하라. 안내는 틀릴 수 있지만 스냅샷은 틀리지 않는다.**
+
+## 2. Incident B — commit 안 하는 mock 토글: *옳은 정책*이 만든 영구 unstaged 변경
+
+Repository의 mock 응답 활성화(`mockFileName` 지정)는 **tracked 파일(Repository 코드)의 한 줄을 수정하되 그 수정을 commit하지 않는** 방식이다 — 정책상 시각 변경 외 자동 commit하되 이 로컬 토글만은 working-tree에 남긴다. Incident A의 reset에 이 활성화 변경도 함께 폐기됐다.
+
+여기서 함정은 미묘하다:
+
+- 토글을 commit하지 않는 정책은 **옳다** — 로컬 전용 mock 토글을 커밋하면 다른 세션·CI가 오염된다.
+- 그러나 commit을 안 하니 **그 변경이 영구히 unstaged 상태로 남는다** → `reset --hard`에 무방비.
+- 즉 **옳은 정책이 *영구 unstaged 변경*을 만들었고, 그게 reset의 사정권에 들어갔다.**
+
+> **정밀 주의:** 파일 자체는 git이 *추적(tracked)*한다. "추적 안 됨(untracked)"이 아니라 *변경만 commit 안 됨(unstaged)*이 정확하다. untracked였다면 `reset --hard`엔 살아남았을 것이다(§0 표). 헷갈리면 처방이 흔들린다.
+
+### 교훈 — 정책을 깨지 말고, 백업으로 메꿔라
+
+정책(commit 안 함)은 유지하되, 파괴적 작업 직전 `stash push -u`가 *unstaged 변경과 untracked 파일을 모두* 포함하므로 mock 토글도 함께 보호된다. Incident A의 처방이 그대로 B를 닫는다. 별도 규칙이 아니라 *같은 백업 게이트*가 두 사각지대를 동시에 덮는다는 점이 중요하다.
+
+> **메타 원칙: "이 변경은 일부러 commit 안 한다"는 정책은 *그 변경을 안전 추론에서 지운다*. 정책상 영구 unstaged인 변경일수록 백업 게이트(`-u`)로 명시 보호.**
+
+## 3. Incident C — 공유 시뮬 UDID 점유 (Journal 022와 같은 결)
+
+워커가 빌드/검증을 돌리며 **사용자 전용 iPhone 17 시뮬**을 사용 → 사용자의 작업 흐름을 침해(시뮬 점유 충돌). 워커는 "사용 가능한 시뮬"을 골랐을 뿐, 그게 *사용자가 점유 중*이라는 상태는 워커 시야 밖이었다.
+
+이건 [Journal 022](/wiki/ios-ai/ios-ai-journal-022-worker-derived-data-isolation)(워커별 DerivedData 격리)와 **정확히 같은 결**이다: 공유 가변 리소스에 *소유권 경계*가 없으면 충돌한다.
+
+### 처방 — UDID 소유권 분할
+
+| 주체 | 전용 시뮬 | 근거 |
+|------|-----------|------|
+| 사용자(메인 작업) | iPhone 17 | 인터랙티브 검증·디버깅 점유 |
+| 워커(자동 빌드/검증) | iPhone 16e (UDID 명시) | 워커는 *고정 UDID*만 사용 — 사용자 시뮬 절대 안 건드림 |
+
+워커 빌드 스크립트에서 시뮬을 *이름*이 아니라 *UDID*로 고정하면 "사용 가능한 첫 시뮬" 같은 암묵 선택이 사라진다. 메모리 `feedback_iphone17_user_only_iphone16e_worker` 박제.
+
+> **메타 원칙: 공유 가변 리소스(시뮬·DerivedData·포트·DB)는 *암묵 선택*을 *명시 소유권*으로 바꿔라. "사용 가능한 것"이 아니라 "내 것"만 만진다.**
+
+## 4. 처방 3종 + 보강 1종
+
+| Incident | 사각지대(보이지 않은 상태) | 처방 |
+|----------|---|---|
+| A. reset 데이터 손실 | tracked 파일의 unstaged 변경 | 파괴적 명령 전 `git stash push -u` 의무 |
+| B. mock 토글 손실 | 정책상 영구 unstaged인 tracked 변경 | 같은 `-u` 백업 게이트가 동시 보호 |
+| C. 시뮬 점유 충돌 | 사용자가 점유 중인 공유 시뮬 | UDID 소유권 분할(워커=고정 UDID) |
+| (보강) SPEC 중복 구현 | SPEC 텍스트 ≠ 실제 코드 상태 | SPEC diff 의사결정은 *코드 grep으로 기구현 교차 확인* 먼저 |
+
+보강 케이스(SPEC diff): 같은 스프린트에서 신규 SPEC diff 의사결정 7건 중 **4건이 코드 grep으로 "이미 구현됨"** 판명 → 중복 구현 회피. SPEC 텍스트(표상)를 *실제 코드 상태*로 검증한 것 — A/B/C와 같은 "표상 < 실제 상태" 결. `feedback_spec_diff_must_grep_code_first` 박제.
+
+네 케이스의 공통점: **표상(메인의 안내·"커밋됐을 것"이라는 가정·"사용 가능한 시뮬"·SPEC 텍스트)을 신뢰하다 *실제 상태*와 어긋나 사고. 실제 상태를 명시적으로 끌어와(stash·UDID·grep) 검증해야 한다.**
+
+## 5. 한계 / 후속
+
+- **`stash push -u`도 만능 아님** — stash 자체가 꼬이거나(`stash pop` 충돌), 사용자가 백업 없이 직접 reset하면 무력. 파괴적 명령에 PreToolUse 가드를 거는 게 더 강함([Journal 014](/wiki/ios-ai/ios-ai-journal-014-memory-to-behavior-guard) 메모리→행동 escalate 결). 메모리 박제는 *상기*에 의존하므로, reset/clean을 행동 레벨에서 stash 강제하는 훅이 다음 단계.
+- **UDID 하드코딩의 stale 문제** — 워커 전용 시뮬 UDID가 OS 업데이트·시드 재생성으로 바뀌면 워커 빌드가 깨진다. seed 재생성 주기 관리 필요(이번엔 22일 stale 시드로 워커 자동검증 불가 회피 발생).
+- **영구 unstaged 변경의 가시성** — "commit 안 함" 정책의 변경이 무엇인지 사람·에이전트 모두 한눈에 봐야 함. 그런 파일·라인 목록을 문서화하면 B 같은 사각지대를 사전 인지 가능. (untracked 의도 파일은 `.gitignore`로, *영구 unstaged 변경*은 별도 문서로 — 둘은 다른 메커니즘.)
+
+## 6. 전이성
+
+- **모든 파괴적 git 명령** — `reset --hard`, `checkout -- .`, `restore`는 tracked 변경을, `clean -fd`는 untracked를 노린다. `-u` stash 게이트는 두 영역 공통 처방.
+- **공유 가변 리소스 일반** — 시뮬뿐 아니라 dev DB, 로컬 포트, 캐시 디렉토리, 빌드 산출물 디렉토리도 멀티 워커 환경에서 소유권 분할 필요. [Journal 022](/wiki/ios-ai/ios-ai-journal-022-worker-derived-data-isolation)의 DerivedData 격리가 원형.
+- **표상 vs 실제 상태** — 안내/SPEC/문서/캐시된 메타데이터 등 *표상*을 신뢰하기 전 실제 상태(working tree·코드·런타임)를 verify하는 것은 [Journal 024](/wiki/ios-ai/ios-ai-journal-024-forensic-blockers-verify-installed-app) forensic 가드와 같은 정신.
+- **다른 에이전트 환경** — Cursor/Codex/Copilot 등 어떤 코딩 에이전트든 "안전 추론은 자기가 본 상태에만 작동" 명제는 동일. 백업 게이트와 소유권 분할은 도구 무관.
+
+## 7. 패턴 요약
+
+> **에이전트의 안전 추론은 *커밋된 상태*에만 작동한다. 아직 커밋되지 않은 변경(tracked 파일의 unstaged 변경·정책상 영구 unstaged인 토글) 과 암묵 점유된 공유 리소스는 추론의 사각지대이고, 바로 거기서 자신 있게 "안전하다"고 말한다.**
+> **처방: 영향 범위를 *안내*하지 말고 *상태를 스냅샷*하라(`stash push -u`). 공유 가변 리소스는 *암묵 선택*을 *명시 소유권*으로 바꿔라(UDID). 표상을 믿기 전 실제 상태를 verify하라(grep·diff).**
+> **그리고 `reset --hard`(tracked 변경)와 `clean`(untracked)의 사정권을 혼동하지 마라 — 혼동하면 "untracked라 안전"처럼 처방이 거꾸로 간다.**
