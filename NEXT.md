@@ -76,6 +76,6 @@
 
 1. **CLAUDE.md → SPEC.md → ai-agent-start-here 로드** (3분)
 2. **NEXT.md 읽기** (이 파일, 5분) — 큐 + KPI 확인
-3. **MEMORY.md 확인** (3분) — 신규 메모리 4건 추가됨 (git-semantics, worktree-merge-back, 등)
+3. **MEMORY.md 확인** (3분) — 이번 세션 신규 메모리 1건 추가 (`feedback_git_reset_vs_clean_semantics`). 기존 17건 + 1 = 총 18건 (실측 권장).
 4. **실측 검증** (5분) — `node -e "..."`로 엔트리 수·연결 실측 (NEXT 수치는 작성 시점 기준)
 5. **P1 우선 처리** (위 큐) — 작업 분기는 `/wt-branch` 반사
