@@ -25,7 +25,7 @@ const STORAGE = {
   flashHard: "stock-flash-hard",
 };
 
-type TabKey = "overview" | "daily" | "p1" | "p2" | "p3" | "p4" | "p5" | "crash" | "swing" | "timing" | "masters" | "glossary" | "quiz" | "flash";
+type TabKey = "overview" | "daily" | "p1" | "p2" | "p3" | "p4" | "p5" | "crash" | "swing" | "timing" | "danta" | "masters" | "glossary" | "quiz" | "flash";
 
 const TABS: { key: TabKey; label: string; emoji: string }[] = [
   { key: "overview", label: "시작", emoji: "✨" },
@@ -38,6 +38,7 @@ const TABS: { key: TabKey; label: string; emoji: string }[] = [
   { key: "crash", label: "폭락 매뉴얼", emoji: "🚨" },
   { key: "swing", label: "스윙 매매", emoji: "⚡" },
   { key: "timing", label: "타이밍 매트릭스", emoji: "⏱️" },
+  { key: "danta", label: "단타 루틴", emoji: "🔥" },
   { key: "masters", label: "투자 거장", emoji: "👑" },
   { key: "glossary", label: "용어 사전", emoji: "📖" },
   { key: "quiz", label: "퀴즈", emoji: "❓" },
@@ -63,6 +64,10 @@ export default function StockPage() {
   const [flashIndex, setFlashIndex] = useState(0);
   const [flashRevealed, setFlashRevealed] = useState<Record<string, boolean>>({});
   const [flashHard, setFlashHard] = useState<Record<string, boolean>>({});
+
+  // 단타 (day-trade) tab state — 세션 한정 (매매마다 새로 시작, 비영속)
+  const [dantaCheck, setDantaCheck] = useState<Record<string, boolean>>({});
+  const [dantaPrice, setDantaPrice] = useState("");
 
   // Masters / Glossary state
   const [masterId, setMasterId] = useState<string>(MASTERS[0].id);
@@ -1441,6 +1446,230 @@ export default function StockPage() {
             </div>
           </section>
         )}
+
+        {tab === "danta" && (() => {
+          const digits = dantaPrice.replace(/[^0-9]/g, "");
+          const price = digits ? parseInt(digits, 10) : 0;
+          const valid = price > 0;
+          const shares = valid ? Math.floor(100_000_000 / price) : 0;
+          const GOLDEN = [
+            { id: "g1", emoji: "💧", title: "빵빵한 수급", crit: "당일 거래대금 상위 최소 30위 안에 확고히 포진" },
+            { id: "g2", emoji: "🚀", title: "폭발적 탄력", crit: "현재가 기준 상승률 +10% 이상 강하게 분출 중" },
+            { id: "g3", emoji: "📰", title: "명확한 명분", crit: "개별 호재 뉴스 or 시장 주도 테마(우주항공·AI·원전 등) 형성" },
+            { id: "g4", emoji: "🧱", title: "호가창 두께", crit: "매수·매도 한 호가에 최소 1억 이상 — 단타 생명줄" },
+          ];
+          const goldenCount = GOLDEN.filter(g => dantaCheck[g.id]).length;
+          const goldenPass = goldenCount === GOLDEN.length;
+          return (
+          <section className="space-y-8">
+            <header className="rounded-[var(--radius)] border-2 border-red-500/50 bg-red-500/5 p-6">
+              <h2 className="text-xl font-bold mb-2">🔥 실전 주도주 단타 루틴 — M-STOCK 화면 그대로</h2>
+              <p className="text-sm leading-relaxed text-[var(--color-fg-muted)]">
+                먼저 진실부터. 단타는 이 페이지에서 <b>가장 위험한 게임</b>이야.
+                데이트레이더의 <b>72%가 1년을 손실로 마감</b>(FINRA), <b>6개월 안에 70%가 그만두고</b>,
+                <b>5년 뒤까지 꾸준히 버는 사람은 1%</b>(Barber &amp; Odean). 이 탭은 &quot;돈 버는 법&quot;이 아니라,
+                <b>장중에 뇌동매매가 마려울 때</b> 그 충동을 <b>기계적 체크리스트로 가두는 안전장치</b>야.
+                아래 1→2→3→4 순서를 하나라도 건너뛰면 — 그냥 안 사는 게 정답.
+              </p>
+              <div className="mt-3 rounded-[var(--radius-sm)] bg-[var(--color-bg)] border border-red-500/30 p-3 text-xs leading-relaxed">
+                <b className="text-red-500">철칙</b> · 단타는 <b>잃어도 되는 돈</b>만, <b>전체 자산의 5% 이하 별도 계좌</b>로.
+                본 계좌·생활비·빚(신용·미수)으로는 <b>절대 금지</b>. 한 매매 최대 손실은 그 계좌의 <b>1~2% 이내</b>로 묶어둔다.
+              </div>
+            </header>
+
+            {/* 1단계 */}
+            <div>
+              <h3 className="font-semibold mb-3">🎯 1단계 · 노는 물 찾기 (조건 검색)</h3>
+              <p className="text-sm text-[var(--color-fg-muted)] mb-3">
+                M-STOCK 하단 <b>[≡ 메뉴] → [국내주식] → [시장/시황] → [순위]</b>로 진입.
+                (앱 버전마다 위치가 조금씩 달라 — 검색창에 <b>&quot;순위&quot;</b> 또는 <b>&quot;거래대금&quot;</b> 쳐도 바로 나옴)
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-4">
+                  <div className="text-sm font-semibold mb-1">📊 실시간 조회순위</div>
+                  <p className="text-xs text-[var(--color-fg-muted)] leading-relaxed">
+                    상단 탭에서 선택. 지금 시장 참여자가 가장 많이 쳐다보는 <b>인기 TOP 20</b>. 관심이 곧 변동성 — 단타가 노는 물.
+                  </p>
+                </div>
+                <div className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-4">
+                  <div className="text-sm font-semibold mb-1">💰 거래대금 상위</div>
+                  <p className="text-xs text-[var(--color-fg-muted)] leading-relaxed">
+                    상단 탭에서 선택. 오늘 진짜 큰돈이 어디로 쏠리는지. <b>주도주는 항상 거래대금 상위에 있다.</b>
+                  </p>
+                </div>
+              </div>
+              <p className="text-xs text-[var(--color-fg-muted)] mt-2">
+                💡 왜 이 둘만? 단타는 <b>유동성이 생명</b>. 거래대금이 터진 곳에서만 1억 호가가 박히고, 사고 싶을 때 사고 팔고 싶을 때 팔 수 있어.
+              </p>
+            </div>
+
+            {/* 2단계 — 4대 황금 기준 인터랙티브 체크 */}
+            <div>
+              <div className="flex items-baseline justify-between mb-3">
+                <h3 className="font-semibold">🛡️ 2단계 · 4대 황금 기준 팩트체크</h3>
+                <span className="text-sm text-[var(--color-fg-muted)]">{goldenCount} / 4</span>
+              </div>
+              <p className="text-sm text-[var(--color-fg-muted)] mb-3">
+                매수 버튼에 손가락 올리기 전, <b>4개 모두</b> 충족하는지 기계적으로 거른다. 하나라도 X면 매수 보류.
+              </p>
+              <div className="space-y-2">
+                {GOLDEN.map(g => (
+                  <label
+                    key={g.id}
+                    className={`flex gap-3 rounded-[var(--radius-sm)] border p-3 cursor-pointer transition-colors ${
+                      dantaCheck[g.id]
+                        ? "border-[var(--color-accent)] bg-[var(--color-bg-subtle)]"
+                        : "border-[var(--color-border)] hover:bg-[var(--color-bg-subtle)]"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={!!dantaCheck[g.id]}
+                      onChange={() => setDantaCheck(p => ({ ...p, [g.id]: !p[g.id] }))}
+                      className="mt-1"
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-baseline gap-2 mb-0.5">
+                        <span>{g.emoji}</span>
+                        <span className="font-medium">{g.title}</span>
+                      </div>
+                      <p className="text-sm text-[var(--color-fg-muted)]">{g.crit}</p>
+                    </div>
+                  </label>
+                ))}
+              </div>
+              {goldenPass && (
+                <div className="mt-3 rounded-[var(--radius-sm)] bg-green-500/5 border border-green-500/30 p-4 text-sm">
+                  ✅ 4대 기준 통과. 그래도 <b>3단계(잡주 필터 + 호가 두께)</b>까지 확인하고 진입.
+                  진입과 <b>동시에 손절가 예약</b> 잊지 마.
+                </div>
+              )}
+              <button
+                onClick={() => setDantaCheck({})}
+                className="mt-3 text-xs text-[var(--color-fg-muted)] hover:underline"
+              >
+                체크 초기화 (다음 종목용)
+              </button>
+            </div>
+
+            {/* 3단계 — 잡주 필터 + 1억 계산기 + 가짜 벽 */}
+            <div>
+              <h3 className="font-semibold mb-3">🔍 3단계 · 잡주 필터링 + 1억 호가 계산</h3>
+
+              <div className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-4 mb-3">
+                <div className="text-sm font-semibold mb-1">📈 일봉 팩트체크</div>
+                <p className="text-xs text-[var(--color-fg-muted)] leading-relaxed">
+                  [차트] 탭에서 과거 일봉을 본다. 이전에 <b>하루 거래대금 3,000억 이상</b> 터졌던 장대양봉
+                  (큰돈이 한 번 들어왔던 흔적)이 있어야 쉽게 안 무너져.
+                  <br />💡 차트 환경설정 → 하단 보조지표를 <b>&apos;거래량&apos; 대신 &apos;거래대금&apos;</b>으로 세팅해두면 한눈에 보임.
+                </p>
+              </div>
+
+              {/* 1억 호가 계산기 (인터랙티브) */}
+              <div className="rounded-[var(--radius-sm)] border-2 border-[var(--color-accent)]/40 bg-[var(--color-bg-subtle)] p-4 mb-3">
+                <div className="text-sm font-semibold mb-1">⚡ 1억 호가 계산기</div>
+                <p className="text-xs text-[var(--color-fg-muted)] leading-relaxed mb-3">
+                  [호가] 탭에서 위아래 호가 곳곳에 <b>이 수량 이상</b>의 뭉칫돈이 꽉 차 있어야 가짜 주도주에 안 당해.
+                  현재 주가를 넣어봐 → <b>1억 = 몇 주</b>인지 바로 나와.
+                </p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={dantaPrice}
+                    onChange={e => setDantaPrice(e.target.value)}
+                    placeholder="현재 주가 (예: 50000)"
+                    className="flex-1 min-w-[160px] rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2 text-sm"
+                  />
+                  <span className="text-sm text-[var(--color-fg-muted)]">원</span>
+                </div>
+                {valid && (
+                  <div className="mt-3 rounded-[var(--radius-sm)] bg-[var(--color-bg)] border border-[var(--color-border)] p-3 text-sm">
+                    1억 원 = 약 <b className="text-[var(--color-accent)] text-base">{shares.toLocaleString()}주</b>
+                    <span className="text-xs text-[var(--color-fg-muted)]"> ({price.toLocaleString()}원 기준)</span>
+                    <p className="text-xs text-[var(--color-fg-muted)] mt-1">
+                      → 한 호가에 <b>{shares.toLocaleString()}주 이상</b> 깔려 있어야 &quot;1억 벽&quot;. 위아래로 곳곳에 이만큼 박혀 있어야 진짜 주도주.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* 가짜 벽 (허매수·허매도) — 웹 리서치 보강 */}
+              <div className="rounded-[var(--radius-sm)] bg-red-500/5 border border-red-500/20 p-4">
+                <div className="text-sm font-semibold mb-2 text-red-500">⚠️ 가짜 벽 (허매수·허매도) 구분</div>
+                <p className="text-xs text-[var(--color-fg-muted)] leading-relaxed mb-2">
+                  호가 두께가 두꺼워 보여도 <b>체결시킬 생각 없이 보여주기만 하는 가짜 물량</b>일 수 있어. 이 신호들을 의심해:
+                </p>
+                <ul className="space-y-1.5 text-xs text-[var(--color-fg-muted)]">
+                  <li>• 큰 물량이 걸려 있는데 <b>체결은 안 되고</b> 가격만 안 움직임 → 허수 의심</li>
+                  <li>• 잔량이 <b>딱 100·1,000·10,000 라운드 단위</b>로 깔끔 → 작전성 허매 신호</li>
+                  <li>• 매수 1~3호가에 <b>대량 물량이 들락날락 반복</b> → 심리 흔들기(작전)</li>
+                  <li>• 체결강도 150 넘는데 <b>주가가 안 오름</b> → 위 매도벽이 진짜 두꺼운 매물벽</li>
+                </ul>
+                <p className="text-xs mt-2 pt-2 border-t border-red-500/20">
+                  <b>핵심: 잔량(보이는 것)보다 체결(실제 일어난 것)을 믿어라.</b>
+                </p>
+              </div>
+            </div>
+
+            {/* 4단계 — 타점 · 마의 시간 · 손절 */}
+            <div>
+              <h3 className="font-semibold mb-3">⚡ 4단계 · 실전 타점 · 마의 시간 · 손절</h3>
+              <div className="space-y-3">
+                <div className="rounded-[var(--radius-sm)] border border-green-500/30 bg-green-500/5 p-4">
+                  <div className="text-sm font-semibold mb-1">🟢 진입 타점</div>
+                  <p className="text-xs text-[var(--color-fg-muted)] leading-relaxed">
+                    <b>상승형 호가창</b>(매도잔량 &gt; 매수잔량)에서, 굵직한 매도벽을 수백~수천 주 단위
+                    <b> 시장가 체결(빨간 체결)</b>로 시원하게 <b>갉아먹으며 뚫어낼 때</b>가 가장 강력한 진입 타이밍.
+                    벽이 줄어드는 속도 = 매수세 강도.
+                  </p>
+                </div>
+                <div className="rounded-[var(--radius-sm)] border border-amber-500/40 bg-amber-500/5 p-4">
+                  <div className="text-sm font-semibold mb-1">🍚 마의 시간대 패스 (11:30 ~ 13:30)</div>
+                  <p className="text-xs text-[var(--color-fg-muted)] leading-relaxed">
+                    큰손들도 밥 먹으러 가서 수급이 텅 비고 주가가 줄줄 흐르는 시간대. 이때는 <b>신규 진입 멈추고 관망</b>이
+                    계좌를 지키는 비결. 가장 활발한 건 <b>09:00~10:30</b>, 그 다음 <b>14:30~15:20</b>.
+                  </p>
+                </div>
+                <div className="rounded-[var(--radius-sm)] border-2 border-red-500/40 bg-red-500/5 p-4">
+                  <div className="text-sm font-semibold mb-2">🛡️ 손절 — 진입보다 중요한 룰</div>
+                  <ul className="space-y-1.5 text-xs text-[var(--color-fg-muted)]">
+                    <li>• 진입과 <b>동시에</b> 손절가 예약 — 보통 <b>-2~3%</b> (단타는 타이트하게). 사후 결정 금지.</li>
+                    <li>• 매수 근거(거래대금·탄력·호가벽)가 <b>사라지면</b> 손익 무관 즉시 청산.</li>
+                    <li>• <b>오버나이트 절대 금지</b> — 당일 청산. 못 팔면 다음날 시초가 시장가로.</li>
+                    <li>• <b>물타기 금지</b> — 떨어진다고 추가 매수 = 손실만 확대.</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            {/* 7대 절대 금지 */}
+            <div>
+              <h3 className="font-semibold mb-3 text-red-500">🚫 단타 7대 절대 금지</h3>
+              <ul className="space-y-2 text-sm">
+                <li className="rounded-[var(--radius-sm)] bg-red-500/5 border border-red-500/20 p-3">✕ 본 계좌·생활비·빚(신용·미수)으로 단타</li>
+                <li className="rounded-[var(--radius-sm)] bg-red-500/5 border border-red-500/20 p-3">✕ 오버나이트 보유 (당일 청산 원칙 위반)</li>
+                <li className="rounded-[var(--radius-sm)] bg-red-500/5 border border-red-500/20 p-3">✕ 손절 미루기 (&quot;곧 오를 거야&quot; → -2%가 -20% 됨)</li>
+                <li className="rounded-[var(--radius-sm)] bg-red-500/5 border border-red-500/20 p-3">✕ 물타기 (하락 중 추가 매수)</li>
+                <li className="rounded-[var(--radius-sm)] bg-red-500/5 border border-red-500/20 p-3">✕ 상한가·급등 끝물 추격 매수</li>
+                <li className="rounded-[var(--radius-sm)] bg-red-500/5 border border-red-500/20 p-3">✕ 마의 시간대(11:30~13:30) 신규 진입</li>
+                <li className="rounded-[var(--radius-sm)] bg-red-500/5 border border-red-500/20 p-3">✕ 잔량(허수)만 보고 체결 흐름 안 보기</li>
+              </ul>
+            </div>
+
+            {/* 마무리 — 페이지 철학과 연결 */}
+            <div className="rounded-[var(--radius)] border-2 border-amber-500/40 bg-amber-500/5 p-6">
+              <h3 className="font-semibold mb-2">⚖️ 마지막 — 민지니에게</h3>
+              <p className="text-sm leading-relaxed text-[var(--color-fg-muted)]">
+                이 루틴을 <b>6개월</b> 지키면서도 계좌가 줄기만 한다면, 단타는 너의 게임이 아니야.
+                부끄러운 게 아니라 <b>대부분(99%)이 그래</b>. 그땐 미련 없이 <b>1~5원칙(장기 추세 투자)</b>으로 돌아와.
+                단타로 번 돈보다 <b>단타 안 하고 아낀 돈</b>이 더 클 때가 많아.
+                그리고 — 혼자 결정이 안 잡히면, 늘 그렇듯 <b>오늘은 아무것도 안 하는 게</b> 정답이야.
+              </p>
+            </div>
+          </section>
+          );
+        })()}
 
         {tab === "daily" && (
           <section className="space-y-8">
