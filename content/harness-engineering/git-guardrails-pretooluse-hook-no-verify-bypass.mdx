@@ -15,6 +15,7 @@ applicable_to: ["any"]
 connections:
   - harness-engineering/claude-code-production-hooks
   - harness-engineering/eugeneyan-4-applied-harness-patterns
+  - ios-ai/ios-ai-journal-025-untracked-state-safety-blindspot
 status: complete
 description: "mattpocock/skills의 git-guardrails-claude-code(MIT)를 한국어 메시지로 이식 + `--no-verify` 패턴 추가 + 최근 발견된 grep 옵션 해석 버그(--no-verify가 grep 자체 옵션으로 해석돼 차단 우회) 픽스. PreToolUse hook 한 개로 push/reset --hard/clean -f/branch -D/--no-verify 전부 차단. 메모리 룰만으론 부족하다 — 메모리 룰 위반 시 행동 레벨로 escalate하는 패턴 그 자체."
 type: entry
