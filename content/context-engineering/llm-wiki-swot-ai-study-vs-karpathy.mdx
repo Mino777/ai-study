@@ -1,45 +1,75 @@
 ---
-title: "SWOT 비교 분석 — ai-study Wiki vs Karpathy LLM Wiki 패턴"
+title: SWOT 비교 분석 — ai-study Wiki vs Karpathy LLM Wiki 패턴
 category: context-engineering
-date: "2026-04-17"
-tags: [swot, karpathy, llm-wiki, comparison, knowledge-base, compound-engineering, strategy]
+date: '2026-04-17'
+tags:
+  - swot
+  - karpathy
+  - llm-wiki
+  - comparison
+  - knowledge-base
+  - compound-engineering
+  - strategy
 confidence: 4
-last_verified: "2026-04-17"
-applicable_to: ["aidy","any"]
+last_verified: '2026-04-17'
+applicable_to:
+  - aidy
+  - any
 connections:
   - context-engineering/karpathy-llm-wiki-pattern-compilation-over-retrieval
   - harness-engineering/llm-first-wiki-principles
   - harness-engineering/compound-engineering-philosophy
   - harness-engineering/harness-journal-025-jit-retrieval-poc-phase1
   - context-engineering/context-scaling-3-layer-architecture
+  - context-engineering/bitemporal-knowledge-graph-jit-recall-design
+  - harness-engineering/compound-phase-4-cross-update-pattern
 status: complete
-description: "ai-study 위키(120 entries, Compound Engineering)와 Karpathy LLM Wiki 패턴(raw/wiki/index 3층, compilation)의 SWOT 비교 분석. 실측 데이터 기반. 두 접근법의 장단점을 구조적으로 비교하고, 합류 전략(convergence)을 제시."
+description: >-
+  ai-study 위키(120 entries, Compound Engineering)와 Karpathy LLM Wiki
+  패턴(raw/wiki/index 3층, compilation)의 SWOT 비교 분석. 실측 데이터 기반. 두 접근법의 장단점을 구조적으로
+  비교하고, 합류 전략(convergence)을 제시.
 type: entry
 quiz:
-  - question: "ai-study 위키가 Karpathy 패턴 대비 가장 큰 Strength는?"
+  - question: ai-study 위키가 Karpathy 패턴 대비 가장 큰 Strength는?
     choices:
-      - "Obsidian 사용"
-      - "Compound Engineering 루프(Plan→Work→Review→Compound)로 매 사이클 박제가 자동화되어 있다. /compound 슬래시 커맨드가 CHANGELOG + 회고 + 솔루션을 한 번에 생성. Karpathy 패턴에는 이 박제 루프 개념이 없다"
-      - "더 많은 엔트리"
-      - "벡터 DB 사용"
+      - Obsidian 사용
+      - >-
+        Compound Engineering 루프(Plan→Work→Review→Compound)로 매 사이클 박제가 자동화되어 있다.
+        /compound 슬래시 커맨드가 CHANGELOG + 회고 + 솔루션을 한 번에 생성. Karpathy 패턴에는 이 박제 루프
+        개념이 없다
+      - 더 많은 엔트리
+      - 벡터 DB 사용
     answer: 1
-    explanation: "Karpathy 패턴은 인제스트(input)와 린트(유지)에 강하지만, 매 작업 사이클 끝의 체계적 박제 루프가 없다. ai-study의 /compound가 CHANGELOG + 회고 + 솔루션을 강제하는 구조는 '작업 자체가 지식을 축적하는' Compound Engineering의 핵심."
-  - question: "Karpathy 패턴이 ai-study 대비 가장 큰 Strength는?"
+    explanation: >-
+      Karpathy 패턴은 인제스트(input)와 린트(유지)에 강하지만, 매 작업 사이클 끝의 체계적 박제 루프가 없다.
+      ai-study의 /compound가 CHANGELOG + 회고 + 솔루션을 강제하는 구조는 '작업 자체가 지식을 축적하는'
+      Compound Engineering의 핵심.
+  - question: Karpathy 패턴이 ai-study 대비 가장 큰 Strength는?
     choices:
-      - "Next.js 사용"
-      - "인제스트 시 10~15 페이지 크로스 업데이트. 한 소스가 기존 위키의 여러 페이지를 동시에 갱신하여 연결 밀도가 자동으로 높아진다. ai-study의 /ingest는 1 엔트리 생성에 그침"
-      - "퀴즈 기능"
-      - "13 카테고리 분류"
+      - Next.js 사용
+      - >-
+        인제스트 시 10~15 페이지 크로스 업데이트. 한 소스가 기존 위키의 여러 페이지를 동시에 갱신하여 연결 밀도가 자동으로
+        높아진다. ai-study의 /ingest는 1 엔트리 생성에 그침
+      - 퀴즈 기능
+      - 13 카테고리 분류
     answer: 1
-    explanation: "ai-study의 /ingest는 새 엔트리 1개를 만들고 connections를 수동 지정. 기존 엔트리의 역링크는 사후 수동 보강(Journal 006/007). Karpathy 패턴은 인제스트 자체에 크로스 업데이트가 내장되어 지식 그래프가 자동으로 밀도 높아짐."
-  - question: "SWOT에서 Threat로 분류된 '일방향 연결 327건'이 위험한 이유는?"
+    explanation: >-
+      ai-study의 /ingest는 새 엔트리 1개를 만들고 connections를 수동 지정. 기존 엔트리의 역링크는 사후 수동
+      보강(Journal 006/007). Karpathy 패턴은 인제스트 자체에 크로스 업데이트가 내장되어 지식 그래프가 자동으로 밀도
+      높아짐.
+  - question: SWOT에서 Threat로 분류된 '일방향 연결 327건'이 위험한 이유는?
     choices:
-      - "빌드가 실패해서"
-      - "A→B 연결만 있고 B→A가 없으면, B를 읽는 에이전트는 A의 존재를 모른다. 위키 그래프가 단방향이면 지식 발견이 한 방향으로만 작동하여 LLM-First 원칙(bidirectional discovery)이 무너짐"
-      - "파일 크기가 커져서"
-      - "검색이 느려져서"
+      - 빌드가 실패해서
+      - >-
+        A→B 연결만 있고 B→A가 없으면, B를 읽는 에이전트는 A의 존재를 모른다. 위키 그래프가 단방향이면 지식 발견이 한
+        방향으로만 작동하여 LLM-First 원칙(bidirectional discovery)이 무너짐
+      - 파일 크기가 커져서
+      - 검색이 느려져서
     answer: 1
-    explanation: "SPEC.md의 Cross-references 원칙: 'connections 필드로 양방향 그래프 형성, UI는 역방향 discovery도 지원'. 일방향 327건은 이 원칙의 59% 미달성. Karpathy 패턴의 lint가 정확히 이 문제를 잡아주는 역할."
+    explanation: >-
+      SPEC.md의 Cross-references 원칙: 'connections 필드로 양방향 그래프 형성, UI는 역방향
+      discovery도 지원'. 일방향 327건은 이 원칙의 59% 미달성. Karpathy 패턴의 lint가 정확히 이 문제를 잡아주는
+      역할.
 ---
 
 ## 왜 지금 이 분석인가

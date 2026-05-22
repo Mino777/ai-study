@@ -1,46 +1,71 @@
 ---
-title: "Aidy Journal 001 — 20라운드 autoceo 스프린트 실전기"
+title: Aidy Journal 001 — 20라운드 autoceo 스프린트 실전기
 category: harness-engineering
 series: aidy-journal
-date: "2026-04-16"
-tags: [aidy-journal, autoceo, multi-agent-orchestration, sprint, gate-validation, compound-engineering]
+date: '2026-04-16'
+tags:
+  - aidy-journal
+  - autoceo
+  - multi-agent-orchestration
+  - sprint
+  - gate-validation
+  - compound-engineering
 confidence: 4
-last_verified: "2026-04-16"
-applicable_to: ["aidy", "any"]
+last_verified: '2026-04-16'
+applicable_to:
+  - aidy
+  - any
 connections:
   - harness-engineering/aidy-journal-000-architect-worker-baseline
   - harness-engineering/aidy-journal-002-stability-observability-test-integrity
   - harness-engineering/aidy-journal-003-parallel-dispatch-token-economics
   - harness-engineering/compound-engineering-philosophy
   - evaluation/ai-output-5-layer-defense
+  - harness-engineering/harness-journal-030-15h-autonomous-goal-loop-case-study
 status: complete
-description: "Journal 000 베이스라인 이후 20라운드 autoceo 스프린트로 WO-002~009 전부 완료. JWT 인증, Relationship Memory, AI 5-Layer 검증, People 탭까지 — Spec-Driven Multi-Agent Orchestration의 첫 대규모 실전 검증."
+description: >-
+  Journal 000 베이스라인 이후 20라운드 autoceo 스프린트로 WO-002~009 전부 완료. JWT 인증,
+  Relationship Memory, AI 5-Layer 검증, People 탭까지 — Spec-Driven Multi-Agent
+  Orchestration의 첫 대규모 실전 검증.
 type: entry
 quiz:
-  - question: "20라운드 autoceo 스프린트를 10라운드씩 2차로 나눈 이유는?"
+  - question: 20라운드 autoceo 스프린트를 10라운드씩 2차로 나눈 이유는?
     choices:
-      - "시간이 부족해서"
-      - "스프린트 1에서 기능(관계 메모리)을 완성하고, 스프린트 2에서 보안+품질(JWT+테스트)을 강화하는 관심사 분리. 한 번에 20라운드를 돌리면 방향 수정 기회가 없음"
-      - "autoceo가 10라운드까지만 지원해서"
-      - "비용을 절약하기 위해"
+      - 시간이 부족해서
+      - >-
+        스프린트 1에서 기능(관계 메모리)을 완성하고, 스프린트 2에서 보안+품질(JWT+테스트)을 강화하는 관심사 분리. 한 번에
+        20라운드를 돌리면 방향 수정 기회가 없음
+      - autoceo가 10라운드까지만 지원해서
+      - 비용을 절약하기 위해
     answer: 1
-    explanation: "기능과 보안/품질을 한 스프린트에 섞으면 Gate 검증의 초점이 흐려진다. 스프린트 1은 'Relationship Memory가 3 플랫폼에서 동작하는가', 스프린트 2는 '인증과 테스트가 충분한가'로 각각 명확한 검증 기준을 가질 수 있다."
-  - question: "WO-009(JWT 인증)가 api-contract.md Auth v0.2 활성화와 동시에 진행된 이유는?"
+    explanation: >-
+      기능과 보안/품질을 한 스프린트에 섞으면 Gate 검증의 초점이 흐려진다. 스프린트 1은 'Relationship Memory가 3
+      플랫폼에서 동작하는가', 스프린트 2는 '인증과 테스트가 충분한가'로 각각 명확한 검증 기준을 가질 수 있다.
+  - question: WO-009(JWT 인증)가 api-contract.md Auth v0.2 활성화와 동시에 진행된 이유는?
     choices:
-      - "JWT가 단순한 기능이라서"
-      - "api-contract.md가 source of truth이므로, 계약에 Auth v0.2를 먼저 명시한 후 3개 워커가 동시에 구현. 계약 없이 구현하면 X-User-Id→Bearer 마이그레이션 시점이 플랫폼마다 달라짐"
-      - "서버만 먼저 구현하고 클라이언트는 나중에"
-      - "보안은 항상 마지막에 추가하므로"
+      - JWT가 단순한 기능이라서
+      - >-
+        api-contract.md가 source of truth이므로, 계약에 Auth v0.2를 먼저 명시한 후 3개 워커가 동시에
+        구현. 계약 없이 구현하면 X-User-Id→Bearer 마이그레이션 시점이 플랫폼마다 달라짐
+      - 서버만 먼저 구현하고 클라이언트는 나중에
+      - 보안은 항상 마지막에 추가하므로
     answer: 1
-    explanation: "Spec-First의 핵심. Auth 방식 변경은 전체 API에 영향을 미치므로, api-contract.md에 v0.2를 먼저 정의하고 WO-009를 발행한 후 3개 워커가 동시에 마이그레이션. 계약이 없으면 서버가 Bearer로 바꿨는데 iOS가 아직 X-User-Id를 보내는 상황이 발생."
-  - question: "ADR-005(Relationship Memory)에서 Phase 2를 명시적으로 '보류'한 이유는?"
+    explanation: >-
+      Spec-First의 핵심. Auth 방식 변경은 전체 API에 영향을 미치므로, api-contract.md에 v0.2를 먼저
+      정의하고 WO-009를 발행한 후 3개 워커가 동시에 마이그레이션. 계약이 없으면 서버가 Bearer로 바꿨는데 iOS가 아직
+      X-User-Id를 보내는 상황이 발생.
+  - question: ADR-005(Relationship Memory)에서 Phase 2를 명시적으로 '보류'한 이유는?
     choices:
-      - "시간이 부족해서"
-      - "Phase 1(Person 추출+DB+UI+피드백)의 실전 검증 없이 Phase 2(그룹/브리핑/타임라인/감쇠 알림)를 설계하면 추측 기반 아키텍처가 됨. normalizedName 실제 LLM 추출 10건 테스트가 Phase 2 착수 조건"
-      - "Phase 2가 필요 없어서"
-      - "비용 때문에"
+      - 시간이 부족해서
+      - >-
+        Phase 1(Person 추출+DB+UI+피드백)의 실전 검증 없이 Phase 2(그룹/브리핑/타임라인/감쇠 알림)를 설계하면
+        추측 기반 아키텍처가 됨. normalizedName 실제 LLM 추출 10건 테스트가 Phase 2 착수 조건
+      - Phase 2가 필요 없어서
+      - 비용 때문에
     answer: 1
-    explanation: "ADR에 '보류'를 명시하는 것 자체가 아키텍처 결정이다. Phase 1의 normalizedName 중복 방지 로직이 실전에서 작동하는지 확인하지 않으면, Phase 2의 Groups/Briefing 설계가 잘못된 전제 위에 세워질 수 있다."
+    explanation: >-
+      ADR에 '보류'를 명시하는 것 자체가 아키텍처 결정이다. Phase 1의 normalizedName 중복 방지 로직이 실전에서
+      작동하는지 확인하지 않으면, Phase 2의 Groups/Briefing 설계가 잘못된 전제 위에 세워질 수 있다.
 ---
 
 ## Before — Journal 000 이후의 상태

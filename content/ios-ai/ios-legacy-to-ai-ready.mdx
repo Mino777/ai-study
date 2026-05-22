@@ -1,45 +1,66 @@
 ---
-title: "레거시 iOS 프로젝트를 AI-Ready로 — pbxproj 지옥에서 에이전트 천국까지"
+title: 레거시 iOS 프로젝트를 AI-Ready로 — pbxproj 지옥에서 에이전트 천국까지
 category: ios-ai
-date: "2026-04-14"
-tags: [ios, ai-ready, tuist, spm, modular, claude-code, legacy, migration, ios-ai]
+date: '2026-04-14'
+tags:
+  - ios
+  - ai-ready
+  - tuist
+  - spm
+  - modular
+  - claude-code
+  - legacy
+  - migration
+  - ios-ai
 confidence: 4
-last_verified: "2026-04-14"
-applicable_to: ["any"]
+last_verified: '2026-04-14'
+applicable_to:
+  - any
 connections:
   - ios-ai/ios-ai-journal-000-baseline
   - ios-ai/ios-ai-journal-003-claudeignore-spm
   - ios-ai/ios-ai-code-quality-test-strategy
   - harness-engineering/ai-agent-start-here
   - harness-engineering/shell-pipe-exit-code-trap
+  - ios-ai/ios-uikit-swiftui-inject-hot-reload-infra
 status: complete
-description: "레거시 iOS 프로젝트에 AI 에이전트를 도입하려면 프로젝트 구조부터 바꿔야 한다. pbxproj는 AI의 적, Tuist/SPM은 AI의 친구. 4단계 AI Readiness 스펙트럼과 Day 1~Week 4 실행 로드맵."
+description: >-
+  레거시 iOS 프로젝트에 AI 에이전트를 도입하려면 프로젝트 구조부터 바꿔야 한다. pbxproj는 AI의 적, Tuist/SPM은 AI의
+  친구. 4단계 AI Readiness 스펙트럼과 Day 1~Week 4 실행 로드맵.
 type: entry
 quiz:
-  - question: "AI 에이전트가 iOS 프로젝트에서 가장 큰 실패를 겪는 원인은?"
+  - question: AI 에이전트가 iOS 프로젝트에서 가장 큰 실패를 겪는 원인은?
     choices:
-      - "Swift 문법이 복잡해서"
-      - "pbxproj 파일이 수천 줄의 불투명한 XML이라 AI가 정확히 수정할 수 없어서"
-      - "Xcode가 느려서"
-      - "시뮬레이터가 불안정해서"
+      - Swift 문법이 복잡해서
+      - pbxproj 파일이 수천 줄의 불투명한 XML이라 AI가 정확히 수정할 수 없어서
+      - Xcode가 느려서
+      - 시뮬레이터가 불안정해서
     answer: 1
-    explanation: "pbxproj는 Xcode가 내부적으로 관리하는 복잡한 포맷이다. AI가 이 파일을 직접 수정하면 프로젝트가 열리지 않는 치명적 손상이 발생한다. 이것이 AI 도입의 가장 큰 장벽."
-  - question: "SPM 기반 모듈화가 AI 토큰 절감에 기여하는 이유는?"
+    explanation: >-
+      pbxproj는 Xcode가 내부적으로 관리하는 복잡한 포맷이다. AI가 이 파일을 직접 수정하면 프로젝트가 열리지 않는 치명적
+      손상이 발생한다. 이것이 AI 도입의 가장 큰 장벽.
+  - question: SPM 기반 모듈화가 AI 토큰 절감에 기여하는 이유는?
     choices:
-      - "SPM이 빌드 속도가 빨라서"
-      - "모듈 단위로 컨텍스트를 제한할 수 있고, Package.swift가 pbxproj보다 작고 읽기 쉬워서"
-      - "SPM이 더 최신 기술이라서"
-      - "Apple이 권장하기 때문에"
+      - SPM이 빌드 속도가 빨라서
+      - '모듈 단위로 컨텍스트를 제한할 수 있고, Package.swift가 pbxproj보다 작고 읽기 쉬워서'
+      - SPM이 더 최신 기술이라서
+      - Apple이 권장하기 때문에
     answer: 1
-    explanation: "에이전트가 FeatureA 모듈만 작업할 때 FeatureB~Z의 코드가 컨텍스트에 포함될 필요가 없다. 모듈 단위 .claudeignore + 모듈 단위 작업 스코프로 토큰 사용량을 크게 줄일 수 있다."
-  - question: "Tuist가 AI 개발에서 pbxproj의 대안으로 적합한 이유는?"
+    explanation: >-
+      에이전트가 FeatureA 모듈만 작업할 때 FeatureB~Z의 코드가 컨텍스트에 포함될 필요가 없다. 모듈 단위
+      .claudeignore + 모듈 단위 작업 스코프로 토큰 사용량을 크게 줄일 수 있다.
+  - question: Tuist가 AI 개발에서 pbxproj의 대안으로 적합한 이유는?
     choices:
-      - "Tuist가 무료라서"
-      - "Tuist가 Swift로 선언적 프로젝트 정의를 제공하고, xcodeproj를 자동 생성하므로 AI가 pbxproj를 직접 건드릴 필요가 없어서"
-      - "Tuist가 Apple 공식 도구라서"
-      - "Tuist가 빌드를 빠르게 해서"
+      - Tuist가 무료라서
+      - >-
+        Tuist가 Swift로 선언적 프로젝트 정의를 제공하고, xcodeproj를 자동 생성하므로 AI가 pbxproj를 직접 건드릴
+        필요가 없어서
+      - Tuist가 Apple 공식 도구라서
+      - Tuist가 빌드를 빠르게 해서
     answer: 1
-    explanation: "Tuist는 Project.swift, Workspace.swift 같은 선언적 Swift 파일로 프로젝트를 정의한다. 이 파일은 AI가 읽고 수정하기 쉽다. 실제 pbxproj는 tuist generate가 자동 생성하므로 AI가 건드리지 않는다."
+    explanation: >-
+      Tuist는 Project.swift, Workspace.swift 같은 선언적 Swift 파일로 프로젝트를 정의한다. 이 파일은
+      AI가 읽고 수정하기 쉽다. 실제 pbxproj는 tuist generate가 자동 생성하므로 AI가 건드리지 않는다.
 ---
 
 ## 한 줄 요약

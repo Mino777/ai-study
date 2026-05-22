@@ -1,62 +1,82 @@
 ---
-title: "iOS Harness Journal 017 — 워커 풀 운영 튜닝: opus/sonnet 모델 분리, ready 폴링, 동적 큐 가드, post-commit 자동화 후퇴"
+title: >-
+  iOS Harness Journal 017 — 워커 풀 운영 튜닝: opus/sonnet 모델 분리, ready 폴링, 동적 큐 가드,
+  post-commit 자동화 후퇴
 category: ios-ai
 series: ios-ai-journal
-date: "2026-05-18"
-tags: [ios-harness-journal, worker-pool, tmux, model-routing, dispatch, post-commit, hook-retreat, dynamic-guard, ui-regression]
+date: '2026-05-18'
+tags:
+  - ios-harness-journal
+  - worker-pool
+  - tmux
+  - model-routing
+  - dispatch
+  - post-commit
+  - hook-retreat
+  - dynamic-guard
+  - ui-regression
 confidence: 4
-last_verified: "2026-05-18"
-applicable_to: ["any"]
+last_verified: '2026-05-18'
+applicable_to:
+  - any
 connections:
   - ios-ai/ios-ai-journal-010-ai-orchestration-tmux-worker-pool
   - ios-ai/ios-ai-journal-015-compound-qa-mock-harness-worker
   - ios-ai/ios-ai-journal-016-codegraph-token-savings
   - ios-ai/ios-ai-journal-014-memory-to-behavior-guard
   - harness-engineering/ai-agent-start-here
+  - ios-ai/ios-ai-journal-018-asymmetric-worker-pool
+  - ios-ai/ios-ai-journal-021-self-report-reliability-inbox-queue
+  - ios-ai/ios-ai-journal-022-worker-derived-data-isolation
 status: complete
 type: entry
 description: >-
-  moneyflow(iOS) 4-pane 워커 풀의 작은 마찰 4건을 같은 결로 박제. opus/sonnet 모델 분리
-  (CTO+Lead만 비싼 모델), 고정 sleep 25s 제거 → pane Claude ready 폴링, Orchestrator 탐색
-  차단 훅을 정적 → 동적 큐(WO ≤ 3 차단, > 3 직접 허용) 분기로 전환, post-commit
-  swift-reviewer 자동 dispatch를 사용자 확인으로 *되돌린* 자동화 후퇴 회고. 보너스로
-  조건부 UI 비활성화 회귀의 3종 세트 패턴(isHidden + isEnabled + 색상)도 함께 박제.
+  moneyflow(iOS) 4-pane 워커 풀의 작은 마찰 4건을 같은 결로 박제. opus/sonnet 모델 분리 (CTO+Lead만
+  비싼 모델), 고정 sleep 25s 제거 → pane Claude ready 폴링, Orchestrator 탐색 차단 훅을 정적 → 동적
+  큐(WO ≤ 3 차단, > 3 직접 허용) 분기로 전환, post-commit swift-reviewer 자동 dispatch를 사용자
+  확인으로 *되돌린* 자동화 후퇴 회고. 보너스로 조건부 UI 비활성화 회귀의 3종 세트 패턴(isHidden + isEnabled +
+  색상)도 함께 박제.
 quiz:
-  - question: "4 pane 워커 풀에서 opus는 orchestrator + lead만, worker-2/3 implement/verify는 sonnet으로 분리한 근거는?"
+  - question: >-
+      4 pane 워커 풀에서 opus는 orchestrator + lead만, worker-2/3 implement/verify는
+      sonnet으로 분리한 근거는?
     choices:
-      - "opus가 toolchain MCP 호출에 더 빠르다"
-      - "결정·계획 부담(CTO 판단, 사양 분해)이 큰 자리만 비싼 모델로, 일관된 패턴 실행 자리는 저렴한 모델로 — 같은 작업당 비용/사이클 trade를 자리별로 따로 튜닝"
-      - "sonnet은 Swift를 더 잘 쓴다"
-      - "opus는 컨텍스트 윈도우가 sonnet보다 좁아서 짧은 자리에만 쓴다"
+      - opus가 toolchain MCP 호출에 더 빠르다
+      - >-
+        결정·계획 부담(CTO 판단, 사양 분해)이 큰 자리만 비싼 모델로, 일관된 패턴 실행 자리는 저렴한 모델로 — 같은 작업당
+        비용/사이클 trade를 자리별로 따로 튜닝
+      - sonnet은 Swift를 더 잘 쓴다
+      - opus는 컨텍스트 윈도우가 sonnet보다 좁아서 짧은 자리에만 쓴다
     answer: 1
     explanation: >-
-      Worker pool은 자리마다 부하 곡선이 다르다. 결정·플래닝·우선순위 충돌은 빈도는
-      낮지만 한 번 실수의 비용이 크고(스프린트 방향 오류), 구현·검증은 빈도는 높지만
-      한 결정의 비용이 작다(개별 함수 fix). 모델을 자리별로 분리하면 같은 월간 예산으로
-      두 부하 곡선을 동시에 최적화할 수 있다.
-  - question: "Orchestrator 탐색 차단 훅을 v2(정적 차단)에서 v3(WO ≤ 3이면 차단, > 3이면 허용)로 바꾼 진짜 이유는?"
+      Worker pool은 자리마다 부하 곡선이 다르다. 결정·플래닝·우선순위 충돌은 빈도는 낮지만 한 번 실수의 비용이 크고(스프린트
+      방향 오류), 구현·검증은 빈도는 높지만 한 결정의 비용이 작다(개별 함수 fix). 모델을 자리별로 분리하면 같은 월간 예산으로 두
+      부하 곡선을 동시에 최적화할 수 있다.
+  - question: 'Orchestrator 탐색 차단 훅을 v2(정적 차단)에서 v3(WO ≤ 3이면 차단, > 3이면 허용)로 바꾼 진짜 이유는?'
     choices:
-      - "정적 차단이 너무 느려서"
-      - "큐 과부하 상태에서도 워커-1에게 강제 위임하니, 위임이 적체되어 dispatcher 자체가 병목으로 변했음 — 시스템 상태에 따라 가드의 강도가 바뀌어야 함"
-      - "Bash exit code 2가 Claude Code에서 deprecated"
-      - "보안 정책 변경"
+      - 정적 차단이 너무 느려서
+      - >-
+        큐 과부하 상태에서도 워커-1에게 강제 위임하니, 위임이 적체되어 dispatcher 자체가 병목으로 변했음 — 시스템 상태에
+        따라 가드의 강도가 바뀌어야 함
+      - Bash exit code 2가 Claude Code에서 deprecated
+      - 보안 정책 변경
     answer: 1
     explanation: >-
-      가드는 '항상 켜져 있는 것'이 정의가 아니다. 보호하려던 자원(워커-1 큐)이 이미
-      과부하면 가드가 오히려 시스템을 더 망친다. 가드 자체가 *시스템 상태를 관찰하고*
-      분기하도록 만드는 게 다음 단계. 임계값 3은 운영 측정으로 정한 comfortable 상한.
-  - question: "post-commit swift-reviewer 자동 dispatch를 사용자 확인 방식으로 *되돌린* 결정은 자동화 퇴보인가?"
+      가드는 '항상 켜져 있는 것'이 정의가 아니다. 보호하려던 자원(워커-1 큐)이 이미 과부하면 가드가 오히려 시스템을 더 망친다.
+      가드 자체가 *시스템 상태를 관찰하고* 분기하도록 만드는 게 다음 단계. 임계값 3은 운영 측정으로 정한 comfortable 상한.
+  - question: post-commit swift-reviewer 자동 dispatch를 사용자 확인 방식으로 *되돌린* 결정은 자동화 퇴보인가?
     choices:
-      - "그렇다, 자동화는 항상 옳다"
-      - "아니다 — 브랜치명 필터로 dispatch 대상을 구분하려 했으나 prefix 없는 브랜치 등에서 신뢰 불가. 잘못된 자동화는 무자동화보다 나쁘다(타 브랜치 커밋 큐 폭주 + 무단 백그라운드)"
-      - "사용자 확인은 항상 자동화의 적"
-      - "Claude Code가 post-commit을 deprecated 했기 때문"
+      - '그렇다, 자동화는 항상 옳다'
+      - >-
+        아니다 — 브랜치명 필터로 dispatch 대상을 구분하려 했으나 prefix 없는 브랜치 등에서 신뢰 불가. 잘못된 자동화는
+        무자동화보다 나쁘다(타 브랜치 커밋 큐 폭주 + 무단 백그라운드)
+      - 사용자 확인은 항상 자동화의 적
+      - Claude Code가 post-commit을 deprecated 했기 때문
     answer: 1
     explanation: >-
-      자동화는 *조건 식별의 신뢰성*이 우선이다. 분류기가 false positive를 흘리면 자동화는
-      소음 증폭기로 바뀐다. 이 경우 분류기(브랜치명 prefix)가 깨졌으니, 자동화를 끄고
-      사람 확인 ↔ orchestrator 확인 단계로 한 칸 되돌리는 게 *전진*. 다음에 더 신뢰할 만한
-      분류기(예: 변경 파일 .swift 비율 + WO 메타데이터)를 만든 뒤 재자동화하면 된다.
+      자동화는 *조건 식별의 신뢰성*이 우선이다. 분류기가 false positive를 흘리면 자동화는 소음 증폭기로 바뀐다. 이 경우
+      분류기(브랜치명 prefix)가 깨졌으니, 자동화를 끄고 사람 확인 ↔ orchestrator 확인 단계로 한 칸 되돌리는 게
+      *전진*. 다음에 더 신뢰할 만한 분류기(예: 변경 파일 .swift 비율 + WO 메타데이터)를 만든 뒤 재자동화하면 된다.
 ---
 
 # iOS Harness Journal 017 — 워커 풀 운영 튜닝

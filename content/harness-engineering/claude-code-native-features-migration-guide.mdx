@@ -1,24 +1,59 @@
 ---
-title: "Claude Code 공식 기능 마이그레이션 가이드 — 커스텀 구현을 네이티브로 대체하기"
-description: "Claude Code가 공식 지원하는 기능 전체 카탈로그 + 커스텀 구현 대체 매핑. 다른 세션이 읽고 자기 프로젝트에 즉시 적용 가능."
+title: Claude Code 공식 기능 마이그레이션 가이드 — 커스텀 구현을 네이티브로 대체하기
+description: Claude Code가 공식 지원하는 기능 전체 카탈로그 + 커스텀 구현 대체 매핑. 다른 세션이 읽고 자기 프로젝트에 즉시 적용 가능.
 category: harness-engineering
-date: "2026-05-08"
-tags: [claude-code, native-features, migration, agent-teams, hooks, tokenomics]
+date: '2026-05-08'
+tags:
+  - claude-code
+  - native-features
+  - migration
+  - agent-teams
+  - hooks
+  - tokenomics
 confidence: 3
-connections: [claude-code-token-levers-catalog, orchestrator-worker-tmux-communication-rules, bash-watcher-zero-token-polling, dispatch-state-idle-false-positive, tmux-flush-automation-pattern]
+connections:
+  - claude-code-token-levers-catalog
+  - orchestrator-worker-tmux-communication-rules
+  - bash-watcher-zero-token-polling
+  - dispatch-state-idle-false-positive
+  - tmux-flush-automation-pattern
+  - harness-engineering/agents-md-orchestration-patterns
+  - harness-engineering/claude-code-codex-migration
+  - harness-engineering/claude-code-production-hooks
+  - harness-engineering/claude-sf-2026-recap-shipped-features
+  - harness-engineering/managed-vs-local-agent-harnesses
 quiz:
-  - question: "tmux 4-pane 오케스트레이션의 네이티브 대체 기능은?"
-    choices: ["Subagents only", "Agent Teams + TaskCreate + SendMessage + worktree isolation", "CronCreate + /loop", "Plan Mode + /compact"]
+  - question: tmux 4-pane 오케스트레이션의 네이티브 대체 기능은?
+    choices:
+      - Subagents only
+      - Agent Teams + TaskCreate + SendMessage + worktree isolation
+      - CronCreate + /loop
+      - Plan Mode + /compact
     answer: 1
-    explanation: "Agent Teams는 TeamCreate로 팀 구성, TaskCreate/TaskUpdate로 태스크 관리, SendMessage로 에이전트 간 통신, isolation: worktree로 병렬 편집 충돌 방지를 모두 네이티브로 제공한다."
-  - question: "커스텀 bash-watcher 워커 폴링을 대체하는 네이티브 훅 이벤트는?"
-    choices: ["PostToolUse", "SessionStart", "TeammateIdle", "PreCompact"]
+    explanation: >-
+      Agent Teams는 TeamCreate로 팀 구성, TaskCreate/TaskUpdate로 태스크 관리, SendMessage로
+      에이전트 간 통신, isolation: worktree로 병렬 편집 충돌 방지를 모두 네이티브로 제공한다.
+  - question: 커스텀 bash-watcher 워커 폴링을 대체하는 네이티브 훅 이벤트는?
+    choices:
+      - PostToolUse
+      - SessionStart
+      - TeammateIdle
+      - PreCompact
     answer: 2
-    explanation: "TeammateIdle 훅은 팀 멤버가 유휴 상태가 되면 자동 발화하므로, capture-pane 기반 수동 폴링을 대체한다. 단, dispatch 전 idle과 완료 후 idle을 구분하려면 TaskCreate 타임스탬프 추적이 보완 필요 (dispatch-state-idle-false-positive 참고)."
-  - question: "다음 중 아직 네이티브 대체가 불가능한 커스텀 기능은?"
-    choices: ["worktree 생성", "세션 내 태스크 추적", "크로스 레포 비동기 메시징", "워커 상태 감지"]
+    explanation: >-
+      TeammateIdle 훅은 팀 멤버가 유휴 상태가 되면 자동 발화하므로, capture-pane 기반 수동 폴링을 대체한다. 단,
+      dispatch 전 idle과 완료 후 idle을 구분하려면 TaskCreate 타임스탬프 추적이 보완 필요
+      (dispatch-state-idle-false-positive 참고).
+  - question: 다음 중 아직 네이티브 대체가 불가능한 커스텀 기능은?
+    choices:
+      - worktree 생성
+      - 세션 내 태스크 추적
+      - 크로스 레포 비동기 메시징
+      - 워커 상태 감지
     answer: 2
-    explanation: "Claude Code의 Agent Teams/SendMessage는 단일 세션 내 통신만 지원한다. 프로젝트 간(cross-repo) 비동기 메시징은 여전히 커스텀 구현(messages/ 큐)이 필요하다."
+    explanation: >-
+      Claude Code의 Agent Teams/SendMessage는 단일 세션 내 통신만 지원한다. 프로젝트 간(cross-repo)
+      비동기 메시징은 여전히 커스텀 구현(messages/ 큐)이 필요하다.
 ---
 
 ## 이 엔트리의 목적

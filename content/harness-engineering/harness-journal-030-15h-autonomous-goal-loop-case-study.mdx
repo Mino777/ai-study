@@ -1,0 +1,233 @@
+---
+title: "Harness Journal 030 — 15시간 자율 goal 루프 케이스 스터디: 한 세션이 지식 시스템을 빌드하는 법"
+description: "15h/48 commit/131 파일 자율 루프 실측. 30분 self-pace + state 외부화 + worktree 격리 + 보수적 게이트 메타 학습."
+category: harness-engineering
+series: harness-journal
+date: '2026-05-22'
+tags:
+  - harness-journal
+  - autonomous-loop
+  - schedule-wakeup
+  - self-pace
+  - state-externalization
+  - worktree-isolation
+  - goal-loop
+  - compound-engineering
+confidence: 4
+last_verified: "2026-05-22"
+applicable_to: ["any"]
+generated_by: human
+connections:
+  - harness-engineering/aidy-journal-001-20round-autoceo-sprint
+  - harness-engineering/compound-engineering-philosophy
+  - harness-engineering/compound-loop-break
+  - harness-engineering/harness-journal-025-jit-retrieval-poc-phase1
+  - harness-engineering/harness-journal-026-midpoint-ai-engineering-review
+  - harness-engineering/llm-first-wiki-principles
+  - context-engineering/karpathy-llm-wiki-pattern-compilation-over-retrieval
+  - agents/long-running-ai-agents-survival-state-persistence-fault-reco
+quiz:
+  - question: "15시간 자율 goal 루프에서 30분 self-pace 주기를 선택한 1차 근거는?"
+    choices:
+      - "사용자가 30분마다 깨어서 검토해야 하기 때문"
+      - "Claude 토큰 윈도우 리셋 주기에 맞춰 컨텍스트 압축을 자연 유도"
+      - "ScheduleWakeup 최대 허용 간격이 30분이기 때문"
+      - "Anthropic 가이드 권장 값"
+    answer: 1
+    explanation: "Claude의 5분 캐시 TTL과 별개로, 토큰 윈도우 리셋과 컨텍스트 자연 압축이 30분 주기에 잘 맞물린다. 매 iteration을 commit으로 마무리하면 컨텍스트가 압축돼도 진행이 보존된다."
+  - question: "이 루프가 백로그 19개 중 2개(B10, B16)를 의도적으로 skip한 이유는?"
+    choices:
+      - "토큰이 부족해서"
+      - "사용자가 자기 전 미리 제외 표시했기 때문"
+      - "보수적 검증 게이트 — 자율 판단 위험이 큰 작업은 헛돌이를 막기 위해 skip"
+      - "다른 세션이 먼저 처리해서"
+    answer: 2
+    explanation: "skip 판단 자체가 자율 루프의 핵심 메타 학습이다. 모든 백로그를 다 해치우려고 하면 헛돌이가 누적되고 ScheduleWakeup이 소진된다. '이건 사람 검토가 필요하다'고 인식하는 게이트가 성공률을 끌어올린다."
+  - question: "루프 상태 파일을 `~/.claude/goal-loop-gma.md` 같은 외부 파일에 둔 가장 큰 이유는?"
+    choices:
+      - "git에서 제외하기 위해"
+      - "다른 사용자와 공유하기 위해"
+      - "컨텍스트 압축돼도 백로그와 진행 상황이 영구 유지되도록"
+      - "ScheduleWakeup이 요구하는 표준 위치이기 때문"
+    answer: 2
+    explanation: "활성 세션 컨텍스트는 압축/요약될 수 있다. 진행 상황을 conversation 내부에만 두면 다음 iteration에서 사라질 수 있고, 외부 markdown 파일은 매 wakeup에서 재읽기 가능한 procedural memory 역할을 한다."
+---
+
+> **시간 박스 자율 루프의 실측 케이스**. 한 워커 iOS 레포에서 2026-05-21 18:16 ~ 2026-05-22 09:16 KST 15시간 동안 ScheduleWakeup 30분 self-pace 주기로 돌렸다. 결과: **commit 48개 / 파일 131개 / 백로그 19/19 완료**. 인프라 도구 15개·hook 2개·skill 2개 신설. wiki health 78/100(B), dangling 0(68→0), nodes 328.
+>
+> 이 글은 그 루프의 메타 학습을 박제한다. 산출물 자체가 아니라 **어떻게 단일 세션이 자율로 시스템을 빌드할 수 있는가**의 패턴.
+
+## For AI Agents
+
+**Trigger**: 자율 루프(ScheduleWakeup 기반) 설계 시. "이런 거 한 세션에서 돌리면 어디까지 가나?" 류 실험 준비. compound-loop-break를 회피하면서 장시간 자율 진행이 필요할 때.
+
+**Prerequisites**:
+- ScheduleWakeup 툴 사용 경험 (delay/prompt/reason 패턴)
+- worktree 격리 작업 패턴 (`/wt-branch` 또는 직접 worktree)
+- 메모리/skill/hook 인프라가 *이미* 갖춰진 환경 (제로에서 자율 루프는 헛돌이)
+
+**Actionable Steps**:
+1. 외부 state 파일 1개 만들기 (`~/.claude/goal-loop-<project>.md`) — 백로그·완료·skip·다음 wakeup 시간 4섹션
+2. 30분 self-pace로 첫 iteration 시작 — 매 wakeup마다 state 파일 먼저 읽고 다음 백로그 1개 집중
+3. iteration 종료 시 반드시 commit (작업 보존) + state 파일 갱신
+4. 자율 판단 위험한 작업(스킬 본문 수정, 라이브 데이터, 외부 API)은 명시적으로 skip → 사용자 검토 큐로 분리
+5. 종료 시점 정해두기 (예: 15시간) — 무한 루프는 quality drift 위험
+
+**Anti-patterns**:
+- ❌ state 파일 없이 conversation 메모리에만 의존 → 컨텍스트 압축으로 진행 분실
+- ❌ 모든 백로그를 자율 처리하려는 욕심 → 헛돌이 누적, 보수적 skip이 없으면 9개째쯤 품질 무너짐
+- ❌ 메인 worktree에서 작업 → 다른 세션/사용자 working tree 영향
+- ❌ commit 없이 다음 wakeup으로 넘기기 → iteration 손실
+- ❌ 인프라 zero 상태에서 자율 루프 시작 → recall/wiki/codegraph 없으면 매 wakeup마다 같은 컨텍스트 재탐색
+
+---
+
+## 1. 실험 설정
+
+| 항목 | 값 |
+|------|---|
+| 시간 박스 | 2026-05-21 18:16 ~ 2026-05-22 09:16 KST (15h) |
+| 펄스 | ScheduleWakeup 30분 self-pace |
+| 목표 | "완전한 에이전트 지식 시스템을 만들 때까지 무한 루프" |
+| state 파일 | `~/.claude/goal-loop-<project>.md` (백로그/완료/skip/다음 wakeup) |
+| 작업 격리 | 매 iteration 새 worktree (`chore/goal-bN-<topic>`) |
+| 본 리포트 | 루프 종료 직후 사용자 검토 큐로 산출 |
+
+**중요 전제**: 이 루프는 *제로*에서 시작하지 않는다. recall.sh, wiki-index, codegraph 같은 인프라 도구가 이미 약 50% 완성된 상태였다. 자율 루프는 **인프라가 갖춰진 위에서 디벨롭**하는 작업에 적합하다.
+
+---
+
+## 2. 결과 — 정량 지표
+
+| 지표 | 값 |
+|------|---|
+| commit | 48개 |
+| 파일 변경 | 131개 |
+| 백로그 완료 | 19/19 (B10·B16 보수적 skip 포함) |
+| 신설 도구 | 15개 (wiki-index, wiki-related, wiki-doctor, wiki-dup-detect, wiki-popular, ax-fingerprint 등) |
+| 신설 hook | 2개 (jit-search-first, recall-on-prompt) |
+| 신설 skill | 2개 (`/recall`, `/wiki-ask`) |
+| wiki health | 78/100 (B grade) |
+| wiki nodes | 328 |
+| dangling link | 0 (시작 68 → 종료 0) |
+| matrix-stale | 0/13 |
+| backlink coverage | 100% |
+| code_refs coverage | 87% |
+
+dangling 68 → 0의 단일 가장 큰 효과는 frontmatter `related` YAML을 graph 빌더가 흡수하도록 한 PR (`B12`)이었다. 한 자율 iteration이 그래프 정합성 메트릭을 *바닥에서 만점*으로 끌어올린 사례.
+
+---
+
+## 3. 메타 학습 5개
+
+### 3.1 30분 self-pace = 컨텍스트 압축 친화 주기
+
+ScheduleWakeup 가이드는 캐시 TTL(5분) 안의 짧은 폴링과 5분 너머의 느린 폴링을 구분한다. 30분 주기는 **캐시는 한 번 잃되, 컨텍스트 압축은 자연스럽게 일어나는** 영역이다. 매 iteration이 commit으로 마무리되면 다음 wakeup은 "현재 worktree 상태 + state 파일 + 짧은 컨텍스트"로 시작한다. 토큰 효율과 진행 보존의 균형이 30분 근처에서 좋다.
+
+비교 — [aidy-journal-001](./aidy-journal-001-20round-autoceo-sprint)의 20-round autoceo 스프린트는 *연속 압축 없는* 동기 루프였다. 본 루프는 *압축을 적극 활용하는* 비동기 self-pace였다는 점에서 다르다.
+
+### 3.2 state 파일 외부화 = procedural memory
+
+루프 상태를 conversation 안에 두면 컨텍스트 압축이 일어날 때 분실 위험이 있다. `~/.claude/goal-loop-<project>.md` 같은 **외부 markdown 파일**을 procedural memory로 쓰면:
+
+- 백로그 (B1, B2, ..., B19) 명시
+- 완료 (체크박스)
+- skip + 이유 (B10·B16)
+- 다음 wakeup 의도
+
+매 wakeup의 첫 행동은 "state 파일 읽기 → 다음 백로그 1개 집중". conversation 메모리는 *오늘 1 iteration용 작업 컨텍스트*만 담아도 된다. [Long-running AI agents 패턴](../agents/long-running-ai-agents-survival-state-persistence-fault-reco)과 동일한 원칙.
+
+### 3.3 보수적 게이트가 성공률을 끌어올린다
+
+자율 루프에 가장 흔한 실패 모드: "백로그 19개 다 해치우자" 욕심. 본 루프는 B10·B16 2개를 **의도적으로 skip**했다.
+
+- B10: 라이브 데이터 마이그레이션 위험 (auto-apply 위험)
+- B16: skill 본문 자동 수정 위험 (다른 세션/사용자 가드 침범)
+
+skip 결정 자체가 메타 학습이다. "이건 사람 검토가 필요하다"고 인식하는 게이트가 없으면 9개째쯤 품질이 무너진다. 헛돌이 cycle이 누적되면 ScheduleWakeup 잔량을 다 까먹는다.
+
+### 3.4 worktree 격리 = 메인 영향 0
+
+매 iteration이 새 worktree(`chore/goal-bN-<topic>`)에서 작업한다. 메인 working tree·다른 활성 worktree·다른 사용자 세션 영향이 0. 마지막에 모든 worktree를 한 브랜치(`chore/claude-setup`)로 머지.
+
+이 패턴이 있어야 *다른 세션과 병렬* 자율 루프가 가능하다. 동일 시간에 다른 세션(verifier-falsification-first / maestro-deterministic-launch skill 작업)이 진행됐고, B18에서 두 산출물이 자연 통합됐다.
+
+### 3.5 보수적 skip이 만든 사용자 검토 큐
+
+종료 시점에 본 리포트가 명시한 *사용자 검토 큐* 5건:
+
+1. 자율로 보강하기 미묘했던 frontmatter 누락 2건 (guides 파일)
+2. 다른 세션이 만든 신규 design doc 검토 (bitemporal v2 설계 — 본 글의 자매편)
+3. /compound Phase 4 실 구현 (설계만 산출됨)
+4. UITEST 런치인자 게이트 (앱 소스 수정 자율 금지)
+5. push 직전 확인 (chore/claude-setup → origin)
+
+자율 루프 후 사용자가 처음 깨는 순간에 *판단할 거리*가 명확히 정리돼 있어야 한다. "다 끝났음, 검토 없음" 보고는 보통 거짓말이다.
+
+---
+
+## 4. 다른 자율 루프와의 차이
+
+| 차원 | 본 루프 (15h goal) | [aidy-journal-001 20-round autoceo](./aidy-journal-001-20round-autoceo-sprint) |
+|------|------------------|----------------------------|
+| 펄스 | ScheduleWakeup 30분 self-pace (비동기) | 20 round 연속 (동기) |
+| 컨텍스트 처리 | 압축 적극 활용 | 단일 컨텍스트 유지 |
+| state 보존 | 외부 markdown 파일 | conversation + git commit |
+| 격리 | 매 iteration worktree | 단일 worktree |
+| 시간 범위 | 15h | 단일 세션 |
+| 보수적 skip | 의도적 게이트 19→17 | 없음 (round 완수 목표) |
+| 적합한 작업 | 인프라 디벨롭, 백로그 처리 | 단일 feature 깊이 진행 |
+
+**선택 기준**: 백로그가 길고 *각 작업이 독립적*이면 self-pace 자율 루프. 한 feature를 깊이 진행해야 하면 동기 round 루프.
+
+---
+
+## 5. 핸드오프 패턴 (루프 종료 → 사용자)
+
+루프 종료 직후 산출되는 단일 리포트가 *핸드오프 게이트* 역할:
+
+```
+docs/research/goal-loop-final-report.md
+├─ 1. 결과 요약 (정량 지표)
+├─ 2. 신설/확장 도구 카탈로그
+├─ 3. baseline 측정
+├─ 4. 핵심 발견 / 인사이트
+├─ 5. 자율 루프 메타 학습 (이 글의 핵심 출처)
+├─ 6. 사용자 다음 액션 (push 가이드 + 검토 큐)
+└─ 7. 자기 점검 (5가지 self-evaluation)
+```
+
+§7 자기 점검은 [agent-self-evaluation-bias-countermeasures](../evaluation/agent-self-evaluation-bias-countermeasures) 패턴을 따른다 — "구현됐다" 아니라 "실제로 작동하는가"를 확인 가능한 질문 형식.
+
+---
+
+## 6. 적용 체크리스트
+
+다른 프로젝트에 self-paced 자율 루프 이식 시:
+
+- [ ] 인프라 50% 이상 완성 — 제로 상태에서는 매 wakeup 같은 컨텍스트 재탐색
+- [ ] state 파일 1개 — 백로그/완료/skip/다음 wakeup
+- [ ] worktree 격리 패턴 — 직접 `git worktree` 또는 `/wt-branch`
+- [ ] 종료 조건 명시 (시간 박스 권장 — 15h, 24h)
+- [ ] 자율 금지 영역 사전 정의 — skill 본문, 라이브 데이터, 외부 API, 토큰 비싼 작업
+- [ ] commit-per-iteration 규칙 — wakeup 사이에 진행 손실 방지
+- [ ] 종료 시 단일 리포트 — 정량 지표 + 메타 학습 + 사용자 검토 큐
+
+---
+
+## 7. 결과의 한계 / 검증 필요
+
+- **n=1 케이스**. 다른 프로젝트(인프라 zero에 가까운 환경)에서 같은 결과 나오리란 보장 없음
+- wiki health 78/100은 *그래프 정합성* 지표 — 콘텐츠 품질 평가는 따로 필요
+- 보수적 skip 19→17은 본 루프의 게이트가 만든 자연 결과. 다른 사람이 같은 백로그로 돌리면 다른 skip 패턴 나올 수 있음
+- ScheduleWakeup 자체가 베타 기능 — 토큰 비용 추적이 별도로 필요
+
+---
+
+## 관련 엔트리
+
+- [aidy-journal-001 — 20round autoceo sprint](./aidy-journal-001-20round-autoceo-sprint) — 동기 round 루프 대조군
+- [compound-loop-break](./compound-loop-break) — 루프 단절 회피 패턴
+- [harness-journal-025 JIT retrieval POC](./harness-journal-025-jit-retrieval-poc-phase1) — 본 루프가 의존한 JIT 검색 인프라
+- [long-running AI agents survival](../agents/long-running-ai-agents-survival-state-persistence-fault-reco) — 외부 state 파일 procedural memory 원리
+- [Karpathy LLM Wiki 패턴](../context-engineering/karpathy-llm-wiki-pattern-compilation-over-retrieval) — 본 루프가 흡수한 compilation 원칙

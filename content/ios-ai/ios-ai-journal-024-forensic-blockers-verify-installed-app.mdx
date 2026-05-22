@@ -1,61 +1,83 @@
 ---
-title: "iOS Harness Journal 024 — Forensic blocker 3종: verify-installed-app · maestro lint · post-commit reviewer"
+title: >-
+  iOS Harness Journal 024 — Forensic blocker 3종: verify-installed-app · maestro
+  lint · post-commit reviewer
 category: ios-ai
 series: ios-ai-journal
-date: "2026-05-20"
-tags: [ios-harness-journal, forensic, verify-installed-app, maestro, post-commit, inbox-queue, build-cache-trap, false-positive]
+date: '2026-05-20'
+tags:
+  - ios-harness-journal
+  - forensic
+  - verify-installed-app
+  - maestro
+  - post-commit
+  - inbox-queue
+  - build-cache-trap
+  - false-positive
 confidence: 4
-last_verified: "2026-05-20"
-applicable_to: ["any"]
+last_verified: '2026-05-20'
+applicable_to:
+  - any
 connections:
   - ios-ai/ios-ai-journal-020-maestro-mcp-test-without-building
   - ios-ai/ios-ai-journal-021-self-report-reliability-inbox-queue
   - ios-ai/ios-ai-journal-022-worker-derived-data-isolation
   - ios-ai/ios-ai-journal-023-impact-brief-xctest-on-diff
   - ios-ai/ios-ai-journal-025-uncommitted-state-safety-blindspot
+  - ios-ai/ax-tree-fingerprint-regression-guard
 status: complete
 type: entry
 generated_by: hermes
 description: >-
-  자율 사이클 forensic 사례 5건 (#1/#2/#3/#6/#7) 차단 도구 3종 박제. (B1) verify-installed-app —
-  build 전/후 CFBundleVersion + Info.plist mtime 스냅샷 비교로 "구버전 앱을 새 빌드로 오인" 차단.
+  자율 사이클 forensic 사례 5건 (#1/#2/#3/#6/#7) 차단 도구 3종 박제. (B1) verify-installed-app
+  — build 전/후 CFBundleVersion + Info.plist mtime 스냅샷 비교로 "구버전 앱을 새 빌드로 오인" 차단.
   (B2) maestro-yaml-lint — assertVisible이 텍스트만 보는 한계 우회, 상태 단어("비활성/disabled")
-  발견 시 snapshot_ui 병행 강제. (B3) swift-review-on-commit — post-commit에서 신규 메서드 detect
-  → inbox-queue 적재 (@MainActor 누락 같은 패턴을 commit 시점에 비동기 reviewer로 검사).
+  발견 시 snapshot_ui 병행 강제. (B3) swift-review-on-commit — post-commit에서 신규 메서드
+  detect → inbox-queue 적재 (@MainActor 누락 같은 패턴을 commit 시점에 비동기 reviewer로 검사).
 quiz:
-  - question: "build_sim 직후 install이 성공으로 보이는데 실은 *시뮬에 이미 있던 구버전*을 검증한 사례를 차단하는 가장 가벼운 가드는?"
+  - question: >-
+      build_sim 직후 install이 성공으로 보이는데 실은 *시뮬에 이미 있던 구버전*을 검증한 사례를 차단하는 가장 가벼운
+      가드는?
     choices:
-      - "매번 erase + cold install"
-      - "build 직전 CFBundleVersion + Info.plist mtime을 BEFORE 스냅샷으로 저장, build 직후 AFTER 스냅샷과 비교 — 둘 다 동일이면 캐시 히트 의심으로 exit 1"
-      - "Maestro로 화면 텍스트 확인"
-      - "GitHub Actions에서만 빌드"
+      - 매번 erase + cold install
+      - >-
+        build 직전 CFBundleVersion + Info.plist mtime을 BEFORE 스냅샷으로 저장, build 직후
+        AFTER 스냅샷과 비교 — 둘 다 동일이면 캐시 히트 의심으로 exit 1
+      - Maestro로 화면 텍스트 확인
+      - GitHub Actions에서만 빌드
     answer: 1
     explanation: >-
-      verify-installed-app은 *건드린 흔적*을 비교한다. CFBundleVersion + mtime + install time이 BEFORE와
-      동일하면 새 빌드가 *반영되지 않은* 상태. erase는 비싸지만 metadata diff는 거의 무료. 가장 비용
-      대비 효과 큰 forensic 가드.
-  - question: "Maestro assertVisible로 '버튼 비활성화' 검증이 통과되지만 실제로는 활성 상태인 false positive를 막는 lint 규칙은?"
+      verify-installed-app은 *건드린 흔적*을 비교한다. CFBundleVersion + mtime + install
+      time이 BEFORE와 동일하면 새 빌드가 *반영되지 않은* 상태. erase는 비싸지만 metadata diff는 거의 무료.
+      가장 비용 대비 효과 큰 forensic 가드.
+  - question: >-
+      Maestro assertVisible로 '버튼 비활성화' 검증이 통과되지만 실제로는 활성 상태인 false positive를 막는
+      lint 규칙은?
     choices:
-      - "Snapshot 비교 강제"
-      - "yaml에 '비활성/활성/disabled/enabled/회색/grayed/isEnabled' 같은 상태 단어가 있으면 같은 yaml 안에 screenshot 또는 snapshot_ui step을 *반드시 포함*해야 한다는 Rule B (FAIL)"
-      - "Maestro 버전 강제"
-      - "테스트 카운트"
+      - Snapshot 비교 강제
+      - >-
+        yaml에 '비활성/활성/disabled/enabled/회색/grayed/isEnabled' 같은 상태 단어가 있으면 같은
+        yaml 안에 screenshot 또는 snapshot_ui step을 *반드시 포함*해야 한다는 Rule B (FAIL)
+      - Maestro 버전 강제
+      - 테스트 카운트
     answer: 1
     explanation: >-
-      assertVisible은 *텍스트 존재*만 확인 — 비활성 상태든 활성 상태든 텍스트는 있다. 상태 단어가 yaml에
-      등장하면 시각적 검증(snapshot/screenshot)을 *언어 게이트*로 강제해야 false positive를 차단할 수 있다.
-      도구의 한계를 *입력 규칙으로* 메꾸는 패턴.
-  - question: "post-commit hook에서 swift-reviewer를 동기 호출하지 않고 inbox-queue로 비동기 적재하는 이유는?"
+      assertVisible은 *텍스트 존재*만 확인 — 비활성 상태든 활성 상태든 텍스트는 있다. 상태 단어가 yaml에 등장하면
+      시각적 검증(snapshot/screenshot)을 *언어 게이트*로 강제해야 false positive를 차단할 수 있다. 도구의
+      한계를 *입력 규칙으로* 메꾸는 패턴.
+  - question: post-commit hook에서 swift-reviewer를 동기 호출하지 않고 inbox-queue로 비동기 적재하는 이유는?
     choices:
-      - "느리니까"
-      - "commit blocking을 피하면서도 신호를 잃지 않기 위함 — post-commit이 동기로 reviewer를 돌리면 사람의 commit 워크플로가 느려지고, 워커 commit은 *멈출 수 없으므로* 비동기 신호 채널이 필요"
-      - "Claude API 비용"
-      - "git이 막아서"
+      - 느리니까
+      - >-
+        commit blocking을 피하면서도 신호를 잃지 않기 위함 — post-commit이 동기로 reviewer를 돌리면 사람의
+        commit 워크플로가 느려지고, 워커 commit은 *멈출 수 없으므로* 비동기 신호 채널이 필요
+      - Claude API 비용
+      - git이 막아서
     answer: 1
     explanation: >-
       post-commit은 *워커 사이클의 핫패스*. 동기 reviewer는 분 단위로 잡아먹어 워커 throughput 붕괴.
-      inbox-queue로 적재 후 메인이 polling → Agent spawn하면 commit은 즉시 끝나고 reviewer는 별 스레드에서
-      병렬 처리. Journal 021 inbox-queue 패턴의 application.
+      inbox-queue로 적재 후 메인이 polling → Agent spawn하면 commit은 즉시 끝나고 reviewer는 별
+      스레드에서 병렬 처리. Journal 021 inbox-queue 패턴의 application.
 ---
 
 # iOS Harness Journal 024 — Forensic blocker 3종

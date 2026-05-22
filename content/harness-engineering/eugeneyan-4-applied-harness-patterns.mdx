@@ -1,7 +1,7 @@
 ---
-title: "Eugeneyan 4종 하네스 패턴 — 드리프트 2종 분리 + 트랜스크립트 마이닝 + tmux pane 상태 + CLAUDE.md 분리"
+title: Eugeneyan 4종 하네스 패턴 — 드리프트 2종 분리 + 트랜스크립트 마이닝 + tmux pane 상태 + CLAUDE.md 분리
 category: harness-engineering
-date: "2026-05-19"
+date: '2026-05-19'
 tags:
   - eugeneyan
   - drift
@@ -10,49 +10,67 @@ tags:
   - claude-md
   - korean-signals
 confidence: 4
-last_verified: "2026-05-19"
-applicable_to: ["any"]
+last_verified: '2026-05-19'
+applicable_to:
+  - any
 connections:
   - harness-engineering/orchestrator-worker-tmux-communication-rules
   - harness-engineering/tmux-flush-automation-pattern
   - harness-engineering/skillify-failure-to-skill-practice
   - harness-engineering/claude-code-production-hooks
+  - harness-engineering/git-guardrails-pretooluse-hook-no-verify-bypass
 status: complete
-description: "Eugeneyan 'AI와 함께 일하며 복리처럼 쌓아 성장하는 법' (GeekNews 29606)에서 모바일 워커 프로젝트 하네스로 이식한 4가지 패턴 실측. ① 드리프트 2종 분리(방향/실행) ② 한국어 반복 신호 트랜스크립트 마이닝 ③ tmux pane title 이모지 + stop hook 사운드 ④ CLAUDE.md 306→210줄 분리(31% 감량). 추정 아닌 실제 적용 시 디테일 — 한국어 토큰 리스트, 시스템 노이즈 필터, role 추정 로직."
+description: >-
+  Eugeneyan 'AI와 함께 일하며 복리처럼 쌓아 성장하는 법' (GeekNews 29606)에서 모바일 워커 프로젝트 하네스로 이식한
+  4가지 패턴 실측. ① 드리프트 2종 분리(방향/실행) ② 한국어 반복 신호 트랜스크립트 마이닝 ③ tmux pane title 이모지 +
+  stop hook 사운드 ④ CLAUDE.md 306→210줄 분리(31% 감량). 추정 아닌 실제 적용 시 디테일 — 한국어 토큰 리스트,
+  시스템 노이즈 필터, role 추정 로직.
 type: entry
 quiz:
-  - question: "드리프트 2종 분리에서 '방향 드리프트'와 '실행 드리프트'는 각각 어느 워커가 담당하나?"
+  - question: 드리프트 2종 분리에서 '방향 드리프트'와 '실행 드리프트'는 각각 어느 워커가 담당하나?
     choices:
-      - "둘 다 Orchestrator가 책임"
-      - "방향=Worker-1 advisor('올바른 작업?'), 실행=Worker-3 verify('올바르게?')"
-      - "방향=Worker-3, 실행=Worker-1"
-      - "사용자(인간)가 둘 다 직접 확인"
+      - 둘 다 Orchestrator가 책임
+      - '방향=Worker-1 advisor(''올바른 작업?''), 실행=Worker-3 verify(''올바르게?'')'
+      - '방향=Worker-3, 실행=Worker-1'
+      - 사용자(인간)가 둘 다 직접 확인
     answer: 1
-    explanation: "Eugeneyan은 드리프트를 한 덩어리로 보지만, 이식 시 작업 정체성(WHAT) vs 실행 품질(HOW)로 쪼개면 워커 분담이 자연스럽다. Worker-1은 advisor로서 '지금 올바른 작업을 하고 있나'를 묻고, Worker-3는 verify로 '올바르게 했나'를 점검한다."
-  - question: "트랜스크립트 마이닝에서 시스템 노이즈로 필터링 제외하는 신호 3가지는?"
+    explanation: >-
+      Eugeneyan은 드리프트를 한 덩어리로 보지만, 이식 시 작업 정체성(WHAT) vs 실행 품질(HOW)로 쪼개면 워커 분담이
+      자연스럽다. Worker-1은 advisor로서 '지금 올바른 작업을 하고 있나'를 묻고, Worker-3는 verify로 '올바르게
+      했나'를 점검한다.
+  - question: 트랜스크립트 마이닝에서 시스템 노이즈로 필터링 제외하는 신호 3가지는?
     choices:
-      - "또/다시/왜 안"
-      - "REVIEW_REQUEST / `<task-notification>` / 워커 prime 메시지"
-      - "still / again / can you also"
-      - "에러 스택트레이스"
+      - 또/다시/왜 안
+      - REVIEW_REQUEST / `<task-notification>` / 워커 prime 메시지
+      - still / again / can you also
+      - 에러 스택트레이스
     answer: 1
-    explanation: "사용자 반복 신호(불만/재시도)를 추출하려면 시스템이 자동 생성하는 메시지가 먼저 걸러져야 한다. REVIEW_REQUEST, `<task-notification>`, 워커 prime은 트랜스크립트에 반복 등장하지만 사용자 의도 신호가 아니라 자동 디스패치다. 한국어 신호(또/다시/왜 안/아니/엥)와 영어 신호(still/again/can you also)는 *결과*로 별도 박제한다."
-  - question: "tmux pane title의 상태 4종(busy/idle/blocked/done) 중 done만 특별한 처리가 있다. 무엇인가?"
+    explanation: >-
+      사용자 반복 신호(불만/재시도)를 추출하려면 시스템이 자동 생성하는 메시지가 먼저 걸러져야 한다. REVIEW_REQUEST,
+      `<task-notification>`, 워커 prime은 트랜스크립트에 반복 등장하지만 사용자 의도 신호가 아니라 자동 디스패치다.
+      한국어 신호(또/다시/왜 안/아니/엥)와 영어 신호(still/again/can you also)는 *결과*로 별도 박제한다.
+  - question: tmux pane title의 상태 4종(busy/idle/blocked/done) 중 done만 특별한 처리가 있다. 무엇인가?
     choices:
-      - "사운드를 동시에 재생"
-      - "5초 후 idle로 자동 복귀"
-      - "Orchestrator pane에 broadcast"
-      - "git commit을 자동 트리거"
+      - 사운드를 동시에 재생
+      - 5초 후 idle로 자동 복귀
+      - Orchestrator pane에 broadcast
+      - git commit을 자동 트리거
     answer: 1
-    explanation: "done은 '직전 작업 완료' 순간 신호다. 영구적으로 done 상태로 두면 다음 turn에 stale해진다. 5초 후 idle 자동 복귀가 'pulse' 효과를 만든다 — 시각적으로 끝났음을 강하게 표현하지만 다음 작업 대기 상태로 즉시 돌아온다."
-  - question: "CLAUDE.md를 306→210줄로 31% 줄였을 때, 어떤 룰은 본문에 남기고 어떤 룰을 분리 파일로 뺐나?"
+    explanation: >-
+      done은 '직전 작업 완료' 순간 신호다. 영구적으로 done 상태로 두면 다음 turn에 stale해진다. 5초 후 idle 자동
+      복귀가 'pulse' 효과를 만든다 — 시각적으로 끝났음을 강하게 표현하지만 다음 작업 대기 상태로 즉시 돌아온다.
+  - question: 'CLAUDE.md를 306→210줄로 31% 줄였을 때, 어떤 룰은 본문에 남기고 어떤 룰을 분리 파일로 뺐나?'
     choices:
-      - "전부 분리 파일로 빼고 본문은 포인터만"
-      - "HARD RULE/워커 계층/디스패치 등 핵심 룰만 본문 유지, 빌드·테스트·스킬 카탈로그는 docs/guides/로 분리"
-      - "랜덤하게 절반"
-      - "frontmatter만 유지하고 전부 분리"
+      - 전부 분리 파일로 빼고 본문은 포인터만
+      - 'HARD RULE/워커 계층/디스패치 등 핵심 룰만 본문 유지, 빌드·테스트·스킬 카탈로그는 docs/guides/로 분리'
+      - 랜덤하게 절반
+      - frontmatter만 유지하고 전부 분리
     answer: 1
-    explanation: "Frozen Snapshot 원칙(활성 세션 중 CLAUDE.md 수정 시 캐시 무효화 + 1.25x 오버헤드) 때문에 본문은 '매 turn 로드 가치가 있는' 항목만 남긴다. 검증·정책·카탈로그는 필요할 때만 fetch — docs/guides/build-and-test.md(86줄) + docs/guides/skill-catalog.md(58줄)로 분리."
+    explanation: >-
+      Frozen Snapshot 원칙(활성 세션 중 CLAUDE.md 수정 시 캐시 무효화 + 1.25x 오버헤드) 때문에 본문은 '매
+      turn 로드 가치가 있는' 항목만 남긴다. 검증·정책·카탈로그는 필요할 때만 fetch —
+      docs/guides/build-and-test.md(86줄) + docs/guides/skill-catalog.md(58줄)로
+      분리.
 ---
 
 ## 왜 쓰는가

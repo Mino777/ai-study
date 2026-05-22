@@ -1,25 +1,30 @@
 ---
-title: "에이전트 검색은 런타임 문제다"
+title: 에이전트 검색은 런타임 문제다
 category: agents
-date: "2026-05-16"
+date: '2026-05-16'
 tags:
   - blake-crosley
   - agents
 confidence: 2
-last_verified: "2026-05-16"
-applicable_to: ["any"]
-connections: []
-description: "이 글은 에이전트가 필요한 정보를 찾는 과정을 '런타임 문제'로 정의하고, 기존의 `grep` 방식과 최신 `벡터 검색` (RAG, 임베딩) 기술을 비교합니다. 효율적인 정보 검색이 에이전트의 성능과 자율성에 결정적인 영향을 미친다는 점을 강조하며, 다양한 검색 기술의"
+last_verified: '2026-05-16'
+applicable_to:
+  - any
+connections:
+  - context-engineering/bitemporal-knowledge-graph-jit-recall-design
+description: >-
+  이 글은 에이전트가 필요한 정보를 찾는 과정을 '런타임 문제'로 정의하고, 기존의 `grep` 방식과 최신 `벡터 검색` (RAG, 임베딩)
+  기술을 비교합니다. 효율적인 정보 검색이 에이전트의 성능과 자율성에 결정적이며, 다양한 검색 기술의 트레이드오프(정확도·지연·비용)를
+  이해해야 합니다.
 generated_by: gemini
 quiz:
-  - question: "이 엔트리의 핵심 개념을 가장 잘 설명하는 것은?"
+  - question: 이 엔트리의 핵심 개념을 가장 잘 설명하는 것은?
     choices:
-      - "이론적 프레임워크만 제시"
-      - "실무 코드와 적용 사례 기반 패턴"
-      - "학술 논문 요약"
-      - "도구 사용법 튜토리얼"
+      - 이론적 프레임워크만 제시
+      - 실무 코드와 적용 사례 기반 패턴
+      - 학술 논문 요약
+      - 도구 사용법 튜토리얼
     answer: 1
-    explanation: "Blake Crosley 블로그는 실무 경험 기반 패턴을 중시한다."
+    explanation: Blake Crosley 블로그는 실무 경험 기반 패턴을 중시한다.
 ---
 
 > 이 엔트리는 Blake Crosley의 [Agent Search Is a Runtime Problem](https://blakecrosley.com/blog/agent-search-is-a-runtime-problem)을 정독하고 핵심을 추출한 것이다.

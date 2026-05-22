@@ -1,5 +1,5 @@
 ---
-title: 'AI 에이전트 자기 평가 바이어스 대응 — 회고 품질을 높이는 3층 방어'
+title: AI 에이전트 자기 평가 바이어스 대응 — 회고 품질을 높이는 3층 방어
 category: evaluation
 date: '2026-04-17'
 tags:
@@ -11,42 +11,49 @@ tags:
   - anti-rationalization
   - hermes-agent
 confidence: 4
-last_verified: "2026-04-17"
-applicable_to: ["aidy", "any"]
+last_verified: '2026-04-17'
+applicable_to:
+  - aidy
+  - any
 connections:
   - harness-engineering/compound-engineering-philosophy
   - agents/hermes-agent-analysis
   - harness-engineering/superpowers-framework-analysis
+  - evaluation/llm-agent-document-vandalism-defense-delegate-52
 status: complete
 description: >-
-  AI 에이전트 회고에서 발견된 3가지 자기 평가 바이어스(특이사항 없음, 외부 귀인, 낮은 자기 비판 비율)와
-  3층 방어 구조(최소 1건 강제, 리프레이밍 표, cross-session-review). 16건 실데이터 분석 기반.
+  AI 에이전트 회고에서 발견된 3가지 자기 평가 바이어스(특이사항 없음, 외부 귀인, 낮은 자기 비판 비율)와 3층 방어 구조(최소 1건
+  강제, 리프레이밍 표, cross-session-review). 16건 실데이터 분석 기반.
 type: entry
 quiz:
-  - question: 'AI 에이전트 회고에서 가장 빈번한 바이어스 패턴은?'
+  - question: AI 에이전트 회고에서 가장 빈번한 바이어스 패턴은?
     choices:
-      - '특이사항 없음으로 회고 스킵'
-      - '외부 귀인 — 자기 판단 실수를 외부 요인 탓으로 돌림'
-      - '과도한 자기 비판'
-      - '솔루션과 회고를 혼합'
+      - 특이사항 없음으로 회고 스킵
+      - 외부 귀인 — 자기 판단 실수를 외부 요인 탓으로 돌림
+      - 과도한 자기 비판
+      - 솔루션과 회고를 혼합
     answer: 1
-    explanation: '16건 분석에서 가장 빈번한 패턴은 외부 귀인. "시간 부족", "범위 초과" 등 외부 요인으로 프레이밍하지만 실제로는 우선순위/추정 판단 실수인 경우가 대부분.'
-  - question: '3층 방어의 2차 방어선이 잡는 것은?'
+    explanation: >-
+      16건 분석에서 가장 빈번한 패턴은 외부 귀인. "시간 부족", "범위 초과" 등 외부 요인으로 프레이밍하지만 실제로는 우선순위/추정
+      판단 실수인 경우가 대부분.
+  - question: 3층 방어의 2차 방어선이 잡는 것은?
     choices:
-      - '회고 스킵'
-      - '자기 검증의 구조적 한계'
-      - '외부 귀인 — 책임 전가 패턴'
-      - '코드 품질 저하'
+      - 회고 스킵
+      - 자기 검증의 구조적 한계
+      - 외부 귀인 — 책임 전가 패턴
+      - 코드 품질 저하
     answer: 2
-    explanation: '2차 방어선은 외부 귀인 → 자기 귀인 리프레이밍 표. "시간 제약으로 미착수"를 "우선순위 판단 실패"로 리프레이밍하도록 가이드한다.'
-  - question: '자기 평가 바이어스의 구조적 원인은?'
+    explanation: >-
+      2차 방어선은 외부 귀인 → 자기 귀인 리프레이밍 표. "시간 제약으로 미착수"를 "우선순위 판단 실패"로 리프레이밍하도록
+      가이드한다.
+  - question: 자기 평가 바이어스의 구조적 원인은?
     choices:
-      - 'LLM의 hallucination 경향'
-      - '컨텍스트 윈도우 부족'
-      - '작업한 에이전트가 회고를 쓰는 구조 — 검찰이 자기 기소를 판단'
-      - '프롬프트 설계 결함'
+      - LLM의 hallucination 경향
+      - 컨텍스트 윈도우 부족
+      - 작업한 에이전트가 회고를 쓰는 구조 — 검찰이 자기 기소를 판단
+      - 프롬프트 설계 결함
     answer: 2
-    explanation: '완벽한 해결이 불가능한 이유도 여기에 있다. 독립된 검증자(cross-session-review)가 3차 방어선인 이유.'
+    explanation: 완벽한 해결이 불가능한 이유도 여기에 있다. 독립된 검증자(cross-session-review)가 3차 방어선인 이유.
 ---
 
 ## 왜 지금 이 주제인가

@@ -1,0 +1,260 @@
+---
+title: "AX-tree Fingerprint 회귀 가드 — 픽셀 diff와 직교한 UI 구조 회귀 감지"
+description: "swift-snapshot-testing 픽셀 diff와 직교한 축으로 라벨/타입/계층 회귀 감지. 1초 미만 CI 게이트."
+category: ios-ai
+date: '2026-05-22'
+tags:
+  - ios-ai
+  - ui-testing
+  - accessibility
+  - snapshot-testing
+  - regression-guard
+  - ci-gate
+  - xcodebuildmcp
+confidence: 4
+last_verified: "2026-05-22"
+applicable_to: ["any"]
+generated_by: human
+connections:
+  - ios-ai/ios-ai-journal-012-ui-test-smoke-forensic-split
+  - ios-ai/ios-ai-journal-020-maestro-mcp-test-without-building
+  - ios-ai/ios-ai-journal-024-forensic-blockers-verify-installed-app
+  - ios-ai/ios-ai-code-quality-test-strategy
+  - evaluation/numeric-execution-evidence
+quiz:
+  - question: "swift-snapshot-testing의 perceptual 픽셀 diff와 AX-tree fingerprint가 '직교한다'고 부르는 이유는?"
+    choices:
+      - "둘 다 같은 회귀를 잡는 중복 도구이기 때문"
+      - "픽셀 diff는 색/위치/폰트 변화를 잡고, AX-tree는 라벨/타입/계층 변화를 잡아 검출축이 겹치지 않음"
+      - "AX-tree가 픽셀 diff를 완전히 대체할 수 있기 때문"
+      - "둘 다 swift-snapshot-testing 패키지의 일부이기 때문"
+    answer: 1
+    explanation: "두 도구는 서로 다른 축의 회귀를 본다. 픽셀 diff는 시각적 변화(색, 폰트, 위치, 사이즈), AX-tree는 구조적 변화(라벨 변경, 요소 누락, 새 요소). 한 축의 변화는 다른 축의 변화 없이도 일어날 수 있다 — 그래서 둘을 함께 둬야 커버리지가 완성된다."
+  - question: "AX-tree fingerprint 파일을 git 추적이 아니라 `.gitignore`로 처리하는 1차 근거는?"
+    choices:
+      - "파일이 너무 커서 저장소가 비대해진다"
+      - "팀원마다 시뮬레이터 환경/iOS 버전이 다를 수 있어 *로컬 baseline*이 회귀 의도와 더 맞는다"
+      - "Apple 가이드라인이 그렇게 요구한다"
+      - "Xcode가 자동으로 무시한다"
+    answer: 1
+    explanation: "fingerprint는 *내 머신에서 의도된 상태*의 스냅샷이다. CI/팀 baseline으로 쓰려면 별도 정책(예: PR의 정상 상태를 baseline 아티팩트로 업로드)이 필요하다. 첫 단계는 로컬 baseline + 의도된 변경 시 save로 갱신 패턴이 단순하다."
+  - question: "fingerprint 정규화에서 좌표(x/y/width/height)를 의도적으로 제외한 이유는?"
+    choices:
+      - "좌표 추출이 너무 느려서"
+      - "좌표 변화는 레이아웃 회귀의 핵심이라 반드시 포함해야 한다"
+      - "구조 변화만 보려면 좌표는 노이즈 — 디바이스/방향/Dynamic Type에 따라 매번 바뀜"
+      - "Apple Accessibility API가 좌표를 반환하지 않는다"
+    answer: 2
+    explanation: "이 fingerprint의 목적은 '구조' 회귀 감지다. 좌표는 디바이스 사이즈, 회전, 큰 글씨 설정 등에 따라 매번 달라져서 false positive 폭증의 원인이 된다. 좌표 회귀가 필요하면 별도 픽셀 diff 또는 레이아웃 전용 fingerprint를 둬야 한다."
+---
+
+> **iOS UI 회귀 감지의 두 번째 축**. swift-snapshot-testing의 픽셀 diff(visual regression)와 직교하는 *구조* 회귀 감지 패턴. AX-tree(Accessibility tree)를 정규화 — 라벨/타입/계층만 추출 → reference 저장 → 다음 회귀에서 diff. 픽셀 무관, 1초 미만 CI 게이트.
+>
+> 한 워커 iOS 레포에서 박제됐다. 본 글은 그 스크립트 패턴을 일반화한다.
+
+## For AI Agents
+
+**Trigger**: SwiftUI/UIKit 화면의 *구조 회귀*(라벨 변경, 버튼 누락, 새 요소)를 픽셀 diff와 별개로 잡고 싶을 때. 픽셀 diff가 노이즈가 너무 많을 때(폰트/Dynamic Type/스크린 사이즈 다양). CI에서 빠른 정확한 게이트가 필요할 때.
+
+**Prerequisites**:
+- AX-tree(또는 동등한 view hierarchy JSON)를 얻을 수 있는 도구 — XcodeBuildMCP `snapshot_ui`, `ios-simulator-mcp ui_describe_all`, 또는 XCUITest의 `valueForKey("accessibilityElements")`
+- python3 (정규화 스크립트), bash (CLI wrapper)
+- 작업 디렉토리에서 `.gitignore`로 baseline 디렉토리 제외할 권한
+
+**Actionable Steps**:
+1. AX-tree JSON 추출 도구 결정 (snapshot_ui 권장 — iOS Simulator 기반)
+2. 정규화 함수 작성 — depth/kind/label만 추출, 좌표/사이즈 제외
+3. `save` / `diff` / `list` / `remove` 4명령 CLI 작성
+4. 핵심 화면 1~3개부터 baseline 잡고 dogfood (전 화면 한 번에 X)
+5. drift 감지 시 *의도된 변경이면* `save`로 갱신, *의도되지 않은 변경이면* diff 보고 fix
+
+**Anti-patterns**:
+- ❌ 좌표/사이즈 포함 — false positive 폭증 (디바이스/방향/Dynamic Type 변동)
+- ❌ 전 화면 한 번에 baseline 잡기 — 회귀 분석 불가, 첫 drift에 누가 어디서 고장냈는지 모름
+- ❌ baseline을 git에 commit — 팀원 환경 차이로 충돌 + PR 노이즈
+- ❌ 픽셀 diff 대체로 도입 — 두 축 모두 필요, 한쪽만으로는 커버리지 부족
+
+---
+
+## 1. 왜 픽셀 diff만으로 부족한가
+
+swift-snapshot-testing의 perceptual diff는 **시각적 변화**를 잡는다. 색·폰트·위치·사이즈가 살짝 바뀌면 잡힌다. 하지만:
+
+| 회귀 유형 | 픽셀 diff | AX-tree fingerprint |
+|----------|----------|------------------|
+| 버튼 라벨 "확인" → "OK" (같은 폰트/위치) | ⚠️ 폰트가 똑같으면 미검출 가능 | ✅ 라벨 변경 즉시 검출 |
+| accessibilityLabel만 변경 (시각 동일) | ❌ 시각 동일하면 미검출 | ✅ 검출 (screen reader 영향) |
+| 요소 누락 (다른 요소가 자리 차지) | ⚠️ 시각 비슷하면 미검출 | ✅ 노드 개수 변화로 검출 |
+| Dynamic Type 변경 시 레이아웃 흔들림 | ❌ 매 변경마다 false positive | ✅ 구조 동일하면 PASS |
+| 색상 일괄 테마 변경 | ✅ 전부 검출 (intended일 수도) | ❌ 미검출 |
+| 폰트 weight 변경 | ✅ 검출 | ❌ 미검출 |
+
+**두 축은 직교한다**. 픽셀 diff만 있으면 라벨 변경·a11y 회귀를 놓치고, AX 만 있으면 시각 회귀를 놓친다. 함께 둬야 커버리지가 완성된다.
+
+---
+
+## 2. 정규화 — 무엇을 fingerprint로 남기나
+
+AX-tree는 디바이스/방향/Dynamic Type/시뮬레이터 화면 크기에 따라 *바뀌는 노이즈*와 *바뀌면 안 되는 구조*가 섞여 있다. 정규화는 후자만 남긴다.
+
+### 2.1 추출 대상
+
+| 필드 | 추출? | 이유 |
+|------|------|------|
+| `type` / `AXRole` (Button, StaticText, Image, ...) | ✅ | 구조 회귀 핵심 |
+| `label` / `AXLabel` / `title` | ✅ | 텍스트 회귀 핵심. accessibilityLabel 변경도 잡힘 |
+| `identifier` / `AXIdentifier` | ✅ (label 없을 때 fallback) | 디버그용 ID 변경 감지 |
+| depth (트리 계층) | ✅ | 컨테이너 누락/추가 감지 |
+| `frame`, `x`, `y`, `width`, `height` | ❌ | 디바이스마다 다름 — 노이즈 |
+| `value` (TextField 입력값) | ❌ | 런타임 상태, fingerprint 부적합 |
+| `selected`, `enabled` 같은 상태 | ❌ (선택) | 런타임 상태. 게이트가 노이즈 만나면 제외 |
+
+### 2.2 정규화 형식
+
+라인 1개당 노드 1개:
+
+```
+depth|kind|label
+```
+
+예:
+```
+0|Window|
+1|NavigationBar|편도 핫딜
+2|Button|뒤로
+2|Button|닫기
+1|ScrollView|
+2|StaticText|2026-05-22 ~ 2026-05-25
+```
+
+label은 80자 절단(긴 텍스트 일부 변경에 둔감). diff는 plain text diff.
+
+---
+
+## 3. 사용 사이클
+
+```
+앱 실행 (iOS Simulator)
+  ↓
+snapshot_ui → ax.json
+  ↓
+fingerprint.sh save <screen-name> ax.json
+  → .claude/.ax-fingerprints/<screen-name>.fp 저장
+  ↓
+[코드 변경]
+  ↓
+snapshot_ui → ax-new.json
+  ↓
+fingerprint.sh diff <screen-name> ax-new.json
+  → diff 없으면 exit 0 (PASS)
+  → diff 있으면 plain text diff 출력 + exit 1 (CI gate)
+  ↓
+[의도된 변경이면]
+fingerprint.sh save <screen-name> ax-new.json (baseline 갱신)
+```
+
+---
+
+## 4. 참조 구현 — 80줄 bash + 30줄 python
+
+핵심 정규화 함수(python3):
+
+```python
+import sys, json
+
+def walk(node, depth=0, out=None):
+    if out is None:
+        out = []
+    if isinstance(node, list):
+        for n in node:
+            walk(n, depth, out)
+        return out
+    if not isinstance(node, dict):
+        return out
+    kind = node.get("type") or node.get("AXRole") or node.get("kind") or "?"
+    label = (node.get("label") or node.get("AXLabel") or node.get("title")
+             or node.get("identifier") or node.get("AXIdentifier") or "")
+    out.append({"d": depth, "k": kind, "l": label.strip()[:80]})
+    children = (node.get("children") or node.get("AXChildren") or
+                node.get("subviews") or [])
+    for c in children:
+        walk(c, depth + 1, out)
+    return out
+
+with open(sys.argv[1], encoding="utf-8") as f:
+    items = walk(json.load(f))
+for it in items:
+    print(f"{it['d']}|{it['k']}|{it['l']}")
+```
+
+bash CLI wrapper(요약):
+
+```bash
+case "$CMD" in
+  save)
+    FP=$(normalize "$INPUT")
+    printf '%s\n' "$FP" > "$FP_DIR/$NAME.fp"
+    ;;
+  diff)
+    NEW_FP=$(normalize "$INPUT")
+    if [ "$(cat "$REF")" = "$NEW_FP" ]; then
+      echo "PASS"; exit 0
+    fi
+    diff <(cat "$REF") <(printf '%s\n' "$NEW_FP") | head -40
+    exit 1
+    ;;
+esac
+```
+
+전체 스크립트는 ~120줄. python3 + bash + diff 외 의존성 없음.
+
+---
+
+## 5. 핵심 화면 골라 baseline 잡기
+
+*전 화면 한 번에* baseline을 잡으면 첫 회귀가 어디서 났는지 모른다. 화면별로 baseline을 잡고, 각각 독립 게이트로 둔다.
+
+권장 순서:
+1. 가장 자주 변경되는 1개 화면 (예: 메인 리스트)
+2. 라벨 회귀가 자주 일어나는 1개 (예: 알림 설정 텍스트)
+3. 결제·중요 분기 화면 (회귀 폭발 위험 큰 곳)
+
+3개부터 시작 → 1~2주 dogfood → 안정되면 점진 확대. [ios-ai-journal-012 UI test smoke forensic split](./ios-ai-journal-012-ui-test-smoke-forensic-split)의 *smoke vs forensic 분리* 사상과 같은 흐름 — *모든 화면 cover*가 아니라 *분리 가능한 단위*로 단계적 확대.
+
+---
+
+## 6. CI 게이트로 묶을 때
+
+```yaml
+# CI step 예시
+- name: AX fingerprint regression
+  run: |
+    xcrun simctl boot "iPhone 15"
+    # 1) 핵심 화면별 snapshot_ui 호출
+    ./run-flows.sh capture-ax > screens/
+    # 2) diff 게이트
+    for screen in main alarm payment; do
+      bash .claude/scripts/ax-fingerprint.sh diff $screen screens/$screen.json || exit 1
+    done
+```
+
+baseline은 *PR의 정상 상태*를 CI 아티팩트로 업로드 → 다음 PR이 그걸 받아 비교하는 방식이 팀 환경에 가장 안정적이다. 로컬 baseline(`.gitignore`)은 개발자 dogfood 단계.
+
+---
+
+## 7. 한계 / 검증 필요
+
+- **시각 회귀 미검출** — 색·폰트 변경은 잡지 못한다. 픽셀 diff와 *함께* 둬야 한다
+- **AX-tree 안정성** — iOS 버전이 바뀌면 AX-tree 구조가 살짝 달라질 수 있다. iOS major 업그레이드 후 첫 한 번은 baseline 재생성 필요
+- **dynamic content** — 날짜·잔액·시간 등 매번 바뀌는 라벨은 노이즈. label 정규화에서 정규식으로 마스킹하거나, 해당 노드는 fingerprint 제외하는 hint 필요
+- **n=1 검증** — 한 워커 iOS 레포에서만 dogfood됨. 다른 프로젝트에서 false positive율은 별도 측정 필요
+
+---
+
+## 관련 엔트리
+
+- [ios-ai-journal-012 UI test smoke forensic split](./ios-ai-journal-012-ui-test-smoke-forensic-split) — 핵심 화면 골라 단계적 cover하는 사상
+- [ios-ai-journal-020 maestro MCP test without building](./ios-ai-journal-020-maestro-mcp-test-without-building) — 빌드 없이 UI 검증, AX fingerprint와 결합 가능
+- [ios-ai-journal-024 forensic blockers — verify installed app](./ios-ai-journal-024-forensic-blockers-verify-installed-app) — 설치된 앱 상태 검증과 결합되는 게이트
+- [ios-ai code quality test strategy](./ios-ai-code-quality-test-strategy) — iOS 테스트 전략 전반
+- [numeric execution evidence](../evaluation/numeric-execution-evidence) — exit 0/1 게이트 패턴의 일반 원칙

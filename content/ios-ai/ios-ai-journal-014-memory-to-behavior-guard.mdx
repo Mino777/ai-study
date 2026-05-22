@@ -1,54 +1,77 @@
 ---
-title: "iOS Harness Journal 014 — 메모리룰만으론 부족하다: PreToolUse 행동가드로 escalate (--no-verify 차단, protected branch 이중 게이트, secret-guard, GC drift)"
+title: >-
+  iOS Harness Journal 014 — 메모리룰만으론 부족하다: PreToolUse 행동가드로 escalate (--no-verify
+  차단, protected branch 이중 게이트, secret-guard, GC drift)
 category: ios-ai
 series: ios-ai-journal
-date: "2026-05-06"
-tags: [ios-harness-journal, ios, hooks, pre-tool-use, behavior-guard, protected-branch, no-verify, secret-guard, gc-drift, exit-code, dogfood]
+date: '2026-05-06'
+tags:
+  - ios-harness-journal
+  - ios
+  - hooks
+  - pre-tool-use
+  - behavior-guard
+  - protected-branch
+  - no-verify
+  - secret-guard
+  - gc-drift
+  - exit-code
+  - dogfood
 confidence: 5
-last_verified: "2026-05-06"
-applicable_to: ["ios-study"]
-connections: [ios-ai/ios-ai-journal-007-claude-hooks-silent-failure, ios-ai/ios-ai-journal-008-first-full-harness-setup-retro, harness-engineering/fixture-silent-failure-trap, harness-engineering/ai-agent-start-here, ios-ai/ios-ai-journal-025-uncommitted-state-safety-blindspot]
+last_verified: '2026-05-06'
+applicable_to:
+  - ios-study
+connections:
+  - ios-ai/ios-ai-journal-007-claude-hooks-silent-failure
+  - ios-ai/ios-ai-journal-008-first-full-harness-setup-retro
+  - harness-engineering/fixture-silent-failure-trap
+  - harness-engineering/ai-agent-start-here
+  - ios-ai/ios-ai-journal-025-uncommitted-state-safety-blindspot
+  - ios-ai/ios-ai-journal-015-compound-qa-mock-harness-worker
+  - ios-ai/ios-ai-journal-017-worker-pool-ops-tuning
+  - ios-ai/ios-ai-journal-021-self-report-reliability-inbox-queue
 status: complete
 type: entry
 description: >-
-  메모리에 박힌 룰을 AI가 한 번이라도 위반하면 즉시 PreToolUse 훅으로 escalate한다는 원칙을
-  iOS 워커와 ai-study 양쪽에서 4개 가드(--no-verify 차단, protected branch 이중 게이트,
-  secret-guard, 식별자 노출 차단)로 굳힌 사례. exit 2 = Claude 차단, exit 0 = silent pass의
-  OpenAI Codex 원칙까지.
+  메모리에 박힌 룰을 AI가 한 번이라도 위반하면 즉시 PreToolUse 훅으로 escalate한다는 원칙을 iOS 워커와 ai-study
+  양쪽에서 4개 가드(--no-verify 차단, protected branch 이중 게이트, secret-guard, 식별자 노출 차단)로
+  굳힌 사례. exit 2 = Claude 차단, exit 0 = silent pass의 OpenAI Codex 원칙까지.
 quiz:
-  - question: "PreToolUse 훅에서 'Claude만 차단하고 사람은 통과'시키려면 어떤 exit code를 써야 하나?"
+  - question: PreToolUse 훅에서 'Claude만 차단하고 사람은 통과'시키려면 어떤 exit code를 써야 하나?
     choices:
-      - "exit 1 — 일반 실패"
-      - "exit 2 — Claude Code 하네스가 도구 실행을 차단하고 stderr를 에이전트에게 전달"
-      - "exit 0 + stderr 출력 — Claude가 알아서 멈춤"
-      - "exit 127 — 명령 없음"
+      - exit 1 — 일반 실패
+      - exit 2 — Claude Code 하네스가 도구 실행을 차단하고 stderr를 에이전트에게 전달
+      - exit 0 + stderr 출력 — Claude가 알아서 멈춤
+      - exit 127 — 명령 없음
     answer: 1
     explanation: >-
-      Claude Code의 PreToolUse 훅 규약. exit 0 = 통과(silent), exit 1 = 비차단 실패(도구 실행 계속),
-      exit 2 = 차단(stderr가 에이전트 컨텍스트에 주입). exit 1로 두면 사람은 메시지를 봐도 Claude는
-      그냥 다음 단계로 진행해버린다. Journal 007 silent failure 함정의 정확한 원인.
-  - question: "메모리룰을 행동가드(훅)로 escalate해야 하는 시점은?"
+      Claude Code의 PreToolUse 훅 규약. exit 0 = 통과(silent), exit 1 = 비차단 실패(도구 실행
+      계속), exit 2 = 차단(stderr가 에이전트 컨텍스트에 주입). exit 1로 두면 사람은 메시지를 봐도 Claude는 그냥
+      다음 단계로 진행해버린다. Journal 007 silent failure 함정의 정확한 원인.
+  - question: 메모리룰을 행동가드(훅)로 escalate해야 하는 시점은?
     choices:
-      - "메모리 등록 직후 즉시 — 메모리는 신뢰할 수 없다"
-      - "AI가 룰을 한 번이라도 위반한 순간 — 메모리는 *상기*에 의존하며 한 번 새면 계속 샌다"
-      - "팀에 새 멤버가 합류할 때마다"
-      - "프로젝트당 1년에 1회 정기 점검 시"
+      - 메모리 등록 직후 즉시 — 메모리는 신뢰할 수 없다
+      - AI가 룰을 한 번이라도 위반한 순간 — 메모리는 *상기*에 의존하며 한 번 새면 계속 샌다
+      - 팀에 새 멤버가 합류할 때마다
+      - 프로젝트당 1년에 1회 정기 점검 시
     answer: 1
     explanation: >-
-      메모리는 다음 세션에서 모델이 떠올려야 작동한다. 떠올리지 못하면 silent하게 위반된다. 한 번이라도
-      위반된 룰은 즉시 PreToolUse 훅 같은 deterministic 가드로 옮긴다 — 잊을 수 없다. 이건
+      메모리는 다음 세션에서 모델이 떠올려야 작동한다. 떠올리지 못하면 silent하게 위반된다. 한 번이라도 위반된 룰은 즉시
+      PreToolUse 훅 같은 deterministic 가드로 옮긴다 — 잊을 수 없다. 이건
       feedback_memory_vs_behavior_guard 메모리룰 자체의 핵심 교훈이다.
-  - question: "branch-commit-guard에서 --no-verify를 차단할 때 -m 메시지 본문에 '--no-verify' 문자열이 들어있으면?"
+  - question: >-
+      branch-commit-guard에서 --no-verify를 차단할 때 -m 메시지 본문에 '--no-verify' 문자열이
+      들어있으면?
     choices:
-      - "차단 — 모든 --no-verify 문자열을 동일 취급"
-      - "shlex.split으로 토큰화 후 -m 본문은 제외하고 옵션 위치만 검사 → 본문은 false positive 안 남"
-      - "정규식 lookbehind로 따옴표 안만 통과"
-      - "환경변수 CLAUDE_ALLOW_NO_VERIFY=1 무시"
+      - 차단 — 모든 --no-verify 문자열을 동일 취급
+      - shlex.split으로 토큰화 후 -m 본문은 제외하고 옵션 위치만 검사 → 본문은 false positive 안 남
+      - 정규식 lookbehind로 따옴표 안만 통과
+      - 환경변수 CLAUDE_ALLOW_NO_VERIFY=1 무시
     answer: 1
     explanation: >-
-      shlex로 셸 토큰 파싱 후 -m/-F 직후 인자(메시지 본문)는 skip하고 그 외 위치에서 --no-verify를
-      찾는다. naive grep으로 하면 'fix: branch protected --no-verify 우회 차단' 같은 정상 커밋
-      메시지가 false positive로 차단된다.
+      shlex로 셸 토큰 파싱 후 -m/-F 직후 인자(메시지 본문)는 skip하고 그 외 위치에서 --no-verify를 찾는다.
+      naive grep으로 하면 'fix: branch protected --no-verify 우회 차단' 같은 정상 커밋 메시지가
+      false positive로 차단된다.
 ---
 
 ## 배경 — 메모리룰이 새고 있었다

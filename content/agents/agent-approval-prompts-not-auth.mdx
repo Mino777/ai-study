@@ -1,25 +1,29 @@
 ---
-title: "AI 에이전트 승인 프롬프트는 권한 부여가 아니다"
+title: AI 에이전트 승인 프롬프트는 권한 부여가 아니다
 category: agents
-date: "2026-05-20"
+date: '2026-05-20'
 tags:
   - blake-crosley
   - agents
 confidence: 2
-last_verified: "2026-05-20"
-applicable_to: ["any"]
-connections: []
-description: "사용자의 '승인 프롬프트'가 에이전트의 실제 '권한 부여(Authorization)'와 다르다는 중요한 구분을 제시합니다. 이는 에이전트가 어떤 범위의 작업을 수행할 수 있는지 명확히 정의하고 통제하는 메커니즘이 필요함을 강조합니다. 에이전트의 오용을 방지하고 안전성을"
+last_verified: '2026-05-20'
+applicable_to:
+  - any
+connections:
+  - agents/forge-guardrail-llm-agent-tool-use-stability-architecture
+description: >-
+  사용자의 '승인 프롬프트'가 에이전트의 실제 '권한 부여(Authorization)'와 다르다는 중요한 구분을 제시합니다. 에이전트의 오용을
+  방지하고 안전성을 확보하려면 승인을 구조화된 '권한 부여 객체'로 설계해야 한다는 패턴.
 generated_by: gemini
 quiz:
-  - question: "이 엔트리의 핵심 개념을 가장 잘 설명하는 것은?"
+  - question: 이 엔트리의 핵심 개념을 가장 잘 설명하는 것은?
     choices:
-      - "이론적 프레임워크만 제시"
-      - "실무 코드와 적용 사례 기반 패턴"
-      - "학술 논문 요약"
-      - "도구 사용법 튜토리얼"
+      - 이론적 프레임워크만 제시
+      - 실무 코드와 적용 사례 기반 패턴
+      - 학술 논문 요약
+      - 도구 사용법 튜토리얼
     answer: 1
-    explanation: "Blake Crosley 블로그는 실무 경험 기반 패턴을 중시한다."
+    explanation: Blake Crosley 블로그는 실무 경험 기반 패턴을 중시한다.
 ---
 
 > 이 엔트리는 Blake Crosley의 [AI Agent Approval Prompts Are Not Authorization](https://blakecrosley.com/blog/ai-agent-approval-prompts-not-authorization)을 정독하고 핵심을 추출한 것이다.

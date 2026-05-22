@@ -1,59 +1,76 @@
 ---
-title: "iOS Harness Journal 015 — 컴파운드: QA smoke pack 28→7분, Mock 토글 silent fallback, 하네스 notify-main 신뢰도 v2, Worker 역할 재정의"
+title: >-
+  iOS Harness Journal 015 — 컴파운드: QA smoke pack 28→7분, Mock 토글 silent fallback,
+  하네스 notify-main 신뢰도 v2, Worker 역할 재정의
 category: ios-ai
 series: ios-ai-journal
-date: "2026-05-13"
-tags: [ios-harness-journal, qa-automation, ax-fingerprint, deeplink, sequence-dsl, mock-toggle, silent-failure, harness-reliability, multi-agent, dispatch, compound]
+date: '2026-05-13'
+tags:
+  - ios-harness-journal
+  - qa-automation
+  - ax-fingerprint
+  - deeplink
+  - sequence-dsl
+  - mock-toggle
+  - silent-failure
+  - harness-reliability
+  - multi-agent
+  - dispatch
+  - compound
 confidence: 4
-last_verified: "2026-05-13"
-applicable_to: ["any"]
+last_verified: '2026-05-13'
+applicable_to:
+  - any
 connections:
   - ios-ai/ios-ai-journal-014-memory-to-behavior-guard
   - ios-ai/ios-ai-journal-007-claude-hooks-silent-failure
   - ios-ai/ios-ai-journal-013-spec-driven-pipeline
   - ios-ai/ios-ai-journal-012-ui-test-smoke-forensic-split
   - harness-engineering/ai-agent-start-here
+  - ios-ai/ios-ai-journal-016-codegraph-token-savings
+  - ios-ai/ios-ai-journal-017-worker-pool-ops-tuning
+  - ios-ai/ios-ai-journal-018-asymmetric-worker-pool
+  - ios-ai/ios-ai-journal-019-dev-metrics-and-ab-system
+  - ios-ai/ios-ai-journal-021-self-report-reliability-inbox-queue
 status: complete
 type: entry
 description: >-
-  iOS 워커(moneyflow) 2일치 스프린트 컴파운드 회고. UI QA 풀 사이클 28분 → smoke 5-10분으로
-  자른 Sequence DSL + Deeplink 강제 + AX fingerprint 패키지, DEBUG 빌드에서 mock 토글이
-  nil일 때 실서버로 fallback 안 되던 silent 버그, notify-main.sh fgrep + 2초 대기 검증 강화 v2,
-  Worker 역할을 leader=Advisor / worker-2=실행으로 재정의한 4건을 한 저널에 박제.
+  iOS 워커(moneyflow) 2일치 스프린트 컴파운드 회고. UI QA 풀 사이클 28분 → smoke 5-10분으로 자른
+  Sequence DSL + Deeplink 강제 + AX fingerprint 패키지, DEBUG 빌드에서 mock 토글이 nil일 때
+  실서버로 fallback 안 되던 silent 버그, notify-main.sh fgrep + 2초 대기 검증 강화 v2, Worker
+  역할을 leader=Advisor / worker-2=실행으로 재정의한 4건을 한 저널에 박제.
 quiz:
-  - question: "UI QA 풀 사이클이 길어질수록 AI 워커의 'PASS' 보고를 더 의심해야 하는 이유는?"
+  - question: UI QA 풀 사이클이 길어질수록 AI 워커의 'PASS' 보고를 더 의심해야 하는 이유는?
     choices:
-      - "긴 사이클은 timeout으로 끝나서 결과가 무효라서"
-      - "신호 대 노이즈 비율이 낮아져, 워커가 빌드 통과만 봐도 PASS로 적는 silent skip 비율이 올라가기 때문"
-      - "Xcode가 캐시를 자주 무효화해서 결과를 못 믿어서"
-      - "사이클이 길면 simulator가 자동 종료되어서"
+      - 긴 사이클은 timeout으로 끝나서 결과가 무효라서
+      - '신호 대 노이즈 비율이 낮아져, 워커가 빌드 통과만 봐도 PASS로 적는 silent skip 비율이 올라가기 때문'
+      - Xcode가 캐시를 자주 무효화해서 결과를 못 믿어서
+      - 사이클이 길면 simulator가 자동 종료되어서
     answer: 1
     explanation: >-
-      AI 워커는 '관측 가능한 신호'가 모호할수록 텍스트 합리화로 결과를 메꾸는 경향이 있다.
-      사이클이 길수록 인내심 임계점에 도달해 'PASS'라고 적어버리는 silent skip이 늘어난다.
-      smoke/forensic 분리 + AX tree hash 같은 구조 신호로 게이트를 옮기는 것이 해법.
-  - question: "DEBUG 빌드에서 mock 토글이 nil일 때 실서버 fallback이 깨졌다. 부분 fix 1건만 적용하면 어떤 일이 벌어지나?"
+      AI 워커는 '관측 가능한 신호'가 모호할수록 텍스트 합리화로 결과를 메꾸는 경향이 있다. 사이클이 길수록 인내심 임계점에 도달해
+      'PASS'라고 적어버리는 silent skip이 늘어난다. smoke/forensic 분리 + AX tree hash 같은 구조
+      신호로 게이트를 옮기는 것이 해법.
+  - question: DEBUG 빌드에서 mock 토글이 nil일 때 실서버 fallback이 깨졌다. 부분 fix 1건만 적용하면 어떤 일이 벌어지나?
     choices:
-      - "다른 파일은 패턴이 달라 안전하다"
-      - "같은 가정(nil = mock on)이 박힌 다른 Repository에서 회귀가 재발한다"
-      - "Swift 컴파일러가 잡아준다"
-      - "TestFlight 빌드에서만 재현된다"
+      - 다른 파일은 패턴이 달라 안전하다
+      - 같은 가정(nil = mock on)이 박힌 다른 Repository에서 회귀가 재발한다
+      - Swift 컴파일러가 잡아준다
+      - TestFlight 빌드에서만 재현된다
     answer: 1
     explanation: >-
-      '부분 fix는 재발 신호' — 동일한 잘못된 default 가정이 박힌 pattern family를 grep으로
-      일괄 수색하지 않으면 다른 파일에서 똑같이 터진다. 이 케이스에서도 5개 Repository에서
-      같은 패턴이 발견됐다.
-  - question: "Claude Code PreToolUse 훅 notify-main.sh의 검증을 fgrep + 2초 대기로 강화한 이유는?"
+      '부분 fix는 재발 신호' — 동일한 잘못된 default 가정이 박힌 pattern family를 grep으로 일괄 수색하지
+      않으면 다른 파일에서 똑같이 터진다. 이 케이스에서도 5개 Repository에서 같은 패턴이 발견됐다.
+  - question: Claude Code PreToolUse 훅 notify-main.sh의 검증을 fgrep + 2초 대기로 강화한 이유는?
     choices:
-      - "정규식 grep이 느려서 성능 최적화"
-      - "race condition으로 dispatch가 끝나기 전에 검증이 돌아 false negative가 났기 때문"
-      - "fgrep은 대소문자를 무시해서 더 정확해서"
-      - "2초 대기가 Claude API rate limit 회피 패턴"
+      - 정규식 grep이 느려서 성능 최적화
+      - race condition으로 dispatch가 끝나기 전에 검증이 돌아 false negative가 났기 때문
+      - fgrep은 대소문자를 무시해서 더 정확해서
+      - 2초 대기가 Claude API rate limit 회피 패턴
     answer: 1
     explanation: >-
-      fgrep은 정규식 메타문자 false positive를 막고, 2초 대기는 비동기 dispatch가 채널에
-      도달하기 전에 검증이 도는 race condition을 해소한다. 검증 신호의 진실성은 타이밍과
-      매칭 모드 양쪽 모두에 달려 있다.
+      fgrep은 정규식 메타문자 false positive를 막고, 2초 대기는 비동기 dispatch가 채널에 도달하기 전에 검증이
+      도는 race condition을 해소한다. 검증 신호의 진실성은 타이밍과 매칭 모드 양쪽 모두에 달려 있다.
 ---
 
 # iOS Harness Journal 015 — 2일치 컴파운드 (QA · Mock · Harness · Worker)

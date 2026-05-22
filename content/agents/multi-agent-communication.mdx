@@ -1,11 +1,21 @@
 ---
-title: "Multi-Agent Communication — 에이전트 간 통신 패턴"
+title: Multi-Agent Communication — 에이전트 간 통신 패턴
 category: agents
 date: '2026-05-03'
-tags: [multi-agent, communication, async, message-queue, direct-call, shared-state, orchestration]
+tags:
+  - multi-agent
+  - communication
+  - async
+  - message-queue
+  - direct-call
+  - shared-state
+  - orchestration
 confidence: 3
 last_verified: '2026-05-03'
-applicable_to: [moneyflow, aidy, any]
+applicable_to:
+  - moneyflow
+  - aidy
+  - any
 connections:
   - agents/multi-agent-pipeline
   - agents/multi-agent-orchestration-patterns-2026
@@ -13,8 +23,11 @@ connections:
   - agents/agent-architectures
   - agents/perpetual-engine-portable-patterns
   - harness-engineering/spec-driven-development-for-ai-agents
+  - harness-engineering/agent-multiplexer-selection-guide
 status: complete
-description: 에이전트 간 통신의 3가지 패턴(Direct, Async, Shared State)과 실전 선택 기준. ai-study messages/ 파일 기반 큐, moneyflow 13-agent 파이프라인, aidy architect-worker 사례.
+description: >-
+  에이전트 간 통신의 3가지 패턴(Direct, Async, Shared State)과 실전 선택 기준. ai-study messages/
+  파일 기반 큐, moneyflow 13-agent 파이프라인, aidy architect-worker 사례.
 type: entry
 quiz:
   - question: 에이전트 간 직접 호출(Direct) 패턴이 가장 적합한 상황은?
@@ -24,7 +37,9 @@ quiz:
       - 대량의 비동기 배치 처리
       - 느슨한 결합이 필요한 대규모 분산 시스템
     answer: 1
-    explanation: Direct Call은 낮은 지연성이 특징. Bull-Bear 토론처럼 한 에이전트의 결과가 다음 에이전트의 입력이 되는 강한 의존성이 있을 때 가장 효율적.
+    explanation: >-
+      Direct Call은 낮은 지연성이 특징. Bull-Bear 토론처럼 한 에이전트의 결과가 다음 에이전트의 입력이 되는 강한
+      의존성이 있을 때 가장 효율적.
   - question: 파일 기반 메시지 큐(messages/)의 장점은?
     choices:
       - 최고의 성능
@@ -32,7 +47,9 @@ quiz:
       - 높은 처리량
       - 실시간 스트리밍
     answer: 1
-    explanation: "파일 기반 큐는 외부 인프라(Redis, RabbitMQ) 없이 순수 파일 시스템으로 메시지 저장. 모든 메시지가 git에 남아 감사 추적 가능하고, 에러 발생 시 재생산 용이."
+    explanation: >-
+      파일 기반 큐는 외부 인프라(Redis, RabbitMQ) 없이 순수 파일 시스템으로 메시지 저장. 모든 메시지가 git에 남아 감사
+      추적 가능하고, 에러 발생 시 재생산 용이.
   - question: moneyflow의 13-agent 파이프라인에서 에이전트 간 통신에 사용되는 주 메커니즘은?
     choices:
       - 실시간 WebSocket
@@ -40,7 +57,9 @@ quiz:
       - JSON 파일 기반 상태 전달(Direct Call + Structured Output)
       - 분산 트랜잭션
     answer: 2
-    explanation: MoneyFlow는 각 에이전트가 JSON Schema로 구조화된 결과를 산출하고, 다음 에이전트가 그 JSON을 입력으로 받음. 빠른 응답과 명확한 인터페이스가 핵심.
+    explanation: >-
+      MoneyFlow는 각 에이전트가 JSON Schema로 구조화된 결과를 산출하고, 다음 에이전트가 그 JSON을 입력으로 받음.
+      빠른 응답과 명확한 인터페이스가 핵심.
 ---
 
 ## 업계 사례와 권위 자료

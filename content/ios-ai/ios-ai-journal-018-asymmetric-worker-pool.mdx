@@ -1,57 +1,68 @@
 ---
-title: "iOS Harness Journal 018 — 비대칭 워커 풀 ADR: 측정 데이터로 Impl:Verify = 1:2 (5-pane)"
+title: 'iOS Harness Journal 018 — 비대칭 워커 풀 ADR: 측정 데이터로 Impl:Verify = 1:2 (5-pane)'
 category: ios-ai
 series: ios-ai-journal
-date: "2026-05-18"
-tags: [ios-harness-journal, worker-pool, tmux, topology-design, measurement-driven, verifier-pool, adr, parallel-verify]
+date: '2026-05-18'
+tags:
+  - ios-harness-journal
+  - worker-pool
+  - tmux
+  - topology-design
+  - measurement-driven
+  - verifier-pool
+  - adr
+  - parallel-verify
 confidence: 4
-last_verified: "2026-05-13"
-applicable_to: ["any"]
+last_verified: '2026-05-13'
+applicable_to:
+  - any
 connections:
   - ios-ai/ios-ai-journal-010-ai-orchestration-tmux-worker-pool
   - ios-ai/ios-ai-journal-015-compound-qa-mock-harness-worker
   - ios-ai/ios-ai-journal-017-worker-pool-ops-tuning
   - harness-engineering/ai-agent-start-here
+  - ios-ai/ios-ai-journal-019-dev-metrics-and-ab-system
+  - ios-ai/ios-ai-journal-020-maestro-mcp-test-without-building
 status: complete
 type: entry
 description: >-
-  moneyflow(iOS) 4-pane 워커 풀의 처리량을 7 FR 자율 사이클(2h)로 측정한 결과 Impl 35% / Verify 52% /
-  Lead 13%로 Verify가 항상 병목임을 확인. Verifier-A/B 분리(5-pane, Impl:Verify = 1:2)
+  moneyflow(iOS) 4-pane 워커 풀의 처리량을 7 FR 자율 사이클(2h)로 측정한 결과 Impl 35% / Verify 52%
+  / Lead 13%로 Verify가 항상 병목임을 확인. Verifier-A/B 분리(5-pane, Impl:Verify = 1:2)
   ADR을 박제해 직선 2h → ~70분 추정. 토폴로지를 *추측*이 아니라 *측정*으로 정하는 패턴.
 quiz:
-  - question: "4-pane 워커 풀에서 Verifier만 2개로 확장하고 Implementer는 1개로 둔 정당성은?"
+  - question: 4-pane 워커 풀에서 Verifier만 2개로 확장하고 Implementer는 1개로 둔 정당성은?
     choices:
-      - "Verifier가 더 빠른 모델을 써서"
-      - "구현은 동시 진행 시 머지 충돌 위험 → 1개 직렬화가 안전, 검증은 시뮬 단위 격리 + read-only → 안전한 병렬화"
-      - "tmux pane 4개가 화면에 맞아서 1개만 더 추가"
-      - "Verifier는 LLM 호출이 적어서"
+      - Verifier가 더 빠른 모델을 써서
+      - '구현은 동시 진행 시 머지 충돌 위험 → 1개 직렬화가 안전, 검증은 시뮬 단위 격리 + read-only → 안전한 병렬화'
+      - tmux pane 4개가 화면에 맞아서 1개만 더 추가
+      - Verifier는 LLM 호출이 적어서
     answer: 1
     explanation: >-
       자원 격리 비용이 비대칭이다. Implementer 다중화는 *공유 자원(git working tree)*에 충돌을 만들지만,
-      Verifier 다중화는 시뮬레이터/빌드 산출물을 별 디렉토리로 격리하면 안전한 read-only 병렬화가 가능.
-      비용 비대칭이 분명한 자리는 토폴로지도 비대칭으로 두는 게 옳다.
-  - question: "워커 풀 토폴로지 결정을 ADR로 박제할 때 *반드시 동반해야 할* 항목은?"
+      Verifier 다중화는 시뮬레이터/빌드 산출물을 별 디렉토리로 격리하면 안전한 read-only 병렬화가 가능. 비용 비대칭이
+      분명한 자리는 토폴로지도 비대칭으로 두는 게 옳다.
+  - question: 워커 풀 토폴로지 결정을 ADR로 박제할 때 *반드시 동반해야 할* 항목은?
     choices:
-      - "Mermaid 다이어그램"
-      - "측정 데이터(단계별 평균 소요 + 비율) — 추측이 아니라 측정이 결정의 근거여야 함"
-      - "예상 비용 절감 %"
-      - "롤백 절차"
+      - Mermaid 다이어그램
+      - 측정 데이터(단계별 평균 소요 + 비율) — 추측이 아니라 측정이 결정의 근거여야 함
+      - 예상 비용 절감 %
+      - 롤백 절차
     answer: 1
     explanation: >-
-      토폴로지는 측정 없는 추측으로 결정하면 늘 한쪽이 비최적. 'Verify가 더 오래 걸린다'는 *체감*이 아니라
-      자율 사이클 N 회 측정 데이터(Impl 35% / Verify 52% / Lead 13%)로 입증되어야 ADR의 결정이 정당화된다.
-      나머지 항목은 부수적.
-  - question: "직선 직렬 처리 → pipeline parallelism → 비대칭 풀로 진화하는 순서에서 비대칭 풀이 들어가는 시점은?"
+      토폴로지는 측정 없는 추측으로 결정하면 늘 한쪽이 비최적. 'Verify가 더 오래 걸린다'는 *체감*이 아니라 자율 사이클 N 회
+      측정 데이터(Impl 35% / Verify 52% / Lead 13%)로 입증되어야 ADR의 결정이 정당화된다. 나머지 항목은
+      부수적.
+  - question: 직선 직렬 처리 → pipeline parallelism → 비대칭 풀로 진화하는 순서에서 비대칭 풀이 들어가는 시점은?
     choices:
-      - "처음부터 — 항상 더 빠르므로"
-      - "pipeline parallelism으로도 못 따라잡는 *단계 자체가 본질적 병목*임이 측정으로 드러난 시점"
-      - "절대 들어가지 않음 — 복잡도 증가"
-      - "verify 도구가 시뮬 격리를 지원하는 시점"
+      - 처음부터 — 항상 더 빠르므로
+      - pipeline parallelism으로도 못 따라잡는 *단계 자체가 본질적 병목*임이 측정으로 드러난 시점
+      - 절대 들어가지 않음 — 복잡도 증가
+      - verify 도구가 시뮬 격리를 지원하는 시점
     answer: 1
     explanation: >-
-      병렬 토폴로지는 복잡도 비용이 있다. pre-fetch / pipeline 같은 *직선 토폴로지 안의 최적화*로
-      해결 가능하면 그게 먼저. 그래도 한 단계가 압도적 시간을 먹는다는 게 측정으로 확인되면 그때 그 단계만
-      비대칭 다중화. 시뮬 격리는 가능 *조건*이지 도입 *트리거*가 아님.
+      병렬 토폴로지는 복잡도 비용이 있다. pre-fetch / pipeline 같은 *직선 토폴로지 안의 최적화*로 해결 가능하면 그게
+      먼저. 그래도 한 단계가 압도적 시간을 먹는다는 게 측정으로 확인되면 그때 그 단계만 비대칭 다중화. 시뮬 격리는 가능 *조건*이지
+      도입 *트리거*가 아님.
 ---
 
 # iOS Harness Journal 018 — 비대칭 워커 풀 ADR

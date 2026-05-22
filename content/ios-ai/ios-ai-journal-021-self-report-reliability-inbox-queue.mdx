@@ -1,58 +1,77 @@
 ---
-title: "iOS Harness Journal 021 — 자가 보고 신뢰성: phantom 잔존, SHA drift, silent drop, 그리고 inbox queue 이중 채널"
+title: >-
+  iOS Harness Journal 021 — 자가 보고 신뢰성: phantom 잔존, SHA drift, silent drop, 그리고
+  inbox queue 이중 채널
 category: ios-ai
 series: ios-ai-journal
-date: "2026-05-18"
-tags: [ios-harness-journal, ipc, reliability, false-positive, sha-drift, silent-failure, inbox-queue, dispatch, harness-reliability]
+date: '2026-05-18'
+tags:
+  - ios-harness-journal
+  - ipc
+  - reliability
+  - false-positive
+  - sha-drift
+  - silent-failure
+  - inbox-queue
+  - dispatch
+  - harness-reliability
 confidence: 4
-last_verified: "2026-05-13"
-applicable_to: ["any"]
+last_verified: '2026-05-13'
+applicable_to:
+  - any
 connections:
   - ios-ai/ios-ai-journal-015-compound-qa-mock-harness-worker
   - ios-ai/ios-ai-journal-017-worker-pool-ops-tuning
   - ios-ai/ios-ai-journal-007-claude-hooks-silent-failure
   - ios-ai/ios-ai-journal-014-memory-to-behavior-guard
+  - ios-ai/ios-ai-journal-024-forensic-blockers-verify-installed-app
 status: complete
 type: entry
 description: >-
-  자율 사이클이 길어질수록 워커의 "보고문" 자체가 거짓말을 하는 빈도가 늘어난다. notify-main.sh가
-  input box 잔존을 history로 오판하는 phantom false positive, pre-commit auto-routing의 silent drop,
-  워커 보고 SHA ≠ 실제 git log SHA(머지백 후 재작성 drift) 3건을 같은 결로 박제. 해법은
-  파일 기반 inbox 큐(`.jsonl` append-only + flock) *이중 채널* — tmux send-keys 단일 채널을
-  durable log로 백업해 신호 손실 0.
+  자율 사이클이 길어질수록 워커의 "보고문" 자체가 거짓말을 하는 빈도가 늘어난다. notify-main.sh가 input box 잔존을
+  history로 오판하는 phantom false positive, pre-commit auto-routing의 silent drop, 워커
+  보고 SHA ≠ 실제 git log SHA(머지백 후 재작성 drift) 3건을 같은 결로 박제. 해법은 파일 기반 inbox
+  큐(`.jsonl` append-only + flock) *이중 채널* — tmux send-keys 단일 채널을 durable log로
+  백업해 신호 손실 0.
 quiz:
-  - question: "notify-main.sh가 'dispatch 성공'이라고 보고하는데 메인 LLM은 메시지를 못 받은 경우가 생기는 근본 원인은?"
+  - question: notify-main.sh가 'dispatch 성공'이라고 보고하는데 메인 LLM은 메시지를 못 받은 경우가 생기는 근본 원인은?
     choices:
-      - "Claude Code 버그"
-      - "tmux send-keys 기반 IPC는 *in-band 채널*이라 pane busy 시 큐잉이 없음 — input box에 잔존하면 stdout 성공으로 보이지만 LLM 컨텍스트엔 안 들어감"
-      - "Enter 누락 — 그게 진짜 원인"
-      - "Claude API rate limit"
+      - Claude Code 버그
+      - >-
+        tmux send-keys 기반 IPC는 *in-band 채널*이라 pane busy 시 큐잉이 없음 — input box에
+        잔존하면 stdout 성공으로 보이지만 LLM 컨텍스트엔 안 들어감
+      - Enter 누락 — 그게 진짜 원인
+      - Claude API rate limit
     answer: 1
     explanation: >-
       tmux pane은 LLM 입력 stream과 같은 채널을 공유한다. 발신자는 'send-keys 성공'을 받지만 수신자가 busy면
       입력이 input box에 적힌 채 끝나고 *처리되지 않는다*. IPC가 in-band면 '보냈다 ≠ 받았다'. 백업 채널이 필요.
-  - question: "워커가 보고한 commit SHA와 실제 git log SHA가 다른 *예측 가능한* 원인은?"
+  - question: 워커가 보고한 commit SHA와 실제 git log SHA가 다른 *예측 가능한* 원인은?
     choices:
-      - "Worker가 거짓말함"
-      - "pre-commit auto-routing이 보호 경로 단독 커밋을 chore/claude-setup으로 머지백 → 머지백 단계에서 SHA 재작성"
-      - "GitHub API 지연"
-      - "Vercel auto-deploy가 SHA 재작성"
+      - Worker가 거짓말함
+      - >-
+        pre-commit auto-routing이 보호 경로 단독 커밋을 chore/claude-setup으로 머지백 → 머지백
+        단계에서 SHA 재작성
+      - GitHub API 지연
+      - Vercel auto-deploy가 SHA 재작성
     answer: 1
     explanation: >-
-      auto-routing은 머지백을 cherry-pick/rebase 비슷한 작업으로 처리해 SHA가 바뀐다. 워커는
-      *자기가 commit한 시점의 SHA*를 보고하고, 머지백 후 그 SHA는 사라진다. 추적이 깨지지 않으려면
-      머지백 후 *최종 SHA를 워커에게 echo*해 갱신하게 해야 한다.
-  - question: "in-band IPC 채널 단일 의존을 해소하는 *durable* 대안은?"
+      auto-routing은 머지백을 cherry-pick/rebase 비슷한 작업으로 처리해 SHA가 바뀐다. 워커는 *자기가
+      commit한 시점의 SHA*를 보고하고, 머지백 후 그 SHA는 사라진다. 추적이 깨지지 않으려면 머지백 후 *최종 SHA를
+      워커에게 echo*해 갱신하게 해야 한다.
+  - question: in-band IPC 채널 단일 의존을 해소하는 *durable* 대안은?
     choices:
-      - "Redis pub/sub"
-      - "append-only JSONL 파일 + flock + tail consumer — 파일시스템 자체가 durable, 동시성은 flock, 순서는 append-only로 보장. 신호 채널 / 분석 채널 분리"
-      - "shared memory"
-      - "WebSocket"
+      - Redis pub/sub
+      - >-
+        append-only JSONL 파일 + flock + tail consumer — 파일시스템 자체가 durable, 동시성은
+        flock, 순서는 append-only로 보장. 신호 채널 / 분석 채널 분리
+      - shared memory
+      - WebSocket
     answer: 1
     explanation: >-
-      외부 인프라(Redis)는 의존성 비용. 단일 머신 / 워크트리 기준에서는 jsonl + flock이 가장 가벼운 durable IPC.
-      append-only면 손실 없고 tail로 *메인이 idle 회복 시* 누락분 흡수. 보조 채널이 *본 채널을 막지 않게* push는
-      exit 0 best-effort로 박제.
+      외부 인프라(Redis)는 의존성 비용. 단일 머신 / 워크트리 기준에서는 jsonl + flock이 가장 가벼운 durable
+      IPC. append-only면 손실 없고 tail로 *메인이 idle 회복 시* 누락분 흡수. 보조 채널이 *본 채널을 막지 않게*
+      push는 exit 0 best-effort로 박제.
 ---
 
 # iOS Harness Journal 021 — 자가 보고 신뢰성

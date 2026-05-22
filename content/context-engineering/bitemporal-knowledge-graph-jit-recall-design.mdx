@@ -1,0 +1,303 @@
+---
+title: "Bitemporal Knowledge Graph + JIT Recall 설계 — Zep/Graphiti SOTA를 Karpathy 위키에 흡수"
+description: "Zep/Graphiti temporal invalidation + Karpathy compilation + 한국어 grep 통합 설계. LongMemEval 63.8% vs 49.0% 격차 분석."
+category: context-engineering
+date: '2026-05-22'
+tags:
+  - context-engineering
+  - knowledge-graph
+  - bitemporal
+  - temporal-knowledge-graph
+  - jit-recall
+  - graphiti
+  - zep
+  - karpathy
+  - memory-staleness
+  - non-lossy
+confidence: 3
+last_verified: "2026-05-22"
+applicable_to: ["any"]
+generated_by: human
+connections:
+  - context-engineering/karpathy-llm-wiki-pattern-compilation-over-retrieval
+  - context-engineering/llm-wiki-swot-ai-study-vs-karpathy
+  - context-engineering/context-scaling-3-layer-architecture
+  - context-engineering/multi-turn-context-management
+  - harness-engineering/harness-journal-025-jit-retrieval-poc-phase1
+  - harness-engineering/llm-first-wiki-principles
+  - rag/vector-search-basics
+  - agents/agent-runtime-search-vector
+quiz:
+  - question: "LongMemEval에서 Zep(63.8%)이 Mem0(49.0%)를 15점 차이로 앞서는 1차 원인은?"
+    choices:
+      - "Zep이 더 큰 임베딩 모델을 쓴다"
+      - "사실의 '유효기간'을 자동으로 무효화하는 temporal invalidation 메커니즘"
+      - "Zep은 chunk를 더 작게 자른다"
+      - "Mem0가 검색 호출을 더 많이 한다"
+    answer: 1
+    explanation: "지식 시스템은 *지금 맞는 사실*만 surface해야 한다. '예전엔 맞았으나 지금은 supersede된' 사실이 검색에 섞이면 환각/구식 답변이 나온다. Zep/Graphiti는 사실에 valid_from/valid_to를 자동으로 매겨 supersede된 사실을 score에서 깎는다. 이 자동화 갭이 15점 격차의 핵심."
+  - question: "한국어 위키에서 *임베딩 기반 검색 도입을 권하지 않는다*는 결론의 1차 근거는?"
+    choices:
+      - "임베딩이 비싸서"
+      - "한국어 multilingual 임베딩이 영어 대비 정확도 낮고 한국어 grep이 충분히 빠름. brute-force JIT 검색이 토큰 효율도 최상위"
+      - "한국어 임베딩이 존재하지 않아서"
+      - "Karpathy가 반대했기 때문에"
+    answer: 1
+    explanation: "harness-journal-025 JIT retrieval POC에서 multilingual-e5-small이 한국어 쿼리에 실패한 사례가 박제됐다. 동시에 Zep 측정에서 600K 토큰/대화 vs Mem0 1,764 — grep이 토큰 효율도 최상위. 한국어 환경에선 결정 트리가 '벡터 DB 미도입'으로 수렴한다."
+  - question: "Graphiti의 'non-lossy' 원칙을 한 줄로 표현하면?"
+    choices:
+      - "메모리는 무한대로 저장한다"
+      - "supersede된 사실도 *삭제하지 않고* 만료 마킹만 — history가 손실되지 않음"
+      - "압축 알고리즘이 lossless여야 한다"
+      - "모든 메모리는 한 파일에 모은다"
+    answer: 1
+    explanation: "non-lossy는 *과거 사실의 보존*에 관한 원칙이다. 'X였는데 Y로 바뀌었다'를 알아야 시간 추론이 가능하다. 단순 덮어쓰기/삭제는 'X 시점에 무엇이 맞았나'를 답할 수 없게 만든다. 검색은 valid_to가 있는 사실을 *현재 시점에선* 깎으면 된다 — 삭제는 별개."
+---
+
+> **지식 시스템의 v2 진화 설계**. Karpathy LLM Wiki + ai-study Layer 3 JIT POC에 외부 SOTA(Zep/Graphiti, 2025~2026)의 temporal invalidation을 흡수. LongMemEval 63.8% vs 49.0% **15점 격차**가 어디서 나오는지, 그 자동화를 한국어 grep 환경에 어떻게 접목할지의 *설계*.
+>
+> 본 글은 **설계만** 담는다. 구현은 별도. 모든 알고리즘은 제안.
+
+## For AI Agents
+
+**Trigger**: 메모리/위키 시스템을 발전시키는 작업. 메모리 supersede/DEPRECATED 처리가 수동이라 불편할 때. JIT recall이 *낡은* 메모리를 surface해서 의심될 때. "이 메모리 아직 유효해?" 류 질문이 반복될 때. 벡터 DB 도입 의사결정 직전.
+
+**Prerequisites**:
+- [Karpathy LLM Wiki 패턴](./karpathy-llm-wiki-pattern-compilation-over-retrieval) (compilation > retrieval)
+- [llm-wiki SWOT — ai-study vs Karpathy](./llm-wiki-swot-ai-study-vs-karpathy) (현재 갭 인식)
+- [harness-journal-025 JIT retrieval POC](../harness-engineering/harness-journal-025-jit-retrieval-poc-phase1) (한국어 임베딩 실패 박제)
+- Zep/Graphiti 기본 개념 (temporal knowledge graph)
+
+**Actionable Steps**:
+1. 현 메모리/위키에 *수동* supersede 패턴이 얼마나 쌓였는지 측정 (예: `DEPRECATED:`, `SUPERSEDED BY:` prefix 개수)
+2. R1(bitemporal) → R2(멀티홉) → R5(즉시 갭) → R4(절차 메모리) 우선순위로 디벨롭
+3. R1 구현 전 *기존 prose supersede → 구조화* 마이그레이션 먼저 (안 하면 신규 스키마가 과거 데이터를 못 덮음)
+4. 어떤 변경도 **non-lossy** 원칙 준수 (메모리/엣지 삭제 금지, 무효화는 만료 마킹만)
+5. 벡터 DB 도입은 *마지막* 카드 — 한국어 grep + AST codegraph가 SOTA 토큰 효율을 이미 달성
+
+**Anti-patterns**:
+- ❌ 한국어 환경에 임베딩 벡터 DB 도입 (한국어 실패 + 토큰 폭증 — 검증된 함정)
+- ❌ supersede된 메모리를 **삭제** (history 손실, 시간 추론 불가)
+- ❌ 본 글의 설계를 "구현됨"으로 인용 (전부 *설계 — 미구현*)
+- ❌ JIT 훅에 staleness 필터 없이 신규 스코어링만 추가 (낡은 메모리 surface 버그가 잔존)
+
+---
+
+## 1. 외부 SOTA → 현 시스템 좌표
+
+2025~2026 에이전트 메모리 SOTA(Zep, Graphiti, Mem0, AriGraph 등)를 ai-study Layer 3 JIT POC 위에 좌표화한다. 결론: **현 설계 결정 대부분이 SOTA로 검증됨 + 자동화 갭 1개가 최대 기회**.
+
+### 1.1 SOTA로 검증된 현 결정 (바꾸지 말 것)
+
+| 결정 | SOTA 근거 |
+|------|----------|
+| grep > 임베딩 (한국어) | 영어 임베딩이 한국어 검색에서 실패하는 사례 박제 ([journal-025](../harness-engineering/harness-journal-025-jit-retrieval-poc-phase1)). 수백 문서 brute-force가 정답 |
+| AST 기반 codegraph | AST 유도 그래프 > LLM 추출 KG 신뢰도 (학계 다수 연구) |
+| Compilation > Retrieval | Karpathy LLM Wiki — 인제스트 시점 1회 컴파일, 검색은 읽기뿐 |
+| 벡터 DB 미사용 | Zep 600K 토큰/대화 vs Mem0 1,764 — grep이 토큰 효율 최상위 |
+| 코드그래프 lazy query | Zep도 인제스트 후 백그라운드 처리 끝나야 검색 가능 = 즉시성 손실. 참조-only가 옳다 |
+
+### 1.2 자동화 갭 (= 최대 ROI 영역)
+
+SOTA가 자동화한 **temporal invalidation**을 현 위키는 *수동 prose*로 한다.
+
+- 현재: 사람이 `feedback_xxx_v2.md` 새로 쓰고 `feedback_xxx.md`에 "SUPERSEDED BY ..." 주석 다는 수동 패턴
+- SOTA: 사실에 `valid_from` / `valid_to` 자동 매김. 새 사실이 기존 사실을 contradicts하면 자동 만료 마킹
+
+LongMemEval에서 Zep 63.8% vs Mem0 49.0% — **15점 격차의 핵심**이 바로 이 "사실 유효기간" 관리. Mem0는 단순 누적, Zep은 bitemporal graph.
+
+---
+
+## 2. Bitemporal — 두 시간축
+
+"Bi-temporal"의 두 시간축:
+
+| 축 | 의미 | 예 |
+|----|------|----|
+| **valid time** | 사실이 *세상에서* 유효한 기간 | "X는 2026-01부터 2026-05까지 회사 다님" |
+| **system time** | 그 사실이 *우리 시스템에* 기록된 시각 | "2026-05-22 14:30에 알게 됨" |
+
+지식 시스템에 두 축이 모두 필요한 이유:
+
+- valid time만 있으면 → "언제부터 우리가 그걸 알았나" 답할 수 없음 (시스템이 늦게 알았을 가능성)
+- system time만 있으면 → "그 사실이 *세상에* 유효한가" 답할 수 없음 (기록은 오늘이지만 5년 전 사실)
+
+JIT recall이 *지금 맞는 사실*만 surface하려면 **valid time을 score에 반영**해야 한다.
+
+---
+
+## 3. 설계 — 4개 layer
+
+본 설계는 4 layer로 단계적 디벨롭:
+
+### R1. Bitemporal Memory Layer (최우선)
+
+기존 메모리 frontmatter에 `valid_from` / `valid_to` 자동 추가.
+
+```yaml
+# 메모리 예시
+---
+title: "feedback: pre-commit 자동 라우팅 silent loss"
+valid_from: 2026-03-15  # 사실 발생 시점
+valid_to: null          # 만료 없음 (현재 유효)
+superseded_by: null     # supersede한 후속 메모리 슬러그
+system_recorded: 2026-03-15
+---
+```
+
+새 메모리가 기존 사실을 contradicts하면:
+
+```yaml
+# 신규 메모리
+---
+title: "feedback: pre-commit 자동 라우팅 silent loss v2"
+valid_from: 2026-05-21
+contradicts: [feedback_pre_commit_auto_route_silent_loss]  # 자동 만료 트리거
+---
+```
+
+JIT recall:
+```python
+score = relevance_score(query, memory)
+if memory.valid_to and memory.valid_to < today:
+    score *= 0.1  # supersede된 사실은 surface 약화 (삭제 X)
+return score
+```
+
+**non-lossy 원칙**: `valid_to`를 매기는 것이지 *파일 삭제*가 아니다. "그 시점에 무엇이 맞았나" 시간 추론 가능.
+
+### R2. Multi-hop Code Bridge
+
+위키 노드와 codegraph(AST 추출, 24K 노드 규모) 사이를 multi-hop 통과.
+
+- 위키 노드 → `code_refs: [auth.swift:142, login.swift:88]`
+- codegraph → `callers(auth.swift:142)` → 다른 함수
+- 다른 함수 → 다른 위키 노드 (`code_refs`로 다시 매핑)
+
+질문 예: "auth 로직 바꾸면 어떤 메모리들이 영향받나?" → codegraph로 caller chain → 각 caller의 code_refs를 가진 메모리 surface.
+
+### R3. Aliases & Synonyms
+
+한국어 grep의 약점: 동의어. "오다 / 차고지 / 픽업" 같은 도메인 표현. 도메인 ontology 파일(`docs/domain-ontology.yaml`):
+
+```yaml
+오다:
+  aliases: [차고지, 픽업, 출발지]
+  type: 도메인-개념
+편도:
+  aliases: [편도반납, 다른지점반납]
+  type: 비즈니스-룰
+```
+
+recall.sh가 쿼리 확장에 사용 — "오다 변경" → "(오다|차고지|픽업) 변경" grep.
+
+### R4. Procedural Memory
+
+"이 도구를 *어떻게* 쓰는가"를 메모리화. 단순 사실(declarative)과 분리.
+
+```yaml
+---
+type: procedural  # vs declarative
+target: recall.sh
+sequence:
+  - "쿼리 작성 — 한국어 키워드 2~3개"
+  - "--remote 플래그 시 Jira/Confluence 통합"
+  - "결과 비어있으면 ontology aliases 확장 시도"
+---
+```
+
+JIT recall이 *작업 유형*에 따라 declarative/procedural을 분리 surface.
+
+### R5. Immediate gap fix (즉시 시작 가능)
+
+- valid_from 백필 (git log 기반 — 첫 commit 날짜를 사실 발생 시점으로)
+- supersede 패턴 정규식 (`DEPRECATED:` / `SUPERSEDED BY` prose 추출 → frontmatter 구조화)
+- recall.sh `--show-staleness` 플래그 (점수에 valid 정보 표시)
+
+---
+
+## 4. 한국어 환경 가드 — 임베딩 도입 회피
+
+벡터 DB 도입 의사결정 트리:
+
+```
+Q1. 콘텐츠가 영어 다수인가? ──── No ──→ grep + ontology
+                            │
+                          Yes
+                            ↓
+Q2. 문서 수가 수천 단위인가? ── No ──→ grep
+                            │
+                          Yes
+                            ↓
+Q3. grep 속도가 1초 초과인가? ── No ──→ grep
+                            │
+                          Yes
+                            ↓
+                       임베딩 검토
+```
+
+ai-study(한국어 다수, 수백 문서, grep `< 1초`)는 *전부 No에서 멈춤*. 벡터 DB가 우월한 시나리오가 아니다. 게다가:
+
+- multilingual-e5-small 한국어 정확도가 영어 대비 낮은 사례 ([journal-025](../harness-engineering/harness-journal-025-jit-retrieval-poc-phase1))
+- 임베딩 생성 + 인제스트 백그라운드 처리 = 즉시성 손실
+- 토큰 비용 (Zep 600K vs grep ~수 KB)
+
+R1~R5 어디에도 임베딩이 강제되지 않는다.
+
+---
+
+## 5. 마이그레이션 — 기존 prose supersede 흡수
+
+R1 구현 전에 *반드시* 선행:
+
+1. 기존 메모리 grep — `DEPRECATED:`, `SUPERSEDED BY`, `replaced by`, `이전 버전:`
+2. 각 매칭에 대해 frontmatter `valid_to` + `superseded_by` 자동 추출
+3. 자동 추출 실패한 케이스는 사람 검토 큐
+4. 마이그레이션 완료 후 R1 활성화
+
+이 순서를 건너뛰면 신규 스키마가 *과거 데이터를 덮지 못해* score에 historical noise가 남는다.
+
+---
+
+## 6. 우선순위 / 디벨롭 순서
+
+| 순서 | layer | 이유 |
+|------|-------|------|
+| 1 | R5 (즉시 갭) | 1~2일. valid_from 백필 + prose supersede 정규식 |
+| 2 | R1 (bitemporal) | 1주. R5 데이터 위에 frontmatter 구조 + JIT score 통합 |
+| 3 | R2 (멀티홉 코드) | 2주. codegraph 있으면 즉시 가능 |
+| 4 | R4 (절차 메모리) | 1주. type 필드 + JIT 분리 surface |
+| 5 | R3 (ontology) | 도메인 표현 누적되면 |
+
+---
+
+## 7. 측정 — 도입 효과 검증
+
+| 지표 | baseline 측정 | 목표 |
+|------|--------------|------|
+| 평균 recall 결과 중 valid 사실 비율 | 현 시스템에서 측정 | +10%p |
+| supersede된 메모리가 top-3에 들어오는 빈도 | 측정 | -50% |
+| recall 토큰 사용량 | 측정 | 유지 (벡터 DB 미도입) |
+| 동일 쿼리 한국어/영어 결과 일관성 | 측정 | +20%p |
+
+baseline 없이 도입하면 효과가 *체감*만 남는다. R5 시작 직전 baseline 박제 필수.
+
+---
+
+## 8. 한계 / 검증 필요
+
+- **n=설계**. 본 글은 외부 SOTA + 현 시스템 갭 분석 기반의 설계 제안이다. 실 구현 후 dogfood + 측정 필요
+- **prose 정규식 누락 가능성** — 비표준 supersede 표현(예: "이건 이제 안 씀") 자동 추출 실패. 사람 검토 큐 필수
+- **자동 contradicts 판정 위험** — LLM이 *contradicts*를 잘못 판정하면 valid 사실이 잘못 만료된다. 자동 X, 사용자 confirm gate 권장
+- **AriGraph 같은 그래프 추론** 미포함. 현 위키가 도메인 추론까지 안 가는 한 R1~R5로 충분
+
+---
+
+## 관련 엔트리
+
+- [Karpathy LLM Wiki — Compilation > Retrieval](./karpathy-llm-wiki-pattern-compilation-over-retrieval) — 본 설계의 상위 원칙
+- [llm-wiki SWOT — ai-study vs Karpathy](./llm-wiki-swot-ai-study-vs-karpathy) — 본 설계가 닫으려는 갭
+- [Context Scaling 3-layer architecture](./context-scaling-3-layer-architecture) — Layer 3에 본 설계 흡수 가능
+- [harness-journal-025 JIT retrieval POC](../harness-engineering/harness-journal-025-jit-retrieval-poc-phase1) — 한국어 임베딩 실패 박제, 본 설계의 회피 근거
+- [LLM-first wiki 원칙](../harness-engineering/llm-first-wiki-principles) — 위키 구조 결정 원칙
+- [vector search basics](../rag/vector-search-basics) — 도입 결정 시 비교 base

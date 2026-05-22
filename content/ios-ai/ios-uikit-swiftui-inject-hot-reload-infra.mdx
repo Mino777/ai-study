@@ -1,49 +1,77 @@
 ---
-title: "UIKit + SwiftUI 운영 앱에 Inject Hot Reload 인프라 박제 — UI iteration 30초 → 1초, 그리고 함정들"
+title: >-
+  UIKit + SwiftUI 운영 앱에 Inject Hot Reload 인프라 박제 — UI iteration 30초 → 1초, 그리고
+  함정들
 category: ios-ai
-date: "2026-05-11"
-tags: [ios, hot-reload, inject, swiftui, uikit, spm, ribs, xcconfig, linker-flag, devtools]
+date: '2026-05-11'
+tags:
+  - ios
+  - hot-reload
+  - inject
+  - swiftui
+  - uikit
+  - spm
+  - ribs
+  - xcconfig
+  - linker-flag
+  - devtools
 confidence: 4
-last_verified: "2026-05-11"
-applicable_to: ["moneyflow", "any"]
+last_verified: '2026-05-11'
+applicable_to:
+  - moneyflow
+  - any
 connections:
   - ios-ai/ios-harness-setup-xcodebuildmcp
   - ios-ai/ios-ai-journal-006-spm-cycle-break
   - ios-ai/ios-ai-journal-011-toss-slash23-tuist-microfeatures
   - ios-ai/ios-legacy-to-ai-ready
+  - ios-ai/ios-ai-journal-020-maestro-mcp-test-without-building
 status: complete
 type: entry
 description: >-
-  UI 한 줄 바꿔서 시뮬에 비치는 데 30~60초 걸리던 사이클을 1초로 줄인 운영 앱 셋업. SwiftUI는
-  3줄로 끝나지만 UIKit + RIBs + SnapKit + BaseViewController 조합에선 함정이 많아서, 안전한
-  패턴(NotificationCenter + updateUI, lazy var 추출)과 금지 패턴(setupViews 재호출,
-  Inject.ViewControllerHost 래핑)을 코드와 함께 박제한다. Xcode 16.3+ 빌드 설정 4종과 SPM
-  모듈 linker flag까지 함께.
+  UI 한 줄 바꿔서 시뮬에 비치는 데 30~60초 걸리던 사이클을 1초로 줄인 운영 앱 셋업. SwiftUI는 3줄로 끝나지만 UIKit +
+  RIBs + SnapKit + BaseViewController 조합에선 함정이 많아서, 안전한 패턴(NotificationCenter +
+  updateUI, lazy var 추출)과 금지 패턴(setupViews 재호출, Inject.ViewControllerHost 래핑)을
+  코드와 함께 박제한다. Xcode 16.3+ 빌드 설정 4종과 SPM 모듈 linker flag까지 함께.
 quiz:
-  - question: "SwiftUI View에 .enableInjection()을 직접 if/else 분기에 부착하면 컴파일 에러가 난다. 어떻게 우회하는가?"
+  - question: >-
+      SwiftUI View에 .enableInjection()을 직접 if/else 분기에 부착하면 컴파일 에러가 난다. 어떻게
+      우회하는가?
     choices:
-      - "@ViewBuilder를 body에 명시한다"
-      - "Group { ... } 으로 감싸고 Group에 .enableInjection()을 부착한다"
-      - ".enableInjection()을 각 분기 안쪽에 중복 부착한다"
-      - "ViewModifier로 따로 정의한다"
+      - '@ViewBuilder를 body에 명시한다'
+      - 'Group { ... } 으로 감싸고 Group에 .enableInjection()을 부착한다'
+      - .enableInjection()을 각 분기 안쪽에 중복 부착한다
+      - ViewModifier로 따로 정의한다
     answer: 1
-    explanation: "if/else는 some View 타입이 아니라 ConditionalContent라서 modifier 부착이 직접 안 된다. Group { }으로 감싸면 Group의 some View 타입에 modifier가 붙는다."
-  - question: "UIKit ViewController에서 onInjected 콜백 시 setupViews()를 재호출하면 발생하는 실측된 문제는?"
+    explanation: >-
+      if/else는 some View 타입이 아니라 ConditionalContent라서 modifier 부착이 직접 안 된다.
+      Group { }으로 감싸면 Group의 some View 타입에 modifier가 붙는다.
+  - question: UIKit ViewController에서 onInjected 콜백 시 setupViews()를 재호출하면 발생하는 실측된 문제는?
     choices:
-      - "subview 메모리 누수만 발생 (시각적 이상 없음)"
-      - "SnapKit makeConstraints가 매번 누적되어 화면이 점점 아래로 밀리고 RxSwift subscription도 누적"
-      - "ViewController가 nil로 deallocate된다"
-      - "Inject 라이브러리가 자동으로 중복을 감지해 무시한다"
+      - subview 메모리 누수만 발생 (시각적 이상 없음)
+      - SnapKit makeConstraints가 매번 누적되어 화면이 점점 아래로 밀리고 RxSwift subscription도 누적
+      - ViewController가 nil로 deallocate된다
+      - Inject 라이브러리가 자동으로 중복을 감지해 무시한다
     answer: 1
-    explanation: "SnapKit의 makeConstraints는 idempotent하지 않다. 호출할 때마다 새 constraint가 추가되어 layout drift가 발생한다. RxSwift bind도 똑같이 누적. 그래서 onInjected에서는 가벼운 updateUI()만 호출해야 한다."
-  - question: "새 SPM feature 모듈에 Inject hot reload를 켤 때 누락 시 'dlopen failed: symbol not found' 런타임 에러를 일으키는 설정은?"
+    explanation: >-
+      SnapKit의 makeConstraints는 idempotent하지 않다. 호출할 때마다 새 constraint가 추가되어
+      layout drift가 발생한다. RxSwift bind도 똑같이 누적. 그래서 onInjected에서는 가벼운
+      updateUI()만 호출해야 한다.
+  - question: >-
+      새 SPM feature 모듈에 Inject hot reload를 켤 때 누락 시 'dlopen failed: symbol not
+      found' 런타임 에러를 일으키는 설정은?
     choices:
-      - "Package.swift의 .target dependencies에 \"Inject\" 추가"
-      - "Package.swift의 linkerSettings에 .unsafeFlags([\"-Xlinker\", \"-interposable\"]) 추가"
-      - "AppDelegate에서 Bundle(path:)?.load() 호출"
-      - "Debug.xcconfig에 EMIT_FRONTEND_COMMAND_LINES = YES"
+      - Package.swift의 .target dependencies에 "Inject" 추가
+      - >-
+        Package.swift의 linkerSettings에 .unsafeFlags(["-Xlinker",
+        "-interposable"]) 추가
+      - 'AppDelegate에서 Bundle(path:)?.load() 호출'
+      - Debug.xcconfig에 EMIT_FRONTEND_COMMAND_LINES = YES
     answer: 1
-    explanation: "-Xlinker -interposable는 SPM 모듈의 심볼을 interposition 가능하게 만들어 dlopen으로 swap할 수 있게 한다. 누락하면 dylib는 빌드되지만 런타임에 symbol resolution이 실패. 다른 세 설정도 모두 필요하지만, 이 에러의 직접 원인은 linker flag다."
+    explanation: >-
+      -Xlinker -interposable는 SPM 모듈의 심볼을 interposition 가능하게 만들어 dlopen으로 swap할
+      수 있게 한다. 누락하면 dylib는 빌드되지만 런타임에 symbol resolution이 실패. 다른 세 설정도 모두 필요하지만,
+      이 에러의 직접 원인은 linker flag다.
 ---
 
 import Callout from '@/components/callout'

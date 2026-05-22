@@ -1,60 +1,77 @@
 ---
-title: "iOS Harness Journal 016 — CodeGraph 도입: 호출그래프 + 토큰 400배 절감, 그리고 Node 25 WASM Zone OOM 함정"
+title: >-
+  iOS Harness Journal 016 — CodeGraph 도입: 호출그래프 + 토큰 400배 절감, 그리고 Node 25 WASM
+  Zone OOM 함정
 category: ios-ai
 series: ios-ai-journal
-date: "2026-05-18"
-tags: [ios-harness-journal, codegraph, mcp, code-intelligence, tokenomics, jit-retrieval, node-wasm, liftoff, harness-tooling]
+date: '2026-05-18'
+tags:
+  - ios-harness-journal
+  - codegraph
+  - mcp
+  - code-intelligence
+  - tokenomics
+  - jit-retrieval
+  - node-wasm
+  - liftoff
+  - harness-tooling
 confidence: 4
-last_verified: "2026-05-18"
-applicable_to: ["any"]
+last_verified: '2026-05-18'
+applicable_to:
+  - any
 connections:
   - ios-ai/ios-ai-journal-015-compound-qa-mock-harness-worker
   - ios-ai/ios-flow-map-via-aidy-ios
   - harness-engineering/harness-journal-025-jit-retrieval-poc-phase1
   - tokenomics/claude-code-token-levers-catalog
+  - ios-ai/ios-ai-journal-017-worker-pool-ops-tuning
+  - ios-ai/ios-ai-journal-023-impact-brief-xctest-on-diff
 status: complete
 type: entry
 description: >-
   moneyflow(iOS 1,773 Swift 파일) 워커에 codegraph MCP를 박제한 회고.
   호출그래프(callers/callees/impact) + JIT 컨텍스트가 풀린 한편, Node 25 V8 turboshaft가
-  tree-sitter WASM을 컴파일하다 Zone OOM(`exit 133`)으로 ~6%에서 죽는 함정을
-  `node --liftoff-only` 래퍼로 박제. 벤치마크는 정직하게: 속도는 tuned grep과 비등(~1.5x 이내),
-  진짜 실익은 (1) 에이전트 토큰 400배 절감 (2) 호출그래프 (3) naive grep 함정 제거 3가지.
+  tree-sitter WASM을 컴파일하다 Zone OOM(`exit 133`)으로 ~6%에서 죽는 함정을 `node
+  --liftoff-only` 래퍼로 박제. 벤치마크는 정직하게: 속도는 tuned grep과 비등(~1.5x 이내), 진짜 실익은 (1)
+  에이전트 토큰 400배 절감 (2) 호출그래프 (3) naive grep 함정 제거 3가지.
 quiz:
-  - question: "codegraph index가 ~6%에서 `exit 133` + Zone OOM으로 죽는 원인은?"
+  - question: codegraph index가 ~6%에서 `exit 133` + Zone OOM으로 죽는 원인은?
     choices:
-      - "JS heap이 부족해서 — `--max-old-space-size`로 늘리면 해결"
-      - "tree-sitter WASM이 100개 누적 시 V8 turboshaft가 tier-up 컴파일하다 Zone(컴파일러 영역) OOM"
-      - "DB 락 충돌 — `.codegraph/codegraph.lock` 잔존"
-      - "MCP 서버가 stdin을 못 받아서"
+      - JS heap이 부족해서 — `--max-old-space-size`로 늘리면 해결
+      - >-
+        tree-sitter WASM이 100개 누적 시 V8 turboshaft가 tier-up 컴파일하다 Zone(컴파일러 영역)
+        OOM
+      - DB 락 충돌 — `.codegraph/codegraph.lock` 잔존
+      - MCP 서버가 stdin을 못 받아서
     answer: 1
     explanation: >-
-      Zone OOM은 *V8 컴파일러 영역*의 메모리 부족이지 JS heap이 아니다.
-      `--max-old-space-size`, `NODE_OPTIONS=--liftoff-only` 둘 다 효과 없고
-      (NODE_OPTIONS는 V8 플래그 거부), 해법은 `node --liftoff-only <bin>` —
-      WASM 최적화 티어를 끄고 baseline만 사용해서 컴파일 메모리 자체를 안 잡게 한다.
-  - question: "벤치마크에서 'codegraph가 grep보다 250~450배 빠르다'고 광고하는 건 왜 과장인가?"
+      Zone OOM은 *V8 컴파일러 영역*의 메모리 부족이지 JS heap이 아니다. `--max-old-space-size`,
+      `NODE_OPTIONS=--liftoff-only` 둘 다 효과 없고 (NODE_OPTIONS는 V8 플래그 거부), 해법은
+      `node --liftoff-only <bin>` — WASM 최적화 티어를 끄고 baseline만 사용해서 컴파일 메모리 자체를 안
+      잡게 한다.
+  - question: 벤치마크에서 'codegraph가 grep보다 250~450배 빠르다'고 광고하는 건 왜 과장인가?
     choices:
-      - "캐시 워밍을 안 해서"
-      - "그 비교는 naive grep(빌드 산출물 미제외) 기준 — `.build`/`DerivedData` 순회 폭주 함정이 가려져 있음. tuned grep 대비는 비등(~1.5x 이내)"
-      - "실제로는 더 빠르다, 측정 오류"
-      - "Swift만 빠르고 Objective-C는 느려서"
+      - 캐시 워밍을 안 해서
+      - >-
+        그 비교는 naive grep(빌드 산출물 미제외) 기준 — `.build`/`DerivedData` 순회 폭주 함정이 가려져
+        있음. tuned grep 대비는 비등(~1.5x 이내)
+      - '실제로는 더 빠르다, 측정 오류'
+      - Swift만 빠르고 Objective-C는 느려서
     answer: 1
     explanation: >-
       130초 → 0.4초 차이는 거의 전부 `--exclude-dir=.build --exclude-dir=DerivedData` 빠진
-      grep의 자폭이다. tuned grep을 똑같이 측정하면 codegraph와 ~1.5배 이내. 도입 가치는
-      속도가 아니라 (a) 출력 토큰 절감 (b) 호출그래프 (c) naive 함정 제거 — 정직하게 적시.
-  - question: "에이전트 입장에서 codegraph 도입의 *최대* 실익은?"
+      grep의 자폭이다. tuned grep을 똑같이 측정하면 codegraph와 ~1.5배 이내. 도입 가치는 속도가 아니라 (a)
+      출력 토큰 절감 (b) 호출그래프 (c) naive 함정 제거 — 정직하게 적시.
+  - question: 에이전트 입장에서 codegraph 도입의 *최대* 실익은?
     choices:
-      - "탐색 속도 단축"
-      - "심볼 검색의 컨텍스트 토큰 비용 — 호출처 검색 출력이 540KB/2,491라인 → 1.3KB/31라인으로 ~400배 감소"
-      - "Mermaid 다이어그램 자동 생성"
-      - "Swift 6 strict concurrency 검증"
+      - 탐색 속도 단축
+      - '심볼 검색의 컨텍스트 토큰 비용 — 호출처 검색 출력이 540KB/2,491라인 → 1.3KB/31라인으로 ~400배 감소'
+      - Mermaid 다이어그램 자동 생성
+      - Swift 6 strict concurrency 검증
     answer: 1
     explanation: >-
-      grep은 *전체 출력*을 에이전트 컨텍스트로 밀어넣는다. codegraph는 시맨틱하게 필요한
-      위치만 반환 — 에이전트 컨텍스트 윈도우 60% 임계값 도달까지의 헤드룸을 직접 늘린다.
-      "빠르다"보다 "싸다(토큰)"가 진짜 레버.
+      grep은 *전체 출력*을 에이전트 컨텍스트로 밀어넣는다. codegraph는 시맨틱하게 필요한 위치만 반환 — 에이전트 컨텍스트
+      윈도우 60% 임계값 도달까지의 헤드룸을 직접 늘린다. "빠르다"보다 "싸다(토큰)"가 진짜 레버.
 ---
 
 # iOS Harness Journal 016 — CodeGraph 도입

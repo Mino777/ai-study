@@ -1,13 +1,32 @@
 ---
-title: "iOS Harness Journal 013 — Spec-Driven Engineering: 기획서 이미지 → SPEC → UI 테스트 자동화 (OCR 60%→95%, AC 매트릭스)"
+title: >-
+  iOS Harness Journal 013 — Spec-Driven Engineering: 기획서 이미지 → SPEC → UI 테스트 자동화
+  (OCR 60%→95%, AC 매트릭스)
 category: ios-ai
 series: ios-ai-journal
-date: "2026-05-06"
-tags: [ios-harness-journal, ios, spec-driven, spec-extractor, spec-qa, ocr, figma, ui-test, ac-matrix, validate-ai-output, ground-truth]
+date: '2026-05-06'
+tags:
+  - ios-harness-journal
+  - ios
+  - spec-driven
+  - spec-extractor
+  - spec-qa
+  - ocr
+  - figma
+  - ui-test
+  - ac-matrix
+  - validate-ai-output
+  - ground-truth
 confidence: 4
-last_verified: "2026-05-06"
-applicable_to: ["ios-study"]
-connections: [ios-ai/ios-ai-journal-012-ui-test-smoke-forensic-split, ios-ai/ios-ai-journal-009-ai-probe-dual-pipeline, harness-engineering/ai-agent-start-here, evaluation/ai-output-5-layer-defense]
+last_verified: '2026-05-06'
+applicable_to:
+  - ios-study
+connections:
+  - ios-ai/ios-ai-journal-012-ui-test-smoke-forensic-split
+  - ios-ai/ios-ai-journal-009-ai-probe-dual-pipeline
+  - harness-engineering/ai-agent-start-here
+  - evaluation/ai-output-5-layer-defense
+  - ios-ai/ios-ai-journal-015-compound-qa-mock-harness-worker
 status: complete
 type: entry
 description: >-
@@ -15,39 +34,39 @@ description: >-
   spec-driven 파이프라인. spec-extractor 스킬/에이전트, spec-qa 스킬, crop-spec-region.sh로
   OCR 60→95% 끌어올린 사례, "코드를 ground truth로 OCR 정정"한 validate-ai-output 실전 적용까지.
 quiz:
-  - question: "spec-extractor에서 AC(수용기준) 옆에 🟢/🟡/🔴 신뢰도 마커를 박는 핵심 이유는?"
+  - question: "spec-extractor에서 AC(수용기준) 옆에 \U0001F7E2/\U0001F7E1/\U0001F534 신뢰도 마커를 박는 핵심 이유는?"
     choices:
-      - "사용자에게 색상 구분으로 가독성을 높이기 위해"
-      - "AI가 추론한 항목과 사용자가 명시한 항목을 구분해 후속 에이전트가 미해결 항목만 surface하도록"
-      - "Figma 링크 매핑 정확도를 시각화하기 위한 부가 정보"
-      - "OCR 신뢰도와 동일한 의미 — 중복 박제"
+      - 사용자에게 색상 구분으로 가독성을 높이기 위해
+      - AI가 추론한 항목과 사용자가 명시한 항목을 구분해 후속 에이전트가 미해결 항목만 surface하도록
+      - Figma 링크 매핑 정확도를 시각화하기 위한 부가 정보
+      - OCR 신뢰도와 동일한 의미 — 중복 박제
+    answer: 1
+    explanation: "\U0001F7E2 = 사용자/코드 명시(확정), \U0001F7E1 = 추정(검증 필요), \U0001F534 = 미해결(질문 필수). 마커가 없으면 후속 에이전트(spec-qa, ios-feature-builder)가 모든 항목을 동급으로 취급해 환각 위에 환각이 쌓인다. spec-extractor가 자기 확신 수준을 명시함으로써 다음 단계가 어디서 멈춰야 할지 안다."
+  - question: OCR로 추출한 SPEC을 코드(CustomerValidator) 기반으로 재정의하면서 박제한 핵심 교훈은?
+    choices:
+      - OCR 도구를 더 비싼 모델로 교체해야 한다
+      - AI가 추출한 텍스트는 코드라는 ground truth와 대조 검증해야 한다 — 이미지만으론 50%가 틀린다
+      - PPT 캡처 해상도를 4K로 올리면 OCR이 100% 정확해진다
+      - Figma 링크가 있으면 OCR이 불필요하다
     answer: 1
     explanation: >-
-      🟢 = 사용자/코드 명시(확정), 🟡 = 추정(검증 필요), 🔴 = 미해결(질문 필수). 마커가 없으면 후속
-      에이전트(spec-qa, ios-feature-builder)가 모든 항목을 동급으로 취급해 환각 위에 환각이 쌓인다.
-      spec-extractor가 자기 확신 수준을 명시함으로써 다음 단계가 어디서 멈춰야 할지 안다.
-  - question: "OCR로 추출한 SPEC을 코드(CustomerValidator) 기반으로 재정의하면서 박제한 핵심 교훈은?"
+      이전 SPEC은 OCR로 만든 CM 매핑이 50% 오류였다. 코드(CustomerValidator +
+      MemberServiceCondition enum)를 읽고 재정의하니 정확해졌다. validate-ai-output 메모리룰의
+      살아있는 사례 — AI 출력은 항상 ground truth와 대조 검증해야 한다.
+  - question: spec-qa 스킬이 새로운 풀 에이전트를 만들지 않고 ios-ui-tester를 재사용한 이유는?
     choices:
-      - "OCR 도구를 더 비싼 모델로 교체해야 한다"
-      - "AI가 추출한 텍스트는 코드라는 ground truth와 대조 검증해야 한다 — 이미지만으론 50%가 틀린다"
-      - "PPT 캡처 해상도를 4K로 올리면 OCR이 100% 정확해진다"
-      - "Figma 링크가 있으면 OCR이 불필요하다"
-    answer: 1
-    explanation: >-
-      이전 SPEC은 OCR로 만든 CM 매핑이 50% 오류였다. 코드(CustomerValidator + MemberServiceCondition enum)를
-      읽고 재정의하니 정확해졌다. validate-ai-output 메모리룰의 살아있는 사례 — AI 출력은 항상 ground truth와
-      대조 검증해야 한다.
-  - question: "spec-qa 스킬이 새로운 풀 에이전트를 만들지 않고 ios-ui-tester를 재사용한 이유는?"
-    choices:
-      - "에이전트 추가 비용이 비싸기 때문"
-      - "얇은 스킬(파싱+위임)과 두꺼운 에이전트(실행) 분리 — 스킬은 SPEC을 시나리오로 변환하는 데만 집중하고 실행은 검증된 에이전트에 위임"
-      - "ios-ui-tester가 이미 SPEC 파싱 기능을 내장하고 있기 때문"
-      - "Anthropic 가이드라인이 에이전트 수를 제한해서"
+      - 에이전트 추가 비용이 비싸기 때문
+      - >-
+        얇은 스킬(파싱+위임)과 두꺼운 에이전트(실행) 분리 — 스킬은 SPEC을 시나리오로 변환하는 데만 집중하고 실행은 검증된
+        에이전트에 위임
+      - ios-ui-tester가 이미 SPEC 파싱 기능을 내장하고 있기 때문
+      - Anthropic 가이드라인이 에이전트 수를 제한해서
     answer: 1
     explanation: >-
       에이전트는 컨텍스트/도구를 무겁게 들고 다닌다. 새 도메인(SPEC) 추가는 얇은 스킬이 SPEC frontmatter +
-      AC-X.Y를 파싱해 fixture/deeplink/labels 시나리오 yaml로 변환하고, 실행은 이미 검증된 ios-ui-tester에
-      위임하는 게 정답이다. 같은 패턴이 spec-extractor → ios-feature-builder, ios-bug-fixer로 확장된다.
+      AC-X.Y를 파싱해 fixture/deeplink/labels 시나리오 yaml로 변환하고, 실행은 이미 검증된
+      ios-ui-tester에 위임하는 게 정답이다. 같은 패턴이 spec-extractor → ios-feature-builder,
+      ios-bug-fixer로 확장된다.
 ---
 
 ## 배경 — 기획서 PPT는 SPEC이 아니다

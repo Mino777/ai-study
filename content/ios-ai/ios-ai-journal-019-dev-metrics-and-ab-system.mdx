@@ -1,58 +1,75 @@
 ---
-title: "iOS Harness Journal 019 — 자율 사이클 측정 시스템 + 자동 A/B 테스트: 측정 없이 튜닝 없다"
+title: 'iOS Harness Journal 019 — 자율 사이클 측정 시스템 + 자동 A/B 테스트: 측정 없이 튜닝 없다'
 category: ios-ai
 series: ios-ai-journal
-date: "2026-05-18"
-tags: [ios-harness-journal, measurement, telemetry, ab-testing, dev-metrics, hooks, observability, harness-tooling]
+date: '2026-05-18'
+tags:
+  - ios-harness-journal
+  - measurement
+  - telemetry
+  - ab-testing
+  - dev-metrics
+  - hooks
+  - observability
+  - harness-tooling
 confidence: 4
-last_verified: "2026-05-14"
-applicable_to: ["any"]
+last_verified: '2026-05-14'
+applicable_to:
+  - any
 connections:
   - ios-ai/ios-ai-journal-018-asymmetric-worker-pool
   - ios-ai/ios-ai-journal-015-compound-qa-mock-harness-worker
   - tokenomics/claude-code-token-levers-applied-log
   - harness-engineering/ai-agent-start-here
+  - ios-ai/ios-ai-journal-022-worker-derived-data-isolation
+  - ios-ai/ios-ai-journal-023-impact-brief-xctest-on-diff
 status: complete
 type: entry
 description: >-
-  하네스 튜닝 결정을 추측이 아니라 측정으로 하기 위해 통합 dev-metrics 대시보드 + 9개 hook 기반
-  텔레메트리 + A/B 등록·집계·결정 파이프라인을 박제. PostToolUse(Bash/Skill/Write) + PreToolUse(Bash)
-  + Stop + PreCompact + UserPromptSubmit hook이 jsonl 로그로 흘러들어가고, ab-decide.sh가
+  하네스 튜닝 결정을 추측이 아니라 측정으로 하기 위해 통합 dev-metrics 대시보드 + 9개 hook 기반 텔레메트리 + A/B
+  등록·집계·결정 파이프라인을 박제. PostToolUse(Bash/Skill/Write) + PreToolUse(Bash) + Stop +
+  PreCompact + UserPromptSubmit hook이 jsonl 로그로 흘러들어가고, ab-decide.sh가
   ADOPT/REVERT/CONTINUE를 compound-growth.jsonl에 기록. 자율 사이클이 *자기 자신의 측정 대상*이 됨.
 quiz:
-  - question: "Claude Code 하네스에서 측정 데이터를 jsonl 로그 파일로 누적하는 이유는?"
+  - question: Claude Code 하네스에서 측정 데이터를 jsonl 로그 파일로 누적하는 이유는?
     choices:
-      - "JSON이 빠르다"
-      - "append-only + line-delimited라 동시 쓰기 안전(flock), 시계열 분석 용이, 손실 없음 — 신호 채널과 분석 채널을 분리하기 위함"
-      - "Claude Code가 jsonl만 지원"
-      - "BigQuery import 호환 때문"
+      - JSON이 빠르다
+      - >-
+        append-only + line-delimited라 동시 쓰기 안전(flock), 시계열 분석 용이, 손실 없음 — 신호 채널과
+        분석 채널을 분리하기 위함
+      - Claude Code가 jsonl만 지원
+      - BigQuery import 호환 때문
     answer: 1
     explanation: >-
-      hook은 다수 워커가 동시에 발화한다. csv는 헤더 충돌, json은 전체 재기록 위험. jsonl은
-      각 hook이 한 줄씩 flock으로 append하면 끝 — 가장 단순하고 손실 없는 시계열 텔레메트리 포맷.
-      대시보드는 별도 프로세스가 같은 파일을 *read-only*로 집계 → 신호와 분석이 분리됨.
-  - question: "ab-decide.sh가 ADOPT/REVERT/CONTINUE 3 상태로 결정하는 이유는?"
+      hook은 다수 워커가 동시에 발화한다. csv는 헤더 충돌, json은 전체 재기록 위험. jsonl은 각 hook이 한 줄씩
+      flock으로 append하면 끝 — 가장 단순하고 손실 없는 시계열 텔레메트리 포맷. 대시보드는 별도 프로세스가 같은 파일을
+      *read-only*로 집계 → 신호와 분석이 분리됨.
+  - question: ab-decide.sh가 ADOPT/REVERT/CONTINUE 3 상태로 결정하는 이유는?
     choices:
-      - "이진 결정은 잡음 흡수가 안 됨 — '아직 모르겠다'(CONTINUE) 상태를 명시해 *측정 충분 시점*까지 결정을 미룰 수 있어야 진짜 A/B"
-      - "테스트 코드 호환성"
-      - "ADOPT/REVERT만으로는 다양성이 부족"
-      - "registry.json 스키마 제약"
+      - >-
+        이진 결정은 잡음 흡수가 안 됨 — '아직 모르겠다'(CONTINUE) 상태를 명시해 *측정 충분 시점*까지 결정을 미룰 수
+        있어야 진짜 A/B
+      - 테스트 코드 호환성
+      - ADOPT/REVERT만으로는 다양성이 부족
+      - registry.json 스키마 제약
     answer: 0
     explanation: >-
-      이진 결정은 표본 수 부족인데도 강제로 한쪽을 선택하게 만들어 false adoption/revert를 늘린다.
-      CONTINUE는 'N회 더 측정 후 재결정'을 정식화 — 추측을 측정으로 미루는 메커니즘. 결정 자체를
-      compound-growth.jsonl에 박제하면 *결정의 이력*까지 자산이 됨.
-  - question: "PreCompact hook에서 세션 상태를 저장하는 이유는?"
+      이진 결정은 표본 수 부족인데도 강제로 한쪽을 선택하게 만들어 false adoption/revert를 늘린다. CONTINUE는
+      'N회 더 측정 후 재결정'을 정식화 — 추측을 측정으로 미루는 메커니즘. 결정 자체를 compound-growth.jsonl에
+      박제하면 *결정의 이력*까지 자산이 됨.
+  - question: PreCompact hook에서 세션 상태를 저장하는 이유는?
     choices:
-      - "Claude Code가 자동으로 함"
-      - "context window가 자동 압축되면서 사라지는 누적 상태(작업 진행/측정값/결정 보류 항목)를 다음 세션이 1시간 이내라면 복원하기 위함"
-      - "토큰 비용 절감"
-      - "디버깅 용도"
+      - Claude Code가 자동으로 함
+      - >-
+        context window가 자동 압축되면서 사라지는 누적 상태(작업 진행/측정값/결정 보류 항목)를 다음 세션이 1시간 이내라면
+        복원하기 위함
+      - 토큰 비용 절감
+      - 디버깅 용도
     answer: 1
     explanation: >-
-      compaction은 컨텍스트 윈도우 한도 도달 시 강제 발화 — *측정 도중* 발화하면 누적이 사라진다.
-      PreCompact에서 jsonl로 박제, SessionStart에서 1h 이내 state 복원 → 측정/결정 연속성이
-      compaction에 끊기지 않는다. "측정 없이 튜닝 없다"의 *시간축* 안전망.
+      compaction은 컨텍스트 윈도우 한도 도달 시 강제 발화 — *측정 도중* 발화하면 누적이 사라진다. PreCompact에서
+      jsonl로 박제, SessionStart에서 1h 이내 state 복원 → 측정/결정 연속성이 compaction에 끊기지 않는다.
+      "측정 없이 튜닝 없다"의 *시간축* 안전망.
 ---
 
 # iOS Harness Journal 019 — 자율 사이클 측정 시스템 + 자동 A/B

@@ -1,0 +1,268 @@
+---
+title: "/compound Phase 4 Cross-update — 인제스트 시점 그래프 합성 패턴"
+description: "Karpathy 인제스트 시점 합성을 /compound에 흡수. 새 메모리 박제 시 관련 노드 backlink 사용자 confirm 기반 보강."
+category: harness-engineering
+date: '2026-05-22'
+tags:
+  - harness-engineering
+  - compound-engineering
+  - slash-command
+  - knowledge-graph
+  - cross-reference
+  - karpathy
+  - wiki
+  - ingest-time-synthesis
+confidence: 3
+last_verified: "2026-05-22"
+applicable_to: ["any"]
+generated_by: human
+connections:
+  - harness-engineering/compound-automation-slash-commands
+  - harness-engineering/compound-engineering-philosophy
+  - harness-engineering/compound-loop-break
+  - harness-engineering/llm-first-wiki-principles
+  - context-engineering/karpathy-llm-wiki-pattern-compilation-over-retrieval
+  - context-engineering/llm-wiki-swot-ai-study-vs-karpathy
+quiz:
+  - question: "Karpathy LLM Wiki 패턴이 /compound에 시사하는 핵심은?"
+    choices:
+      - "위키 페이지를 더 많이 써라"
+      - "매 쿼리 시점이 아니라 *인제스트 시점에* 그래프를 합성하라"
+      - "RAG가 위키보다 우월하다"
+      - "Obsidian을 강제로 써야 한다"
+    answer: 1
+    explanation: "Karpathy 패턴의 핵심은 'compilation over retrieval' — 새 정보 1개 박제 시 그 자리에서 관련 기존 노드 10~15개에 backlink 보강. 검색 시점에 합성하면 매번 비용. 인제스트 시점 합성은 1회만."
+  - question: "/compound Phase 4 (cross-update)가 *자동* link 추가가 아니라 *사용자 confirm 필수*인 이유는?"
+    choices:
+      - "사용자가 모든 결정에 개입하고 싶어해서"
+      - "Atomicity 보호 — LLM 자율 판단으로 무의미한 cross-link이 생기면 위키가 '하나 주제 = 여러 노드 분산' 합리화 도구로 변질"
+      - "LLM이 link 문법을 못 써서"
+      - "성능 때문에"
+    answer: 1
+    explanation: "cross-link가 *분산 합리화 도구*가 되는 게 가장 큰 함정이다. 'A 노드와 B 노드가 비슷한 주제니 link 추가' → 사실 A와 B는 합쳐야 했다. 자동화하면 Atomicity 위반이 누적되고 위키가 무너진다. wiki-dup-detect 결과를 confirm 단계에서 함께 보여줘야 한다."
+  - question: "cross-update 후보 추출에서 *tf-idf 키워드 매칭*과 *tag 공유*를 모두 쓰는 이유는?"
+    choices:
+      - "둘 다 비싸지 않으니까"
+      - "tag 공유는 의도(저자가 분류한 표찰), tf-idf는 본문 실제 내용 — 두 신호가 보완"
+      - "tag만으로는 부족하고 tf-idf만으로는 노이즈가 많다"
+      - "B와 C 모두 옳다"
+    answer: 3
+    explanation: "tag 공유만 보면 저자가 tag 안 단 새 메모리를 놓친다. tf-idf만 보면 같은 단어 쓰지만 주제 다른 노드가 끼어든다. 두 신호를 AND/OR로 결합하면 정확도가 올라간다. code_refs 공통(같은 코드 파일 인용)을 추가로 결합하면 더 정확."
+---
+
+> **/compound 슬래시 커맨드의 Phase 4 제안 — cross-update**. 새 메모리·솔루션 박제 시점에 관련 기존 노드의 backlink를 *사용자 confirm* 기반으로 보강. Karpathy LLM Wiki의 *인제스트 시점 합성* 원칙을 [compound-automation-slash-commands](./compound-automation-slash-commands)에 흡수.
+>
+> 본 글은 **설계 + dogfood 가이드**. 실 구현은 별도.
+
+## For AI Agents
+
+**Trigger**: /compound 스킬 개선 작업. 새 솔루션/메모리 박제 후 *관련 기존 문서 backlink가 수동이라* 불편할 때. Karpathy "compilation over retrieval" 패턴을 자기 위키에 적용 검토.
+
+**Prerequisites**:
+- 기존 `/compound` 스킬 — Phase 1~3 동작 (CHANGELOG / 솔루션 / 회고 / 메모리)
+- 위키 그래프 인덱스 빌더 (예: 노드 frontmatter `connections:` YAML + 본문 `[[name]]` 추출)
+- Atomicity 가드 — wiki-dup-detect 또는 동등 도구 (prefix 클러스터 / tag 클러스터 탐지)
+
+**Actionable Steps**:
+1. /compound 기존 Phase 1~3 무손상 유지 — Phase 4를 *옵트인*으로 추가
+2. Phase 4 시작 시점: 신규/변경 노드 식별 (git diff)
+3. 후보 추출 보수적으로 — tag 공유 ≥2 / prefix 클러스터 / tf-idf top-3 / code_refs 공통
+4. 사용자에게 markdown diff로 제안 → confirm 후 적용
+5. Atomicity 위반 의심 시 wiki-dup-detect 함께 표시 — "link 보강이 아니라 *통합*이 답"인 경우 분기
+6. 적용 결과를 /compound CHANGELOG에 박제
+
+**Anti-patterns**:
+- ❌ 자동 link 추가 (LLM 판단으로 무조건 append) — Atomicity 위반 누적
+- ❌ wiki-index 빌드 없이 추측 — 그래프 정합성 손상
+- ❌ cross 보강을 *분산 합리화 도구로 오용* — 같은 주제 분산을 link로 봉합
+- ❌ Phase 1~3 흐름 수정 — 기존 사용 패턴 회귀
+
+---
+
+## 1. 갭 — 현 /compound의 단방향성
+
+기존 /compound([compound-automation-slash-commands](./compound-automation-slash-commands)):
+
+1. **Phase 1**: 스프린트 산출물 수집 (commit diff, fixture, screenshot)
+2. **Phase 2**: CHANGELOG / 솔루션 / 회고 작성
+3. **Phase 3**: 메모리 업데이트
+
+각 Phase가 *새 문서 생성*에 초점. **기존 문서의 backlink 보강은 수동**. 결과:
+
+- 새 솔루션 박제됨 → 관련 기존 메모리가 그것을 [[참조]]하지 않음
+- 그래프 단절 누적
+- 한 달 후 "이 솔루션 알고 있었으면 좋았을 텐데" 발견
+
+지표: 한 워커 iOS 레포에서 dangling link **68개 누적** → frontmatter related YAML 흡수 + 후처리로 0으로 떨굼. *수동 보강에 의존하면* 정합성이 항상 후행한다.
+
+---
+
+## 2. Karpathy 흡수 — 인제스트 시점 합성
+
+Karpathy LLM Wiki 패턴([엔트리](../context-engineering/karpathy-llm-wiki-pattern-compilation-over-retrieval)) 핵심:
+
+> "매 인제스트에 10~15 페이지 동시 업데이트" — 새 소스 1개 = 새 페이지 + 기존 페이지 cross-reference 보강. **합성이 한 번 일어나고 결과가 누적**.
+
+대비:
+
+| 패턴 | 합성 시점 | 비용 |
+|------|----------|------|
+| RAG | 매 쿼리 | 매번 LLM + 검색 + 합성 |
+| Karpathy Compilation | 인제스트 1회 | 박제 시 1회, 검색은 읽기뿐 |
+
+/compound는 *박제 도구*이므로 인제스트 시점 합성에 자연 적합하다.
+
+---
+
+## 3. Phase 4 설계
+
+Phase 1~3 유지. Phase 4 *옵트인* 추가:
+
+### 3.1 Step 1 — wiki-index 재빌드
+
+```bash
+bash .claude/scripts/wiki-index.sh  # 또는 동등 도구
+# 산출: .wiki-index.json (nodes + edges + backlinks)
+```
+
+### 3.2 Step 2 — 신규/변경 노드 식별
+
+git diff로 본 Phase에서 생성/수정된 메모리·솔루션 파일 추출.
+
+```bash
+git diff --name-only HEAD~N --diff-filter=AM | grep -E '\.claude/memory|content/.*\.mdx'
+```
+
+### 3.3 Step 3 — 관련 후보 추출 (보수적)
+
+여러 신호 결합:
+
+| 신호 | 방법 | 신뢰도 |
+|------|------|-------|
+| tag 공유 ≥2 | frontmatter `tags:` 교집합 | 높음 (저자 의도) |
+| prefix 클러스터 | 같은 `feedback_<topic>_*` prefix | 중간 |
+| tf-idf top-3 본문 매칭 | 본문 키워드 top-3 겹침 | 중간 (노이즈 가능) |
+| `code_refs` 공통 | 같은 코드 파일/심볼 인용 | 매우 높음 |
+
+top-K 후보(예: 5개)만 추출. K가 크면 *분산 합리화* 위험 증가.
+
+### 3.4 Step 4 — markdown diff 제안
+
+사용자에게 보여주는 형식:
+
+```diff
+신규 노드: feedback_pre_commit_silent_loss_v2
+후보 backlink 추가 (3건):
+
+@ .claude/memory/feedback_pre_commit_silent_loss.md
++ ## 후속
++ - [[feedback_pre_commit_silent_loss_v2]] — 2026-05 v2 박제
+
+@ docs/solutions/build-errors/pre-commit-hook-failure.md
++ 관련 메모리: [[feedback_pre_commit_silent_loss_v2]]
+
+@ docs/guides/git-hooks-guide.md
++ See also: [[feedback_pre_commit_silent_loss_v2]]
+```
+
+### 3.5 Step 5 — Atomicity 가드 통합
+
+후보 표시 시 wiki-dup-detect 신호 함께:
+
+```
+⚠️  후보 1 (feedback_pre_commit_silent_loss)와 신규 노드:
+   - prefix 클러스터: 동일 (feedback_pre_commit_*)
+   - tag 공유: 4개
+   → '통합'이 답일 수 있음 (link 보강 X)
+   → 검토: wiki-dup-detect 결과 확인
+```
+
+### 3.6 Step 6 — 사용자 confirm
+
+각 후보를 개별 confirm. confirm된 것만 양방향 link 적용:
+
+```python
+for candidate in top_candidates:
+    show_diff(candidate)
+    if confirm("적용?"):
+        apply_link(new_node, candidate)
+        apply_link(candidate, new_node)  # 양방향
+```
+
+### 3.7 Step 7 — /compound CHANGELOG 박제
+
+```markdown
+## Phase 4: Cross-update (2026-05-22)
+
+신규 노드: feedback_pre_commit_silent_loss_v2
+backlink 보강 (사용자 confirm):
+- feedback_pre_commit_silent_loss
+- docs/solutions/build-errors/pre-commit-hook-failure.md
+- docs/guides/git-hooks-guide.md
+
+후보 중 보류: 2건 (wiki-dup-detect 통합 검토 필요)
+```
+
+---
+
+## 4. 도구 의존성
+
+Phase 4가 가정하는 인프라:
+
+| 도구 | 역할 |
+|------|------|
+| wiki-index 빌더 | 노드 + edges + backlinks 그래프 |
+| wiki-related (1-2 hop) | 후보 추출 |
+| wiki-dup-detect | Atomicity 가드 |
+| frontmatter `tags:` | 의도 신호 |
+| code_refs (frontmatter or 본문 추출) | 코드↔문서 브리지 |
+
+위 5개 중 wiki-index 1개만 있어도 Phase 4 MVP 가능. 나머지는 점진 추가.
+
+---
+
+## 5. 자동 X — 왜 그렇게 보수적인가
+
+cross-link은 *Atomicity 보호*와 충돌하기 쉽다.
+
+| 자동 link 함정 | 결과 |
+|-------------|------|
+| 같은 주제인데 link로 봉합 | 본래 *통합*이 답. 위키가 분산 합리화 도구로 변질 |
+| 표면 키워드 겹침으로 link | 의미 무관한 link로 그래프 노이즈 증가 |
+| LLM이 link 문법 어긋남 | dangling link 누적, wiki-doctor가 빨개짐 |
+
+Karpathy 자신도 *LLM 판단 + 사람 검토* 패턴을 추천한다. 자동은 위험.
+
+---
+
+## 6. dogfood 첫 실행 — 1 메모리부터
+
+전체 백로그를 한 번에 Phase 4 적용하면 노이즈 폭증. 첫 실행은 *1 메모리*로:
+
+1. 가장 최근 박제된 메모리 1개 선택
+2. Phase 4 dry-run (변경 적용 X, 제안만)
+3. 후보 5개 검토 — 적절한가? 노이즈는?
+4. 적정 K 결정 (5 vs 10)
+5. 다음 실행부터 본격 적용
+
+dogfood 결과를 별도 회고로 박제 → Phase 4 자체가 개선 대상.
+
+---
+
+## 7. 위험 / 한계
+
+- **n=설계**. 실 구현 + 1회 dogfood 후 정합성 검증 필요
+- 후보 추출 정확도가 인프라 도구 품질에 의존. wiki-index가 부실하면 후보가 부정확
+- Atomicity 위반을 *cross-link으로 봉합* 위험. wiki-dup-detect와 통합 안 하면 위험 누적
+- LLM이 후보 결정에 들어가면 환각 link 생성 — 후보 추출은 *deterministic 신호*(tag, prefix, tf-idf, code_refs)로 한정 권장
+
+---
+
+## 관련 엔트리
+
+- [compound-automation-slash-commands](./compound-automation-slash-commands) — Phase 1~3 베이스
+- [compound-engineering-philosophy](./compound-engineering-philosophy) — 복리 원칙
+- [compound-loop-break](./compound-loop-break) — 회피해야 할 단절 패턴
+- [LLM-first wiki 원칙](./llm-first-wiki-principles) — Atomicity 보호 사상
+- [Karpathy LLM Wiki — Compilation > Retrieval](../context-engineering/karpathy-llm-wiki-pattern-compilation-over-retrieval) — 본 설계의 상위 원칙
+- [llm-wiki SWOT — ai-study vs Karpathy](../context-engineering/llm-wiki-swot-ai-study-vs-karpathy) — Phase 4가 닫으려는 갭

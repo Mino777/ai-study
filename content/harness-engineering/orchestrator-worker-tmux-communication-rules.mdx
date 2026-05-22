@@ -1,13 +1,26 @@
 ---
-title: "tmux 멀티 페인 오케스트레이터 — 워커 통신 5대 함정과 박제 룰"
-description: "메인 pane이 직접 코드 탐색 / Agent() 광역 spawn / Enter 미수신 오인 / WO Brief 평문 인라인 / 폴링 정규식 false-fail — 멀티 워커 사이클의 만성 인터럽트 5종을 박제 룰로 차단하는 패턴."
-date: "2026-04-30"
+title: tmux 멀티 페인 오케스트레이터 — 워커 통신 5대 함정과 박제 룰
+description: >-
+  메인 pane이 직접 코드 탐색 / Agent() 광역 spawn / Enter 미수신 오인 / WO Brief 평문 인라인 / 폴링 정규식
+  false-fail — 멀티 워커 사이클의 만성 인터럽트 5종을 박제 룰로 차단하는 패턴.
+date: '2026-04-30'
 category: harness-engineering
-tags: [orchestrator, multi-agent, tmux, ipc, work-order, dispatch, brief-template, harness-rules, queue-saturation, anti-pattern]
+tags:
+  - orchestrator
+  - multi-agent
+  - tmux
+  - ipc
+  - work-order
+  - dispatch
+  - brief-template
+  - harness-rules
+  - queue-saturation
+  - anti-pattern
 confidence: 4
-last_verified: "2026-04-30"
-applicable_to: ["any"]
-generated_by: "claude"
+last_verified: '2026-04-30'
+applicable_to:
+  - any
+generated_by: claude
 connections:
   - harness-engineering/ai-orchestration-roi-negative-trivial-task-detection
   - harness-engineering/orchestrator-fail-meta-verify-growth-axes
@@ -15,33 +28,50 @@ connections:
   - harness-engineering/multi-agent-quality-sprint-pattern
   - harness-engineering/worker-prompts-logging-pattern
   - harness-engineering/aidy-journal-000-architect-worker-baseline
+  - harness-engineering/agent-multiplexer-selection-guide
+  - harness-engineering/eugeneyan-4-applied-harness-patterns
 status: complete
 type: entry
 quiz:
-  - question: "오케스트레이터(메인 pane)가 grep/Read/find로 소스를 직접 탐색할 때 가장 큰 문제는?"
+  - question: 오케스트레이터(메인 pane)가 grep/Read/find로 소스를 직접 탐색할 때 가장 큰 문제는?
     choices:
-      - "토큰 비용 증가만"
-      - "토큰 낭비 + 워커 역할 침범 + 메인 컨텍스트 오염 (라우팅·상태 관리 attention 잠식)"
-      - "보안 위험"
-      - "Git diff가 깨진다"
+      - 토큰 비용 증가만
+      - 토큰 낭비 + 워커 역할 침범 + 메인 컨텍스트 오염 (라우팅·상태 관리 attention 잠식)
+      - 보안 위험
+      - Git diff가 깨진다
     answer: 1
-    explanation: "메인 pane은 라우팅·dispatch·상태 추적을 담당. 코드 직접 탐색은 (a) 토큰 낭비, (b) worker-1(분석 담당) 역할 침범, (c) 메인 컨텍스트가 raw source로 오염되어 오케스트레이션 attention budget 잠식. 'Advisor 모드' 예외 — 워커가 ADVICE_REQUEST로 특정 파일/라인을 가리키면 그것만 Read OK."
-  - question: "tmux send-keys Enter를 쳤는데 워커가 메시지를 안 받는 듯 보이는 가장 흔한 진짜 원인은?"
+    explanation: >-
+      메인 pane은 라우팅·dispatch·상태 추적을 담당. 코드 직접 탐색은 (a) 토큰 낭비, (b) worker-1(분석 담당)
+      역할 침범, (c) 메인 컨텍스트가 raw source로 오염되어 오케스트레이션 attention budget 잠식. 'Advisor
+      모드' 예외 — 워커가 ADVICE_REQUEST로 특정 파일/라인을 가리키면 그것만 Read OK.
+  - question: tmux send-keys Enter를 쳤는데 워커가 메시지를 안 받는 듯 보이는 가장 흔한 진짜 원인은?
     choices:
-      - "Enter 키가 실제로 미전송"
-      - "워커 busy 상태에서 메시지가 큐에 쌓이고 처리 지연이 발생 — Enter는 정상이지만 큐 적체가 'Enter 안 쳐짐'으로 오인됨. --wait-idle 옵션으로 우회"
-      - "tmux 버전 호환성 문제"
-      - "워커 모델이 Enter를 차단"
+      - Enter 키가 실제로 미전송
+      - >-
+        워커 busy 상태에서 메시지가 큐에 쌓이고 처리 지연이 발생 — Enter는 정상이지만 큐 적체가 'Enter 안 쳐짐'으로
+        오인됨. --wait-idle 옵션으로 우회
+      - tmux 버전 호환성 문제
+      - 워커 모델이 Enter를 차단
     answer: 1
-    explanation: "Enter는 보통 정상 전달된다. 워커 busy 시 메시지가 큐에 진입하고 처리만 지연될 뿐. 대응은 (1) capture-pane으로 처리 신호(Generating/Thinking) 폴링 + 재송신, (2) `--wait-idle` 옵션으로 워커 idle 대기 후 송신. 같은 메시지를 여러 번 dispatch하면 dedup이 없을 경우 큐에 중복 누적."
-  - question: "dispatch.sh가 RUNNING 검증 정규식 화이트리스트(`Thinking|Working` 등)로 워커 작동 여부를 폴링한다. 이 방식의 본질적 약점은?"
+    explanation: >-
+      Enter는 보통 정상 전달된다. 워커 busy 시 메시지가 큐에 진입하고 처리만 지연될 뿐. 대응은 (1)
+      capture-pane으로 처리 신호(Generating/Thinking) 폴링 + 재송신, (2) `--wait-idle` 옵션으로
+      워커 idle 대기 후 송신. 같은 메시지를 여러 번 dispatch하면 dedup이 없을 경우 큐에 중복 누적.
+  - question: >-
+      dispatch.sh가 RUNNING 검증 정규식 화이트리스트(`Thinking|Working` 등)로 워커 작동 여부를 폴링한다.
+      이 방식의 본질적 약점은?
     choices:
-      - "정규식이 느려서"
-      - "Anthropic CLI verb('Kneading'/'Whirring' 등)가 자주 추가되며 화이트리스트 미매칭 시 false-fail → 재시도 루프 → 큐 적체. 화이트리스트 방식이 brittle"
-      - "정규식이 대소문자 구분 안 해서"
-      - "polling 주기가 너무 짧아서"
+      - 정규식이 느려서
+      - >-
+        Anthropic CLI verb('Kneading'/'Whirring' 등)가 자주 추가되며 화이트리스트 미매칭 시
+        false-fail → 재시도 루프 → 큐 적체. 화이트리스트 방식이 brittle
+      - 정규식이 대소문자 구분 안 해서
+      - polling 주기가 너무 짧아서
     answer: 1
-    explanation: "Anthropic CLI는 verb를 자주 추가한다. 좁은 화이트리스트는 새 verb 출현 시 즉시 false-fail. 해법: (a) 정규식을 broad하게 (`'esc to in|⏵⏵ bypass|queued'` 등 작동/큐/idle 신호 모두 매칭), (b) 모르는 verb는 success로 fail-open, (c) 새 verb 발견 시 즉시 보강."
+    explanation: >-
+      Anthropic CLI는 verb를 자주 추가한다. 좁은 화이트리스트는 새 verb 출현 시 즉시 false-fail. 해법:
+      (a) 정규식을 broad하게 (`'esc to in|⏵⏵ bypass|queued'` 등 작동/큐/idle 신호 모두 매칭),
+      (b) 모르는 verb는 success로 fail-open, (c) 새 verb 발견 시 즉시 보강.
 ---
 
 ## 요약
