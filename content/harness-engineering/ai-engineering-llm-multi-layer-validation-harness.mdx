@@ -5,7 +5,6 @@ date: "2026-05-12"
 tags: [harness-engineering, llm, swift, ai-agent, validation, safety, harness-engineering]
 confidence: 1
 connections: [harness-engineering/addy-osmani-agent-harness-engineering, harness-engineering/agents-md-orchestration-patterns, harness-engineering/ai-agent-architecture-overview]
-status: draft
 description: "LLM이 그럴듯하게 생성하는 미완성된 결과물을 방어하기 위해, 단순 파싱을 넘어 구문, 의미, 교차 검증의 3단계로 출력을 검증하는 AI 하네스 엔지니어링 전략을 알아봅니다."
 type: entry
 generated_by: gemini
@@ -36,6 +35,10 @@ quiz:
     explanation: 정답은 4번입니다. 본문에서는 3계층 검증이 비용과 복잡성이 높은 대신, '유창한 거짓말'을 탐지하는 데 효과적이라고 설명합니다. 따라서 금융, 법률, 의료 정보와 같이 사실관계의 정확성이 매우 중요한 작업에 적용하는 것이 적합하다고 명시되어 있습니다. 1번은 빠른 응답이 중요하므로 3계층 적용이 부적합하며, 2번은 1계층(구문 검증)에 해당하고, 3번은 2계층(의미 검증)의 예시에 해당합니다.
 
 ---
+
+> **출처 검증 노트:** 긱뉴스 자동 큐레이션 (#131, 2026-05-12) 초안 기반. 원본 URL 미캡처. LLM의 "유창한 확신(Fluent Confidence)" 현상은 Anthropic·OpenAI 공개 문헌에서 폭넓게 다룬 실제 행동 패턴. 3계층 검증 하네스(구문→의미→교차) 구조는 방어적 엔지니어링 일반 원칙과 일치하며 직접 구현 가능합니다.
+
+> **본인 메모:** ai-study `/validate-ai-output` 커맨드가 이 3계층 아이디어를 실천 중 — Gemini 생성물을 slug·YAML·인용 3단계로 검증. [[ai-agent-architecture-overview]], [[agents-md-orchestration-patterns]], [[addy-osmani-agent-harness-engineering]]
 
 ## 유창함의 함정: 전문가는 왜 더 위험한가
 

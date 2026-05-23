@@ -5,7 +5,6 @@ date: "2026-05-14"
 tags: [ai-engineering, harness-engineering, swift, test-coverage, complexity-ratchet, llm, harness-engineering]
 confidence: 1
 connections: [harness-engineering/addy-osmani-agent-harness-engineering, harness-engineering/agent-execution-traces-runtime-contract, harness-engineering/agents-md-orchestration-patterns]
-status: draft
 description: "AI 생성 코드가 유발하는 '복잡성 래칫' 현상을 분석하고, 왜 90% 테스트 커버리지가 AI 시대의 개발자에게 '좋은 습관'을 넘어선 '최소 방어선'이 되는지 설명합니다."
 type: entry
 generated_by: gemini
@@ -36,6 +35,10 @@ quiz:
     explanation: 본문은 '커버리지의 함정'에 대해 '90%라는 숫자에만 집착하면, XCTAssertTrue(true)와 같이 의미 없는 테스트를 양산하여 실제 코드 품질은 높이지 못하고 개발자에게 거짓 안정감만 줄 수 있다'고 설명합니다. 이에 대한 해결책으로 '단순 커버리지의 함정을 피하기 위해' Mutation Testing 도입을 검토하여 '테스트가 실제로 버그를 잡을 수 있는지 검증'해야 한다고 명확히 제시하고 있습니다.
 
 ---
+
+> **출처 검증 노트:** 긱뉴스 자동 큐레이션 (#137, 2026-05-14) 초안 기반. 원본 URL 미캡처. "복잡성 래칫(Complexity Ratchet)"은 진화생물학 유래 개념으로 AI 코딩 맥락에서도 실제로 관찰되는 현상. 90% 커버리지 기준의 구체적 출처는 확인되지 않았으나, 테스트 커버리지를 방어선으로 삼는 접근 자체는 업계에서 폭넓게 지지받는 관행입니다.
+
+> **본인 메모:** moneyflow처럼 AI 생성 코드 비중이 높은 프로젝트일수록 이 함정이 빠르게 온다. `npm test`로 회귀 테스트 유지가 이 위키 자체에도 적용 중. [[agent-execution-traces-runtime-contract]], [[addy-osmani-agent-harness-engineering]]
 
 AI 코드 생성기는 눈부신 생산성 향상을 약속하며 개발 현장에 빠르게 스며들고 있습니다. 하지만 이 편리함 뒤에는 '복잡성 래칫(Complexity Ratchet)'이라는 함정이 숨어있습니다. 래칫이 한쪽으로만 돌아가듯, AI가 생성한 코드는 프로젝트의 복잡성을 되돌리기 어려운 방향으로 계속 증가시킵니다. AI는 종종 미묘한 버그나 숨겨진 가정을 포함한 코드를 '그럴듯하게' 만들어내기 때문에, 한번 시스템에 통합되면 인간 개발자가 그 의도를 파악하고 수정하기 매우 어렵습니다. 이런 코드가 누적되면 코드베이스는 점차 이해하고 유지보수하기 힘든 블랙박스로 변해갑니다. 결국 개발 속도는 다시 느려지고, 시스템은 작은 변화에도 쉽게 무너지는 취약한 구조가 됩니다. 이 문제를 해결하기 위한 방어선이 바로 '90% 테스트 커버리지'라는, 과거에는 과하다고 여겨졌던 기준입니다.
 
