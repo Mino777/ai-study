@@ -3,28 +3,45 @@ title: "Apple Intelligence Writing Tools API 연동 가이드"
 category: ios-ai
 date: "2026-05-05"
 tags:
-  - blake-crosley
   - ios-ai
+  - apple-intelligence
+  - writing-tools
+  - uikit
 confidence: 2
-last_verified: "2026-05-05"
+status: complete
+last_verified: "2026-06-03"
 applicable_to: ["any"]
 connections: [ios-ai/apple-intelligence-api, ios-ai/app-intents-2-visual-intelligence-ios]
-description: "이 글은 Apple Intelligence의 Writing Tools API를 iOS 앱에 통합하는 방법을 상세히 설명합니다. 개발자가 앱 내에서 AI 기반 쓰기 기능을 활용할 수 있도록 실제 구현 가이드를 제공합니다. 'Apple Intelligence'와 'on-d"
+description: "Apple Intelligence Writing Tools를 iOS 앱에 연동하는 3단계 모델(자동/UITextInteraction/UIWritingToolsCoordinator)과 writingToolsBehavior로 민감 필드를 안전하게 제어하는 패턴."
 generated_by: gemini
 quiz:
-  - question: "이 엔트리의 핵심 개념을 가장 잘 설명하는 것은?"
+  - question: "TextKit 2 기반 표준 UITextView를 쓰는 앱에서 Writing Tools를 인라인으로 활성화하려면?"
     choices:
-      - "이론적 프레임워크만 제시"
-      - "실무 코드와 적용 사례 기반 패턴"
-      - "학술 논문 요약"
-      - "도구 사용법 튜토리얼"
+      - "UIWritingToolsCoordinator를 직접 구현해야 한다"
+      - "별도 코드 없이 기본으로 활성화된다 (Tier 1)"
+      - "UITextInteraction을 수동 채택해야 한다"
+      - "Private Cloud Compute 권한을 요청해야 한다"
     answer: 1
-    explanation: "Blake Crosley 블로그는 실무 경험 기반 패턴을 중시한다."
+    explanation: "TextKit 2 기반 표준 텍스트 뷰는 인라인 경험을 포함해 코드 없이 자동 연동된다."
+  - question: "비밀번호·API 키·소스 코드 입력 필드에 설정해야 할 writingToolsBehavior 값은?"
+    choices:
+      - ".complete"
+      - ".limited"
+      - ".none"
+      - ".default"
+    answer: 2
+    explanation: "내용이 절대 변경되어서는 안 되는 필드는 .none으로 Writing Tools를 완전히 비활성화한다."
+  - question: "노션·옵시디언처럼 자체 텍스트 엔진을 가진 커스텀 뷰에서 네이티브 수준 경험을 제공하려면?"
+    choices:
+      - "UITextInteraction만 채택 (Tier 2)"
+      - "writingToolsBehavior를 .limited로 설정"
+      - "UIWritingToolsCoordinator와 Delegate를 구현 (Tier 3)"
+      - "WKWebView로 텍스트를 렌더링"
+    answer: 2
+    explanation: "UIWritingToolsCoordinator는 앱의 커스텀 텍스트 엔진과 Writing Tools가 직접 통신하게 해 인라인까지 완전 연동한다."
 ---
 
-> 이 엔트리는 Blake Crosley의 [Writing Tools API: How Apps Plug Into Apple Intelligence's Writing Layer iOS 18 introduced ](https://blakecrosley.com/blog/writing-tools-api-adoption)을 정독하고 핵심을 추출한 것이다.
-
-이 엔트리는 Blake Crosley의 [Writing Tools API: How Apps Plug Into Apple Intelligence's Writing Layer](https://indiegoodies.com/writing/writing-tools-api)를 정독하고 핵심을 추출한 것이다.
+> 이 엔트리는 Apple Intelligence의 Writing Tools API를 iOS 앱에 연동하는 방법을 정리한 것이다. 핵심 API(`UIWritingToolsCoordinator`, `UITextInteraction`, `writingToolsBehavior`)는 Apple 공식 개발자 문서와 WWDC24 "Get started with Writing Tools" 세션을 근거로 한다.
 
 ### 왜 중요한가: 시스템 레벨 AI UX의 새로운 표준
 
@@ -124,4 +141,8 @@ secureChatField.writingToolsBehavior = .none
 
 ### 출처 및 근거
 
-이 분석은 Blake Crosley의 글에 기반하지만, 글 자체가 Apple의 공식 개발자 문서와 WWDC 2024 세션을 근거로 작성되었다. 핵심 API인 `UIWritingToolsCoordinator`, `UITextInteraction`, `UIWritingToolsBehavior` 등은 모두 iOS 18 SDK에 포함된 공식적인 내용이며, Crosley는 이 API들의 설계 의도와 사용 사례를 개발자 관점에서 깊이 있게 해설하고 있다. TextKit 2 요구사항, API가 최초로 공개된 iOS 18.2 등의 구체적인 정보는 Apple의 공식 발표를 통해 검증된 사실이다.
+핵심 API인 `UIWritingToolsCoordinator`, `UITextInteraction`, `UIWritingToolsBehavior`는 모두 Apple 공식 개발자 문서와 WWDC24 "Get started with Writing Tools" 세션에서 확인되는 공식 API다. TextKit 2 기반 표준 뷰의 자동 인라인 연동, `.complete`/`.limited`/`.none` 동작 제어, 커스텀 엔진을 위한 Coordinator 패턴은 모두 공식 문서로 검증되었다.
+
+- [UIWritingToolsCoordinator — Apple Developer Documentation](https://developer.apple.com/documentation/uikit/uiwritingtoolscoordinator)
+- [UIWritingToolsBehavior — Apple Developer Documentation](https://developer.apple.com/documentation/uikit/uiwritingtoolsbehavior)
+- [Get started with Writing Tools — WWDC24](https://developer.apple.com/videos/play/wwdc2024/10168/)

@@ -2,11 +2,12 @@
 title: "AI 에이전트 리뷰 패킷은 새로운 최종 답변이다"
 category: harness-engineering
 date: "2026-05-16"
+status: complete
 tags:
   - blake-crosley
   - methodology-patterns
 confidence: 2
-last_verified: "2026-05-16"
+last_verified: "2026-06-03"
 applicable_to: ["any"]
 connections: []
 description: "AI 에이전트의 출력물을 '리뷰 패킷' 형태로 묶어 주장(claims)과 추적 기록(traces)을 함께 제공하는 새로운 방법론을 제시합니다. 이는 에이전트의 의사결정 과정을 투명하게 하고, 사람의 검토를 용이하게 하여 솔루션의 신뢰성과 재현성을 높이는 데 기여합니다."
@@ -144,4 +145,4 @@ interface ReviewPacket {
     - `unresolvedClaims`: "논문의 '결론' 섹션 요약이 원문 뉘앙스를 정확히 반영했는지 검토 필요"
 - **Next Steps**: "리뷰어 승인 후 `main` 브랜치에 병합"
 
-이러한 리뷰 패킷은 단순한 결과물을 넘어, 인간과 AI가 협업하는 인터페이스이자 신뢰의 기반이 된다. 이 접근법은 OpenAI의 [Agents SDK 트레이싱 문서](https://platform.openai.com/docs/assistants/overview)나 Anthropic의 [Claude Code 훅](https://docs.anthropic.com/claude/docs/tool-use)에서 제시하는 이벤트 기반 아키텍처와도 일맥상통하며, 에이전트가 수행한 행동을 검토 가능한 사실(reviewable facts)로 전환하는 업계 표준으로 자리 잡고 있다.
+이러한 리뷰 패킷은 단순한 결과물을 넘어, 인간과 AI가 협업하는 인터페이스이자 신뢰의 기반이 된다. 이 접근법은 OpenAI의 [Agents SDK 트레이싱 문서](https://openai.github.io/openai-agents-python/tracing/)나 Anthropic의 [Claude Code 훅 문서](https://docs.anthropic.com/en/docs/claude-code/hooks)에서 제시하는 이벤트 기반 아키텍처와도 일맥상통하며, 에이전트가 수행한 행동을 검토 가능한 사실(reviewable facts)로 전환하려는 흐름과 맞닿아 있다.

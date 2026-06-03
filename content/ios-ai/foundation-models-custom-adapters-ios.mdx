@@ -6,25 +6,40 @@ tags:
   - blake-crosley
   - ios-ai
 confidence: 2
-last_verified: "2026-05-09"
+status: complete
+last_verified: "2026-06-03"
 applicable_to: ["any"]
 connections: [ios-ai/apple-intelligence-api, ios-ai/coreml-on-device-inference-patterns]
 description: "iOS 26의 파운데이션 모델에서 커스텀 어댑터를 훈련해야 하는 시기와 그 방법을 설명합니다."
 generated_by: gemini
 quiz:
-  - question: "이 엔트리의 핵심 개념을 가장 잘 설명하는 것은?"
+  - question: "Apple이 커스텀 어댑터를 도입하기 전에 먼저 시도하라고 권고하는 것은?"
     choices:
-      - "이론적 프레임워크만 제시"
-      - "실무 코드와 적용 사례 기반 패턴"
-      - "학술 논문 요약"
-      - "도구 사용법 튜토리얼"
+      - "전체 모델 재학습"
+      - "프롬프트 엔지니어링과 Tool Calling"
+      - "더 큰 클라우드 모델로 교체"
+      - "어댑터 파일 압축"
     answer: 1
-    explanation: "Blake Crosley 블로그는 실무 경험 기반 패턴을 중시한다."
+    explanation: "Apple은 어댑터를 마지막 수단으로 규정하고, 프롬프트 엔지니어링과 Tool Calling이 실패했을 때만 고려하라고 권고한다."
+  - question: "Apple의 커스텀 어댑터가 사용하는 미세조정 기술은?"
+    choices:
+      - "전체 파라미터 미세조정(Full Fine-Tuning)"
+      - "RLHF"
+      - "LoRA(Low-Rank Adaptation) 기반 PEFT"
+      - "Knowledge Distillation"
+    answer: 2
+    explanation: "어댑터는 시스템 모델 가중치를 동결하고 작은 LoRA 행렬만 학습하는 PEFT 방식을 사용한다."
+  - question: "어댑터(.fmadapter)의 가장 큰 운영상 제약은?"
+    choices:
+      - "Wi-Fi에서만 동작"
+      - "특정 시스템 모델 버전과 1:1로 종속되어 OS 업데이트 시 재학습 필요"
+      - "앱당 1개만 허용"
+      - "영어만 지원"
+    answer: 1
+    explanation: "어댑터는 특정 시스템 모델 버전과만 호환되며, Apple이 새 모델을 배포하면 재학습·재배포가 필수다."
 ---
 
 > 이 엔트리는 Blake Crosley의 [Foundation Models Custom Adapters: When To Train One](https://blakecrosley.com/blog/foundation-models-custom-adapters)을 정독하고 핵심을 추출한 것이다.
-
-이 엔트리는 Blake Crosley의 [Custom Adapters: When To Train One](https://crosley.com/writing/apple-ecosystem-series/foundation-models/custom-adapters-when-to-train-one/)을 정독하고 핵심을 추출한 것이다.
 
 ### 왜 중요한가
 
@@ -56,7 +71,7 @@ Apple은 프롬프트 엔지니어링이나 Tool Calling이 실패했을 때만 
 
 - **1:1 매핑**: 어댑터 파일(`.fmadapter`)은 오직 하나의 시스템 모델 버전(예: iOS 26.0.0 탑재 모델)과만 호환된다.
 - **필수 재학습**: Apple이 OS를 업데이트하여 새로운 버전의 시스템 모델을 배포하면, 기존 어댑터는 작동하지 않으며 런타임 오류가 발생한다. 개발자는 새 모델 버전에 맞춰 어댑터를 반드시 재학습하고 재배포해야 한다.
-- **지속적인 유지보수**: 이는 어댑터를 위한 지속적인 데이터셋 관리, 학습, 평가, 배포 파이P라인 구축이 필수적임을 의미한다.
+- **지속적인 유지보수**: 이는 어댑터를 위한 지속적인 데이터셋 관리, 학습, 평가, 배포 파이프라인 구축이 필수적임을 의미한다.
 
 #### 4. 앱 번들 외부에서의 배포 및 로딩
 
@@ -79,7 +94,7 @@ graph TD
         E --> F{".fmadapter 파일 생성"};
         F --> G["3. Asset Pack으로 · 서버에 호스팅"];
         G --> H["4. 앱에서 BackgroundAssets로 · On-demand 다운로드"];
-        H --> I["5. Swift에서 · SystemLanguageModel["adapter:"]로 로드"];
+        H --> I["5. Swift에서 · SystemLanguageModel adapter 로 로드"];
     end
     
     subgraph "Maintenance Loop"

@@ -6,7 +6,8 @@ tags:
   - blake-crosley
   - harness-engineering
 confidence: 2
-last_verified: "2026-05-08"
+status: complete
+last_verified: "2026-06-03"
 applicable_to: ["any"]
 connections: [harness-engineering/claude-code-native-features-migration-guide, harness-engineering/ai-engineering-landscape-2026-midpoint]
 description: "2026년 Claude SF 컨퍼런스에서 Anthropic이 실제로 출시한 기능들에 대한 요약입니다. 코드와 Claude를 활용한 새로운 도구 체인, API 및 기능 개선 사항들을 다룹니다. AI 에이전트 오케스트레이션 및 개발 생산성 향상에 기여할 내용입니다."
@@ -22,9 +23,7 @@ quiz:
     explanation: "Blake Crosley 블로그는 실무 경험 기반 패턴을 중시한다."
 ---
 
-> 이 엔트리는 Blake Crosley의 [Code with Claude SF 2026: What Anthropic Actually Shipped Recap of Code with Claude SF 2026: do](https://blakecrosley.com/blog/code-with-claude-sf-2026-recap)을 정독하고 핵심을 추출한 것이다.
-
-이 엔트리는 Blake Crosley의 [Code with Claude SF 2026: What Anthropic Actually Shipped](https://blakecrosley.com/blog/code-with-claude-sf-2026-what-anthropic-actually-shipped/)를 정독하고 핵심을 추출한 것이다. 원문은 Anthropic의 공식 발표와 CLI 릴리즈 노트를 인용하며, 단순 기능 나열을 넘어 각 변화가 갖는 전략적 의미를 분석한다.
+> 이 엔트리는 Blake Crosley의 [Code with Claude SF 2026: What Anthropic Actually Shipped](https://blakecrosley.com/blog/code-with-claude-sf-2026-recap)를 정독하고 핵심을 추출한 것이다. 원문은 Anthropic의 공식 발표와 CLI 릴리즈 노트를 인용하며, 단순 기능 나열을 넘어 각 변화가 갖는 전략적 의미를 분석한다.
 
 ### 왜 중요한가
 
@@ -56,19 +55,20 @@ Anthropic은 SpaceX의 Colossus 1 데이터센터로부터 300+ 메가와트(약
 
 Anthropic은 10개의 금융 서비스 에이전트 템플릿(피치북 빌더, 재무제표 감사 등)을 출시하며 독특한 배포 모델을 제시했다. 동일한 에이전트 정의(artifact)가 세 가지 다른 형태(surfaces)로 제공된다.
 
-1.  **Claude Code/Cowork의 플러그인:** 개발자는 터미널에서, 비즈니스 사용자는 GUI 환경에서 동일한 에이전트를 호출할 수 있다.
-2.  **Claude Managed Agents의 쿡북:** 자체 런타임을 유지보수할 필요 없이, Anthropic이 관리하는 인프라에서 레시피처럼 실행할 수 있다.
+1.  **Claude Code의 플러그인 (개발자용):** 개발자는 터미널에서 동일한 에이전트를 호출할 수 있다.
+2.  **Claude Cowork의 플러그인 (사용자용):** 비즈니스 사용자는 GUI 환경에서 동일한 에이전트를 호출할 수 있다.
+3.  **Claude Managed Agents의 쿡북 (서버리스):** 자체 런타임을 유지보수할 필요 없이, Anthropic이 관리하는 인프라에서 레시피처럼 실행할 수 있다.
 
 ```mermaid
 graph TD
-    subgraph artifactArtifact ["정의Artifact["정의 Artifact"]"]
-        A["금융 에이전트 로직 (예: 재무 모델 빌더)"]
+    subgraph artifactGroup ["정의 Artifact"]
+        A["금융 에이전트 로직 - 재무 모델 빌더 등"]
     end
 
-    subgraph surfacesSurfaces ["배포Surfaces["배포 Surfaces"]"]
-        B["Plugin: 개발자용 (Claude Code CLI)"]
-        C["Plugin: 사용자용 (Claude Cowork GUI)"]
-        D["Cookbook: 서버리스 실행용 (Managed Agents)"]
+    subgraph surfacesGroup ["배포 Surfaces"]
+        B["Plugin - 개발자용 Claude Code CLI"]
+        C["Plugin - 사용자용 Claude Cowork GUI"]
+        D["Cookbook - 서버리스 실행용 Managed Agents"]
     end
 
     A --> B

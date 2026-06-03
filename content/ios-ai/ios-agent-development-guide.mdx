@@ -2,11 +2,12 @@
 title: "iOS 에이전트 개발 가이드"
 category: ios-ai
 date: "2026-05-07"
+status: complete
 tags:
   - blake-crosley
   - ios-ai
 confidence: 2
-last_verified: "2026-05-07"
+last_verified: "2026-06-03"
 applicable_to: ["any"]
 connections: [ios-ai/ios-harness-setup-xcodebuildmcp, ios-ai/ios-claude-code-mcp-xcodebuild, agents/agent-architectures]
 description: "iOS 플랫폼에서 AI 에이전트를 개발하는 포괄적인 가이드입니다. Apple Intelligence, on-device ML, CoreML을 활용하여 자율 에이전트를 구현하는 방법과 Swift AI 패턴 등을 다룹니다. iOS 환경에서의 AI 에이전트 구축에 대한 실질"
@@ -20,6 +21,22 @@ quiz:
       - "도구 사용법 튜토리얼"
     answer: 1
     explanation: "Blake Crosley 블로그는 실무 경험 기반 패턴을 중시한다."
+  - question: "에이전트의 자율 개발 루프에서 MCP 서버가 담당하는 역할은?"
+    choices:
+      - "프롬프트를 자동으로 개선한다"
+      - "LLM과 Xcode 빌드 시스템 사이의 브릿지로 빌드/테스트 결과를 구조화해 반환한다"
+      - "App Store 심사를 자동 제출한다"
+      - ".pbxproj 파일을 안전하게 편집한다"
+    answer: 1
+    explanation: "MCP(Model Context Protocol) 서버는 에이전트가 구조화된 도구를 호출해 빌드/테스트 결과(JSON)를 직접 읽고 스스로 수정하게 한다."
+  - question: "이 가이드에서 에이전트가 직접 하면 안 되는(인간이 해야 할) 작업으로 강조한 것은?"
+    choices:
+      - "SwiftUI 뷰 코드 작성"
+      - "컴파일 에러 진단 및 수정안 제시"
+      - ".pbxproj 수정·코드 서명·배포"
+      - "유닛 테스트 작성"
+    answer: 2
+    explanation: ".pbxproj 수정, 코드 서명, App Store 배포는 에이전트가 안정적으로 수행하지 못해 인간이 직접 처리해야 한다."
 ---
 
 > 이 엔트리는 Blake Crosley의 [iOS Agent Development](https://blakecrosley.com/guides/ios-agent-development)을 정독하고 핵심을 추출한 것이다.
@@ -28,7 +45,7 @@ quiz:
 
 ### 왜 중요한가: '코드 생성'을 넘어선 '자율 개발 루프'
 
-iOS 개발에서 AI 에이전트의 역할은 단순히 코드를 생성하는 데 그치지 않는다. 핵심은 **MCP(Model-driven Code Production) 서버**를 통해 에이전트가 Xcode 빌드 시스템에 직접 접근하여 **`작성 → 빌드 → 에러 분석 → 수정 → 테스트`**의 자율적인 개발 루프를 실행하게 하는 것이다.
+iOS 개발에서 AI 에이전트의 역할은 단순히 코드를 생성하는 데 그치지 않는다. 핵심은 **MCP(Model Context Protocol) 서버**를 통해 에이전트가 Xcode 빌드 시스템에 직접 접근하여 **`작성 → 빌드 → 에러 분석 → 수정 → 테스트`**의 자율적인 개발 루프를 실행하게 하는 것이다.
 
 이전에는 에이전트가 작성한 코드가 컴파일되는지 확인하려면 개발자가 직접 코드를 복사해 Xcode에 붙여넣고 빌드 결과를 다시 에이전트에게 알려줘야 했다. Crosley가 제시하는 시스템은 이 과정을 자동화하여, 에이전트가 구조화된 빌드/테스트 결과(JSON)를 직접 읽고 스스로 문제를 해결하게 만든다.
 

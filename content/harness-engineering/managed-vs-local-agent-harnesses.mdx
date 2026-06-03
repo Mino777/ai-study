@@ -6,7 +6,9 @@ tags:
   - blake-crosley
   - harness-engineering
 confidence: 2
-last_verified: "2026-05-09"
+status: complete
+type: pattern
+last_verified: "2026-06-03"
 applicable_to: ["any"]
 connections: [harness-engineering/ai-agent-architecture-overview, harness-engineering/claude-code-native-features-migration-guide, agents/agent-architectures]
 description: "AI 에이전트의 세션 관리 및 샌드박싱 아키텍처를 매니지드 방식과 로컬 하네스 방식으로 비교 분석합니다."
@@ -23,8 +25,6 @@ quiz:
 ---
 
 > 이 엔트리는 Blake Crosley의 [Managed Agents vs Local Agent Harnesses: What to Keep](https://blakecrosley.com/blog/managed-agents-vs-local-ai-agent-harnesses)을 정독하고 핵심을 추출한 것이다.
-
-이 엔트리는 Blake Crosley의 [Managed Agents vs Local Agent Harnesses: What to Keep](https://blakecrosley.com/blog/managed-agents-vs-local-agent-harnesses/)을 정독하고 핵심을 추출한 것이다.
 
 ### 왜 중요한가
 
@@ -76,7 +76,7 @@ graph TD
 -   **툴 실행 접착제(Glue)**: 깨지기 쉬운 프롬프트 규칙 대신 안정적인 인터페이스(MCP, SDK Tool Adapters) 사용.
 -   **다중 에이전트 팬아웃**: 가시성, 입력 필터, 명확한 핸드오프 계약. (OpenAI SDK Handoffs)
 
-Anthropic의 `Outcomes` 기능은 이 트렌드의 미래를 보여준다. 개발자가 평가 기준(rubric)을 정의하면, Managed 하네스가 별도의 평가자(grader)를 프로비저닝하여 에이전트가 그 피드백을 바탕으로 반복 작업을 수행한다. 이는 로컬의 '기준'을 런타임의 '슬롯'에 주입하는 패턴이다.
+원문이 "managed outcome"으로 부르는 패턴은 이 트렌드의 미래를 보여준다. 개발자가 평가 기준(rubric)을 정의하면, Managed 하네스가 별도의 평가자(grader)를 프로비저닝하여 에이전트가 그 피드백을 바탕으로 반복 작업을 수행한다. 이는 로컬의 '기준'을 런타임의 '슬롯'에 주입하는 패턴이다.
 
 #### 2. 로컬 하네스에 남겨야 할 대상: 판단(Judgment)
 

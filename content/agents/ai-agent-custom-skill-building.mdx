@@ -6,7 +6,9 @@ tags:
   - blake-crosley
   - agents
 confidence: 2
-last_verified: "2026-05-08"
+status: complete
+type: pattern
+last_verified: "2026-06-03"
 applicable_to: ["any"]
 connections: [harness-engineering/skill-system-introduction, harness-engineering/compound-automation-slash-commands, harness-engineering/agents-md-orchestration-patterns]
 description: "AI 에이전트가 특정 작업을 수행하도록 돕는 사용자 지정 스킬(tool use)을 구축하는 방법을 설명합니다. 에이전트의 능력 확장 및 복잡한 워크플로우 자동화를 위한 실질적인 구현 가이드를 제공합니다. 하네스 엔지니어링의 핵심 요소입니다."
@@ -22,9 +24,7 @@ quiz:
     explanation: "Blake Crosley 블로그는 실무 경험 기반 패턴을 중시한다."
 ---
 
-> 이 엔트리는 Blake Crosley의 [Build Custom Skills](https://blakecrosley.com/blog/building-custom-skills)을 정독하고 핵심을 추출한 것이다.
-
-이 엔트리는 Blake Crosley의 [Claude Code Skills: Build Custom Auto-Activating Extensions](https://www.blakecrosley.com/p/claude-code-skills-build-custom-auto-activating-extensions/)를 정독하고 핵심을 추출한 것이다.
+> 이 엔트리는 Blake Crosley의 [Building Custom Skills for Claude Code: A Complete Tutorial](https://blakecrosley.com/blog/building-custom-skills)을 정독하고 핵심을 추출한 것이다.
 
 ### 왜 중요한가
 
@@ -52,9 +52,9 @@ Skill의 가장 중요한 부분은 `SKILL.md` 파일 상단의 YAML frontmatter
 ```mermaid
 graph TD
     subgraph "Claude Code 확장 시스템"
-        A[""상황: 매번 같은 보안 체크리스트를 붙여넣는다""] --> B["해결책: Skill · (자동 활성화되는 도메인 전문성)"];
-        C[""상황: 명시적으로 특정 커맨드 시퀀스를 실행한다""] --> D["해결책: 슬래시 커맨드 · (사용자가 직접 호출하는 액션)"];
-        E[""상황: 메인 컨텍스트를 오염시키지 않는 · 독립적인 분석이 필요하다""] --> F["해결책: 서브에이전트 · (격리된 컨텍스트에서 집중 작업)"];
+        A["상황: 매번 같은 보안 체크리스트를 붙여넣는다"] --> B["해결책: Skill · 자동 활성화되는 도메인 전문성"];
+        C["상황: 명시적으로 특정 커맨드 시퀀스를 실행한다"] --> D["해결책: 슬래시 커맨드 · 사용자가 직접 호출하는 액션"];
+        E["상황: 메인 컨텍스트를 오염시키지 않는 독립적인 분석이 필요하다"] --> F["해결책: 서브에이전트 · 격리된 컨텍스트에서 집중 작업"];
     end
 
     style B fill:#e6ffed,stroke:#333

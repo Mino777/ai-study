@@ -6,7 +6,8 @@ tags:
   - blake-crosley
   - harness-engineering
 confidence: 2
-last_verified: "2026-05-21"
+status: complete
+last_verified: "2026-06-03"
 applicable_to: ["any"]
 connections: []
 description: "AI 에이전트가 사용하는 툴에 대해 세분화된 '액션 레벨 권한 부여'의 중요성을 강조합니다."
@@ -22,15 +23,13 @@ quiz:
     explanation: "Blake Crosley 블로그는 실무 경험 기반 패턴을 중시한다."
 ---
 
-> 이 엔트리는 Blake Crosley의 [MCP Tools Need Action-Level Authorization](https://blakecrosley.com/blog/mcp-tools-need-action-level-authorization)을 정독하고 핵심을 추출한 것이다.
-
-이 엔트리는 Blake Crosley의 [MCP Tools Need Action-Level Authorization](https-placeholder-url-for-blake-crosley-post)을 정독하고 핵심을 추출한 것이다.
+> 이 엔트리는 Blake Crosley의 글 "MCP Tools Need Action-Level Authorization"의 핵심 주장과, 그 배경이 된 실제 CVE 사례를 정리한 것이다.
 
 ### 왜 중요한가: 유효한 토큰이 '만능 키'가 되는 순간
 
-2026년 5월, WordPress 플러그인 'AI Engine'에서 심각한 취약점(CVE-2026-8719)이 발견되었다. 이 플러그인은 MCP(Model-facing Communication Protocol)를 통해 AI 에이전트와 WordPress 사이트를 연동하는 기능을 제공했다. 문제는 OAuth 2.1 인증 과정에 있었다. 시스템은 요청에 담긴 OAuth 토큰이 **유효한지(Authentication)**만 확인하고, 해당 토큰의 소유자가 관리자 도구를 사용할 **권한이 있는지(Authorization)**는 확인하지 않았다.
+2026년 5월(공개 2026-05-18), WordPress 플러그인 'AI Engine'에서 권한 상승 취약점(CVE-2026-8719, CVSS 8.8)이 보고되었다. 이 플러그인은 MCP(Model Context Protocol)를 통해 AI 에이전트와 WordPress 사이트를 연동하는 기능을 제공했다. 문제는 OAuth 인증 과정에 있었다. 시스템은 요청에 담긴 OAuth bearer 토큰이 **유효한지(Authentication)**만 확인하고, 해당 토큰의 소유자가 관리자 도구를 사용할 **권한이 있는지(Authorization)**는 확인하지 않았다.
 
-Wordfence의 분석에 따르면, 이로 인해 일반 사용자 권한을 가진 유효한 토큰만으로 관리자급 MCP 도구에 접근하여 데이터를 수정하거나 민감 정보를 탈취하는 등의 권한 상승 공격이 가능했다.
+보도된 분석에 따르면, 이로 인해 Subscriber 이상 권한을 가진 유효한 토큰만으로 관리자급 MCP 도구를 호출하여 Administrator로 권한을 상승시키는 공격이 가능했다. 벤더는 3.5.0 버전에서 이를 수정했다.
 
 이 사례는 AI 에이전트 시대에 서버 보안의 패러다임이 어떻게 변해야 하는지를 명확히 보여준다. 인간 사용자는 정해진 UI 경로를 따르지만, AI 에이전트는 계획(planning)을 통해 API 엔드포인트(도구)를 예상치 못한 방식으로 조합하고 호출할 수 있다. 따라서 도구 하나하나에 대한 **액션 레벨(action-level) 인가**는 이제 선택이 아닌 필수다.
 

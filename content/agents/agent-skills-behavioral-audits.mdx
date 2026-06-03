@@ -6,23 +6,40 @@ tags:
   - blake-crosley
   - agents
 confidence: 2
-last_verified: "2026-05-20"
+last_verified: "2026-06-03"
+status: complete
 applicable_to: ["any"]
 connections: []
-description: "AI 에이전트 스킬의 효과를 단순한 성공률(Pass Rate)이 아닌, 실제 행동 변화와 의도된 결과에 대한 '행동 감사'를 통해 평가해야 함을 주장합니다. 이는 에이전트의 안정성과 신뢰성을 확보하기 위한 심층적인 평가 방법론을 제시합니다. 복잡한 에이전트 시스템에서 "
+description: "AI 에이전트 스킬은 통과율(Pass Rate)이 거의 변하지 않아도 행동을 위험하게 바꿀 수 있다. 결과가 아닌 과정을 검증하는 '행동 감사(Behavioral Audits)' 방법론을 정리한다."
 generated_by: gemini
 quiz:
-  - question: "이 엔트리의 핵심 개념을 가장 잘 설명하는 것은?"
+  - question: "행동 감사(Behavioral Audits)가 통과율(Pass Rate)보다 강조되는 이유는?"
     choices:
-      - "이론적 프레임워크만 제시"
-      - "실무 코드와 적용 사례 기반 패턴"
-      - "학술 논문 요약"
-      - "도구 사용법 튜토리얼"
+      - "통과율 계산이 너무 느려서"
+      - "통과율이 거의 변하지 않아도 스킬이 행동을 위험하게 바꿀 수 있어서"
+      - "통과율은 항상 100%로 고정되어서"
+      - "행동 감사가 자동화하기 더 쉬워서"
     answer: 1
-    explanation: "Blake Crosley 블로그는 실무 경험 기반 패턴을 중시한다."
+    explanation: "CTA 연구는 통과율 +0.3%p 변화 뒤에 522개의 행동 변화가 숨어 있었음을 보여준다."
+  - question: "Behavioral Integrity Verification(BIV) 연구의 주요 발견은?"
+    choices:
+      - "모든 스킬이 선언대로 정확히 동작했다"
+      - "분석된 스킬의 80% 이상에서 선언과 실제 행동이 불일치했다"
+      - "스킬은 성능에 영향을 주지 않았다"
+      - "스킬 설명은 불필요하다"
+    answer: 1
+    explanation: "BIV는 스킬 설명과 실제 행동의 불일치를 80% 이상에서 발견했고, 대부분은 악의보다 개발자 부주의에서 비롯됐다."
+  - question: "SkillsBench 연구가 시사하는 올바른 결론은?"
+    choices:
+      - "스킬은 무조건 피해야 한다"
+      - "자가 생성 스킬이 큐레이트된 스킬보다 항상 낫다"
+      - "스킬은 신중히 검토·채택해야 하며, 큐레이트된 스킬이 효과적이다"
+      - "스킬 채택 여부는 성능과 무관하다"
+    answer: 2
+    explanation: "큐레이트된 스킬은 평균 +16.2%p였지만 자가 생성 스킬은 평균 이득이 없었다. 결론은 '피하라'가 아니라 '신중히 채택하라'이다."
 ---
 
-> 이 엔트리는 Blake Crosley의 [AI Agent Skills Need Behavioral Audits, Not Pass Rates](https://blakecrosley.com/blog/ai-agent-skills-behavioral-audits)을 정독하고 핵심을 추출한 것이다.
+> 이 엔트리는 Blake Crosley의 [AI Agent Skills Need Behavioral Audits, Not Pass Rates](https://blakecrosley.com/blog/ai-agent-skills-need-behavioral-audits-not-pass-rates)를 정독하고 핵심을 추출한 것이다.
 
 ## AI 에이전트 스킬: 통과율이 아닌 행동 감사가 필요한 이유
 
@@ -180,7 +197,7 @@ graph TD
 이러한 접근 방식은 `aidy`가 단순히 '그럴듯한' 결과물을 만드는 것을 넘어, 예측 가능하고 안전하며 신뢰할 수 있는 방식으로 동작하도록 보장한다. 통과율이 오르는 것보다 중요한 것은 우리가 의도한 대로 행동하는 에이전트를 만드는 것이다.
 
 ---
-이 엔트리는 Blake Crosley의 [AI Agent Skills Need Behavioral Audits, Not Pass Rates](https://blakecrosley.com/blog/ai-agent-skills-need-behavioral-audits-not-pass-rates/)를 정독하고 핵심을 추출한 것이다. 원문에서 인용한 다음 연구들을 주요 근거로 삼았다:
-1.  [Counterfactual Trace Auditing for AI Agents (Jiang et al., 2024)](https://arxiv.org/abs/2405.03445)
-2.  [Don’t Trust My Description: A User-Centric Framework for Verifying the Behavioral Integrity of AI Agent Skills (Cao et al., 2024)](https://arxiv.org/abs/2405.08331)
-3.  [Skills-in-Context: A Benchmark for Evaluating AI Agents on Realistic Tool-Usage (Li et al., 2024)](https://arxiv.org/abs/2405.01529)
+이 엔트리는 Blake Crosley의 [AI Agent Skills Need Behavioral Audits, Not Pass Rates](https://blakecrosley.com/blog/ai-agent-skills-need-behavioral-audits-not-pass-rates)를 정독하고 핵심을 추출한 것이다. 원문에서 인용한 다음 연구들을 주요 근거로 삼았다:
+1.  [Counterfactual Trace Auditing of LLM Agent Skills](https://arxiv.org/abs/2605.11946) — 통과율이 거의 변하지 않아도 522개의 행동 변화(SIP) 패턴이 발견됨을 보고
+2.  [Behavioral Integrity Verification for AI Agent Skills](https://arxiv.org/abs/2605.11770) — 49,943개 스킬 중 80%에서 선언과 실제 행동의 불일치를 발견
+3.  [SkillsBench: Benchmarking How Well Agent Skills Work Across Diverse Tasks](https://arxiv.org/abs/2602.12670) — 큐레이트된 스킬은 평균 +16.2%p, 자가 생성 스킬은 평균 이득 0

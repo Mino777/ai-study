@@ -6,7 +6,8 @@ tags:
   - blake-crosley
   - agents
 confidence: 2
-last_verified: "2026-05-21"
+status: complete
+last_verified: "2026-06-03"
 applicable_to: ["any"]
 connections: []
 description: "AI 에이전트가 복잡한 환경을 탐색하며 내린 결정과 그 과정을 추적하고 증명할 수 있는 '탐색 체크포인트'의 개념을 소개합니다."
@@ -22,7 +23,7 @@ quiz:
     explanation: "Blake Crosley 블로그는 실무 경험 기반 패턴을 중시한다."
 ---
 
-> 이 엔트리는 Blake Crosley의 [AI Agents Need Exploration Checkpoints](https://blakecrosley.com/blog/ai-agents-need-exploration-checkpoints)을 정독하고 핵심을 추출한 것이다.
+> 이 엔트리는 Blake Crosley의 글 "AI Agents Need Exploration Checkpoints"(blakecrosley.com)와, 글이 인용한 논문 ["Look Before You Leap"](https://arxiv.org/abs/2605.16143)를 정독하고 핵심을 추출한 것이다.
 
 ## 왜 중요한가: 성급한 실행의 함정 (Premature Exploitation)
 
@@ -89,9 +90,9 @@ graph TD
     D --> E;
 ```
 
-논문의 실험 결과는 이 패턴의 유효성을 뒷받침한다.
-- **편향 교정:** 목표 지향적 훈련(GRPO)은 오히려 에이전트의 탐색을 좁혔다 (Qwen3-4B의 ECC가 28.5% → 18.8%로 하락).
-- **성능 향상:** 탐색을 인지하는 훈련을 받은 에이전트는 Explore-then-Act 구조에서 직접 실행보다 높은 성공률을 보였다 (Qwen3-4B 기준 77.2% → 79.5%).
+논문의 실험 결과는 이 패턴의 유효성을 뒷받침한다 (구체 수치는 원논문 참조).
+- **편향 교정:** 표준 과제 지향 강화학습은 오히려 에이전트의 탐색을 좁고 반복적으로 만들어, ECC를 떨어뜨리는 경향이 보고됐다.
+- **성능 향상:** 탐색 롤아웃과 실행 롤아웃을 교차시켜 각자의 검증 가능한 보상으로 최적화하면, 곧바로 실행하는 베이스라인보다 다운스트림 성공률이 개선됐다고 보고됐다.
 
 ---
 
@@ -177,4 +178,4 @@ class AgentSupervisor {
 
 이 접근법은 에이전트가 데이터베이스에 대해 '안다고 주장'하는 대신, '알고 있음을 증명'하도록 강제한다. 이를 통해 에이전트의 신뢰성과 안전성을 크게 향상시킬 수 있다.
 
-> 이 엔트리는 Blake Crosley의 [AI Agents Need Exploration Checkpoints](https://www.latent.space/p/ai-agents-need-exploration-checkpoints)를 정독하고, 글이 인용한 핵심 논문인 Ziang Ye 등의 ["Look Before You Leap: A Universal Exploration-Exploitation Policy for Action-Based Language Models"](https://arxiv.org/abs/2405.09438)의 아이디어를 추출하여 재구성한 것이다.
+> 이 엔트리는 Blake Crosley의 글 "AI Agents Need Exploration Checkpoints"(blakecrosley.com)를 정독하고, 글이 인용한 핵심 논문인 Ziang Ye 등의 ["Look Before You Leap: Autonomous Exploration for LLM Agents"](https://arxiv.org/abs/2605.16143)의 아이디어를 추출하여 재구성한 것이다.

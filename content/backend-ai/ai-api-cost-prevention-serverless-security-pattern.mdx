@@ -4,10 +4,10 @@ category: backend-ai
 date: "2026-04-19"
 tags: [api-security, billing, firebase, serverless, rate-limiting, proxy, backend-ai]
 confidence: 2
-last_verified: "2026-04-19"
+last_verified: "2026-06-03"
 applicable_to: ["aidy", "any"]
 connections: [backend-ai/backend-flow-map-via-aidy-server, backend-ai/password-reset-security-pattern, backend-ai/pg-trgm-gin-index-for-like-search, backend-ai/tier-based-ai-cost-cap, agents/agent-compiler-dynamic-routing]
-status: published
+status: complete
 description: "클라이언트에서 직접 AI API를 호출하는 것의 위험성을 Firebase 과금 폭증 사례로 분석하고, 안전한 연동을 위한 3단계 방어 패턴을 제시합니다."
 type: entry
 quiz:
@@ -59,7 +59,7 @@ graph TD
     subgraph Bad_Practice ["❌ 위험한 아키텍처"]
         Client_App["📱 iOS/Web App (Secret Key 내장)"] -- "API Call" --> Malicious_User["👨‍💻 악의적 사용자 (Key 탈취)"]
         Malicious_User -- "💸 무제한 API 호출" --> AI_API["🤖 Gemini API"]
-        AI_API -- "請求書 €54,000" --> Developer["🧑‍💻 개발자"]
+        AI_API -- "청구서 €54,000" --> Developer["🧑‍💻 개발자"]
     end
 ```
 

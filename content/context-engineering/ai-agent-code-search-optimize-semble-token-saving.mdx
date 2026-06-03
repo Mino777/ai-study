@@ -3,10 +3,12 @@ title: "AI 에이전트 코드 검색 최적화: Semble을 활용한 98% 토큰 
 category: context-engineering
 date: "2026-05-19"
 tags: [context-engineering, ai-agent, code-search, token-efficiency, semantic-search, swift, context-engineering]
-confidence: 1
+confidence: 2
 connections: [context-engineering/api-contract-as-3-client-source-of-truth, context-engineering/claude-code-session-ctx-stateful-workflow, context-engineering/claude-md-design-patterns]
 description: "기존 grep 및 벡터 검색 방식의 한계를 극복하고, Semble의 시맨틱 코드 검색을 통해 AI 에이전트의 컨텍스트 토큰 비용을 획기적으로 줄이는 방법을 배웁니다."
 type: entry
+status: complete
+last_verified: "2026-06-03"
 generated_by: gemini
 quiz:
   - question: AI 에이전트의 코드 검색에 'grep'을 사용할 때 발생하는 가장 치명적인 문제점으로 본문이 지적하는 두 가지를 올바르게 짝지은 것은 무엇인가요?
@@ -36,7 +38,7 @@ quiz:
 
 ---
 
-> **출처 검증 노트:** 긱뉴스 자동 큐레이션 (#147, 2026-05-19) 초안 기반. 원본 URL은 큐레이션 단계에서 캡처되지 못했습니다. "98% 토큰 절감" 수치는 큐레이션 요약본에서 인용된 값으로 독립 검증 필요. 다만 AST 기반 시맨틱 코드 검색 패턴 자체는 실제 도구들(tree-sitter 계열)에서 검증된 접근법과 일치하며 일반화 가능합니다.
+> **출처 검증 노트 (2026-06-03 갱신):** 긱뉴스 자동 큐레이션 (#147, 2026-05-19) 초안 기반. Semble은 실재하는 오픈소스 프로젝트(MinishLab/semble)로 확인되었습니다. "grep+read 대비 ~98% 적은 토큰" 수치는 Semble 프로젝트가 자체 벤치마크로 공개한 값이며, 독립적인 제3자 재현은 아직 확인되지 않았으니 마케팅 수치로 받아들이고 자기 코드베이스에서 직접 측정해 볼 것을 권합니다. AST/tree-sitter 기반 시맨틱 코드 검색 패턴 자체는 여러 도구(CocoIndex 등)에서 검증된 접근법과 일치하며 일반화 가능합니다.
 
 > **본인 메모:** ai-study 자체의 Layer 3 JIT 검색(`npm run search`)도 동일한 아이디어 — 전체 파일 대신 관련 청크만 추출해 컨텍스트 오염 방지. 직접 체감 중. [[context-compression]], [[claude-code-session-ctx-stateful-workflow]], [[claude-md-design-patterns]]
 
@@ -51,7 +53,7 @@ LLM 기반 AI 에이전트가 실제 개발 워크플로우에 통합되면서, 
 1.  **토큰 예산 낭비**: LLM은 불필요한 코드 조각을 처리하느라 한정된 컨텍스트 윈도우와 연산 비용을 소모합니다. 이는 응답 품질 저하와 비용 증가로 직결됩니다.
 2.  **에이전트 할루시네이션(Hallucination)**: 관련 없어 보이는 코드 조각들이 한 컨텍스트에 묶여 제공되면, LLM은 존재하지 않는 연관성을 상상해내거나 잘못된 추론을 할 가능성이 높아집니다.
 
-한 연구에 따르면, `grep`을 사용한 코드 검색은 Semble과 같은 의미 기반 검색에 비해 최대 98% 더 많은 토큰을 사용할 수 있습니다. 이는 단순히 비용 문제를 넘어, 에이전트의 근본적인 성능을 저해하는 핵심 병목 지점임을 의미합니다.
+Semble 프로젝트가 공개한 자체 벤치마크에 따르면, `grep + 파일 읽기` 방식은 같은 수준의 검색 정확도(recall)에 도달하기 위해 시맨틱 검색 대비 최대 ~98% 더 많은 토큰을 소모할 수 있습니다(제3자 재현은 미확인 — 자기 코드베이스에서 직접 측정 권장). 수치의 정확한 크기와 무관하게, 토큰 낭비가 비용을 넘어 에이전트의 근본적인 성능을 저해하는 핵심 병목이라는 방향성은 분명합니다.
 
 ## Semble의 접근법: AST와 시맨틱 분석의 결합
 
@@ -64,7 +66,7 @@ Semble은 `grep`의 문자열 매칭과 순수 벡터 검색의 한계를 극복
 ```mermaid
 graph TD
     subgraph "전통적인 Grep 기반 검색"
-        A[에이전트 요청: "로그인 버튼 탭 핸들러"] --> B{`grep "loginButtonTapped"` 실행};
+        A["에이전트 요청: 로그인 버튼 탭 핸들러"] --> B["grep loginButtonTapped 실행"];
         B --> C["관련 없는 결과 다수 포함 · (변수명, 주석, UI 코드 등)"];
         C --> D{LLM 컨텍스트에 주입};
         D --> E[토큰 낭비 및 · 부정확한 응답 생성];

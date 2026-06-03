@@ -6,10 +6,12 @@ tags:
   - blake-crosley
   - agents
 confidence: 2
-last_verified: "2026-05-30"
+status: complete
+type: entry
+last_verified: "2026-06-03"
 applicable_to: ["any"]
 connections: []
-description: "MLflow 3.9.0의 AI Assistant에서 발생한 `CVE-2026-2611` 취약점을 분석하며, 루프백 인터페이스가 신뢰 경계가 될 수 없다는 보안 원칙을 강조합니다. 로컬에서 실행되는 AI 에이전트 및 서비스가 어떻게 외부 공격에 노출될 수 있는지 설명합니"
+description: "MLflow 3.9.0의 AI Assistant CVE-2026-2611 취약점을 분석하며, 루프백 인터페이스가 신뢰 경계가 될 수 없다는 원칙과 로컬 AI 에이전트 방어 전략을 정리한다."
 generated_by: gemini
 quiz:
   - question: "이 엔트리의 핵심 개념을 가장 잘 설명하는 것은?"
@@ -39,12 +41,12 @@ CVE-2026-2611은 이 위협이 이론이 아님을 증명했다. MLflow의 Assis
 
 ### 핵심 패턴: 경로 열거 누락으로 인한 권한 증폭
 
-CVE-2026-2611의 공격 체인은 각 단계가 합법적인 기능을 사용하지만, 그 조합이 치명적인 결과를 낳는다는 점에서 교훈적이다. National Vulnerability Database(NVD)는 이 취약점에 CVSS 9.6 (CRITICAL) 등급을 부여했다.
+CVE-2026-2611의 공격 체인은 각 단계가 합법적인 기능을 사용하지만, 그 조합이 치명적인 결과를 낳는다는 점에서 교훈적이다. 이 취약점은 CRITICAL 등급(CVSS 9점대)으로 보고되었으며, MLflow 3.10.0에서 수정되었다.
 
 ```mermaid
 flowchart TD
     subgraph "피해자 PC"
-        A["사용자 브라우저 (evil.com 탭)"] --> B{MLflow 로컬 서버 · 127.0.0.1:5000};
+        A["사용자 브라우저 (evil.com 탭)"] --> B{"MLflow 로컬 서버 · 127.0.0.1:5000"};
         B -- "1. PUT /ajax-api/.../config 요청" --> C{"CORS 미들웨어 · 경로 검증 로직"};
         C -- "2. 경로 검증 실패 · ('/api/'만 체크, '/ajax-api/' 누락)" --> D["엔드포인트 핸들러 · (요청 허용)"];
         D -- "3. Assistant 설정 변경 · (full-access 모드 활성화)" --> E[MLflow Assistant];
@@ -74,7 +76,7 @@ def is_api_endpoint(path: str) -> bool:
 ```
 새로 추가된 `/ajax-api/` 경로는 이 함수를 통과하여 CORS 보호를 받지 못했다.
 
-**수정된 코드 (MLflow 3.10.0, [PR #20832](https://github.com/mlflow/mlflow/pull/20832) 기반):**
+**수정된 코드 (MLflow 3.10.0에서 적용된 방향, 개념 재구성):**
 ```python
 # security_utils.py
 API_PATH_PREFIX = "/api/"
@@ -141,4 +143,4 @@ export const strictOriginFirewall = (req, res, next) => {
 이론적으로, Web-based `aidy`가 VSCode 확장과 로컬 HTTP 서버를 통해 통신한다면, 이 서버의 모든 엔드포인트는 이와 같은 엄격한 CORS 정책과 경로 관리가 필수적이다. 하나의 경로 누락이 전체 개발 환경을 장악하는 통로가 될 수 있다.
 
 ---
-이 엔트리는 Blake Crosley의 [Loopback Is Not a Trust Boundary: CVE-2026-2611](https://blakecrosley.com/blog/cve-2026-2611-loopback-is-not-a-trust-boundary/)을 정독하고 핵심을 추출한 것이다.
+이 엔트리는 Blake Crosley의 [Loopback Is Not a Trust Boundary: CVE-2026-2611](https://blakecrosley.com/blog/loopback-is-not-a-trust-boundary)을 정독하고 핵심을 추출한 것이다.

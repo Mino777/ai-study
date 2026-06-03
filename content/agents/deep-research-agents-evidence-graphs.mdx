@@ -6,7 +6,8 @@ tags:
   - blake-crosley
   - agents
 confidence: 2
-last_verified: "2026-05-21"
+status: complete
+last_verified: "2026-06-03"
 applicable_to: ["any"]
 connections: []
 description: "복잡한 조사를 수행하는 AI 에이전트의 추론 과정과 정보 출처를 명확히 추적하기 위한 '증거 그래프'의 필요성을 제시합니다."
@@ -22,9 +23,7 @@ quiz:
     explanation: "Blake Crosley 블로그는 실무 경험 기반 패턴을 중시한다."
 ---
 
-> 이 엔트리는 Blake Crosley의 [Deep Research Agents Need Evidence Graphs](https://blakecrosley.com/blog/deep-research-agents-evidence-graphs)을 정독하고 핵심을 추출한 것이다.
-
-이 엔트리는 Blake Crosley의 [Deep Research Agents Need Evidence Graphs](https://blakecrosley.com/blog/deep-research-agents-need-evidence-graphs/)를 정독하고 핵심을 추출한 것이다.
+> 이 엔트리는 Blake Crosley의 [Deep Research Agents Need Evidence Graphs](https://blakecrosley.com/blog/deep-research-agents-evidence-graphs)를 정독하고 핵심을 추출한 것이다.
 
 ### 왜 중요한가: '그럴듯한' 보고서의 함정
 
@@ -122,7 +121,7 @@ const exampleGraph: EvidenceGraph = {
   nodes: [
     { id: 'claim-1', type: 'Claim', content: 'Argus is more efficient than parallel search.' },
     { id: 'source-1', type: 'Source', content: 'Zhen Zhang et al., Argus Paper', metadata: { source_url: '...' } },
-    { id: 'evidence-1', type: 'Evidence', content: 'Argus gains 12.7 points with eight parallel Searchers...', metadata: { page_number: 1 } },
+    { id: 'evidence-1', type: 'Evidence', content: 'Argus reports gains when scaling parallel Searchers (see paper benchmarks).', metadata: { page_number: 1 } },
     { id: 'gap-1', type: 'Gap', content: 'Efficiency claim needs comparison on non-benchmark tasks.' }
   ],
   edges: [

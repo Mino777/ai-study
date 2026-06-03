@@ -1,12 +1,14 @@
 ---
 title: "Claude Code에서 Codex로의 마이그레이션 가이드"
 category: harness-engineering
+type: entry
 date: "2026-05-07"
 tags:
   - blake-crosley
   - harness-engineering
 confidence: 2
-last_verified: "2026-05-07"
+status: complete
+last_verified: "2026-06-03"
 applicable_to: ["any"]
 connections: [harness-engineering/openai-codex-harness-engineering-agent-first, harness-engineering/claude-code-native-features-migration-guide]
 description: "AI 에이전트 개발 시 Claude Code에서 Codex로 전환하는 상세 가이드입니다. AGENTS.md 파일과 관련된 변경사항 및 오케스트레이션 툴 체인 마이그레이션 전략을 다룹니다. 특정 LLM 기반 코딩 도구 간의 전환 과정을 실용적으로 제시합니다."
@@ -24,13 +26,13 @@ quiz:
 
 > 이 엔트리는 Blake Crosley의 [Claude Code to Codex Migration Guide 2026](https://blakecrosley.com/blog/claude-code-to-codex-migration)을 정독하고 핵심을 추출한 것이다.
 
-이 엔트리는 Blake Crosley의 [Claude Code to Codex Migration Guide 2026](https://blakecrosley.com/blog/claude-code-to-codex-migration-guide-2026/)을 정독하고 핵심을 추출한 것이다. Crosley는 이 글의 배경으로 자신의 이전 글들(예: `Claude Code as Infrastructure`, `AGENTS.md Patterns`)을 지속적으로 인용하며, 일관된 개념 체계를 구축하고 있음을 보여준다.
+Crosley는 이 글의 배경으로 자신의 이전 글들(예: Claude Code CLI 가이드, Codex CLI 가이드)을 지속적으로 인용하며, 일관된 개념 체계를 구축하고 있음을 보여준다.
 
 ### 왜 중요한가: 시스템의 '의도'를 마이그레이션하기
 
 복잡하고 오래된 AI 에이전트 시스템(Claude Code)을 새로운 프레임워크(Codex)로 이전할 때, 단순히 파일 트리를 복사하거나 모든 기능을 1:1로 매핑하는 방식은 실패한다. 이러한 접근은 시스템의 복잡성만 그대로 옮길 뿐, 그 안에 담긴 운영 철학과 핵심 제어 로직을 놓치기 때문이다.
 
-Crosley는 744개의 로컬 설정을 분석한 결과, 시스템의 진짜 '심장'은 가장 긴 파일이나 가장 영리한 스크립트가 아니라, **리스크 수준을 결정하고, 품질 원칙을 주입하며, 증거 기반의 완료를 강제하는 소수의 '의사결정 레이어'**임을 발견했다. 따라서 성공적인 마이그레이션은 코드 구현이 아닌, 이 운영 계약(operating contract)과 증명 의무(proof obligation)를 이식하는 데 초점을 맞춰야 한다.
+Crosley는 다수의 로컬 설정을 분석한 결과, 시스템의 진짜 '심장'은 가장 긴 파일이나 가장 영리한 스크립트가 아니라, **리스크 수준을 결정하고, 품질 원칙을 주입하며, 증거 기반의 완료를 강제하는 소수의 '의사결정 레이어'**임을 발견했다. 따라서 성공적인 마이그레이션은 코드 구현이 아닌, 이 운영 계약(operating contract)과 증명 의무(proof obligation)를 이식하는 데 초점을 맞춰야 한다.
 
 ### 핵심 패턴: 계약 우선 마이그레이션과 점진적 활성화
 

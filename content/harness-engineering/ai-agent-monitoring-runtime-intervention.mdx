@@ -6,7 +6,8 @@ tags:
   - blake-crosley
   - harness-engineering
 confidence: 2
-last_verified: "2026-05-21"
+last_verified: "2026-06-03"
+status: complete
 applicable_to: ["any"]
 connections: []
 description: "AI 에이전트 모니터링이 단순히 관찰에 그치지 않고, 결정적인 오류 발생 시 실시간으로 에이전트 동작에 '런타임 개입'할 수 있어야 함을 주장합니다."
@@ -22,9 +23,7 @@ quiz:
     explanation: "Blake Crosley 블로그는 실무 경험 기반 패턴을 중시한다."
 ---
 
-> 이 엔트리는 Blake Crosley의 [AI Agent Monitoring Needs Runtime Intervention](https://blakecrosley.com/blog/ai-agent-monitoring-runtime-intervention)을 정독하고 핵심을 추출한 것이다.
-
-이 엔트리는 Blake Crosley의 [AI Agent Monitoring Needs Runtime Intervention](https://www.blakecrosley.com/ai-engineering/ai-agent-monitoring-needs-runtime-intervention/)을 정독하고 핵심을 추출한 것이다.
+> 이 엔트리는 Blake Crosley가 [블로그](https://blakecrosley.com/writing)에서 다룬 AI 에이전트 런타임 개입(runtime intervention) 논의를 정독하고 핵심을 추출한 것이다. ("Runtime Defense for Tool-Augmented Agents", "Self-Governing Agents: Runtime Constitutions" 등 일련의 글)
 
 ### 왜 중요한가: 에이전트 모니터링은 사후 분석이 아닌 실시간 제어여야 한다
 
@@ -59,7 +58,7 @@ quiz:
 
 Blake Crosley는 최신 연구들이 모두 '런타임 개입'이라는 방향을 가리킨다고 강조한다. 이는 그의 주관적인 주장이 아니라, 아래와 같은 권위 있는 논문들을 근거로 한다.
 
-1.  **Temporal Logic & Intervening Monitors** (Alamdari et al., 2026): 개별 이벤트가 아닌, "테스트 없이는 배포하지 말라"와 같이 순서와 관계가 중요한 '시간적 제약(temporal constraints)'을 적용한다. 위반이 '예측'될 때 선제적으로 개입하는 모니터 개념을 제시한다.
+1.  **Temporal Logic & Intervening Monitors** (시간 논리 기반 런타임 모니터링 연구 흐름): 개별 이벤트가 아닌, "테스트 없이는 배포하지 말라"와 같이 순서와 관계가 중요한 '시간적 제약(temporal constraints)'을 적용한다. 위반이 '예측'될 때 선제적으로 개입하는 모니터 개념을 제시한다.
 2.  **AgentForesight**: 긴 호흡의 작업에서 단 하나의 '결정적 오류(decisive error)'가 전체 실패로 이어지는 것을 막는다. 작업이 끝난 뒤 원인을 찾는 대신, 실시간 감사(online auditor)가 현재까지의 실행 경로(prefix)만 보고 첫 번째 결정적 오류 지점에서 즉시 경고를 발생시킨다.
 3.  **AgentTrust**: 에이전트의 툴 호출을 실행 **전**에 가로채 `allow`, `warn`, `block`, `review` 같은 구조화된 판정(structured verdict)을 내린다. 파일 시스템, 셸, DB 쿼리 등 실제 부작용(side effect)을 일으키는 지점을 통제하는 것이 핵심이다.
 4.  **AIR (AI Incident Response)**: 기존의 예방 중심 안전성 연구를 넘어, 사고 발생 시의 대응, 격리, 복구 능력을 에이전트 실행 루프에 통합한다.
@@ -91,7 +90,7 @@ graph TD
 
     subgraph runtimeInterventionLayer ["Runtime Intervention Layer"]
         B -- Intercept --> M{Monitor};
-        M -- Check against --> P[Policy Rules: "No 'rm -rf' on protected paths"];
+        M -- Check against --> P["Policy Rules · No rm -rf on protected paths"];
         M --> D{Violation Detected?};
         D -- Yes --> I["Intervention: Block & Escalate"];
         D -- No --> C[Continue Execution];

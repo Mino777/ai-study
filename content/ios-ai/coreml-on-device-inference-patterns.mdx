@@ -6,7 +6,8 @@ tags:
   - blake-crosley
   - ios-ai
 confidence: 2
-last_verified: '2026-05-03'
+status: complete
+last_verified: '2026-06-03'
 applicable_to:
   - any
 connections:
@@ -16,19 +17,33 @@ description: >-
   설명합니다.
 generated_by: gemini
 quiz:
-  - question: 이 엔트리의 핵심 개념을 가장 잘 설명하는 것은?
+  - question: Core ML에서 PyTorch/TensorFlow 모델을 .mlpackage로 변환하는 작업은 언제 수행하는가?
     choices:
-      - 이론적 프레임워크만 제시
-      - 실무 코드와 적용 사례 기반 패턴
-      - 학술 논문 요약
-      - 도구 사용법 튜토리얼
+      - 사용자 기기에서 앱 실행 시 런타임마다
+      - 개발 환경에서 coremltools로 빌드 타임에 한 번
+      - 모델 추론 직전 매 프레임마다
+      - App Store 심사 단계에서 자동으로
     answer: 1
-    explanation: Blake Crosley 블로그는 실무 경험 기반 패턴을 중시한다.
+    explanation: 변환은 coremltools를 통해 개발 환경에서 단 한 번 수행하는 빌드 타임 툴링 작업이다. 사용자 기기에서 런타임에 하지 않는다.
+  - question: 실시간 카메라 필터(60fps)처럼 매 프레임을 처리해야 하는 기능의 지연 시간 예산은?
+    choices:
+      - 16ms 이내 (전처리·추론·후처리·렌더링 포함)
+      - 100ms 이내
+      - 1초 이내
+      - 예산 없음 (백그라운드 처리)
+    answer: 0
+    explanation: 60fps 실시간 UI는 프레임당 약 16ms 예산을 가지며, 이 안에 전처리·추론·후처리·UI 렌더링이 모두 들어가야 한다. MobileNetV3급 소형 모델이 적합하다.
+  - question: 대부분의 비전 모델에서 속도와 정확도의 균형점으로 권장되는 양자화 수준은?
+    choices:
+      - Float32 (원본 유지)
+      - Float16
+      - INT8
+      - INT4
+    answer: 2
+    explanation: INT8은 Float32 대비 크기 1/4, Neural Engine에서 2-4배 속도를 내면서 정확도 손실이 작아 대부분의 비전 모델에서 좋은 균형점이다. INT4는 LLM 등 거대 모델용으로 정확도 손실이 크다.
 ---
 
-> 이 엔트리는 Blake Crosley의 [Core ML On-Device Inference: The Patterns That Actually Ship Core ML runs models on Neural Engi](https://blakecrosley.com/blog/core-ml-on-device-inference)을 정독하고 핵심을 추출한 것이다.
-
-이 엔트리는 Blake Crosley의 [Core ML On-Device Inference: The Patterns That Actually Ship](https://b-crosley.com/core-ml-on-device-inference)를 정독하고 핵심을 추출한 것이다.
+> 이 엔트리는 Blake Crosley의 [Core ML On-Device Inference: The Patterns That Actually Ship](https://blakecrosley.com/blog/core-ml-on-device-inference)를 정독하고 핵심을 추출한 것이다.
 
 ### 왜 중요한가: On-Device ML의 '공짜 점심'은 아키텍처에서 나온다
 

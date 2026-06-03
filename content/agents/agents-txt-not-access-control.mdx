@@ -6,7 +6,8 @@ tags:
   - blake-crosley
   - agents
 confidence: 2
-last_verified: "2026-05-21"
+status: complete
+last_verified: "2026-06-03"
 applicable_to: ["any"]
 connections: []
 description: "`agents.txt`와 같은 단순한 텍스트 파일이 AI 에이전트의 진정한 접근 제어 메커니즘이 될 수 없음을 지적합니다."
@@ -23,8 +24,6 @@ quiz:
 ---
 
 > 이 엔트리는 Blake Crosley의 [Agents.txt Is Not Access Control](https://blakecrosley.com/blog/agents-txt-not-access-control)을 정독하고 핵심을 추출한 것이다.
-
-이 엔트리는 Blake Crosley의 [Agents.txt Is Not Access Control](https://blakecrosley.com/blog/agents-txt-is-not-access-control/)을 정독하고 핵심을 추출한 것이다.
 
 ### 왜 중요한가
 
@@ -159,59 +158,35 @@ Disallow: /
 Sitemap: https://tarosaju.com/sitemap.xml
 ```
 
-**2. 서버 미들웨어를 통한 크롤러 신원 검증**
+**2. 서버 측 크롤러 신원 검증**
 
-Vercel Edge Middleware를 사용하여 `Googlebot`을 사칭하는 악성 봇을 차단하는 로직을 구현한다.
+`Googlebot`을 사칭하는 봇은 `User-Agent` 문자열만 위조하면 되므로, 진짜 검증은 역방향 DNS 조회로 한다. Google이 공식 권장하는 방식은 (1) 요청 IP에 대해 reverse DNS lookup → (2) 호스트명이 `.googlebot.com` / `.google.com`으로 끝나는지 확인 → (3) 그 호스트명을 다시 forward DNS로 조회해 원래 IP와 일치하는지 확인하는 3단계다.
+
+주의: 역방향 DNS 조회는 Node `dns` 모듈이 필요하므로 **Edge Runtime에서는 불가능**하다. Node.js 런타임(예: API Route, 또는 `runtime: 'nodejs'`로 설정한 Route Handler)에서 수행해야 한다. 아래는 개념을 보여주는 Node 런타임 예시다.
 
 ```typescript
-// middleware.ts
-import { next } from '@vercel/edge';
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
-import { a, dns } from '@vercel/dns';
+import dns from 'node:dns/promises';
 
-const GOOGLEBOT_HOSTNAMES = ['.googlebot.com', '.google.com'];
+const GOOGLEBOT_SUFFIXES = ['.googlebot.com', '.google.com'];
 
-export async function middleware(request: NextRequest) {
-  const userAgent = request.headers.get('user-agent') || '';
-  const ip = request.ip;
+// Node.js 런타임에서 실행 (Edge Runtime에서는 node:dns 사용 불가)
+async function isVerifiedGooglebot(ip: string): Promise<boolean> {
+  try {
+    // 1. reverse DNS lookup
+    const hostnames = await dns.reverse(ip);
+    const hostname = hostnames.find(h =>
+      GOOGLEBOT_SUFFIXES.some(suffix => h.endsWith(suffix))
+    );
+    if (!hostname) return false;
 
-  // Check if the user agent claims to be Googlebot
-  if (userAgent.includes('Googlebot') && ip) {
-    try {
-      // 1. Perform a reverse DNS lookup on the request's IP address.
-      const hostnames = await dns.reverse(ip);
-      
-      // 2. Verify that the hostname ends with .googlebot.com or .google.com.
-      const isVerifiedGooglebot = hostnames.some(hostname => 
-        GOOGLEBOT_HOSTNAMES.some(validSuffix => hostname.endsWith(validSuffix))
-      );
-
-      if (!isVerifiedGooglebot) {
-        // If it's a fake Googlebot, block the request.
-        return new NextResponse('Forbidden: IP address does not match Googlebot hostname.', { status: 403 });
-      }
-
-      // Optional: Forward DNS lookup for stronger verification.
-      // const forwardIps = await a(hostnames[0]);
-      // if (!forwardIps.includes(ip)) { ... }
-
-    } catch (error) {
-      // DNS lookup failed, treat as suspicious.
-      console.warn('DNS verification failed for IP:', ip, error);
-      return new NextResponse('Forbidden: DNS verification failed.', { status: 403 });
-    }
+    // 2. forward DNS lookup 으로 IP 일치 재확인 (위조 방지 핵심)
+    const forward = await dns.resolve4(hostname).catch(() => []);
+    return forward.includes(ip);
+  } catch {
+    // 조회 실패 시 신뢰하지 않음
+    return false;
   }
-
-  return next();
 }
-
-export const config = {
-  matcher: [
-    // Apply this middleware to relevant paths
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
-  ],
-};
 ```
 
-이 접근법을 통해 `tarosaju`는 `robots.txt`로 정책 '의도'를 명확히 표현하고, 서버 엣지에서 '실제' 검증을 수행하여 검색 엔진 최적화(SEO)의 이점은 누리면서 콘텐츠를 보호하는 이중 방어 체계를 구축할 수 있다.
+이 접근법을 통해 `tarosaju`는 `robots.txt`로 정책 '의도'를 명확히 표현하고, 서버 측에서 '실제' 검증을 수행하여 검색 엔진 최적화(SEO)의 이점은 누리면서 콘텐츠를 보호하는 이중 방어 체계를 구축할 수 있다.

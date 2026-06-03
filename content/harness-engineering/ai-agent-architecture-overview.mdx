@@ -6,7 +6,8 @@ tags:
   - blake-crosley
   - harness-engineering
 confidence: 2
-last_verified: '2026-05-05'
+status: complete
+last_verified: '2026-06-03'
 applicable_to:
   - any
 connections:
@@ -32,7 +33,7 @@ quiz:
     explanation: Blake Crosley 블로그는 실무 경험 기반 패턴을 중시한다.
 ---
 
-> 이 엔트리는 Blake Crosley의 [agent@harness:~$ █████╗ ██████╗ ███████╗███╗ ██╗████████╗ ██╔══██╗██╔════╝ ██╔════╝████╗ ██║╚══██╔══╝ ███████║██║ ███╗██](https://blakecrosley.com/guides/agent-architecture)을 정독하고 핵심을 추출한 것이다.
+> 이 엔트리는 Blake Crosley가 정리한 "Agent Architecture: Building AI-Powered Development Harnesses"([blakecrosley.com](https://blakecrosley.com))를 정독하고 핵심을 추출한 것이다.
 
 AI 코딩 에이전트를 단순한 대화형 챗봇으로 취급하면 그 잠재력의 일부만 활용하는 것입니다. 진정한 생산성 향상은 에이전트를 프롬프트 엔지니어링의 대상이 아닌, **LLM을 커널로 사용하는 프로그래밍 가능한 런타임**으로 바라보는 인프라적 관점에서 시작됩니다.
 
@@ -54,7 +55,7 @@ Andrej Karpathy가 'claws'라고 명명한 LLM 주변 인프라가 필수적인 
 
 ```mermaid
 graph TD
-    subgraph harnessarchitHarnessArchitecture ["하네스아키텍처HarnessArchit["하네스 아키텍처 Harness Architecture"]"]
+    subgraph harness ["하네스 아키텍처 Harness Architecture"]
         direction LR
         A["Hooks (강제 실행)"] -- "보장성" --> B
         B["Skills (도메인 지식)"] -- "전문성" --> C
@@ -136,4 +137,4 @@ function blockSecretsHook(input: ToolInput): { exitCode: 0 | 1 | 2; message?: st
     -   **기대효과**: 대규모 코드베이스에서도 컨텍스트 창의 한계를 극복하고, 정확한 맥락 이해를 바탕으로 작업을 수행할 수 있습니다.
 
 ---
-이 엔트리는 Blake Crosley의 [Agent Architecture: Building AI-Powered Development Harnesses](https://blakeweb.github.io/agent-architecture/)를 정독하고 핵심을 추출한 것입니다.
+이 엔트리는 Blake Crosley가 정리한 "Agent Architecture: Building AI-Powered Development Harnesses"([blakecrosley.com](https://blakecrosley.com))를 정독하고 핵심을 추출한 것입니다.
