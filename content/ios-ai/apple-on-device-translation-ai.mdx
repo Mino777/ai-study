@@ -1,6 +1,7 @@
 ---
 title: "Apple 온디바이스 번역 프레임워크 활용"
 category: ios-ai
+status: complete
 date: "2026-06-04"
 tags:
   - blake-crosley
@@ -12,19 +13,35 @@ connections: []
 description: "Apple의 무료 온디바이스 번역 프레임워크의 기능과 성능을 분석합니다. 네트워크 연결 없이 기기에서 직접 구동되어 개인 정보 보호 및 응답 속도 이점을 가집니다. AI 기반 번역 기능을 iOS 앱에 통합하는 실용적인 방법을 제시합니다."
 generated_by: gemini
 quiz:
-  - question: "이 엔트리의 핵심 개념을 가장 잘 설명하는 것은?"
+  - question: "TranslationSession을 프로그래밍 방식으로 사용하려면 최소 어느 OS 버전이 필요한가?"
     choices:
-      - "이론적 프레임워크만 제시"
-      - "실무 코드와 적용 사례 기반 패턴"
-      - "학술 논문 요약"
-      - "도구 사용법 튜토리얼"
+      - "iOS 16"
+      - "iOS 17.4"
+      - "iOS 18"
+      - "iOS 26"
+    answer: 2
+    explanation: "시스템 팝오버 translationPresentation은 iOS 17.4+, 코드로 결과를 직접 받는 TranslationSession + .translationTask는 iOS 18+부터 제공된다."
+  - question: "'브라켓(Bracket)' 패턴의 핵심 아이디어는?"
+    choices:
+      - "모든 언어별로 LLM 로직을 따로 구현한다"
+      - "핵심 로직은 영어로만 작성하고 입출력 양 끝단에 번역 계층을 둔다"
+      - "번역을 서버에서 처리해 디바이스 부하를 줄인다"
+      - "번역 결과를 캐시해 재사용한다"
     answer: 1
-    explanation: "Blake Crosley 블로그는 실무 경험 기반 패턴을 중시한다."
+    explanation: "Translate → Reason(English) → Translate 구조로, 단일 언어 AI 로직을 번역 계층으로 감싸 다국어로 즉시 확장한다. 전 과정이 온디바이스라 비용·개인정보 문제가 없다."
+  - question: "Translation Framework 도입 시 반드시 고려해야 할 현실적 제약은?"
+    choices:
+      - "유료 API 키 발급이 필요하다"
+      - "시뮬레이터에서 동작하지 않으며 최초 번역 시 언어팩 다운로드가 필요하다"
+      - "영어 단일 언어만 지원한다"
+      - "네트워크가 항상 연결되어 있어야 한다"
+    answer: 1
+    explanation: "Translation Framework는 시뮬레이터 미지원이라 실기기 테스트가 필수이고, 특정 언어 쌍 최초 번역 시 언어팩 다운로드 대기(availability 체크 + prepare)를 UX로 처리해야 한다."
 ---
 
-> 이 엔트리는 Blake Crosley의 [Apple's Translation Framework: Free, On-Device, and Sharper Than It Looks](https://blakecrosley.com/blog/apple-translation-framework-on-device)을 정독하고 핵심을 추출한 것이다.
+> 이 엔트리는 [Blake Crosley](https://blakecrosley.com/) 블로그의 Apple Translation Framework 분석 글을 정독하고 핵심을 추출한 것이다. Crosley는 Apple의 WWDC 발표와 공식 API 문서를 기반으로 실제 구현 시 마주할 수 있는 함정과 활용 패턴을 다룬다.
 
-이 엔트리는 Blake Crosley의 [Apple's Translation Framework: Free, On-Device, and Sharper Than It Looks](https://blake.crosley.com/blog/apples-translation-framework-free-on-device-and-sharper-than-it-looks/)를 정독하고 핵심을 추출한 것이다. Crosley는 Apple의 WWDC 발표와 공식 API 문서를 기반으로 실제 구현 시 마주할 수 있는 함정과 강력한 활용 패턴을 분석한다.
+> 본 엔트리의 API 시그니처는 Apple 공식 문서로 교차 검증했다 ([TranslationSession](https://developer.apple.com/documentation/translation/translationsession), [translate(batch:)](https://developer.apple.com/documentation/translation/translationsession/translate(batch:)), [Foundation Models](https://developer.apple.com/documentation/FoundationModels)).
 
 ## 왜 중요한가: 온디바이스 AI의 '마지막 마일' 해결
 
