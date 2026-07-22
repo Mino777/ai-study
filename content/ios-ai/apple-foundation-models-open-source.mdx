@@ -89,8 +89,8 @@ var session = LanguageModelSession(model: someModel, skills: mySkills)
 graph TD
     subgraph SwiftAppClientorServ["Swift App Client or Server"]
         A["LanguageModelSession (Swift API)"]
-        B[("Skills API")] --> A
-        C[("History Management")] --> A
+        B["Skills API"] --> A
+        C["History Management"] --> A
     end
 
     A --> D{"On-Device Model"}
