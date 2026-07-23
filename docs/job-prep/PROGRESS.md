@@ -1,8 +1,10 @@
 # iOS 엔지니어 이직 준비 — 진도 트래커
 
-> **매 세션 시작 규약 (Claude용):** 유저가 "시작"이라고 하면 → 이 파일 + `GAME.md`를 읽고 → ① `GAME.md` 캐릭터 시트를 보여주며 요일·Phase/Week 확인 → ② 아래 "다음 세션 큐" 확인 → ③ **오늘의 퀘스트(1시간 플랜)** 제시 → 세션 종료 시 이 파일 "세션 로그" 기록 + 약점/큐 갱신 + **`GAME.md` 캐릭터 시트 갱신(XP·레벨·스탯·스트릭·업적)**.
+> **매 세션 시작 규약 (Claude용):** 유저가 "시작"이라고 하면 → **⓪ 먼저 rebase-first(아래)로 원격을 맞춘다** → 이 파일 + `GAME.md`를 읽고 → ① `GAME.md` 캐릭터 시트를 보여주며 요일·Phase/Week 확인 → ② 아래 "다음 세션 큐" 확인 → ③ **오늘의 퀘스트(1시간 플랜)** 제시 → 세션 종료 시 이 파일 "세션 로그" 기록 + 약점/큐 갱신 + **`GAME.md` 캐릭터 시트 갱신(XP·레벨·스탯·스트릭·업적)**.
 >
-> 💾 **자율 커밋 규약 (2026-07-23 유저 명시 "항상 커밋, 묻지 말고 자율적으로"):** 진도 갱신(PROGRESS/GAME/BACKEND/lessons 등) 후엔 **묻지 말고 자동으로 `git commit`** 한다. 개인 레포(github Mino777/ai-study, job-prep 브랜치)라 안전. push는 유저 몫(자동 X). 커밋 메시지: `docs(job-prep): 세션 N — <요약>`.
+> 🔄 **세션 시작 rebase-first 규약 (2026-07-23 추가):** job-prep은 GitHub에서 PR로 **squash-merge** 되므로 로컬 커밋과 해시가 갈라져 push가 reject되는 함정이 있다. **세션 맨 처음** `git fetch origin && git rebase --empty=drop origin/job-prep` 를 돌려 원격을 먼저 반영하고 시작한다(중복 커밋 자동 drop). → push reject 재발 0.
+>
+> 💾 **자율 커밋+푸시 규약 (2026-07-23 유저 명시 "항상 커밋 묻지 말고 자율적으로" + "ai-study는 push도 해도 돼"):** 진도 갱신(PROGRESS/GAME/BACKEND/lessons 등) 후엔 **묻지 말고 자동으로 `git commit` + `git push origin job-prep`** 한다. 개인 레포(github Mino777/ai-study, job-prep 브랜치)라 안전. push reject 시 위 rebase-first로 해결 후 재푸시. 커밋 메시지: `docs(job-prep): 세션 N — <요약>`. ⛔ **이 규약은 오직 개인 ai-study/job-prep 전용 — 그 외 업무/워커 레포는 각자의 하드 push 가드가 적용되며 무관.**
 >
 > 🎮 **게임 레이어:** `GAME.md` 참조. 재미와 꾸준함이 실력보다 우선. 보상은 후하게, 정직하게.
 > 🗺️ **백엔드 사이드 퀘스트:** 매 세션 후반 5~7분 `BACKEND.md` 노드 1개(그림 위주). iOS 가로축(백엔드/DB) 확장.
