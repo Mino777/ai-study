@@ -83,11 +83,13 @@
 **🔀 전략 피벗 완료 (2026-07-27):** CURRICULUM v2 + AI-TEST.md 신설. 무게중심 🏛️/🤖로 이동.
 
 - [x] ~~해시 4형제 졸업~~ ✅ · [x] ~~투포인터 진입(Valid Palindrome·Two Sum II)~~ ✅
-- [ ] 🤖 **AI 활용 트랙 첫 드릴** (신규·우선): `AI-TEST.md` 4대역량 중 **🔍 검증·회의**부터 — "AI가 짠 코드 버그 감별" 드릴 + 하네스 스토리 1개(verifier-falsification-first) 서사화
-- [ ] 🏛️ **아키텍처/SD 트랙** (메인): 🅰️ A2(Clean 계층경계) 또는 🅱️ B1 SD 프레임 이어서(범위·규모추정). 격일 번갈아
-- [ ] 🎤 **인터뷰 답변 뱅크 리허설** (`interview-stories/` 12문서): 06 하네스 아키텍처 방어 → **AI 협업 STAR 스토리로 재가공**(AI-TEST 매핑표 활용). 실측 숫자 암기(스킬59·에이전트17·훅46)
-- [ ] 🧮 **DSA 쪽집게** (축소·트리거인출만): 3Sum 마무리 → Sliding Window(Longest Substring) 트리거 습득. 손코딩은 주말
-- [ ] 🍎 W2: Rx↔Concurrency 대응표 작성 (CURRICULUM에 뼈대 있음)
+- [x] ~~🍎 SwiftUI @Observable vs ObservableObject~~ ✅ `lessons/ios-01` · [x] ~~property wrapper 4형제~~ ✅ `lessons/ios-02` · [x] ~~Rx→async 브릿지~~ ✅ `lessons/ios-03`
+- [x] ~~JeaSungLEE + weeeBox 레포 → 우리 질문뱅크로 통합~~ ✅ `QUESTION-BANK.md`
+- [ ] 🍎 **iOS 갭 드릴** (우선·`QUESTION-BANK.md` 드릴 큐 순서): ① GCD Serial/Concurrent+Main스레드 ② TableView 셀 재사용+이미지 잘못된셀 함정 ③ Core Data vs SQLite+Keychain ④ SSL/TLS 핸드셰이크 ⑤ Codable 실전
+- [ ] 🏛️ **아키텍처/SD** (메인): A2(async를 어느 계층에) 또는 B1 SD 프레임(규모추정 냅킨계산). 격일 번갈아
+- [ ] 🤖 **AI 활용 첫 드릴**: `AI-TEST.md` 🔍 검증·회의 — "AI 코드 버그 감별" + 하네스 스토리 서사화
+- [ ] 🎤 **인터뷰 답변 뱅크 리허설** (`interview-stories/`): 06 하네스 방어 → AI 협업 STAR 재가공
+- [ ] 🧮 **DSA 쪽집게**: 3Sum 마무리 → Sliding Window 트리거. 손코딩은 주말
 
 ## 약점 노트
 
