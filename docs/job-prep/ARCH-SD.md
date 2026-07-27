@@ -158,6 +158,15 @@ Security        OAuth/JWT+Keychain · TLS·cert pinning · 서버검증 필수(�
 ```
 > 레드플래그: UI 과몰입 · 오프라인 무시 · 앱 고립 취급 · 트레이드오프 미articulate · 초반부터 구현디테일.
 
+### 🪜 레벨별 기대치 루브릭 (weeeBox 흡수 — 어느 깊이로 답할지 캘리브레이션)
+```
+주니어  기초 개념 · 단일 컴포넌트 구현
+중급    패턴 적용 · 코딩/테스트 능력
+시니어  시스템 전체 · 트레이드오프 소리내기 · 모듈화 설계     ← 우리 타깃
+스태프  비즈니스 우선 · 규모 확장 · 위험 완화(mitigation)
+```
+> 면접 초반 "어느 정도 깊이로?" 확인하고, **시니어 레벨 = 트레이드오프 articulate + 모듈 경계**에 답의 무게를 둔다. 구체 클래스명·라이브러리보다 **개념·근거·대안**.
+
 ### 📚 추천 학습 리소스
 - 📕 **《Mobile System Design Interview》— Manuel Vivo** (모바일 특화 바이블, "Design YouTube"/"chat app" 케이스) · [cheat sheets](https://topmate.io/manuelvivo/799730)
 - 🆓 **weeeBox/mobile-system-design** (GitHub, 사실상 정규 프레임 + 솔루션) · **Bartlett "iOS System Design 2026"** ([blog](https://blog.jacobstechtavern.com/p/system-design-interview))

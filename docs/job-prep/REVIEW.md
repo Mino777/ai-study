@@ -27,6 +27,8 @@
 | @Published 깜빡 함정 | @Published 안 붙인 프로퍼티를 바꾸면 UI가? + 왜? + 왜 유령버그로 보임? | 1 | 2026-07-27 | 2026-07-28 | lessons/ios-01 |
 | property wrapper 4형제 축 | 4개를 가르는 축 2개? + @StateObject vs @ObservedObject 차이는 오직 무엇? | 1 | 2026-07-27 | 2026-07-28 | lessons/ios-02 |
 | @StateObject 리셋 버그 | 뷰에서 `@ObservedObject var vm = VM()` 하면 왜 상태 리셋? 정확한 메커니즘? 고치려면? | 1 | 2026-07-27 | 2026-07-28 | lessons/ios-02 |
+| Rx→async 왜 더 안전 | async가 Rx보다 안전한 4가지? + 심장(disposeBag→무엇)? | 1 | 2026-07-27 | 2026-07-28 | lessons/ios-03 |
+| await 의미 | `await`는 스레드를 블로킹? 양보? 정확히 뭐가 일어나나? | 1 | 2026-07-27 | 2026-07-28 | lessons/ios-03 |
 
 ## 📝 정답 키 (인출 실패 시 확인용)
 - **5-스텝:** ① 번역(값/인덱스) ② brute force ③ 낭비 찾기 ④ 도구 매칭 ⑤ 복잡도+엣지
@@ -43,3 +45,5 @@
 - **@Published 깜빡:** 신호(`objectWillChange.send()`)가 안 나가 **UI 갱신 안 됨(옛날 값)**. 근데 데이터는 실제 바뀌어 있어서, 나중에 다른 @Published가 뷰 재평가시키면 값이 "갑자기" 튀어나옴 → 재현 힘든 유령버그.
 - **4형제 축:** ① 값/참조 타입 ② 소유/빌림. @State(값·소유)/@Binding(값·빌림)/@StateObject(참조·소유)/@ObservedObject(참조·빌림). @StateObject vs @ObservedObject 차이 = 오직 **수명 소유권**.
 - **@StateObject 리셋 버그:** View는 struct라 부모 갱신마다 re-init → `= VM()` 이니셜라이저 재실행 → 매번 새 객체 → 상태 리셋. @ObservedObject는 재초기화를 안 막음. 고침 = 뷰에서 생성하면 @StateObject(첫 등장 1번만 평가·유지) / 주입이면 @ObservedObject(= 없이).
+- **Rx→async 4안전:** ① 가독성(콜백중첩→선형) ② 취소(disposeBag 수동→구조적 자동전파) ③ data race(런타임규율→컴파일러 강제 actor/@MainActor) ④ 에러(onError→try/throw). 심장 = disposeBag→**구조적 취소**.
+- **await 의미:** 블로킹 아님 → 스레드 **양보(suspend)**, 결과 오면 재개(resume). 그동안 스레드는 다른 일 처리.
