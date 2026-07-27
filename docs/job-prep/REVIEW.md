@@ -25,6 +25,8 @@
 | 모바일 SD 규모추정 | 모바일 SD에서 "규모"는 서버 QPS가 아니라 무엇? | 1 | 2026-07-23 | 2026-07-24 | ARCH-SD B1 |
 | @Observable vs ObservableObject | 옛날 건 왜 과잉 렌더링? (objectWillChange 특성) + 신형은 무슨 방식으로 정밀해짐? | 1 | 2026-07-27 | 2026-07-28 | lessons/ios-01 |
 | @Published 깜빡 함정 | @Published 안 붙인 프로퍼티를 바꾸면 UI가? + 왜? + 왜 유령버그로 보임? | 1 | 2026-07-27 | 2026-07-28 | lessons/ios-01 |
+| property wrapper 4형제 축 | 4개를 가르는 축 2개? + @StateObject vs @ObservedObject 차이는 오직 무엇? | 1 | 2026-07-27 | 2026-07-28 | lessons/ios-02 |
+| @StateObject 리셋 버그 | 뷰에서 `@ObservedObject var vm = VM()` 하면 왜 상태 리셋? 정확한 메커니즘? 고치려면? | 1 | 2026-07-27 | 2026-07-28 | lessons/ios-02 |
 
 ## 📝 정답 키 (인출 실패 시 확인용)
 - **5-스텝:** ① 번역(값/인덱스) ② brute force ③ 낭비 찾기 ④ 도구 매칭 ⑤ 복잡도+엣지
@@ -39,3 +41,5 @@
 - **클라-서버:** 클라=요청하는 손님(UI) / 서버=진실 소유한 주방(데이터·로직). 가격을 클라에서 계산하면 조작 가능 → 서버가 진실의 원천
 - **@Observable vs ObservableObject:** 옛날=`objectWillChange`가 **객체당 1개·인자 없는 신호** → 어느 프로퍼티인지 모름 → 구독한 모든 뷰 보수적 무효화(과잉). 신형=매크로가 get/set을 registrar로 감싸 **뷰가 접근한 keyPath만 추적** → 그 값 바뀔 때만 무효화. (방송 vs 의존성그래프 / signal 기반 fine-grained reactivity)
 - **@Published 깜빡:** 신호(`objectWillChange.send()`)가 안 나가 **UI 갱신 안 됨(옛날 값)**. 근데 데이터는 실제 바뀌어 있어서, 나중에 다른 @Published가 뷰 재평가시키면 값이 "갑자기" 튀어나옴 → 재현 힘든 유령버그.
+- **4형제 축:** ① 값/참조 타입 ② 소유/빌림. @State(값·소유)/@Binding(값·빌림)/@StateObject(참조·소유)/@ObservedObject(참조·빌림). @StateObject vs @ObservedObject 차이 = 오직 **수명 소유권**.
+- **@StateObject 리셋 버그:** View는 struct라 부모 갱신마다 re-init → `= VM()` 이니셜라이저 재실행 → 매번 새 객체 → 상태 리셋. @ObservedObject는 재초기화를 안 막음. 고침 = 뷰에서 생성하면 @StateObject(첫 등장 1번만 평가·유지) / 주입이면 @ObservedObject(= 없이).
