@@ -1,122 +1,146 @@
-# 📚 13주 커리큘럼 (리서치 기반)
+# 📚 커리큘럼 v2 — AI 시대 이직 전략 (2026-07-27 피벗)
 
-> 2025-2026 한국 iOS 이직 시장 웹 리서치 기반. 학습자 프로필: 5년차, 강점=UIKit/Rx/아키텍처, 약점=동시성/SwiftUI, **DSA 제로**. 하루 1시간 + 주말 일부.
-
----
-
-## 🎯 전략 요약 (리스크 순)
-
-1. **🚨 DSA 제로가 1순위 리스크.** 대기업/토스는 경력직도 코딩테스트 필수(1차 게이트). 스타트업은 과제전형. → 하루 1문제 daily rep, 13주 누적 **~110~120문제**.
-2. **시니어 감별점 = 동시성 + 상태관리 + 아키텍처** (2025 시니어 배점 Swift/SwiftUI 40%, 아키텍처 25%). 정확히 학습자 약점. → iOS 심화는 **동시성 > SwiftUI > 시스템디자인** 순.
-3. **강점(UIKit/Rx/실무 아키텍처)은 무기로 전환** — 면접에서 "왜 이 결정을 했나" 방어 스크립트 + SwiftUI↔UIKit interop 스토리.
-
-**통과 바(목표):** 프로그래머스 Lv.2를 편하게 + Lv.3 절반. (Lv.4는 인터뷰에 거의 안 나옴 — 버림.)
-
-> ⚠️ **쿠팡 타겟 델타(`COUPANG.md`):** 쿠팡은 아마존식 루프라 바가 더 높다 — **LeetCode medium 중심 100~150문제 + 일부 hard**, HackerRank/CoderPad에서 **영어 think-aloud**, **모바일 시스템 디자인** 1라운드, **15 LP 행동면접**(원칙당 2~3 SBI 스토리+지표), Bar Raiser. 프로젝트 딥다이브 방어가 iOS 깊이의 실체. base 커리큘럼을 깔되 W7+부터 LP 스토리·모바일 SD·영어 연습을 병행 주입.
-
-## 🧠 학습 방법 (운영 규칙 — 증거 기반)
-
-- **능동 회상(active recall):** 읽지 말고 **문제를 풀고, 개념은 빈 종이에 재현**. (재독보다 파지 50%↑)
-- **간격 반복(SM-2):** 개념/패턴 카드 Anki 또는 위키 퀴즈 SRS. 간격 1일→6일→점증, 실패 시 리셋. 목표 유지율 ~90%.
-- **인터리빙:** 패턴은 블록으로 배우되, **주 1회 복습 세션은 여러 패턴을 섞어** 출제(문제 보고 전략 고르기 = 실전).
-- **의도적 연습:** 약점(동시성/SwiftUI/DSA)에 시간 집중.
-- **시각적 우선:** VisuAlgo 애니메이션 + box-and-pointer/콜스택 다이어그램으로 먼저 그리고 코드.
-
-## 🖥️ 플랫폼
-
-| 용도 | 플랫폼 |
-|------|--------|
-| 한국 CT 실전 환경 (1순위) | **프로그래머스** (코딩테스트 연습 키트, Lv.1→2→3) |
-| 기초 유형별 단계 훈련 | 백준 (단계별 풀이) |
-| 패턴 학습 커리큘럼 | LeetCode + **NeetCode 250**(완전초보 friendly) |
+> **v1 → v2 전환 이유:** 2025~2026 채용이 **"코딩테스트 그라인딩" → "AI 활용 능력 + 실무 깊이"** 로 이동.
+> Google·Meta·Canva·Shopify가 기술면접에서 AI 툴 사용을 허용/기대하기 시작.
+> DSA는 라이브코딩 게이트용 최소한만 "쪽집게"로, 무게중심은 **아키텍처·시스템디자인·AI 활용**으로.
+> 학습자 프로필: 5년차 iOS, 강점=UIKit/Rx/실무 아키텍처, **AI 하네스 직접 구축(최대 무기)**, 약점=동시성/SwiftUI/DSA.
 
 ---
 
-## 🧮 DSA 패턴 로드맵 (~118문제, 통과 바 기준)
+## 🎯 전략 요약 (v2 — 무게중심 이동)
 
-| # | 패턴 | 문제 | ROI | 메모 |
-|---|------|------|-----|------|
-| 1 | Arrays & Hashing | 12 | ★★★★★ | 해시 = 한국 CT 단골. Two Sum부터 |
-| 2 | 구현/시뮬레이션 + 문자열 | 10 | ★★★★★ | **한국 CT 1위 유형** |
-| 3 | Two Pointers | 8 | ★★★★ | |
-| 4 | Sliding Window | 6 | ★★★★ | |
-| 5 | Stack | 7 | ★★★★ | 괄호/모노토닉 |
-| 6 | Binary Search | 8 | ★★★★ | 정렬+파라메트릭 서치 |
-| 7 | Linked List | 6 | ★★★ | 포인터 감각(box-and-pointer) |
-| 8 | Trees (BFS/DFS) | 15 | ★★★★★ | 콜스택 그림 필수 |
-| 9 | Heap / PQ | 5 | ★★★ | Top-K |
-| 10 | Backtracking | 6 | ★★★ | 순열/조합/완전탐색 |
-| 11 | Graphs (BFS/DFS·Union-Find·Topo) | 12 | ★★★★ | BFS/DFS 필수, 나머지 후순위 |
-| 12 | DP (1D→2D, 기초만) | 12 | ★★★ | 피보/배낭/LCS/coin만. 고급 DP 버림 |
-| 13 | Greedy | 5 | ★★★ | |
-| 14 | Intervals / Math | 6 | ★★★ | 정렬 후 병합 |
+```
+        v1 (그라인딩 시대)              v2 (AI 시대)
+   ┌──────────────────────┐     ┌──────────────────────┐
+   │ 🧮 DSA        60% ███ │     │ 🏛️ 아키텍처/SD   35% │
+   │ 🍎 iOS 심화   25% █   │  →  │ 🤖 AI 활용        25% │  🆕
+   │ 🏛️ 아키텍처   15%     │     │ 🍎 iOS 심화       20% │
+   │                       │     │ 🧮 DSA 쪽집게     15% │  ↓ 축소
+   └──────────────────────┘     │ 💼 딥다이브/행동  5%  │
+                                 └──────────────────────┘
+```
 
-**버리는 것(저 ROI, 3개월엔 skip):** Trie, Segment Tree, 고급 DP(구간/비트마스크), 심화 Union-Find/위상정렬, 기하.
+**세 기둥 + 두 서포트:**
+1. 🏛️ **아키텍처 & 시스템 디자인 (메인 무대·35%)** — 실무 시니어 강점을 면접 방어력으로. `ARCH-SD.md`
+2. 🤖 **AI 활용 테스트 대비 (신규·25%)** — 하네스 구축 경험을 무기로. `AI-TEST.md`
+3. 🍎 **iOS 심화 (20%)** — 동시성 > SwiftUI (시니어 감별점)
+4. 🧮 **DSA 쪽집게 (15%)** — 라이브코딩 게이트용 **최소 시그니처 문제만** SRS 반복 (그라인딩 X)
+5. 💼 **프로젝트 딥다이브 방어 + 행동면접 (5%·상시)** — `interview-stories/`
 
-## 🌀 Rx → Swift Concurrency 브릿지 (학습자 맞춤 핵심 자산)
+**통과 바(목표):** ① AI-assisted 라운드에서 "AI를 잘 몰고 검증하고 선택을 방어" ② 모바일 SD 1시나리오 완주 ③ 라이브코딩은 medium **패턴 인식**까지 (풀 그라인딩 아님) ④ 프로젝트 딥다이브 방어 완성.
 
-> 이미 아는 Rx 멘탈모델에 새 개념을 붙인다. 면접에서 "Rx로는 이렇게, 구조적 동시성으로는 왜 더 안전한가"를 말할 수 있으면 시니어 감별에서 유리.
+---
+
+## 🧮 DSA — 쪽집게 모드 (그라인딩 → 시그니처 반복)
+
+> **왜 축소:** AI-assisted 라운드가 raw DSA 가치를 떨어뜨림. 단 **라이브코딩(무 AI)은 아직 존재** → 게이트 통과용 최소 기본기는 유지.
+> **방법:** 패턴당 **"이게 곧 그 패턴"인 시그니처 문제 1~2개**만. 손코딩 그라인딩 대신 **"문제 보면 패턴 즉시 호명"** 을 SRS로 반복. (회사 환경 = 플랫폼 그라인딩 OFF와도 일치)
+
+### 🥇 S급 (거의 매번 — 이것만은 반사)
+| 패턴 | 시그니처 문제 | 트리거(이거 보이면 이 패턴) | 상태 |
+|------|--------------|------------------------------|------|
+| 해시 O(1) 조회 | Two Sum, Group Anagrams | "짝 찾기"·"본 적 있나"·"빈도" | ✅ 졸업 |
+| Two Pointers | Valid Palindrome, 3Sum | "정렬됨"·"양끝/회문"·공간절약 | 🔶 진행중 |
+| Sliding Window | Longest Substring, Best Time Buy/Sell | "연속 부분배열/문자열"·"윈도우" | ⬜ 다음 |
+| Stack | Valid Parentheses, 모노토닉 | "괄호/짝맞춤"·"다음 큰 수" | ⬜ |
+| Binary Search | 고전 + "정답 위에 이분" | "정렬됨 + 찾기"·"최소/최대 만족값" | ⬜ |
+| Tree BFS/DFS | Level Order, Max Depth, Invert | "트리"·"레벨"·"경로/깊이" | ⬜ |
+| Graph BFS/DFS | Number of Islands, Clone Graph | "격자/연결"·"섬/컴포넌트" | ⬜ |
+
+### 🥈 A급 (자주 — 여유되면)
+| 패턴 | 시그니처 | 트리거 |
+|------|---------|--------|
+| Linked List | Reverse, Cycle(fast/slow) | "연결리스트"·"사이클" |
+| Heap / Top-K | K Largest, Merge K Lists | "상위 K개"·"최소/최대 반복추출" |
+| Backtracking | Subsets, Permutations | "모든 조합/순열"·"완전탐색" |
+| 1D DP | Climbing Stairs, House Robber, Coin Change | "경우의 수"·"최소/최대 누적" |
+| Intervals | Merge Intervals | "구간 병합/겹침" |
+
+### 🗑️ 버림 (3개월 ROI 최악)
+Trie · Segment Tree · 고급 DP(구간/비트마스크) · 기하 · 심화 Union-Find/위상정렬.
+
+> **쪽집게 운영:** 매 세션 🧮 블록(~15분)은 위 표에서 **due 패턴 1개를 "트리거→접근법" 능동인출**. 손코딩은 주말/집에서 시그니처 1문제만. `REVIEW.md`에 패턴 카드로 관리.
+
+---
+
+## 🤖 AI 활용 테스트 트랙 (신규 — 상세 `AI-TEST.md`)
+
+> **한 줄:** 시험 대상이 "코드를 짤 수 있나"에서 **"AI를 잘 몰고(prompt) · 결과를 의심·검증(verify) · 좋은 선택을 하고(judge) · 그 선택을 설명(defend)하나"** 로 이동.
+> **너의 우위:** 이걸 하네스로 이미 시스템화함 (검증 게이트·서브에이전트·falsification-first). 남들은 "AI 써봤어요", 넌 "AI 실패모드를 코드 게이트로 막는 인프라를 설계했어요."
+
+**4대 역량 (AI-TEST.md에서 드릴):**
+1. 🎯 **프롬프팅/컨텍스트 설계** — 멀티파일 코드베이스에 맥락 주입, 작업 분해
+2. 🔍 **검증·회의(skepticism)** — AI 출력의 버그·환각을 잡아내는 근육 (하네스의 verifier-falsification-first)
+3. ⚖️ **툴/접근 선택 방어** — "왜 이 라이브러리·이 구조? AI가 제안한 걸 왜 거절/수용?"
+4. 🗣️ **의사결정 서사화** — take-home 후 "왜 그렇게 했나" 방어 (아키텍처 4틀 재활용)
+
+**포맷 대비:** Meta형 CoderPad 3-panel(버그픽스→구현→최적화, 60분) 모의 · take-home AI-allowed 시나리오.
+
+---
+
+## 🏛️ 아키텍처 & 시스템 디자인 (메인 무대 — 상세 `ARCH-SD.md`)
+
+- 🅰️ **iOS 아키텍처 서사화**: 실무 결정(모듈화·Clean·DI·Rx→Concurrency)을 [상황→결정→트레이드오프→**방어(mitigation)**] 4틀로. 강점을 방어 스크립트로.
+- 🅱️ **모바일 SD 시나리오**: 10-스텝 프레임. 규모추정=**사용자당 자원예산**(캐시·메모리·배터리). 피드/오프라인동기화/이미지캐시/모듈러delivery.
+- 격일 번갈아, 각 ~20분. `ARCH-SD.md`에 카드 10 + 시나리오 10.
+
+## 🍎 iOS 심화 (동시성 우선)
+
+1. **동시성(최우선):** Rx 브릿지 → async/await → actor/Sendable/data race → structured concurrency → @MainActor/Swift6
+2. **SwiftUI(감 되살리기):** property wrapper 구분, @Observable(iOS17+), 리렌더/성능, UIKit interop(강점)
+
+**🌀 Rx → Swift Concurrency 대응표** (면접 단골):
 
 | RxSwift | Swift Concurrency |
 |---------|-------------------|
-| `Single<T>` / one-shot | `async func -> T` |
-| `Observable<T>` 스트림 | `AsyncSequence` / `AsyncStream` |
+| `Single<T>` | `async func -> T` |
+| `Observable<T>` | `AsyncSequence`/`AsyncStream` |
 | `subscribe(onNext:)` | `for await x in stream` |
-| `disposeBag` / dispose | Task 취소 + 구조적 동시성 자동 취소 전파 |
-| `observeOn(MainScheduler)` | `@MainActor` / `await MainActor.run` |
+| `disposeBag` | Task 취소 + 구조적 동시성 자동 전파 |
+| `observeOn(Main)` | `@MainActor` |
 | `flatMapLatest` | 이전 Task cancel 후 새 Task |
-| 직렬 스케줄러(스레드 안전) | **actor** |
-
-**동시성 면접 단골:** async/await의 suspend/resume, `@MainActor` vs `DispatchQueue.main.async`, actor isolation이 data race 막는 원리, `Sendable`이 왜 필요한가, structured concurrency(`async let`/`TaskGroup`/취소), Swift 6 strict concurrency.
-
-## 🍎 iOS 심화 우선순위
-
-1. **동시성(최우선):** Rx 브릿지 → async/await → actor/Sendable/data race → structured concurrency → @MainActor/Swift6. **AI 없이 손으로 재현**.
-2. **SwiftUI(감 되살리기):** property wrapper 정확 구분(@State/@Binding/@StateObject vs @ObservedObject), **@Observable 매크로(iOS17+)**와 리렌더 추적/성능, NavigationStack, **SwiftUI↔UIKit interop(강점 활용)**.
-3. **시스템 디자인:** 모바일 시나리오형(오프라인/동기화 충돌/모듈러 delivery). 백엔드 사이드 퀘스트(`BACKEND.md`)와 수렴.
+| 직렬 스케줄러 | **actor** |
 
 ---
 
-## 🗓️ 13주 스켈레톤
+## 🗓️ 12주 스켈레톤 (v2 — 무게중심 재배치)
 
-**일일(평일 60분):** 🧮 DSA 1문제(~35) + 🍎 iOS 개념 능동인출·손코딩(~15) + 🗺️ 백엔드 1노드(~7).
-**주말:** iOS 심화 빌드(동시성/SwiftUI 손코딩) 또는 라이브코딩/모의면접.
-**복습:** 주 1회 인터리브 복습 세션(지난 패턴 혼합 재출제).
+**일일(평일 ~75분·5블록):**
+🏛️ 아키텍처/SD(~20) + 🤖 AI 활용(~20) + 🍎 iOS 심화(~15) + 🧮 DSA 쪽집게(~10, 트리거 인출) + 🔁 SRS due 카드(~5·상시)
+> 시간 부족 시 트리아지: 🏛️/🤖 사수 > 🍎 > 🧮. DSA는 "패턴 인출"만이라도 매일.
 
-| 주 | DSA (패턴·누적) | iOS 심화 | 주말 산출물 |
-|----|------|------|------|
-| W1 | 셋업 + Arrays&Hashing(4) — Two Sum 진짜 이해 | Swift 값/참조·ARC 워밍업 + Anki 시작 | 환경/Anki 세팅, 배열/해시 box-and-pointer |
-| W2 | A&H(8) + 구현/문자열 시작(3) | **Rx↔Concurrency 대응표 작성** | async/await 기초 손코딩(AI 없이) |
-| W3 | 구현/시뮬 + 문자열(10) | async/await + Task/취소 | 네트워킹 함수 Rx→async 재작성 |
-| W4 | Two Pointers(8) | **actor + Sendable + data race** | actor로 스레드세이프 캐시 |
-| W5 | Sliding Window(6) + Stack(4) | structured concurrency(async let/TaskGroup) | 병렬 이미지 로드 TaskGroup |
-| W6 | Stack(7) + Binary Search(5) | @MainActor vs DispatchQueue.main, Swift6 | 🔁 인터리브 복습 #1 (W1–5) |
-| W7 | Binary Search(8) + Linked List(6) | SwiftUI 부활: @State/@Binding, @Observable | @Observable+async 작은 화면 |
-| W8 | Trees BFS/DFS(8) — 콜스택 그림 | @StateObject vs @ObservedObject, 리렌더/성능 | SwiftUI 리스트 성능 실험 |
-| W9 | Trees(15) + Heap(5) | MVVM-C, NavigationStack, UIKit interop | Representable 데모(강점 활용) |
-| W10 | Backtracking(6) + Graphs BFS/DFS(6) | 기술면접 CS Q&A 능동인출(메모리/동시성/네트워크) | 🔁 인터리브 복습 #2 |
-| W11 | Graphs(12) + DP 1D(5) | 시니어 아키텍처 방어 스크립트("왜 이 결정") | 🐉 모의 라이브코딩 #1 (45분 타이머) |
-| W12 | DP 2D(12) + Greedy(5) | 모바일 시스템 디자인(오프라인/동기화) | 🐉 모의 기술면접 #1 (녹화·리뷰) |
-| W13 | Intervals/Math(6) + 약한 패턴 집중 | 회사별 맞춤 복습 + Anki 총정리 | 🐉 모의 라이브코딩 #2 + 프로그래머스 Lv.2 실전셋 |
+| 주 | 🏛️ 아키텍처/SD | 🤖 AI 활용 | 🍎 iOS | 🧮 DSA 쪽집게 |
+|----|------|------|------|------|
+| W1 (現) | 서사화 A1~A2 + SD 프레임 도입 | 트렌드 파악 + 4대역량 정의 | COW·값타입 복습 | 해시✅ + 투포인터 |
+| W2 | Clean 계층경계 + SD 규모추정 | 프롬프팅/컨텍스트 설계 드릴 | Rx→async 대응표 | Sliding Window |
+| W3 | 모듈화 방어 + SD 피드설계 | 🔍 검증·회의 근육 (AI 버그잡기) | async/await + Task취소 | Stack |
+| W4 | DI 방어 + SD 오프라인동기화 | ⚖️ 툴선택 방어 연습 | actor + Sendable | Binary Search |
+| W5 | 상태관리 방어 + SD 이미지캐시 | Meta형 3-panel 모의 #1 | structured concurrency | Tree BFS/DFS |
+| W6 | 🔁 아키텍처 인터리브 복습 | take-home AI-allowed 모의 | @MainActor/Swift6 | Graph BFS/DFS |
+| W7 | SD 모듈러delivery + 딥다이브 | 🗣️ 의사결정 서사화 통합 | SwiftUI @State/@Binding | Linked List |
+| W8 | 하네스 아키텍처 방어(06번) | Meta형 3-panel 모의 #2 | @Observable + 리렌더 | Heap/Top-K |
+| W9 | 프로젝트 딥다이브 종합 | AI 협업 스토리 STAR화 | UIKit interop 데모 | Backtracking |
+| W10 | 🐉 모의 SD 라운드 #1 | 🐉 AI-assisted 라운드 #1 | 기술 CS Q&A 인출 | 1D DP |
+| W11 | 🐉 모의 딥다이브 방어 #1 | AI 활용 약점 보강 | 약점 iOS 집중 | Intervals + 약점 |
+| W12 | 🐉 종합 모의면접 (SD+딥다이브+행동) | 🐉 AI-assisted 라운드 #2 | 총정리 | 시그니처 총복습 |
 
 ## 🚩 체크포인트
 
-- **W6말:** 프로그래머스 Lv.1 자유롭게 + async/await 손으로 설명 가능
-- **W9말:** Lv.2 대부분 + SwiftUI @Observable 화면 AI 없이 제작
-- **W13말:** **Lv.2 편하게 + Lv.3 절반 = 대기업 CT/라이브코딩 통과 바** + 모의면접 3회 완료
+- **W4말:** 아키텍처 4틀 방어 자동화(mitigation까지) + AI 검증 근육 장착 + 투포인터·슬라이딩윈도우 반사
+- **W8말:** 모바일 SD 1시나리오 완주 + Meta형 3-panel 2회 경험 + async/await 손 설명 + S급 DSA 7패턴 트리거 반사
+- **W12말:** **딥다이브 방어 완성 + AI-assisted 라운드 2회 + SD 라운드 1회 + 종합 모의면접** = 실전 준비 완료
 
-## ⚖️ 시간 부족 시 트리아지
+## ⚖️ 시간 부족 트리아지 (v2)
 
-우선순위: **🧮 DSA daily rep (절대 안 거름) > 🍎 iOS 동시성 > 🏛️ 아키텍처/SD > 🍎 SwiftUI > 🗺️ 백엔드 노드.** 90분 못 채우는 날은 🏛️ 블록을 먼저 압축(사고만·그림 skip). 저 ROI DSA 패턴(Trie/고급DP/기하)은 과감히 버린다.
-
-> 🏛️ **아키텍처 & 시스템 디자인 트랙은 `ARCH-SD.md`** — 평일 🏛️ 블록에서 [iOS 아키텍처 서사화] ↔ [모바일 SD 시나리오] 격일 번갈아. 모바일 SD 10-스텝 프레임 + 아키텍처 방어 카드 10개 + SD 시나리오 사다리 10개.
+우선순위: **🏛️ 아키텍처/SD > 🤖 AI 활용 > 🍎 iOS 동시성 > 🧮 DSA 트리거인출 > 🍎 SwiftUI.**
+75분 못 채우는 날은 🍎/🧮를 압축, 🏛️/🤖는 사수. DSA는 "패턴 호명"만이라도 매일 1개.
 
 ---
 
-## 📎 지원 타겟별 배분
+## 📎 지원 타겟별 배분 (v2)
 
-- **대기업/토스(네카라쿠배당토):** CT 비중 최대. DSA + 라이브코딩 집중.
-- **스타트업:** 과제전형(take-home)이 관건. 포트폴리오 프로젝트 + 아키텍처 방어.
-- **외국계:** LeetCode 스타일 CT(영어) + 모바일 시스템 디자인 + behavioral.
+- **AI 도입 빅테크/외국계(Google·Meta·Canva·Shopify류):** 🤖 AI-assisted 라운드 + 🏛️ SD + 딥다이브. **너의 하네스 스토리가 결정타.**
+- **국내 대기업/토스:** 라이브코딩(무 AI) 잔존 → 🧮 쪽집게 사수 + 🏛️ 아키텍처.
+- **스타트업:** take-home(AI-allowed) + 포트폴리오 + 아키텍처 방어.
 
-> 리서치 출처(23건, URL 포함)는 세션 로그/커밋 히스토리에 보존. 필요 시 요청.
+> v1 리서치(23건) + v2 AI 트렌드 근거는 커밋 히스토리·`AI-TEST.md` 출처 참조.
