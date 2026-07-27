@@ -47,6 +47,22 @@
 ```
 **핵심:** AI는 챗으로 조언만 하고 **파일을 직접 못 고침** → 네가 **판단·통합·검증**의 주체. "AI가 대신 풀어주는 시험"이 절대 아니라 **"AI를 도구로 쓰는 너의 판단력"** 시험.
 
+### 📊 Meta 4대 평가기준 (이걸로 채점당함)
+```
+① 문제해결(Problem Solving)   요구사항 분해·접근 설계
+② 코드품질(Code Quality)      AI 출력을 프로덕션 수준으로 정제
+③ 검증(Verification)          ⭐ AI 코드의 버그·엣지·잘못된 가정을 잡아냄  ← AI시대 핵심
+④ 커뮤니케이션(Communication) 생각·의도를 계속 소리내기 (관찰자에게 들려줘야 채점됨)
+```
+
+### 🔁 실제 진행 3단계 (평가 관점)
+```
+1단계  문제 분해     ⛔ 아직 AI 안 씀. 순수 분석력 관찰 (요구사항 쪼개기)
+2단계  AI로 구현     프롬프팅·반복 품질·통합력 관찰
+3단계  리뷰 & 정제    AI 출력 검토 + 테스트 추가 + 결정 방어
+```
+> 과제 자체는 [🐛 버그픽스 → 🔨 구현 → ⚡ 최적화]로 흐르고, 그 위에서 위 4기준·3단계 행동이 평가됨.
+
 ---
 
 ## 🎯 4대 역량 (드릴 대상)
@@ -75,6 +91,53 @@
 
 ---
 
+## ❌ 떨어지는 5대 실수 (리서치 실측 — 이것만 피해도 상위권)
+
+> 실제로 대부분의 후보가 AI-assisted 라운드를 **틀린 멘탈모델**로 접근해 떨어진다.
+
+```
+1. 🧠 문제 이해 전에 프롬프트   "가장 큰 단일 실수." AI를 답 기계로 취급.
+                               → 먼저 요구사항 분해(1단계 무AI)부터.
+2. 📋 읽지 않고 붙여넣기         AI 출력 이해 없이 수용 → "이 함수 뭐하죠?"에 버벅.
+                               → 코드 품질 판단 불능 = AI시대 최악 신호(치명타).
+3. 🌀 프롬프트 죽음의 소용돌이   에러 뜨면 AI에 계속 되물음. 3~4턴 후 자기 코드도
+                               설명 못 함 → "그건 AI의 면접이지 네 면접이 아님."
+4. 🔍 검증 부실                 AI는 데이터모델 오가정·엣지 누락·"맞아 보이는데
+                               미묘히 틀린" 코드 생성. 안 걸러내면 감점.
+5. 😱 도구 실패 시 패닉          AI에 전부 의존 → 툴 먹통되면 무너짐(의존도 노출).
+```
+
+## ✅ 좋은 접근 vs 나쁜 접근 (멘탈모델)
+
+```
+        나쁨 ❌                          좋음 ✅
+   "자동완성으로 빨리 코딩"           "AI는 조수, 운전자는 나"
+   AI가 solution을 driving            내가 항상 solution을 lead
+   조용히 붙여넣기                     붙여넣는 이유까지 오버커뮤니케이션
+   "AI가 맞겠지"                       "이 부분 의심스러워서 검증했다"
+```
+
+> 🗝️ **황금률 3개:**
+> 1. **AI는 assistant, not driver** — 항상 네가 방향 잡고 AI는 실행 보조.
+> 2. **오버커뮤니케이션** — "지금 이걸 왜 AI에 물어보는지 / 왜 이 답을 채택·거절하는지" 계속 소리내. 관찰자는 네 사고과정을 들어야 채점함.
+> 3. **믿기 전에 의심** — 붙여넣기 전에 "이거 왜 맞다고 보나"를 스스로 답할 수 있어야.
+
+## 🗣️ 행동면접: "AI 어떻게 쓰세요?" (iOS 직결 — 주력 경로)
+
+> iOS는 전용 라운드보다 **행동/딥다이브에서 AI 사용을 *말로* 검증**하는 경우가 많음(AI 이후 소프트스킬·판단력 배점↑). "AI로 알고리즘은 풀리니, 못 대체하는 건 트레이드오프 설명·모호함 항해·압박 속 소통."
+
+**STAR로 답하기** ("AI를 실제로 어떻게 썼나"):
+```
+S 상황   어떤 작업/제약에서
+T 과제   무엇을 해결해야 했고
+A 행동   AI에 무엇을 맡기고 / 무엇을 직접 판단·거절·검증했는지 (선택의 이유)
+R 결과   지표·임팩트 + 배운 것
+```
+- ⚖️ **핵심 = 정직 + 판단.** "다 AI로 했어요"(❌) / "AI가 X 제안했지만 Y 이유로 제가 바꿨습니다"(✅ 시니어 신호).
+- 🗡️ **너의 필살기:** 대부분은 "Cursor 써봤어요" 수준. 넌 하네스로 **AI 실패모드를 코드 게이트로 막은** 사람 → 아래 매핑표가 곧 STAR 스토리 재료.
+
+---
+
 ## 🗡️ 너의 하네스 → 면접 스토리 매핑
 
 > 이미 만든 걸 면접 언어로. 각 항목 = "AI 협업 STAR 스토리" 후보.
@@ -97,6 +160,16 @@
 - **take-home AI-allowed (W6):** 작은 과제를 AI로 완수 → 결정 로그 → 딥다이브 방어.
 - **AI-assisted 라운드 #2 (W12):** 난이도↑ + 압박 꼬리질문("이 AI 답 왜 안 고쳤어요?").
 
+## 🏋️ 연습 프로토콜 (혼자 하는 드릴 — 회사 환경 OK)
+
+> "문제 더 풀기"가 아니라 **설명·검증·프롬프트 규율·실패모드**를 연습. 실제 네 워크플로(Cursor/Claude Code)에서.
+
+1. **🔍 버그 감별 드릴:** AI에 코드 생성시킨 뒤, 붙여넣기 전에 **"여기 버그/엣지/잘못된 가정 있나?"를 먼저 손으로** 찾고 → 그다음 검증. (2단계→3단계 근육)
+2. **🗣️ 오버커뮤니케이션 드릴:** 작업하며 **소리내 녹음** — "왜 이걸 AI에 묻나 / 왜 이 답 채택·거절하나". 다시 들어보면 침묵 구간이 감점 포인트.
+3. **🧠 무-AI 분해 드릴:** 요구사항 받으면 **AI 켜기 전 5분** 손으로 분해(1단계). 프롬프트 조급증 교정.
+4. **🎤 STAR 스토리 드릴:** 하네스 자산 1개 골라 2분 구술 STAR. "AI가 X 제안 → Y 이유로 내가 바꿈" 패턴 연습.
+5. **😱 툴 실패 대비:** AI 없이도 접근 설명 가능한지 점검(의존도 낮추기).
+
 ## 📝 운영 규칙
 
 - 매 세션 🤖 블록(~20분): 위 4대 역량 중 due 1개 드릴 + 하네스 스토리 1개 서사화.
@@ -107,7 +180,14 @@
 
 ## 출처 (2026-07 리서치)
 
+**트렌드·포맷:**
 - [Google's AI-Assisted Coding Interview (2026 Guide) — Exponent](https://www.tryexponent.com/blog/google-ai-coding-interview)
 - [Top 4 Companies That Allow AI in Tech Interviews — LockedIn AI](https://www.lockedinai.com/blog/companies-allowing-ai-in-interviews)
 - [Are You Allowed to Use AI in Coding Interviews? The 2026 Rules — techinterview](https://www.techinterview.org/post/3233475415/ai-coding-interviews-rules-2026/)
 - [AI-Assisted Coding Interviews (how to prepare) — IGotAnOffer](https://igotanoffer.com/en/advice/ai-assisted-coding-interview)
+
+**평가기준·실수·행동면접 (2차 리서치):**
+- [Meta's AI-Enabled Coding Interview: How to Prepare — Hello Interview](https://www.hellointerview.com/blog/meta-ai-enabled-coding)
+- [Meta Now Lets You Use AI... Most Candidates Use It Wrong — DEV](https://dev.to/klement_gunndu/meta-now-lets-you-use-ai-in-coding-interviews-most-candidates-use-it-wrong-5156)
+- [Meta transformed their coding interviews with AI — Fahim ul Haq](https://medium.com/@fahimulhaq/meta-just-transformed-their-coding-interviews-with-ai-heres-what-developers-must-know-363b50dceda4)
+- [How technical interviews are evolving with AI — Formation](https://formation.dev/blog/how-technical-interviews-are-evolving-with-ai)
