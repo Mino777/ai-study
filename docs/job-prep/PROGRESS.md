@@ -94,7 +94,8 @@
 - [x] ~~🅰️ A5 Rx→Concurrency 전환 서사 (압박질문 2개 방어 포함)~~ ✅ `lessons/arch-a5-...` (2026-07-28)
 - [x] ~~🅱️ B1 규모추정 냅킨계산 + 이미지 디코딩 배율~~ ✅ `lessons/sd-b1-napkin-math.md` (2026-07-28)
 - [x] ~~🅱️ B2 이미지 피드 풀 시나리오 (10-스텝 완주 + SSOT 방어)~~ ✅ `lessons/sd-b2-image-feed.md` (2026-07-28)
-- [ ] 🏛️ **아키텍처/SD** (다음 = 🅰️ A턴): A3(DI 방어) 또는 A4(MVVM vs TCA). B턴은 B4(오프라인 노트·CRDT) 또는 B5(채팅)
+- [x] ~~🅰️ A3 DI 방어 (추상화 과잉 압박 방어 포함)~~ ✅ `lessons/arch-a3-dependency-injection.md` (2026-07-28)
+- [ ] 🏛️ **아키텍처/SD** (다음): 🅱️ B턴 = B4(오프라인 노트·CRDT) 또는 B5(채팅) / 🅰️ A턴 = A4(MVVM vs TCA) 또는 A8(레거시+팀설득)
 - [ ] 🤖 **AI 활용 첫 드릴**: `AI-TEST.md` 대폭 디벨롭 완료(4대 평가기준·5대 실수·멘탈모델·행동STAR·연습 프로토콜5). 다음 = 연습 프로토콜 ① 버그감별 or ④ STAR 스토리 드릴
 - [ ] 🎤 **인터뷰 답변 뱅크 리허설** (`interview-stories/`): 06 하네스 방어 → AI 협업 STAR 재가공
 - [ ] 🧮 **DSA 쪽집게**: 3Sum 마무리 → Sliding Window 트리거. 손코딩은 주말
