@@ -85,7 +85,8 @@
 - [x] ~~해시 4형제 졸업~~ ✅ · [x] ~~투포인터 진입(Valid Palindrome·Two Sum II)~~ ✅
 - [x] ~~🍎 SwiftUI @Observable vs ObservableObject~~ ✅ `lessons/ios-01` · [x] ~~property wrapper 4형제~~ ✅ `lessons/ios-02` · [x] ~~Rx→async 브릿지~~ ✅ `lessons/ios-03`
 - [x] ~~JeaSungLEE + weeeBox 레포 → 우리 질문뱅크로 통합~~ ✅ `QUESTION-BANK.md`
-- [ ] 🍎 **iOS 갭 드릴** (우선·`QUESTION-BANK.md` 드릴 큐 순서): ① GCD Serial/Concurrent+Main스레드 ② TableView 셀 재사용+이미지 잘못된셀 함정 ③ Core Data vs SQLite+Keychain ④ SSL/TLS 핸드셰이크 ⑤ Codable 실전
+- [x] ~~🍎 GCD Serial/Concurrent+Main + 셀 재사용 레이스~~ ✅ `lessons/ios-04` (2026-07-28)
+- [ ] 🍎 **iOS 갭 드릴** (다음 순서): ③ Core Data vs SQLite+Keychain ④ SSL/TLS 핸드셰이크 ⑤ Codable 실전 ⑥ QoS
 - [ ] 🏛️ **아키텍처/SD** (메인): A2(async를 어느 계층에) 또는 B1 SD 프레임(규모추정 냅킨계산). 격일 번갈아
 - [ ] 🤖 **AI 활용 첫 드릴**: `AI-TEST.md` 대폭 디벨롭 완료(4대 평가기준·5대 실수·멘탈모델·행동STAR·연습 프로토콜5). 다음 = 연습 프로토콜 ① 버그감별 or ④ STAR 스토리 드릴
 - [ ] 🎤 **인터뷰 답변 뱅크 리허설** (`interview-stories/`): 06 하네스 방어 → AI 협업 STAR 재가공

@@ -28,7 +28,10 @@
 | property wrapper 4형제 축 | 4개를 가르는 축 2개? + @StateObject vs @ObservedObject 차이는 오직 무엇? | 1 | 2026-07-27 | 2026-07-28 | lessons/ios-02 |
 | @StateObject 리셋 버그 | 뷰에서 `@ObservedObject var vm = VM()` 하면 왜 상태 리셋? 정확한 메커니즘? 고치려면? | 1 | 2026-07-27 | 2026-07-28 | lessons/ios-02 |
 | Rx→async 왜 더 안전 | async가 Rx보다 안전한 4가지? + 심장(disposeBag→무엇)? | 1 | 2026-07-27 | 2026-07-28 | lessons/ios-03 |
-| await 의미 | `await`는 스레드를 블로킹? 양보? 정확히 뭐가 일어나나? | 1 | 2026-07-27 | 2026-07-28 | lessons/ios-03 |
+| await 의미 | `await`는 스레드를 블로킹? 양보? 정확히 뭐가 일어나나? (블로킹처럼 보이지만?) | 1 | 2026-07-27 | 2026-07-29 | lessons/ios-03 |
+| GCD 2축 | Serial vs Concurrent 차이? + sync/async는 같은 축인가 다른 축인가? | 1 | 2026-07-28 | 2026-07-29 | lessons/ios-04 |
+| main.sync 데드락 | 메인 스레드에서 `DispatchQueue.main.sync`가 왜 데드락? | 1 | 2026-07-28 | 2026-07-29 | lessons/ios-04 |
+| 셀 재사용 레이스 | 이미지가 엉뚱한 셀에 뜨는 이유? 해결 3가지? | 1 | 2026-07-28 | 2026-07-29 | lessons/ios-04 |
 
 ## 📝 정답 키 (인출 실패 시 확인용)
 - **5-스텝:** ① 번역(값/인덱스) ② brute force ③ 낭비 찾기 ④ 도구 매칭 ⑤ 복잡도+엣지
@@ -46,4 +49,7 @@
 - **4형제 축:** ① 값/참조 타입 ② 소유/빌림. @State(값·소유)/@Binding(값·빌림)/@StateObject(참조·소유)/@ObservedObject(참조·빌림). @StateObject vs @ObservedObject 차이 = 오직 **수명 소유권**.
 - **@StateObject 리셋 버그:** View는 struct라 부모 갱신마다 re-init → `= VM()` 이니셜라이저 재실행 → 매번 새 객체 → 상태 리셋. @ObservedObject는 재초기화를 안 막음. 고침 = 뷰에서 생성하면 @StateObject(첫 등장 1번만 평가·유지) / 주입이면 @ObservedObject(= 없이).
 - **Rx→async 4안전:** ① 가독성(콜백중첩→선형) ② 취소(disposeBag 수동→구조적 자동전파) ③ data race(런타임규율→컴파일러 강제 actor/@MainActor) ④ 에러(onError→try/throw). 심장 = disposeBag→**구조적 취소**.
-- **await 의미:** 블로킹 아님 → 스레드 **양보(suspend)**, 결과 오면 재개(resume). 그동안 스레드는 다른 일 처리.
+- **await 의미:** 블로킹 아님 → 스레드 **양보(suspend)**, 결과 오면 재개(resume). 그동안 스레드는 다른 일 처리. ⚠️ *블로킹처럼 "보이지만"(코드 선형) 실제론 스레드 반납* — 이게 "동기처럼 쓰는 논블로킹"의 핵심.
+- **GCD 2축:** Serial=한 번에 1개·FIFO·안전(=actor의 GCD판) / Concurrent=동시·빠름·경쟁위험. **sync/async는 별개 축**(기다리냐 마냐). 2×2 조합. Main=UI 전용 serial 큐.
+- **main.sync 데드락:** 메인 큐(serial)는 현재 코드를 끝내야 다음 실행 ↔ sync는 그 블록 끝날 때까지 대기 → 상호 대기 = 영구 정지. (UI는 `main.async`가 관용구, "동기적으로"라는 표현 금지)
+- **셀 재사용 레이스:** 느린 다운로드 도중 셀이 재사용돼 다른 행 역할 → 뒤늦은 응답이 그 셀에 그려짐. 해결 ① prepareForReuse에서 취소+nil ② 완료 시 URL/indexPath 일치 검증 ③ 셀이 Task 보유→재사용 시 cancel.
