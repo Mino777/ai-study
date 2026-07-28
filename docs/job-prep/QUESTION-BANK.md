@@ -18,14 +18,14 @@
 
 ### 동시성
 - 🔶 async/await를 completion handler 대신 쓰는 이유 + 마이그레이션 ⭐ → `lessons/ios-03`(Rx→async)
-- ⬜ GCD Serial vs Concurrent 큐, Main 스레드의 역할 ⭐
+- ✅ GCD Serial vs Concurrent 큐, Main 스레드의 역할 ⭐ → `lessons/ios-04` (+ main.sync 데드락)
 - ⬜ QoS 클래스와 우선순위
 - ⬜ actor 재진입(reentrancy) 함정 / Sendable / Swift6 strict concurrency
 - ⬜ 프로세스 vs 스레드
 
 ### UIKit
-- ⬜ TableView 셀 재사용 메커니즘 ⭐
-- ⬜ 이미지 다운로드 중 잘못된 셀에 표시되는 문제(재사용 함정) + 해결 ⭐
+- ✅ TableView 셀 재사용 메커니즘 ⭐ → `lessons/ios-04`
+- ✅ 이미지 다운로드 중 잘못된 셀에 표시되는 문제(재사용 함정) + 해결 ⭐ → `lessons/ios-04`
 - ⬜ Delegate 패턴 메모리 누수 방지 / 동적 셀 높이 / AutoLayout 성능
 
 ### 메모리 (💪 강점 — 복습만)
@@ -87,11 +87,12 @@
 
 피벗 전략상 **🍎 iOS 갭 → 🏛️ 서사화** 순. 강점(💪)은 인출 확인만, 갭(⬜)에 시간 투자.
 
-1. ⬜ **GCD Serial/Concurrent + Main 스레드** (동시성 기초 — async 밑단) ⭐
-2. ⬜ **TableView 셀 재사용 + 이미지 잘못된 셀 함정** (UIKit 최빈출) ⭐
-3. ⬜ **Core Data vs SQLite vs Realm + Keychain vs UserDefaults** (데이터 저장) ⭐
+1. ✅ ~~**GCD Serial/Concurrent + Main 스레드**~~ → `lessons/ios-04` (2026-07-28)
+2. ✅ ~~**TableView 셀 재사용 + 이미지 잘못된 셀 함정**~~ → `lessons/ios-04` (2026-07-28)
+3. ⬜ **Core Data vs SQLite vs Realm + Keychain vs UserDefaults** (데이터 저장) ⭐ ← 다음
 4. ⬜ **SSL/TLS 핸드셰이크 + HTTPS** (네트워크·보안, cert pinning 연결) ⭐
 5. ⬜ **Codable 실전 디코딩** (실무 단골 확인)
-6. 💪 **ARC/순환참조 + weak/unowned** 인출 확인 (강점, 빠르게)
+6. ⬜ **QoS 클래스 + 우선순위** (GCD 후속)
+7. 💪 **ARC/순환참조 + weak/unowned** 인출 확인 (강점, 빠르게)
 
 > weeeBox **레벨별 기대치**는 `ARCH-SD.md`에 흡수(주니어→스태프 루브릭). SD 프레임은 이미 커버.
