@@ -84,7 +84,7 @@
 ### 🃏 방어 카드 (각 항목 = 면접 딥다이브 대비)
 - [x] A1. 모듈화(SPM 멀티모듈) — ✅ 서사 완성(2026-07-23). 남은 것: **mitigation 라인**(순환→인터페이스 모듈로 끊음, cold build→incremental 캐싱, 보일러→코드젠, 러닝커브→의존성 다이어그램 문서)
 - [x] A2. Clean 계층 + **async를 어느 계층에** — ✅ 방어 완성(2026-07-28) → `lessons/arch-a2-concurrency-layers.md`. 3원칙(경계에만 MainActor / Domain nonisolated / Task 수명은 화면) + 안티패턴 2축(성능·순수성) + "경고 은폐" 결정타 + Swift6.2
-- [ ] A3. DI — 생성자 주입 기본 → 언제 컨테이너(Factory/Needle) 도입? 컴파일타임 안전 우선
+- [x] A3. DI — ✅ 방어 완성(2026-07-28) → `lessons/arch-a3-dependency-injection.md`. 생성자주입 기본 + 컨테이너 도입 기준(조립지옥·스코프) + 컴파일타임 안전 우선(런타임 컨테이너=모순) + **추상화 과잉 압박 방어**("비용은 양이 아니라 예측불가능성" + Protocol Witness 대안)
 - [ ] A4. MVVM vs TCA — "죽었나?" 프레임 + TCA 국소적용 논리
 - [x] A5. 반응형(Rx) → Swift Concurrency 전환 — ✅ 방어 완성(2026-07-28) → `lessons/arch-a5-rx-to-concurrency-migration.md`. Strangler Fig + 전환 우선순위 + mitigation 4 + 팀 설득 축 + **압박질문 2개 방어**("안 하면 안 되나" / "언제 멈추나")
 - [ ] A6. 모듈 네비게이션 — Coordinator + 딥링크 + 네비 상태/테스트

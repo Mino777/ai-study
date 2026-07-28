@@ -43,6 +43,8 @@
 | 오프라인 좋아요 5단계 | 탭부터 동기화까지 5단계? 멱등키는 왜? 충돌정책은? | 1 | 2026-07-28 | 2026-07-29 | lessons/sd-b2 |
 | Core Data vs SQLite ⭐ | 둘은 경쟁 관계? Core Data의 정체? 그럼 진짜 질문은 무엇인가? | 1 | 2026-07-28 | 2026-07-29 | lessons/ios-05 |
 | Keychain vs UserDefaults | UserDefaults에 토큰 두면 왜 사고? + 이미지 캐시는 어느 디렉토리? | 1 | 2026-07-28 | 2026-07-29 | lessons/ios-05 |
+| DI 컨테이너 도입 기준 | 생성자 주입으로 안 되는 순간 2~3? + 도구 고르는 제1기준? | 1 | 2026-07-28 | 2026-07-29 | lessons/arch-a3 |
+| 추상화 과잉 방어 ⭐ | "protocol 파일 두 배인데 가치있나"에 뭐라고? (비용의 정체 + 대안) | 1 | 2026-07-28 | 2026-07-29 | lessons/arch-a3 |
 
 ## 📝 정답 키 (인출 실패 시 확인용)
 - **5-스텝:** ① 번역(값/인덱스) ② brute force ③ 낭비 찾기 ④ 도구 매칭 ⑤ 복잡도+엣지
@@ -67,6 +69,8 @@
 - **계층별 동시성:** Presentation=@MainActor(+Task 수명 소유) / Domain=nonisolated+async만(스레드 중립) / Data=async throws+actor(CPU바운드는 @concurrent). **@MainActor는 경계에만.**
 - **@MainActor 남발:** ① 성능(API·디코딩·로직이 메인 점유→프레임드랍) ② 순수성(Domain이 UIKit 런타임 결합→테스트·재사용 불가, 의존성 방향 위반). "경고 사라짐"=해결이 아니라 **은폐**(병렬성 포기로 컴파일러 침묵, 문제는 런타임 성능으로 이동).
 - **Rx→async 전환 전략:** **Strangler Fig**(빅뱅 X). 1순위 일회성 요청(Single→async throws, 1:1 매핑) → 2순위 신규 피처 전체 → 3순위 Data 계층(actor 캐시 격리). **남겨두는 것 = 복잡 스트림 조합(debounce·merge)** + 잘 돌고 안 바뀌는 레거시.
+- **DI 컨테이너 도입 기준:** ① **조립 지옥**(다단 수동 조립 × 화면 수십) ② **스코프 관리**(앱1개/화면당1개/매번새로) ③ 순환 의존 탐지. 도구 제1기준 = **컴파일 타임 검증**(Factory·Needle ✅ / Swinject는 런타임 → "DI 목적이 안전성인데 안전성을 런타임으로 미루는 모순").
+- **추상화 과잉 방어 ⭐:** "맞습니다"로 인정 후 → **보일러플레이트의 진짜 비용은 양이 아니라 예측 불가능성**(팀 합의 패턴이면 양 많아도 읽는 비용 낮음 = 일관성으로 인지비용 상쇄). 기준 = 확장성만을 위한 추상화 지양, **테스트 이음새 필요한 경계만**. 대안: **Protocol Witness**(클로저 담은 struct) · 클로저 주입 · 코드젠 → "목적은 이음새 확보, protocol은 수단 중 하나".
 - **Core Data vs SQLite ⭐:** 경쟁 관계 **아님**. Core Data = **객체 그래프 관리 프레임워크**, 저장 엔진으로 SQLite를 씀(on top of). 진짜 질문 = *"객체그래프 추상화를 쓸까, SQL을 직접 통제할까"*. Core Data=관계자동·변경추적·iOS통합 / SQLite(GRDB)=쿼리통제·성능예측·디버깅 쉬움. iOS17+ 신규면 SwiftData(Core Data 모던 래퍼).
 - **Keychain vs UserDefaults:** UserDefaults=**암호화 안 된 평문 plist** → 토큰 두면 백업·탈옥으로 노출(계정 탈취). Keychain=암호화+Secure Enclave, `WhenUnlockedThisDeviceOnly`, 앱 삭제 후 잔존→로그아웃 시 명시 삭제. **이미지 캐시는 `Caches/`**(Documents는 백업돼서 용량 잡아먹음). 원칙: 큰 바이너리는 파일시스템, DB엔 **경로만**.
 - **cursor vs offset:** offset은 새 글 추가 시 위치가 밀려 **중복/누락 = page drift**. cursor는 "이 아이템 다음부터"라는 절대 기준 → drift 없음. 피드 기본 추천.
