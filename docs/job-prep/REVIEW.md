@@ -32,6 +32,8 @@
 | GCD 2축 | Serial vs Concurrent 차이? + sync/async는 같은 축인가 다른 축인가? | 1 | 2026-07-28 | 2026-07-29 | lessons/ios-04 |
 | main.sync 데드락 | 메인 스레드에서 `DispatchQueue.main.sync`가 왜 데드락? | 1 | 2026-07-28 | 2026-07-29 | lessons/ios-04 |
 | 셀 재사용 레이스 | 이미지가 엉뚱한 셀에 뜨는 이유? 해결 3가지? | 1 | 2026-07-28 | 2026-07-29 | lessons/ios-04 |
+| 계층별 동시성 정책 | Presentation/Domain/Data 각각 격리 정책? Task 수명은 누가 소유? | 1 | 2026-07-28 | 2026-07-29 | lessons/arch-a2 |
+| @MainActor 남발 안티패턴 | UseCase까지 @MainActor 붙이면 문제 2축? + "경고 사라짐"의 의미? | 1 | 2026-07-28 | 2026-07-29 | lessons/arch-a2 |
 
 ## 📝 정답 키 (인출 실패 시 확인용)
 - **5-스텝:** ① 번역(값/인덱스) ② brute force ③ 낭비 찾기 ④ 도구 매칭 ⑤ 복잡도+엣지
@@ -53,3 +55,5 @@
 - **GCD 2축:** Serial=한 번에 1개·FIFO·안전(=actor의 GCD판) / Concurrent=동시·빠름·경쟁위험. **sync/async는 별개 축**(기다리냐 마냐). 2×2 조합. Main=UI 전용 serial 큐.
 - **main.sync 데드락:** 메인 큐(serial)는 현재 코드를 끝내야 다음 실행 ↔ sync는 그 블록 끝날 때까지 대기 → 상호 대기 = 영구 정지. (UI는 `main.async`가 관용구, "동기적으로"라는 표현 금지)
 - **셀 재사용 레이스:** 느린 다운로드 도중 셀이 재사용돼 다른 행 역할 → 뒤늦은 응답이 그 셀에 그려짐. 해결 ① prepareForReuse에서 취소+nil ② 완료 시 URL/indexPath 일치 검증 ③ 셀이 Task 보유→재사용 시 cancel.
+- **계층별 동시성:** Presentation=@MainActor(+Task 수명 소유) / Domain=nonisolated+async만(스레드 중립) / Data=async throws+actor(CPU바운드는 @concurrent). **@MainActor는 경계에만.**
+- **@MainActor 남발:** ① 성능(API·디코딩·로직이 메인 점유→프레임드랍) ② 순수성(Domain이 UIKit 런타임 결합→테스트·재사용 불가, 의존성 방향 위반). "경고 사라짐"=해결이 아니라 **은폐**(병렬성 포기로 컴파일러 침묵, 문제는 런타임 성능으로 이동).

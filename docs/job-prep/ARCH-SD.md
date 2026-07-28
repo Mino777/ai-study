@@ -83,7 +83,7 @@
 
 ### 🃏 방어 카드 (각 항목 = 면접 딥다이브 대비)
 - [x] A1. 모듈화(SPM 멀티모듈) — ✅ 서사 완성(2026-07-23). 남은 것: **mitigation 라인**(순환→인터페이스 모듈로 끊음, cold build→incremental 캐싱, 보일러→코드젠, 러닝커브→의존성 다이어그램 문서)
-- [ ] A2. Clean 계층 + **async를 어느 계층에** (UI=MainActor / UseCase=nonisolated / CPU=@concurrent) ← C·꼬리 대비
+- [x] A2. Clean 계층 + **async를 어느 계층에** — ✅ 방어 완성(2026-07-28) → `lessons/arch-a2-concurrency-layers.md`. 3원칙(경계에만 MainActor / Domain nonisolated / Task 수명은 화면) + 안티패턴 2축(성능·순수성) + "경고 은폐" 결정타 + Swift6.2
 - [ ] A3. DI — 생성자 주입 기본 → 언제 컨테이너(Factory/Needle) 도입? 컴파일타임 안전 우선
 - [ ] A4. MVVM vs TCA — "죽었나?" 프레임 + TCA 국소적용 논리
 - [ ] A5. 반응형(Rx) → Swift Concurrency 전환 — 무엇을 얻고 잃나 (오늘 세션의 Rx↔async 브릿지 연결)
