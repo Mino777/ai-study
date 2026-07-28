@@ -41,6 +41,8 @@
 | cursor vs offset | 피드에 offset 쓰면 무슨 문제? 그 현상 이름? cursor는 왜 안전? | 1 | 2026-07-28 | 2026-07-29 | lessons/sd-b2 |
 | 로컬DB SSOT 방어 | View가 API 직접 받으면 안 되는 이유 3? + "언제는 과잉"? | 1 | 2026-07-28 | 2026-07-29 | lessons/sd-b2 |
 | 오프라인 좋아요 5단계 | 탭부터 동기화까지 5단계? 멱등키는 왜? 충돌정책은? | 1 | 2026-07-28 | 2026-07-29 | lessons/sd-b2 |
+| Core Data vs SQLite ⭐ | 둘은 경쟁 관계? Core Data의 정체? 그럼 진짜 질문은 무엇인가? | 1 | 2026-07-28 | 2026-07-29 | lessons/ios-05 |
+| Keychain vs UserDefaults | UserDefaults에 토큰 두면 왜 사고? + 이미지 캐시는 어느 디렉토리? | 1 | 2026-07-28 | 2026-07-29 | lessons/ios-05 |
 
 ## 📝 정답 키 (인출 실패 시 확인용)
 - **5-스텝:** ① 번역(값/인덱스) ② brute force ③ 낭비 찾기 ④ 도구 매칭 ⑤ 복잡도+엣지
@@ -65,6 +67,8 @@
 - **계층별 동시성:** Presentation=@MainActor(+Task 수명 소유) / Domain=nonisolated+async만(스레드 중립) / Data=async throws+actor(CPU바운드는 @concurrent). **@MainActor는 경계에만.**
 - **@MainActor 남발:** ① 성능(API·디코딩·로직이 메인 점유→프레임드랍) ② 순수성(Domain이 UIKit 런타임 결합→테스트·재사용 불가, 의존성 방향 위반). "경고 사라짐"=해결이 아니라 **은폐**(병렬성 포기로 컴파일러 침묵, 문제는 런타임 성능으로 이동).
 - **Rx→async 전환 전략:** **Strangler Fig**(빅뱅 X). 1순위 일회성 요청(Single→async throws, 1:1 매핑) → 2순위 신규 피처 전체 → 3순위 Data 계층(actor 캐시 격리). **남겨두는 것 = 복잡 스트림 조합(debounce·merge)** + 잘 돌고 안 바뀌는 레거시.
+- **Core Data vs SQLite ⭐:** 경쟁 관계 **아님**. Core Data = **객체 그래프 관리 프레임워크**, 저장 엔진으로 SQLite를 씀(on top of). 진짜 질문 = *"객체그래프 추상화를 쓸까, SQL을 직접 통제할까"*. Core Data=관계자동·변경추적·iOS통합 / SQLite(GRDB)=쿼리통제·성능예측·디버깅 쉬움. iOS17+ 신규면 SwiftData(Core Data 모던 래퍼).
+- **Keychain vs UserDefaults:** UserDefaults=**암호화 안 된 평문 plist** → 토큰 두면 백업·탈옥으로 노출(계정 탈취). Keychain=암호화+Secure Enclave, `WhenUnlockedThisDeviceOnly`, 앱 삭제 후 잔존→로그아웃 시 명시 삭제. **이미지 캐시는 `Caches/`**(Documents는 백업돼서 용량 잡아먹음). 원칙: 큰 바이너리는 파일시스템, DB엔 **경로만**.
 - **cursor vs offset:** offset은 새 글 추가 시 위치가 밀려 **중복/누락 = page drift**. cursor는 "이 아이템 다음부터"라는 절대 기준 → drift 없음. 피드 기본 추천.
 - **로컬DB SSOT 방어:** ① **코드 경로 통일**(View는 DB만 관찰 → 온/오프라인 분기 소멸, View가 오히려 단순) ② 오프라인(재시작·비행기모드에도 열람+optimistic 보존) ③ **부분 실패 내성**(4페이지 실패해도 1~3 유지, 실패분만 재시도). **과잉인 경우 = 읽기전용+오프라인 불필요 화면** → API 직접도 씀(종교적 옹호 회피).
 - **오프라인 좋아요 5단계:** ① UI 즉시(optimistic) ② 로컬DB pendingLike ③ SyncQueue 적재(**Idempotency-Key** = 재시도 시 중복 좋아요 방지) ④ 복구 시 배치 전송 ⑤ 실패 시 지수백오프→최종 실패면 롤백+알림. 충돌정책 = 좋아요는 저가치라 **LWW 충분**(CRDT는 오프라인 멀티디바이스 편집용, 여기선 과잉).

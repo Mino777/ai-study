@@ -55,8 +55,8 @@
 
 - **Phase:** 1 (기초)
 - **Week:** 1~2
-- **진행 세션 수:** 6 (최근 2026-07-28: GCD + 아키텍처 A2·A5)
-- **레벨:** 🥈 Lv.5 "알고리즘 견습생" (누적 448 XP)
+- **진행 세션 수:** 6 (최근 2026-07-28: 딥다이브 6개 — GCD·A2·A5·B1·B2·저장소)
+- **레벨:** 🥈 Lv.6 "알고리즘 견습생" (누적 518 XP)
 
 ## 진단 프로필 (2026-07-22)
 
@@ -86,7 +86,8 @@
 - [x] ~~🍎 SwiftUI @Observable vs ObservableObject~~ ✅ `lessons/ios-01` · [x] ~~property wrapper 4형제~~ ✅ `lessons/ios-02` · [x] ~~Rx→async 브릿지~~ ✅ `lessons/ios-03`
 - [x] ~~JeaSungLEE + weeeBox 레포 → 우리 질문뱅크로 통합~~ ✅ `QUESTION-BANK.md`
 - [x] ~~🍎 GCD Serial/Concurrent+Main + 셀 재사용 레이스~~ ✅ `lessons/ios-04` (2026-07-28)
-- [ ] 🍎 **iOS 갭 드릴** (다음 순서): ③ Core Data vs SQLite+Keychain ④ SSL/TLS 핸드셰이크 ⑤ Codable 실전 ⑥ QoS
+- [x] ~~🍎 Core Data vs SQLite + Keychain vs UserDefaults~~ ✅ `lessons/ios-05` (2026-07-28)
+- [ ] 🍎 **iOS 갭 드릴** (다음 순서): ④ SSL/TLS 핸드셰이크 + cert pinning ⑤ Codable 실전 ⑥ QoS ⑦ Core Data 마이그레이션
 - [x] ~~🏛️ A2 "async를 어느 계층에"~~ ✅ `lessons/arch-a2-concurrency-layers.md` (2026-07-28)
 - [x] ~~🅰️ A5 Rx→Concurrency 전환 서사 (압박질문 2개 방어 포함)~~ ✅ `lessons/arch-a5-...` (2026-07-28)
 - [x] ~~🅱️ B1 규모추정 냅킨계산 + 이미지 디코딩 배율~~ ✅ `lessons/sd-b1-napkin-math.md` (2026-07-28)
