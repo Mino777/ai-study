@@ -86,7 +86,7 @@
 - [x] A2. Clean 계층 + **async를 어느 계층에** — ✅ 방어 완성(2026-07-28) → `lessons/arch-a2-concurrency-layers.md`. 3원칙(경계에만 MainActor / Domain nonisolated / Task 수명은 화면) + 안티패턴 2축(성능·순수성) + "경고 은폐" 결정타 + Swift6.2
 - [ ] A3. DI — 생성자 주입 기본 → 언제 컨테이너(Factory/Needle) 도입? 컴파일타임 안전 우선
 - [ ] A4. MVVM vs TCA — "죽었나?" 프레임 + TCA 국소적용 논리
-- [ ] A5. 반응형(Rx) → Swift Concurrency 전환 — 무엇을 얻고 잃나 (오늘 세션의 Rx↔async 브릿지 연결)
+- [x] A5. 반응형(Rx) → Swift Concurrency 전환 — ✅ 방어 완성(2026-07-28) → `lessons/arch-a5-rx-to-concurrency-migration.md`. Strangler Fig + 전환 우선순위 + mitigation 4 + 팀 설득 축 + **압박질문 2개 방어**("안 하면 안 되나" / "언제 멈추나")
 - [ ] A6. 모듈 네비게이션 — Coordinator + 딥링크 + 네비 상태/테스트
 - [ ] A7. 네트워크 계층 — 재시도·서킷브레이커·토큰 갱신·환경전환·mocking
 - [ ] A8. 안티패턴+레거시 — Massive VC → strangler + **팀 설득 과정**(리더십)
