@@ -70,7 +70,7 @@
 ### 보안
 - ⬜ 대칭키 vs 비대칭키 / 해싱+솔트 / Certificate Pinning + MITM 방지 (→ ARCH-SD 네트워크계층 연결)
 ### 성능
-- ⬜ 메모리 경고 대응 / 스크롤 성능 / Instruments 사용법
+- 🔶 메모리 경고 대응 / 스크롤 성능 → `lessons/sd-b1`(디코딩 배율·NSCache cost·다운샘플링) + `ios-04`(GCD). 남은 것: Instruments 사용법
 
 ---
 
