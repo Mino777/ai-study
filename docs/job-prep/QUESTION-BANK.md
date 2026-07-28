@@ -34,9 +34,9 @@
 - 💪 힙 vs 스택, 값 타입 vs 참조 타입 관계 ⭐ (COW 연결 → `REVIEW.md`)
 
 ### 데이터 저장
-- ⬜ Core Data vs SQLite vs Realm 비교 ⭐
-- ⬜ Keychain 용도 + UserDefaults 대비 (민감정보) ⭐
-- ⬜ Core Data 마이그레이션 / SwiftData vs Core Data
+- ✅ Core Data vs SQLite vs Realm 비교 ⭐ → `lessons/ios-05` (대립 아님: SQLite 위 객체그래프 계층)
+- ✅ Keychain 용도 + UserDefaults 대비 (민감정보) ⭐ → `lessons/ios-05` (+ 디렉토리 구분·사고 시나리오)
+- 🔶 SwiftData vs Core Data → `lessons/ios-05`. 남은 것: **Core Data 마이그레이션** 실전
 
 ---
 
@@ -89,8 +89,8 @@
 
 1. ✅ ~~**GCD Serial/Concurrent + Main 스레드**~~ → `lessons/ios-04` (2026-07-28)
 2. ✅ ~~**TableView 셀 재사용 + 이미지 잘못된 셀 함정**~~ → `lessons/ios-04` (2026-07-28)
-3. ⬜ **Core Data vs SQLite vs Realm + Keychain vs UserDefaults** (데이터 저장) ⭐ ← 다음
-4. ⬜ **SSL/TLS 핸드셰이크 + HTTPS** (네트워크·보안, cert pinning 연결) ⭐
+3. ✅ ~~**Core Data vs SQLite vs Realm + Keychain vs UserDefaults**~~ → `lessons/ios-05` (2026-07-28)
+4. ⬜ **SSL/TLS 핸드셰이크 + HTTPS** (네트워크·보안, cert pinning 연결) ⭐ ← 다음
 5. ⬜ **Codable 실전 디코딩** (실무 단골 확인)
 6. ⬜ **QoS 클래스 + 우선순위** (GCD 후속)
 7. 💪 **ARC/순환참조 + weak/unowned** 인출 확인 (강점, 빠르게)
