@@ -9,73 +9,143 @@
 
 ## 작성 시점
 
-- **작성 일시**: 2026-05-21 (stock 단타 탭 + iOS Harness Journal 025 세션 직후 compound)
-- **작성 주체**: Claude (단타 탭 박제 + 워커 프로젝트 incident 추출 세션)
-- **이유**: 세션 핸드오프 + KPI 판정(엔트리 exceeded, scale_up)
+- **작성 일시**: 2026-08-03 (세션 7~8f 자율 마감 직후 · 전면 교체)
+- **작성 주체**: Claude (모빌리티 M 트랙 완주 + A 카드 4장 + AI 트랙 착수 세션)
+- **이유**: 직전 판본이 **2026-05-21 작성 후 2개월 방치**(50+ 커밋 경과)되어 실제 작업 스트림과 완전히 어긋나 있었음. 재발 방지 조치를 아래 ⚠️ 에 명시.
 
 ---
 
-## 현재 상태 스냅샷
+## ⚠️ 직전 판본이 stale 했던 원인 (재발 방지)
 
-### ai-study Wiki
-- **엔트리 수**: 262 (2026-05-09 대비 +41 — 봇 스카우트 + iOS 저널 022~025)
-- **그래프**: 270 nodes, 1,642 edges
-- **Solutions**: workflow 19, mdx 9, ai-pipeline 6, github-actions 5, next-patterns 3, performance 1 (workflow +2 이번 스프린트)
-- **테스트**: 71개 (모두 통과)
-- **Mermaid 규칙**: 8개 AUTO-FIX (FIX 1-8) · 렌더링 에러 0 유지
-- **일방향 연결**: 113건 (소프트 워닝 · 작업 시 양방향 백필 권장)
+```
+NEXT.md 는 "위키 콘텐츠 큐"만 담고 있었다.
+그런데 실제 활성 작업 스트림은 job-prep 브랜치(면접 준비)였다.
+→ 위키 큐는 진행이 없었으니 NEXT.md 도 갱신될 이유가 없었고, 그대로 화석이 됐다.
 
-### 봇 파이프라인 (정상 작동)
-- 데일리 레슨(Gemini): 매일 09:00 KST 주제 추천 → 댓글 트리거 → PR 자동 머지
-- Blake 스카우트: 영문 블로그 → 한국어 엔트리 → 자동 머지 (이번 스프린트 #154 5건 머지 확인)
-- 긱뉴스 스카우트: 22:00 KST → 4 프로젝트 매칭 → hub-dispatch (#155 머지 확인)
-
-### auto-trade
-- 레포: Mino777/auto-trade · 하네스 이식 완료 (CLAUDE.md, settings.json, JIT 검색, specs)
-- 상태: JIT 검색 실제 테스트 미완 (carry-over)
+✅ 교정: 이 문서는 **활성 스트림을 먼저 명시**한다. 위키 큐는 그 아래 둔다.
+✅ job-prep 스트림의 상세 진도는 이 파일이 아니라 docs/job-prep/PROGRESS.md 가 SoT.
+   여기서는 "지금 어느 스트림이 살아있는지 + 내일 첫 행동"만 가리킨다.
+```
 
 ---
 
-## P0 — 완료 ✅ (이번 세션)
+## 🔴 활성 스트림 — `job-prep` 브랜치 (면접 준비)
 
-- **iOS Harness Journal 025** — 안전 추론의 사각지대(커밋되지 않은 working-tree 상태). incident 3종 + 양방향 연결 4건. pre-push 리뷰어 캐치 후 git 시맨틱 정정 → 정밀 구분 표를 자산화.
-- **stock 단타 루틴 탭** — M-STOCK 흐름 기반 4단계 + 1억 호가 라이브 계산기 + 허매수/허매도 구분.
+**이게 현재 유일한 활성 스트림이다.** 위키 콘텐츠 작업은 봇 파이프라인이 자동으로 돌고 있고, 사람/에이전트 주도 작업은 전부 job-prep 이다.
 
-## P1 — 이번 주 내
+- **SoT**: `docs/job-prep/PROGRESS.md` (진도·세션로그·약점) · `GAME.md` (스탯) · `REVIEW.md` (SRS) · `CHEATSHEET.md` (1분 복습) · `MOCK-INTERVIEW.md` (능동인출)
+- **데드라인**: 2026-10-22 면접 가능 상태 (3개월 압축, 시작 2026-07-22)
+- **현재**: 🥈 Lv.9 · lessons 21개 · SRS 113장 · Top20 커버 19/20
 
-- [ ] **`/stock` 페이지 CLAUDE.md 등재 판단** — /resume·/interview는 등재됐는데 /stock만 누락. 의도적 비공개인지 정책 판단 후 등재 OR 명시 누락.
-- [ ] **Gemini Search grounding 퀄리티 실측 비교** — grounding 켠 엔트리 vs 끈 엔트리 정성 평가 (carry-over from 2026-05-09)
-- [ ] **github-actions(5)·next-patterns(3) 스킬 후보 검토** — 누적 N≥3 도달했으나 전용 check 스킬 부재. `/promote-solution`으로 패턴 추출 검토.
-- [ ] **일방향 연결 113건 일괄 백필** — `node scripts/fix-one-way-connections.mjs --apply` 단독 PR. 작업 commit과 섞지 말 것.
+### 🎯 내일 첫 행동 (이것만 하면 된다)
 
-## Backlog
+```
+문서 축적은 충분하다. 부족한 건 실행이다.
 
-- auto-trade JIT 검색 실제 테스트 (자기 코드에 grep + 임베딩)
-- /interview 실전 모의면접 모드 (Quiz 170 + Flashcard 풀에서 랜덤 출제)
-- iOS Harness Journal 026 후보: 워커 프로젝트의 *JIT recall L1~L7 / 지식시스템 v2 bitemporal* — 별도 `harness-journal-025-jit-retrieval-poc-phase1`이 일부 커버하지만 ios 시각의 L7 ontology + spec-extractor 패턴은 미커버 (조사 필요)
-- 직장인 사이드 보유 7개 프로젝트의 솔루션 cross-pollination 점검 (가장 박제 안 된 곳 식별)
+1순위  🎤 MOCK-INTERVIEW.md T3 음성 완주
+        S4 "지하주차장에서 차 문이 안 열립니다"   ← T1 오답 영역 직격
+        또는 S1 "지도에 차량 실시간 표시"        ← T1 오답 영역 직격
+        → 소리내어 3~5분 말한 뒤 "ㅇㅋ" 만 입력 (타이핑 0자)
+
+2순위  🔍 ai-01 버그 감별 드릴 D1 (결제) — 줄 번호만 답변
+3순위  🎯 T1 R2/R3 (지도·결제 심층 10문항) — 첫 회차 3.5/6 이었으니 재측정 가치
+```
+
+> ⚠️ **에이전트 주의:** 유저가 *"다 안다"* 고 하면 **정답을 펼치지 말고 T1(숫자 1자)로 강등해서 확인**한다. 2026-08-03 실측에서 자평과 실제가 3.5/6 으로 갈렸다. 자평 ≠ 인출.
+> ⚠️ **타이핑 마찰이 실제 병목이다.** 긴 서술 답변을 요구하지 말 것. T3(음성·0자) → T1(1자) → T2(3~5어) 순으로 제안한다.
+
+### 🔎 실무 확인 큐 (유저가 출근했을 때만 가능 — 전부 면접 소재 직결)
+
+```
+⓪ ⭐ ATS 전역 해제(NSAllowsArbitraryLoads=true) 이유 확인
+     → 웹뷰? 레거시 서버? 알면 NSExceptionDomains 축소 제안 가능 = "발견하고 제안했다" 서사
+① reconcile 루틴(미확정 결제 조회) 존재 여부 ⭐ 없으면 이것도 개선 제안 소재
+② 서킷브레이커·재시도 실패 분류 실제 구현 여부
+③ 서드파티 SDK 레벨 cert pinning 유무
+④ 최소 배포 타깃 iOS 버전 (@Observable 방어 답변에 필요)
+⑤ 서버 측 반납 구역 재검증 존재 여부
+```
+
+### 남은 학습 큐 (우선순위 순)
+
+```
+🏛️ A6 모듈 네비게이션(Coordinator·딥링크) · A9 테스트 전략 · A10 Swift 6.2 동시성
+🍎 iOS 갭: ⑥ QoS · ⑦ Core Data 마이그레이션
+🅱️ B5 실시간 채팅 · B3 무한스크롤
+🤖 AI: 연습 프로토콜 ② 오버커뮤니케이션(녹음) · ③ 무-AI 분해 드릴
+🎤 07 AI 스토리 2분판 리허설 (유저가 2026-08-03 보류 — 문서는 완성돼 있음)
+```
+
+---
+
+## 📚 위키 스트림 (봇 자동 · 사람 개입 최소)
+
+### 현재 상태 스냅샷 (2026-08-03 실측)
+
+| 항목 | 값 | 비고 |
+|---|---|---|
+| MDX 엔트리 | **313** | 2026-05-21 262 → +51 (봇 파이프라인) |
+| 일방향 연결 | **105건** | 소프트 워닝 |
+| 테스트 | **71/71 통과** | vitest, 1.04s |
+| job-prep lessons | **21개** | 2026-07-22 시작 |
+| SRS 카드 | **113장** | |
+| 커밋 | 705+ | |
+
+### 봇 파이프라인 (정상 작동 — 개입 불필요)
+- 데일리 레슨(Gemini): 09:00 KST 주제 추천 → 댓글 트리거 → PR 자동 머지
+- Blake 스카우트: 영문 블로그 → 한국어 엔트리 → 자동 머지
+- 긱뉴스 스카우트: 22:00 KST → 4 프로젝트 매칭 → hub-dispatch
+
+### P1 위키 유지보수 (급하지 않음 — job-prep 우선)
+
+- [ ] **일방향 연결 105건 일괄 백필** — `node scripts/fix-one-way-connections.mjs --apply` **단독 PR**. 작업 커밋과 섞지 말 것
+- [ ] **`/stock` 페이지 CLAUDE.md 등재 판단** — `/resume`·`/interview` 는 등재됐는데 `/stock` 만 누락. 의도적 비공개인지 정책 판단 후 등재 또는 명시적 누락 처리
+- [ ] **github-actions(5)·next-patterns(3) 스킬 승격 검토** — N≥3 도달, 전용 check 스킬 부재. `/promote-solution`
+- [ ] **Gemini Search grounding 퀄리티 실측 비교** (carry-over from 2026-05-09)
+
+### Backlog
+- auto-trade JIT 검색 실제 테스트
+- `/interview` 실전 모의면접 모드 (Quiz + Flashcard 랜덤 출제)
+- iOS Harness Journal 026 후보 (JIT recall L1~L7 / 지식시스템 v2 bitemporal)
+- 직장인 사이드 7개 프로젝트 솔루션 cross-pollination 점검
+- ⚠️ `interview-stories/09`·`12` 에 실제 모듈 코드네임 잔존 (저위험이나 치환 권장 — `12` 자체에 평가 기재됨)
 
 ---
 
 ## 이번 스프린트 KPI
 
-이번 actual을 다음 baseline으로 갱신 (복리 효과).
+| 지표 | baseline | target | direction | **actual** |
+|------|----------|--------|-----------|-----------|
+| 엔트리 수 | 262 | 280 | higher | **313** ✅ 초과 |
+| 일방향 연결 | 113 | 80 | lower | **105** 🔶 미달 (백필 미실행) |
+| Mermaid 렌더링 에러 | 0 | 0 | lower | **0** ✅ |
+| 테스트 통과 | 71 | 71 | — | **71/71** ✅ |
 
-| 지표 | baseline | target | direction | actual |
-|------|----------|--------|-----------|--------|
-| 엔트리 수 | 262 | 280 | higher | ? |
-| 일방향 연결 | 113 | 80 | lower | ? |
-| Mermaid 렌더링 에러 | 0 | 0 | lower | ? |
-| 빌드 시간(s) | 5 | 4 | lower | ? |
+**판정:** 엔트리 262→313 (+51 vs target +18 = **2.8× planned delta** → exceeded, 봇 파이프라인 기여). 일방향 연결은 **target 미달** — 원인은 단독 PR 작업이 큐에 남아있고 실행되지 않았음(작업 자체는 1커맨드). 다음 스프린트에 **실행 우선순위 상향**.
 
-직전 스프린트 결과: 엔트리 221→262 (+41 entries vs target +4 = **10.25× planned delta** → exceeded · 봇+저널 합산). action: scale_up. 다음 target +18(=280-262)로 현실 보정. 양방향 연결은 미관리 영역이라 이번 스프린트 새 KPI로 도입(graph 무결성). KPI 표기 규칙: 비율과 절댓값·delta 병기.
+**다음 baseline**: 엔트리 313 / 일방향 105. 다음 target: 엔트리 330 · 일방향 **0**(백필 실행).
+
+> 📌 **KPI 자체에 대한 관찰:** 위키 엔트리 수는 봇이 올리므로 *내 노력 지표가 아니다*. 다음 스프린트부터는 job-prep 지표(lessons·SRS·**능동 인출 횟수** ⭐)를 주 KPI로 승격하는 걸 검토할 것. 2026-08-03 기준 능동 인출은 **1회**(T1 3.5/6)에 불과하다 — 이게 진짜 병목 지표다.
 
 ---
 
-## 다음 세션 시작 체크리스트 (참고)
+## 다음 세션 시작 체크리스트
 
-1. **CLAUDE.md → SPEC.md → ai-agent-start-here 로드** (3분)
-2. **NEXT.md 읽기** (이 파일, 5분) — 큐 + KPI 확인
-3. **MEMORY.md 확인** (3분) — 이번 세션 신규 메모리 1건 추가 (`feedback_git_reset_vs_clean_semantics`). 기존 17건 + 1 = 총 18건 (실측 권장).
-4. **실측 검증** (5분) — `node -e "..."`로 엔트리 수·연결 실측 (NEXT 수치는 작성 시점 기준)
-5. **P1 우선 처리** (위 큐) — 작업 분기는 `/wt-branch` 반사
+```
+1. ⓪ rebase-first (2분)
+   git fetch origin && git rebase --empty=drop origin/job-prep
+   ⚠️ job-prep 은 PR squash-merge + force-push 로 갱신된다. 갈라지면:
+      · 트리 비교로 방향 확인:  git diff HEAD..origin/job-prep --stat
+      · origin 이 내 콘텐츠를 삭제하는 방향이면 로컬이 상위집합
+      · git merge -s ours origin/job-prep  (트리 유지 + 히스토리 통합)
+      · ⛔ git reset --hard 는 쓰지 말 것 (2026-08-03 유저가 거부, 옳은 판단)
+
+2. CLAUDE.md → SPEC.md → ai-agent-start-here 로드 (3분)
+3. 이 파일(NEXT.md) 읽기 (2분)
+4. docs/job-prep/PROGRESS.md + GAME.md 로드 → 캐릭터 시트 표시 (3분)
+5. ⭐ REVIEW.md 에서 다음복습 ≤ 오늘 인 카드 1~2개 능동인출 (T1/T3) (5분)
+6. 위 "🎯 내일 첫 행동" 1순위 실행
+```
+
+> 💾 **커밋·푸시는 자율** (유저 명시: "묻지 말고 자율적으로", "ai-study 는 push 도 해도 돼"). 커밋 메시지: `docs(job-prep): 세션 N — <요약>`. ⛔ 이 규약은 개인 ai-study/job-prep 전용.
+> 🔒 **회사 식별자 금지** — `.claude/hooks/no-company-names.sh` 가 Edit/Write 를 차단한다. 실무 코드를 근거로 쓸 때는 **패턴만 익명화**해서 쓰고, 재확인용 grep 명령을 함께 남긴다 (세션 8 방식).
