@@ -94,18 +94,48 @@ I'll be honest about what's measured versus estimated:
 
 ## Appendix — fast-recall numbers (for follow-up questions)
 
-| Signal | Value |
+> ⚠️ **Re-measure the night before any interview.** These numbers age weekly.
+> `HARNESS_DIR=… APP_DIR=… bash scripts/measure-harness-stats.sh`
+> When quoting them, say **"as of my last measurement"** — never state a count as timeless fact.
+> **Last measured: 2026-08-03.** (Previous values in this table had drifted by up to +320 on commits.)
+
+| Signal | Value (measured 2026-08-03) |
 |---|---|
-| Harness skills / agents / commands | 59 / 17 / 16 |
-| Lifecycle hooks (guards + gates) | 46 Claude hooks (+6 git hooks) |
-| Team memories (feedback / reference / project) | 579 (374 / 159 / 44) |
-| Solutions / retros / ADRs / research docs | 152 / 58 / 19 / 66 |
-| Scripts / tracked files / commits | 176 / 1,515 / ~800 |
+| Harness skills / agents / commands | **65** / 17 / 16 |
+| Lifecycle hooks (guards + gates) | **57** shell hooks (excl. archive/vendor) |
+| Team memories (feedback / reference / project) | **671** (429 / 192 / 48) |
+| Solutions / retros / ADRs / research docs | 152 / 58 / **22** / **65** |
+| Tracked files / commits | **1,668** / **1,120** |
+| Shell scripts (`.sh`, excl. archive/vendor) | **310** |
+| Harness in production for | **115 days (~3.8 months)** — first adopted 2026-04-10 |
 | MCP server tools (unit-tested TS) | 6 (`search_memory`, `add_memory`, `wiki_query`, `harness_status`, `harness_pull`, `harness_health`) |
-| Model-tier cost delta | ~15× cheaper on read-only tier |
-| Context saved via isolation | ~40% (9K vs 15K tokens) |
-| Silent-nil surface (measured) | 64% of DTOs (123/191) no CodingKeys |
-| Eval gate | Wilson-score 95% CI on 22-task golden set |
+| Public learning wiki (separate repo) | 313 MDX entries / 705 commits |
+
+### ⚠️ Provenance — do not blur these two categories
+
+An interviewer *will* ask "how did you measure that?" Answering "I measured it" about a
+number you read in a paper is fabrication. Keep the line sharp:
+
+| Claim | Provenance | How to say it |
+|---|---|---|
+| All counts in the table above | **I measured it** (script, reproducible) | "I measured it — here's the counting method." |
+| Silent-nil surface: 64% of DTOs (123/191) lacked CodingKeys | **I measured it** (repo audit) | "I audited our DTOs and found…" |
+| Model-tier cost delta ~15×, context saved ~40% | **I measured it** — but on a small sample | "In my own before/after, roughly… — small sample, not a benchmark." |
+| Eval gate: Wilson 95% CI on 22-task golden set | **I built it** | "I gated changes on a 22-task golden set with a Wilson interval." |
+| JIT retrieval ≈99.8% token reduction | **My documented figure** (331K → ~800 tokens) | "By my own accounting…" — say the two raw numbers, not just the percentage. |
+| "falsification-first raises failure detection +25%p" | ⛔ **Paper, not mine** (arXiv 2507.11662) | "That comes from a paper I based the design on — I didn't run that experiment." |
+
+> 🗝️ **This distinction is itself a hiring signal.** Saying *"I didn't run that experiment — I took it from the paper the design is based on"* reads as rigor. Claiming it reads as a liability.
+
+### Counting method (if probed)
+```
+Excluded: _archive-backups, node_modules, vendor, .git, tmp
+Skills   = one skill directory = 1
+Hooks    = executable .sh under a hooks path (archive excluded)
+Memories = memory/*.md, typed by filename prefix
+→ Earlier "176 scripts" vs today's "310" is partly growth, partly a wider glob.
+  If asked, say the method, not just the number.
+```
 
 ## Appendix — escalation ladder (the self-improvement mechanism)
 
