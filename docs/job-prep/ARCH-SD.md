@@ -85,11 +85,11 @@
 - [x] A1. 모듈화(SPM 멀티모듈) — ✅ 서사 완성(2026-07-23). 남은 것: **mitigation 라인**(순환→인터페이스 모듈로 끊음, cold build→incremental 캐싱, 보일러→코드젠, 러닝커브→의존성 다이어그램 문서)
 - [x] A2. Clean 계층 + **async를 어느 계층에** — ✅ 방어 완성(2026-07-28) → `lessons/arch-a2-concurrency-layers.md`. 3원칙(경계에만 MainActor / Domain nonisolated / Task 수명은 화면) + 안티패턴 2축(성능·순수성) + "경고 은폐" 결정타 + Swift6.2
 - [x] A3. DI — ✅ 방어 완성(2026-07-28) → `lessons/arch-a3-dependency-injection.md`. 생성자주입 기본 + 컨테이너 도입 기준(조립지옥·스코프) + 컴파일타임 안전 우선(런타임 컨테이너=모순) + **추상화 과잉 압박 방어**("비용은 양이 아니라 예측불가능성" + Protocol Witness 대안)
-- [ ] A4. MVVM vs TCA — "죽었나?" 프레임 + TCA 국소적용 논리
+- [x] A4. **MVVM vs TCA** — ✅ **초심층 완료**(2026-08-03, A8과 통합) → `lessons/arch-a4-a8-architecture-debate-migration.md`. ⭐**5축 번역표**(상태소유·이벤트방향·DI·화면전환·테스트이음새 → MVVM/TCA/RIBs 같은 평면에 놓기) · "MVVM 죽었나"=**구현(ObservableObject)은 죽고 패턴은 @Observable로 진화** · TCA 국소적용 기준("상태 전이 다이어그램을 그려야 하는 화면인가") + 부분도입 함정 · ⚠️**@Observable 채택 0건 방어 5단 틀**(안했다→제약→도입계획→개념설명→이득·대가) ← 안 써본 최신기술 질문 전부에 재사용
 - [x] A5. 반응형(Rx) → Swift Concurrency 전환 — ✅ 방어 완성(2026-07-28) → `lessons/arch-a5-rx-to-concurrency-migration.md`. Strangler Fig + 전환 우선순위 + mitigation 4 + 팀 설득 축 + **압박질문 2개 방어**("안 하면 안 되나" / "언제 멈추나")
 - [ ] A6. 모듈 네비게이션 — Coordinator + 딥링크 + 네비 상태/테스트
 - [x] A7. **네트워크 계층** — ✅ **초심층 완료**(2026-08-03) → `lessons/arch-a7-network-layer-deep.md` (iOS 갭 ④SSL/TLS·핀닝 + ⑤Codable 통합). ⭐**토큰 갱신 = 시간게이트가 아니라 single-flight**(actor + in-flight Task 공유 / 실무는 1초 게이트 + class 비격리 = 상호배제 없음 → rotation 시 강제로그아웃 위험) · TLS1.3 1-RTT 핸드셰이크 + 체인검증 · **핀닝은 도입보다 운영 리스크**(백업핀·만료관리·`NSPinnedDomains` 선언방식 / 앱배포 비가역) · 🔬**ATS 전역 해제 발견** + 신중한 프레이밍(`NSExceptionDomains`로 범위축소) · **CodingKeys 미보유 64%(120/188) = silent-nil** + Codable 함정5 + 라운드트립 테스트 · 재시도/서킷브레이커/**에러 계약을 서버가 코드로** · mock 프로덕션 유출 3층 방어 · 압박방어 5
-- [ ] A8. 안티패턴+레거시 — Massive VC → strangler + **팀 설득 과정**(리더십)
+- [x] A8. **레거시 전환 + 팀 설득** — ✅ 완료(2026-08-03, 위 파일 통합). 실측 RIBs 520/Rx 617 → SwiftUI 145 **공존 상태** · Strangler Fig 우선순위 + ⛔남겨둘 것 · ⭐**근거 3종 분리**(플랫폼 방향성/측정값/리스크 유계) — **승인은 이득이 아니라 리스크가 유계라서 난다** · 공존을 온보딩 자산으로 재프레이밍 · mitigation 5
 - [ ] A9. 테스트 전략 — protocol 추상화 + async mock(protocol witness) + side effect를 값으로 반환해 검증
 - [ ] A10. Swift 6.2 동시성 아키텍처 — MainActor-by-default 채택 + @concurrent 경계 문서화
 
