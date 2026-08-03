@@ -35,7 +35,7 @@ NEXT.md 는 "위키 콘텐츠 큐"만 담고 있었다.
 
 - **SoT**: `docs/job-prep/PROGRESS.md` (진도·세션로그·약점) · `GAME.md` (스탯) · `REVIEW.md` (SRS) · `CHEATSHEET.md` (1분 복습) · `MOCK-INTERVIEW.md` (능동인출)
 - **데드라인**: 2026-10-22 면접 가능 상태 (3개월 압축, 시작 2026-07-22)
-- **현재**: 🥈 Lv.9 · lessons 21개 · SRS 113장 · Top20 커버 19/20
+- **현재**: 🥈 Lv.9 · lessons 21개 · SRS 111장 · Top20 커버 19/20
 
 ### 🎯 내일 첫 행동 (이것만 하면 된다)
 
@@ -88,7 +88,7 @@ NEXT.md 는 "위키 콘텐츠 큐"만 담고 있었다.
 | 일방향 연결 | **105건** | 소프트 워닝 |
 | 테스트 | **71/71 통과** | vitest, 1.04s |
 | job-prep lessons | **21개** | 2026-07-22 시작 |
-| SRS 카드 | **113장** | |
+| SRS 카드 | **111장** | |
 | 커밋 | 705+ | |
 
 ### 봇 파이프라인 (정상 작동 — 개입 불필요)
@@ -109,6 +109,7 @@ NEXT.md 는 "위키 콘텐츠 큐"만 담고 있었다.
 - iOS Harness Journal 026 후보 (JIT recall L1~L7 / 지식시스템 v2 bitemporal)
 - 직장인 사이드 7개 프로젝트 솔루션 cross-pollination 점검
 - ⚠️ `interview-stories/09`·`12` 에 실제 모듈 코드네임 잔존 (저위험이나 치환 권장 — `12` 자체에 평가 기재됨)
+- ⚠️ **CLAUDE.md 238줄** — Frozen Snapshot 규칙(≤200줄) 초과. 2026-08-03 세션에서 job-prep 포인터 +10줄 추가로 악화시킴(핸드오프 정확성 우선 판단). `/compound` 시 Skills/Rules 로 분리 필요. 분리 후보: `## .claude/ 인프라` 섹션(10줄) · `## Compound Engineering`(20줄) · Components/API Routes 상세
 
 ---
 
@@ -148,4 +149,21 @@ NEXT.md 는 "위키 콘텐츠 큐"만 담고 있었다.
 ```
 
 > 💾 **커밋·푸시는 자율** (유저 명시: "묻지 말고 자율적으로", "ai-study 는 push 도 해도 돼"). 커밋 메시지: `docs(job-prep): 세션 N — <요약>`. ⛔ 이 규약은 개인 ai-study/job-prep 전용.
+
+### 🔧 에이전트가 막히기 쉬운 지점 (미리 알려둠)
+
+```
+① scripts/measure-harness-stats.sh 는 HARNESS_DIR / APP_DIR 를 env var 로 받는다
+   → 회사 경로라 저장소에 하드코딩할 수 없다(가드가 차단). 경로를 모르면 유저에게 묻는다.
+   → 안 물어도 이 저장소 지표(엔트리/lessons/SRS/커밋)는 인자 없이 측정된다.
+
+② 실무 코드 근거가 필요한 작업은 앱 레포 읽기가 필요하다
+   → 익명화 규약: 회사 식별자·파일 경로·와이어 프로토콜은 박제 금지. **패턴만** 쓰고
+     "재확인 grep" 명령을 함께 남긴다 (세션 8 방식). 가드가 Edit/Write 를 차단한다.
+
+③ 코드 탐색 시 줄 단위 grep 을 믿지 말 것
+   여러 줄 제네릭 선언은 `: Protocol` 매칭을 빠져나간다(세션 8 실제 오판).
+   → 심볼 사용(메서드명)으로 교차검증. 모순되는 두 신호 = 측정 오류 신호.
+   ⚠️ `git grep -E` 의 `\s`·`\b` 는 POSIX ERE 밖이라 조용히 오작동한다.
+```
 > 🔒 **회사 식별자 금지** — `.claude/hooks/no-company-names.sh` 가 Edit/Write 를 차단한다. 실무 코드를 근거로 쓸 때는 **패턴만 익명화**해서 쓰고, 재확인용 grep 명령을 함께 남긴다 (세션 8 방식).
