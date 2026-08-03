@@ -92,7 +92,8 @@
 - [x] ~~JeaSungLEE + weeeBox 레포 → 우리 질문뱅크로 통합~~ ✅ `QUESTION-BANK.md`
 - [x] ~~🍎 GCD Serial/Concurrent+Main + 셀 재사용 레이스~~ ✅ `lessons/ios-04` (2026-07-28)
 - [x] ~~🍎 Core Data vs SQLite + Keychain vs UserDefaults~~ ✅ `lessons/ios-05` (2026-07-28)
-- [ ] 🍎 **iOS 갭 드릴** (다음 순서): ④ SSL/TLS 핸드셰이크 + cert pinning ⑤ Codable 실전 ⑥ QoS ⑦ Core Data 마이그레이션
+- [x] ~~🍎 iOS 갭 ④SSL/TLS+핀닝 · ⑤Codable 실전~~ ✅ `lessons/arch-a7-network-layer-deep.md` (2026-08-03, A7과 통합 — 같은 레이어)
+- [ ] 🍎 **iOS 갭 드릴** (남은 것): ⑥ QoS ⑦ Core Data 마이그레이션
 - [x] ~~🏛️ A2 "async를 어느 계층에"~~ ✅ `lessons/arch-a2-concurrency-layers.md` (2026-07-28)
 - [x] ~~🅰️ A5 Rx→Concurrency 전환 서사 (압박질문 2개 방어 포함)~~ ✅ `lessons/arch-a5-...` (2026-07-28)
 - [x] ~~🅱️ B1 규모추정 냅킨계산 + 이미지 디코딩 배율~~ ✅ `lessons/sd-b1-napkin-math.md` (2026-07-28)
@@ -107,7 +108,7 @@
 - [ ] 🎤 **M 트랙 능동 완주** (최우선): `MOCK-INTERVIEW.md` T3로 S1(지도) 또는 S2(결제) 소리내어 완주
 - [x] ~~🚙 **M3+M5 주행데이터·요금 초심층**~~ ✅ `lessons/sd-m3-m5-telemetry-fare-deep.md` (2026-08-03) — 🔴 **세션7 M3 오답 교정**(카셰어링 앱은 주행 GPS 안 씀)
 - [x] ~~🔐 **M4+M6 차량제어·검색 초심층**~~ ✅ `lessons/sd-m4-m6-control-search-deep.md` (2026-08-03) — 🎉 **M 트랙 6/6 완주**
-- [ ] 🔎 **실무 확인 큐** (다음 출근 시): ① reconcile 루틴 존재 여부 ⭐ ② 서버 측 구역 재검증 여부 ③ ~~BLE 목표상태형 여부~~ ✅**해소(목표상태형 확인)** ④ 판정 함수 CPU 비중 실측 ⑤ 서버↔BLE 자동 폴백 로직 유무 ⑥ 검색 debounce 1초가 실제 UX 문제였는지
+- [ ] 🔎 **실무 확인 큐** (다음 출근 시): ⓪ **ATS 전역 해제 이유 확인** ⭐신규(웹뷰? 레거시 서버? → `NSExceptionDomains` 축소 제안 가능) · ①ᐟ 서킷브레이커/재시도 분류 실제 구현 · ①ᐠ 서드파티 SDK 핀닝 유무 · ① reconcile 루틴 존재 여부 ⭐ ② 서버 측 구역 재검증 여부 ③ ~~BLE 목표상태형 여부~~ ✅**해소(목표상태형 확인)** ④ 판정 함수 CPU 비중 실측 ⑤ 서버↔BLE 자동 폴백 로직 유무 ⑥ 검색 debounce 1초가 실제 UX 문제였는지
 - [ ] 🏛️ **아키텍처/SD**: 🅰️ A턴 = A4(MVVM vs TCA) 또는 A8(레거시+팀설득) / 🅱️ B5(채팅)
 - [x] ~~🤖 **AI 트랙 첫 착수 — 숫자 무결성 감사**~~ ✅ (2026-08-03) `scripts/measure-harness-stats.sh` 신설 + 전 지표 실측 + `07` 부록·`AI-TEST` 갱신 + **출처 구분표**(내 실측 vs 논문 인용)
 - [x] ~~🤖 **버그 감별 드릴 구축**~~ ✅ `lessons/ai-01-bug-detection-drill.md` (2026-08-03) — D1 결제/D2 지도/D3 BLE · 14버그 + 미끼 2 · LLM 버그 7유형 · 감별 순서 3단
