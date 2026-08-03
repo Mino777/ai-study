@@ -11,7 +11,13 @@ AI 에이전트가 이 저장소에서 작업할 때 **반드시** 먼저 로드
 4. **[NEXT.md](./NEXT.md)** — 다음 세션 계획 (현재 상태 + 다음 큐 + 체크리스트)
 
 이 4개를 로드하지 않고 작업 시작하면 *계약 위반*.
-새 세션은 NEXT.md의 "다음 세션 시작 체크리스트" 5 Phase(총 18분)를 따른다.
+새 세션은 NEXT.md의 "다음 세션 시작 체크리스트"(6 스텝, ⓪ rebase-first 포함)를 따른다.
+
+🔴 **현재 활성 작업 스트림 = `job-prep` 브랜치 (면접 준비)** — 위키 콘텐츠는 봇이 자동 운영 중이고,
+사람/에이전트 주도 작업은 전부 여기다. SoT는 **`docs/job-prep/`**:
+`PROGRESS.md`(진도·규약·세션로그) · `GAME.md`(스탯) · `REVIEW.md`(SRS) · `CHEATSHEET.md`(1분 복습) ·
+`MOCK-INTERVIEW.md`(능동인출 3티어) · `lessons/`(딥다이브 21개) · `interview-stories/`(답변 뱅크).
+세션 시작 프로토콜은 `docs/job-prep/PROGRESS.md` 상단 규약이 우선한다.
 
 ---
 
@@ -80,6 +86,8 @@ src/lib/           → schema.ts (zod, 10 categories, quizQuestionSchema),
                      quiz-storage.ts (localStorage attempts + SM-2 SRS schedule)
 src/generated/     → content-manifest.json (gitignored, entries + graph + streak)
 messages/          → 허브↔워커 비동기 메시지 큐 (JSON 파일, perpetual-engine MessageQueue 이식, poll 지원)
+docs/job-prep/     → 🔴 활성 스트림. 면접 준비 SoT (PROGRESS/GAME/REVIEW/CHEATSHEET/
+                     MOCK-INTERVIEW + lessons/ 21개 + interview-stories/ 13개)
 docs/hermes/       → Hermes 에이전트 SOUL.md (VPS와 동기화, git 추적)
 docs/designs/      → CEO Plan 승격 문서 (hermes-first-stack.md 등)
 public/            → search-index.json (gitignored, SearchDialog lazy fetch용 슬림 인덱스),
