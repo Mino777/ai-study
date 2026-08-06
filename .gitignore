@@ -44,3 +44,6 @@ next-env.d.ts
 /wiki-index.md
 .claude/worktrees/
 .gstack/
+
+# stock-master python venv (사내 SSL 이슈로 미사용, 시스템 python3 사용)
+stock-master/.venv/
