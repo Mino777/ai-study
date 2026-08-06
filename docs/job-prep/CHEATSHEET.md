@@ -469,7 +469,7 @@ TCA 기준 한 줄: ⭐"상태 전이 다이어그램을 그려야 하는 화면
 | 🌀 동시성 | 25 → **55** |
 | 🎨 SwiftUI | 30 → **50** |
 
-- **Top20 커버:** 19/20 · **lessons:** 21개 · **SRS 카드:** 115장 · 🥈 **Lv.10**
+- **Top20 커버:** 19/20 · **lessons:** **22개**(+`ios-06` Swift 착지) · **SRS 카드:** **125장**(+🍎 10) · 🥇 **Lv.11**
 - **카드:** 🅰️ **A1·A2·A3·A4·A5·A7·A8 ✅**(남음 A6·A9·A10) / 🅱️ B1·B2·B4 ✅ / 🚗 **M 트랙 6/6 완주** ✅ / 🤖 숫자감사·버그드릴 ✅
 - **다음:** 🎯 **해결 구조 명명** — 위험 감지는 되는데 "그럼 어떻게 설계?"에서 막힌다(2회 재현). 남은 A6·A9·A10 + 버그드릴 D1
 - ⚠️ **정직 표기:**
@@ -499,6 +499,29 @@ TCA 기준 한 줄: ⭐"상태 전이 다이어그램을 그려야 하는 화면
 | **후결제 = 미납 구조** | 이미 서비스를 줬으니 되돌릴 수 없다 → 사전 차단 불가 → **게이트 사다리**(악의/사고 구분 안 되므로) |
 | **위치 13:1** (내 코드) | start 13곳 : stop 1곳 = 켠 사람 13명, 끌 책임자 0명. 핵심 = **소유권/참조 카운팅**(구독 0 → 자동 stop) |
 
+## 🍎 Swift 착지 (`lessons/ios-06`) — 면접 2차 질문 대비
+
+```
+🎯 면접 3층 답변 템플릿  ← 세션9 진단(위험감지✅/해결구조❌) 직격 처방
+   ① 도메인 위험  10초  "이건 ~해서 위험합니다"           ← 이미 강함
+   ② Swift 구현   30초  "그래서 저는 ~로 구현합니다"        ← ⭐ 합격선
+                        실제 타입·API 이름 + "왜 그 타입인가"
+   ③ iOS 함정     20초  "다만 iOS에서는 ~를 주의합니다"
+                        스레드·앱생명주기·백그라운드·메모리·배터리·심사
+```
+
+| 도메인 | Swift 착지점 | 결정적 함정 |
+|---|---|---|
+| 멱등키 | `actor IdempotencyStore` · 키는 재시도 루프 **밖**에서 1회 · **네트워크 호출 전** 디스크 저장 | 앱 킬 → `Task` 소멸. `CancellationError` 에서 키 지우면 조회 불가 |
+| 전송성공≠수행완료 | `didWriteValueFor`(ack) ≠ `didUpdateValueFor`(상태) · delegate→`AsyncStream` | 백그라운드 notify 유실 → 복귀 시 `readValue` 로 재확인 |
+| 명령은 상태 지정 | `enum DoorCommand { open, close }` — **toggle을 만들 수 없게** · `IdempotentCommand` 마킹 | SwiftUI `Toggle` 바인딩이 유혹. `isOn` 은 표시용 |
+| 픽셀 상한 | `metersPerPoint` → `MapDisplayMode` (zoom 하드코딩 금지) · `clusteringIdentifier` | `addAnnotations(5만)` 금지 · `regionDidChange` debounce · 오래된 응답 레이스 |
+| 클러스터=좌표함수 | `GridKey: Hashable` (Int 인덱스 + zoomBucket) · `Dictionary(grouping:)` | `Double` 키 = 부동소수로 셀 갈림 · main에서 계산 시 5천개부터 드랍(`Sendable` 필요) |
+| 신뢰 경계 | 앱은 raw `TripReport` 전송 · `enum FareDisplay { estimated, confirmed }` | `Decodable` 기본값 silent-nil(CodingKeys 명시) · `UserDefaults` 는 평문 |
+| 원본 vs 파생 | `LocationEvent: Codable`(원본) / `DisplayTrack`(파생, **Codable 아님**) | `CLLocationCoordinate2D` 는 Codable 아님 · 파생은 `Caches/` |
+| 기기시계 불신 | 과금=**서버시각** · 경과=`ContinuousClock` · 표시=`Date()` | `Continuous`(sleep중 흐름) vs `Suspending`(멈춤) · 백그라운드 `Timer` 죽음 |
+| 위치 13:1 | `actor LocationService` + 구독 참조카운팅 + `LocationSubscription.deinit` | 정확도 역설(Best 항상 = 노이즈↑) · iOS14+ `reducedAccuracy` → 서버 판정 폴백 |
+
 ## 🔗 문서 지도
 ```
 CHEATSHEET.md   ← 지금 이 파일 (1분 복습)
@@ -507,4 +530,5 @@ REVIEW.md       SRS 카드(능동인출)        CURRICULUM.md 12주 계획 v2
 QUESTION-BANK.md 면접 질문 커버맵         ARCH-SD.md   아키텍처·SD 트랙
 AI-TEST.md      AI 활용 면접 트랙         lessons/     딥다이브 원문
 interview-stories/ 내 프로젝트 답변 뱅크(12문서)
+lessons/ios-06   🍎 도메인→Swift 착지판 (면접 3층 템플릿) ⭐신설
 ```
