@@ -48,17 +48,34 @@ for f in minervini macro derivatives valuation chart risk tools; do
 done
 echo "" >&2
 
-# ── 최근 저널 ──
+# ── 최근 저널 + 신선도 경고 ──
 LAST_JOURNAL=$(ls -1t "$SM_DIR/journal/"*.md 2>/dev/null | head -1)
 if [ -n "$LAST_JOURNAL" ]; then
-  echo "  📝 최근 기록: $(basename "$LAST_JOURNAL")" >&2
+  JBASE=$(basename "$LAST_JOURNAL")
+  # 파일명 앞 YYYY-MM-DD 로 경과일 계산
+  JDATE=$(echo "$JBASE" | grep -oE '^[0-9]{4}-[0-9]{2}-[0-9]{2}')
+  AGE=""
+  if [ -n "$JDATE" ]; then
+    JS=$(date -j -f "%Y-%m-%d" "$JDATE" "+%s" 2>/dev/null)
+    NS=$(date "+%s")
+    [ -n "$JS" ] && AGE=$(( (NS - JS) / 86400 ))
+  fi
+  if [ -n "$AGE" ] && [ "$AGE" -ge 1 ]; then
+    echo "  📝 최근 기록: $JBASE  ⚠️ ${AGE}일 전 — 시황/시세는 STALE, 인용 금지·재조회" >&2
+  else
+    echo "  📝 최근 기록: $JBASE (오늘)" >&2
+  fi
   echo "" >&2
 fi
 
 # ── 커맨드 ──
 echo "  ⚡ 커맨드:  /시황  /종목  /토론  /복기  /공부" >&2
 echo "" >&2
-echo "  ⚠️  시세·수급 질문은 반드시 WebSearch 조회 후 답변 (기억 속 숫자 금지)" >&2
+echo "  🚨 최신 데이터 원칙 (사용자 지시)" >&2
+echo "     1) 시세·수급·지표 → WebSearch 필수 (기억 속 숫자 금지)" >&2
+echo "     2) 검색 결과의 '날짜'를 확인 — 낡은 기사 인용이 최다 실패" >&2
+echo "     3) 모든 수치에 기준일 명시:  '$TODAY 기준 X'" >&2
+echo "     4) 못 가져오면 '못 가져왔다'고 말할 것 (추정 금지)" >&2
 echo "═══════════════════════════════════════════════════" >&2
 echo "" >&2
 
