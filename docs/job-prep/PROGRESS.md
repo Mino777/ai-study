@@ -8,6 +8,8 @@
 >
 > 🔄 **세션 시작 rebase-first 규약 (2026-07-23 추가):** job-prep은 GitHub에서 PR로 **squash-merge** 되므로 로컬 커밋과 해시가 갈라져 push가 reject되는 함정이 있다. **세션 맨 처음** `git fetch origin && git rebase --empty=drop origin/job-prep` 를 돌려 원격을 먼저 반영하고 시작한다(중복 커밋 자동 drop). → push reject 재발 0.
 >
+> 🔴 **rebase vs `merge -s ours` 구분 (2026-08-06 세션9 실측 — 위 규약의 예외):** `rebase --empty=drop` 은 **세션 맨 처음(로컬 커밋 0)에만** 안전하다. **세션 중 작업이 쌓인 뒤 push reject** 가 나면 rebase 를 쓰면 안 된다 — 로컬 커밋 전체를 origin 위에 재적용하면서 **오래된 커밋(세션7 등)까지 되감아 add/add 충돌**이 난다(실측: `sd-mobility-scenarios.md` 충돌 → abort). squash-merge 된 원격은 내 옛 커밋과 계보가 끊겨 재적용 자체가 무의미하다. **처방:** ① `git diff HEAD..origin/job-prep --stat` 으로 방향 확인 → ② origin 이 내 작업을 지우는 방향이면 `git merge -s ours --no-edit origin/job-prep` → ③ **양방향 유실 0 검증** `git diff origin/job-prep..HEAD --diff-filter=D --name-only`(비어야 정상) → ④ push. ⛔ 충돌 난 rebase 를 손으로 풀지 말 것 — `--abort` 가 정답.
+>
 > 💾 **자율 커밋+푸시 규약 (2026-07-23 유저 명시 "항상 커밋 묻지 말고 자율적으로" + "ai-study는 push도 해도 돼"):** 진도 갱신(PROGRESS/GAME/BACKEND/lessons 등) 후엔 **묻지 말고 자동으로 `git commit` + `git push origin job-prep`** 한다. 개인 레포(github Mino777/ai-study, job-prep 브랜치)라 안전. push reject 시 위 rebase-first로 해결 후 재푸시. 커밋 메시지: `docs(job-prep): 세션 N — <요약>`. ⛔ **이 규약은 오직 개인 ai-study/job-prep 전용 — 그 외 업무/워커 레포는 각자의 하드 push 가드가 적용되며 무관.**
 >
 > 🎮 **게임 레이어:** `GAME.md` 참조. 재미와 꾸준함이 실력보다 우선. 보상은 후하게, 정직하게.
