@@ -13,7 +13,7 @@
 
 ## 왜 이 커맨드가 필요한가
 
-AI 자동 squash merge(예: `ai-review.yml`)는 origin 상태를 변경하지만 **로컬 git 상태는 그것을 모른다**. 새 작업을 옛 브랜치 위에 쌓으면 다음 push에서 100% rebase 충돌이 발생한다.
+원격에서의 squash merge(GitHub PR 머지 등)는 origin 상태를 변경하지만 **로컬 git 상태는 그것을 모른다**. 새 작업을 옛 브랜치 위에 쌓으면 다음 push에서 100% rebase 충돌이 발생한다.
 
 같은 사고가 [Journal 002](/wiki/harness-engineering/harness-journal-002-inline-test-gate)와 [Journal 003](/wiki/harness-engineering/harness-journal-003-squash-merge-trap-pattern)에서 두 번 라이브 발생했다 — *다른 세션*에서도 동일하게. 이건 우연이 아닌 시스템 결함이다.
 
@@ -90,7 +90,7 @@ git -C <project-root> worktree add -b <branch-name> /tmp/<project-name>-<branch-
 
 1. 새 worktree에서 변경 + commit
 2. `git -C /tmp/<project-name>-<branch-name> push -u origin <branch-name>`
-3. `ai-review.yml` 등 자동 머지 흐름이 *깨끗한 origin/main 위에서* 정상 작동
+3. PR 머지가 *깨끗한 origin/main 위에서* 충돌 없이 진행
 4. 머지 완료 후 worktree 정리
 
 ## 금지 사항

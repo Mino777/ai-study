@@ -32,8 +32,8 @@ AI 하네스 엔지니어링 학습 위키 + 포트폴리오. Next.js 15 App Rou
 - **Code:** shiki (@shikijs/rehype, github-dark-default theme) + 복사 버튼
 - **Diagrams:** Mermaid (dynamic import, client-side rendering, dark theme)
 - **Theme:** next-themes (dark default, data-theme attribute)
-- **AI Generation:** Gemini 2.5 Flash (daily lesson pipeline)
-- **CI/CD:** GitHub Actions (daily topic suggestion + comment-triggered generation)
+- **AI Generation:** Gemini 2.5 Flash (lesson pipeline, 수동 실행)
+- **CI/CD:** 없음 — GitHub Actions 워크플로 전체 삭제 (2026-10-12). 빌드 검증은 로컬 pre-commit 훅
 - **Deploy:** Vercel (GitHub auto-deploy, push = 배포)
 - **JIT Retrieval (Layer 3):** 로컬 임베딩 (`Xenova/multilingual-e5-small`, 384d) + JSON brute-force 검색 (1~2ms) + 규칙 기반 쿼리 라우터
 
@@ -92,7 +92,6 @@ docs/hermes/       → Hermes 에이전트 SOUL.md (VPS와 동기화, git 추적
 docs/designs/      → CEO Plan 승격 문서 (hermes-first-stack.md 등)
 public/            → search-index.json (gitignored, SearchDialog lazy fetch용 슬림 인덱스),
                      embeddings.json (gitignored, Layer 3 벡터 인덱스 ~12MB)
-.github/workflows/ → daily-lesson, generate-on-pick, vercel-retry, weekly-search-benchmark
 ```
 
 ## Key Commands
@@ -102,7 +101,7 @@ public/            → search-index.json (gitignored, SearchDialog lazy fetch용
 - `npm run generate-lesson` — AI 과외 선생님: 주제 3개 추천
 - `npm run generate-lesson generate <slug>` — 특정 주제로 콘텐츠 생성
 - `npm run generate-lesson generate-custom <텍스트>` — 커스텀 주제로 생성 (Gemini가 영문 slug 자동 생성, 한글 slug 금지)
-- `node scripts/scout-geeknews.mjs [--dry-run]` — 긱뉴스 데일리 스카우트: 전체 스캔 → 4 프로젝트 매칭 → hub-dispatch Issue (22:00 KST CI 자동)
+- `node scripts/scout-geeknews.mjs [--dry-run]` — 긱뉴스 데일리 스카우트: 전체 스캔 → 4 프로젝트 매칭 → hub-dispatch Issue (수동 실행)
 - `npm run embed-content` — Layer 3 벡터 인덱스 재생성 (multilingual-e5-small, ~100s)
 - `npm run search -- "<query>"` — Layer 3 JIT 검색 (쿼리 라우터 자동 적용, --force로 강제)
 - `node scripts/shadow-benchmark.mjs` — Layer 3 Phase 3 섀도우 벤치마크 (적중률 + 토큰 절감 측정)
@@ -130,11 +129,11 @@ public/            → search-index.json (gitignored, SearchDialog lazy fetch용
 - Optional `applicable_to` 필드: `["any"]` | `["aidy", "any"]` | `["moneyflow"]` 등. AI 에이전트 적용 범위 신호. `["any"]`면 UI 배지 표시 안 함.
 
 ## AI 과외 선생님 Pipeline
-- 매일 09:00 KST: GitHub Actions → 3개 주제 추천 Issue 생성
-- 사용자가 번호(1/2/3) 또는 자유 텍스트 댓글 → Gemini가 MDX 생성 → 자동 PR
+- 스케줄 자동 실행 없음 (2026-10-12 워크플로 삭제). `npm run generate-lesson` 으로 로컬 수동 실행
+- 주제 3개 추천 → `generate <slug>` 또는 `generate-custom <텍스트>` 로 Gemini가 MDX 생성
 - 주제 추천: 지식 그래프 분석 (빈 카테고리, dangling connections, 낮은 confidence)
 - 카테고리 우선순위: AI 방법론(2.0x) > iOS/Frontend(1.5x) > Infrastructure(0.7x)
-- Secrets: GEMINI_API_KEY, VERCEL_TOKEN
+- 환경변수: GEMINI_API_KEY
 
 ## Components (주요)
 - `KnowledgeGraph` — force-directed 그래프 (react-force-graph-2d, ssr:false)
