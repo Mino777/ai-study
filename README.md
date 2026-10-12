@@ -244,13 +244,11 @@ ai-study/
 │   └── middleware.ts          # Admin 인증 미들웨어
 ├── .claudeignore              # 컨텍스트 최적화 (~50% 축소)
 ├── .claude/
-│   ├── commands/
-│   │   ├── compound.md        # /compound — 복리형 지식 축적
-│   │   ├── autoceo.md         # /autoceo — 풀 자동 스프린트 루프
-│   │   ├── ingest.md          # /ingest — 외부 콘텐츠 가공
-│   │   ├── projects-sync.md   # /projects-sync — 워커 프로젝트 진단
-│   │   └── wt-branch.md       # /wt-branch — worktree 안전 분기
-│   └── settings.json          # 빌드 게이트 + compound 훅
+│   ├── commands/              # 슬래시 커맨드 13개 (/compound, /autoceo, /ingest, /wt-branch, /review …)
+│   ├── hooks/                 # session-start · gc-drift-detector · no-company-names · jit-search-first
+│   ├── rules/                 # harness-meta · content-mdx
+│   └── settings.json          # 빌드 게이트 + tsc + compound 리마인더 훅
+├── docs/HARNESS.md            # 하네스 인프라 레퍼런스 (훅·커맨드·룰 전체 목록)
 ├── CHANGELOG.md               # 변경 이력
 ├── CLAUDE.md                  # 프로젝트 규칙
 ├── DESIGN.md                  # 디자인 시스템

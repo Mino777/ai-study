@@ -80,6 +80,12 @@ AI 에이전트가 명시적으로 호출하는 워크플로:
 | `/autoceo` | N라운드 자동 스프린트 루프 (CEO→Dev→QA→Compound) |
 | `/wt-branch` | 새 작업을 worktree로 origin/main에서 안전하게 분기 |
 | `/ingest` | 외부 URL을 교차 검증 거쳐 학습 엔트리로 가공 |
+| `/review` · `/cross-session-review` | 머지 전 2-Stage 리뷰 · 다른 세션 결과물 검증 |
+| `/projects-sync` · `/curate-inbound` · `/message` | 허브↔워커 진단 · inbound PR 박제 · 비동기 메시지 |
+| `/validate-mdx` · `/validate-ai-output` · `/promote-solution` | 콘텐츠/AI 생성물 사전 검증 · 반복 솔루션 게이트 승격 |
+| `/consult` | 온디맨드 전문가 자문 |
+
+> 2026-10-12 기준 13개. 전체 목록·훅·룰은 [`docs/HARNESS.md`](./docs/HARNESS.md).
 
 ### 4. Manifest — `src/generated/content-manifest.json`
 
@@ -195,11 +201,11 @@ Jominho의 프로젝트 (또는 새 프로젝트)
 
 > SDD 원칙: 코드 ≠ 진실, Spec = 진실. 아래 기준을 통과해야 "완료"다.
 
-### Build Gate (자동 검증)
+### Build Gate (자동 검증 — 로컬 훅. GitHub Actions CI 는 2026-10-12 삭제)
 | 기준 | 명령 | 통과 조건 |
 |------|------|----------|
 | TypeScript 빌드 | `npm run build` | 에러 0, 경고 허용 |
-| 테스트 | `npm test` | 전체 통과 (현재 23/23) |
+| 테스트 | `npm test` | 전체 통과 (2026-10-12 기준 71/71) |
 | MDX 문법 | `/validate-mdx` | 5대 함정 0건 |
 | Dangling 연결 | 빌드 로그 확인 | 신규 dangling 0건 |
 
@@ -280,3 +286,14 @@ AI 에이전트가 이 저장소에서 작업할 때 *지켜야 할 계약*:
 | 사람 직접 작업 비중 | 거의 0 (대부분 AI 에이전트 박제) |
 
 이 Spec은 *살아있는 문서*. 위키가 성장하면 이 파일도 갱신된다. 갱신은 *append-only* (원본 섹션 보존, 새 섹션 추가).
+
+## 현재 상태 (2026-10-12)
+
+| 항목 | 값 |
+|---|---|
+| 총 엔트리 | 313 (harness-engineering 148 · ios-ai 53 · agents 45 · context-engineering 20 · 기타 47) |
+| 시리즈 | Harness Journal 000~039 · iOS Journal 000~029 · Aidy Journal 000~018 |
+| 슬래시 커맨드 | 13개 (`docs/HARNESS.md`) |
+| 활성 카테고리 | 13 / 13 (전 카테고리 1건 이상) |
+| 자동화 | GitHub Actions 전체 삭제 (2026-10-12). 콘텐츠 생성·스카우트·벤치마크는 수동 실행 |
+| 활성 작업 스트림 | `job-prep` 브랜치 (면접 준비, SoT `docs/job-prep/`) |

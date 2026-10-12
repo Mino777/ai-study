@@ -3,7 +3,7 @@
 # OpenAI Codex "Garbage Collection" 패턴 적용
 # 실행 시간 목표: 2초 이내
 
-PROJECT_ROOT="/Users/jominho/Develop/ai-study"
+PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null)}"
 WARNINGS=0
 
 # 1. Dangling connections 감지 (빈 카테고리 참조)
@@ -15,13 +15,13 @@ fi
 
 # 2. CLAUDE.md 줄 수 체크
 CLAUDE_LINES=$(wc -l < "$PROJECT_ROOT/CLAUDE.md" 2>/dev/null || echo "0")
-if [ "$CLAUDE_LINES" -gt 250 ]; then
+if [ "$CLAUDE_LINES" -gt 200 ]; then
   echo "⚠️ GC: CLAUDE.md ${CLAUDE_LINES}줄 — 200줄 이하로 Skills 분리 필요"
   WARNINGS=$((WARNINGS + 1))
 fi
 
 # 3. Memory 파일 중 빈 파일 감지
-EMPTY_MEM=$(find ~/.claude/projects/-Users-jominho-Develop-ai-study/memory/ -name "*.md" -empty 2>/dev/null | wc -l | tr -d ' ')
+EMPTY_MEM=$(find ~/.claude/projects/$(echo "$PROJECT_ROOT" | tr '/' '-')/memory/ -name "*.md" -empty 2>/dev/null | wc -l | tr -d ' ')
 if [ "$EMPTY_MEM" -gt 0 ]; then
   echo "⚠️ GC: 빈 메모리 파일 ${EMPTY_MEM}개 — 정리 필요"
   WARNINGS=$((WARNINGS + 1))
