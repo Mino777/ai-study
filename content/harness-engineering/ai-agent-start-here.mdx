@@ -12,7 +12,7 @@ tags:
   - ios
   - web
 confidence: 5
-last_verified: '2026-06-03'
+last_verified: '2026-10-12'
 applicable_to:
   - aidy
   - any
@@ -102,7 +102,7 @@ quiz:
 
 - **저장소**: Jominho의 `ai-study` 위키 (SPEC.md 참조)
 - **목적**: Jominho의 3 프로덕트(mino-moneyflow, mino-tarosaju, aidy 4레포)에서 검증된 AI 엔지니어링 방법론을 *당신이 즉시 실행할 수 있는 형태*로 박제
-- **주요 시리즈**: [Harness Journal](/harness-journal) — AI 운영 환경 개선 사이클 기록 (000~024, 24 에피소드) + [iOS Journal](/harness-journal) (000~009, 10 에피소드) + [Aidy Journal](/harness-journal) (000~009, 10 에피소드)
+- **주요 시리즈**: [Harness Journal](/harness-journal) — AI 운영 환경 개선 사이클 기록 (000~039) + [iOS Journal](/harness-journal) (000~029) + [Aidy Journal](/harness-journal) (000~018) — 2026-10-12 기준
 - **당신의 역할**: (a) 위키를 읽고 *현재 작업에 적용*, (b) 작업 결과를 *다음 에이전트가 읽을 수 있게* 박제, (c) 워커 프로젝트에서 발견한 패턴을 허브로 전달 (`/curate-inbound`)
 
 ## 세션 시작 필수 로드 순서
@@ -491,9 +491,9 @@ git config --get core.hooksPath
 
 1. **`CLAUDE.md`** — Tech stack, 페이지 목록, API routes, 배포 흐름. 이 위키의 CLAUDE.md가 *레퍼런스 구현*
 2. **`.claudeignore`** — `node_modules/`, `package-lock.json`, `.next/`, `src/generated/` 등 생성 파일
-3. **`ai-review.yml`** — Push 시 자동 PR + Test Gate + Squash Merge. 3개 프로젝트에서 운용 중
+3. **로컬 Claude Code 훅** — 커밋 전 `npm run build` 게이트 + 편집 후 `tsc --noEmit`. (`ai-review.yml` 자동 머지는 2026-10-12 삭제 — 상세 `docs/HARNESS.md`)
 4. **`validate-content.mjs`** — MDX/Mermaid 문법 사전 검증 + JSX 함정 탐지 (중괄호, void tag 등)
-5. **`vitest` + `npm run build`** — CI 게이트. exit code *직접* 검사, pipe 금지 (Shell pipe 함정 참조)
+5. **`vitest` + `npm run build`** — 로컬 게이트 (GitHub Actions CI 없음). exit code *직접* 검사, pipe 금지 (Shell pipe 함정 참조)
 
 ### Web 하네스 핵심 차이점 (vs iOS)
 
@@ -543,15 +543,15 @@ Web은 *배포가 push = 즉시 반영*이므로 pre-commit 게이트가 더 중
 |---|---|
 | 총 엔트리 | 194+ |
 | 카테고리 | 13개 (prompt/context/harness/tokenomics/rag/agents/fine-tuning/evaluation/infrastructure/ios-ai/frontend-ai/android-ai/backend-ai) |
-| 주 시리즈 | Harness Journal (000~029) + iOS Journal (000~011) + Aidy Journal (000~018) |
+| 주 시리즈 | Harness Journal (000~039) + iOS Journal (000~029) + Aidy Journal (000~018) |
 | 슬래시 커맨드 | 13개 (`/compound`, `/autoceo`, `/wt-branch`, `/ingest`, `/cross-session-review`, `/curate-inbound`, `/projects-sync`, `/review`, `/validate-mdx`, `/validate-ai-output`, `/promote-solution`, `/consult`, `/message`) |
 | 플랫폼별 가이드 | Web (Next.js) + iOS (Swift/SPM) + **공통 하네스 이식 템플릿** + **iOS 하네스 이식 템플릿** |
 | 하네스 연구 | Fowler 프레임워크 + Claude Code arxiv + Anthropic 3-Agent + OpenAI Codex — 4편 종합 적용 |
 | 허브-워커 모델 | ai-study(허브) + moneyflow/tarosaju/aidy(워커) — 양방향 기여 인프라 확립 |
 | Flow Map | 6편 (architect + ios + android + backend + moneyflow 13-Agent + tarosaju 3-Layer) |
 | 하네스 템플릿 | `harness-template/` (공통) + `harness-template/ios/` (iOS 특화) — 원커맨드 이식 |
-| CI/CD | ai-review.yml + hybrid fallback (ADR-010) + weekly-search-benchmark (JIT 품질 자동 감지) |
-| JIT 검색 | 전 프로젝트 배포 (Layer 3 벡터 인덱스, 주간 품질 벤치마크 자동화) |
+| CI/CD | 없음 — GitHub Actions 워크플로 전체 삭제 (2026-10-12). 로컬 훅 게이트만 운용. 과거 구성(ai-review.yml + hybrid fallback ADR-010 + weekly-search-benchmark)은 Journal 기록 참조 |
+| JIT 검색 | 전 프로젝트 배포 (Layer 3 벡터 인덱스). 품질 벤치마크는 `node scripts/shadow-benchmark.mjs` 수동 실행 |
 
 ### 엔트리 신뢰도 필드 (AI 에이전트용)
 
@@ -651,7 +651,7 @@ Web은 *배포가 push = 즉시 반영*이므로 pre-commit 게이트가 더 중
 - [LLM-First Wiki 설계 원칙](/wiki/harness-engineering/llm-first-wiki-principles) — 메타 엔트리
 - [iOS AI 코드 품질 보증 전략](/wiki/ios-ai/ios-ai-code-quality-test-strategy) — 테스트 하네스 상세
 - [Shell Pipe Exit Code 함정](/wiki/harness-engineering/shell-pipe-exit-code-trap) — QA 게이트 우회 방지
-- [iOS Harness Journal 000~006](/harness-journal) — iOS 하네스 실전 사이클 기록
+- [iOS Harness Journal 000~029](/harness-journal) — iOS 하네스 실전 사이클 기록
 - 상황별 라우팅에 링크된 모든 엔트리는 *이 위키의 실제 파일*
 
 **외부 리서치 (iOS 고급 섹션 출처, 2026-04-14 검증)**:

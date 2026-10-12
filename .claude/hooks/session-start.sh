@@ -2,7 +2,7 @@
 # session-start.sh — Claude Code 세션 시작 시 ai-study 컨텍스트 요약
 # .claude/settings.json의 SessionStart 훅에서 호출됨
 
-REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo "/Users/jominho/Develop/ai-study")
+REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo "${CLAUDE_PROJECT_DIR:-$PWD}")
 BRANCH=$(git -C "$REPO_ROOT" branch --show-current 2>/dev/null || echo "unknown")
 ENTRY_COUNT=$(find "$REPO_ROOT/content" -name "*.mdx" 2>/dev/null | wc -l | tr -d ' ')
 
@@ -11,7 +11,7 @@ echo "" >&2
 
 # NEXT.md 최우선 큐 1개 표시
 if [ -f "$REPO_ROOT/NEXT.md" ]; then
-  FIRST_TASK=$(grep -A1 '### 🔴 High' "$REPO_ROOT/NEXT.md" 2>/dev/null | grep -E '^\d+\.' | head -1 | sed 's/^[0-9]*\. \*\*//' | sed 's/\*\*.*//')
+  FIRST_TASK=$(grep -m1 -E '^1순위' "$REPO_ROOT/NEXT.md" 2>/dev/null | sed -E 's/^1순위[[:space:]]+//')
   if [ -n "$FIRST_TASK" ]; then
     echo "🎯 최우선: $FIRST_TASK" >&2
   fi

@@ -13,7 +13,7 @@ AI 에이전트가 이 저장소에서 작업할 때 **반드시** 먼저 로드
 이 4개를 로드하지 않고 작업 시작하면 *계약 위반*.
 새 세션은 NEXT.md의 "다음 세션 시작 체크리스트"(6 스텝, ⓪ rebase-first 포함)를 따른다.
 
-🔴 **현재 활성 작업 스트림 = `job-prep` 브랜치 (면접 준비)** — 위키 콘텐츠는 봇이 자동 운영 중이고,
+🔴 **현재 활성 작업 스트림 = `job-prep` 브랜치 (면접 준비)** — 위키 자동화(GitHub Actions)는 2026-10-12 전부 삭제됐고,
 사람/에이전트 주도 작업은 전부 여기다. SoT는 **`docs/job-prep/`**:
 `PROGRESS.md`(진도·규약·세션로그) · `GAME.md`(스탯) · `REVIEW.md`(SRS) · `CHEATSHEET.md`(1분 복습) ·
 `MOCK-INTERVIEW.md`(능동인출 3티어) · `lessons/`(딥다이브 21개) · `interview-stories/`(답변 뱅크).
@@ -81,7 +81,7 @@ src/app/           → Next.js App Router (홈, wiki, dashboard, projects)
 src/components/    → header, graph, sidebar, search, summary-card, mermaid,
                      code-block (복사), entry-nav (이전/다음), mobile-nav (하단 탭)
 src/contexts/      → GraphSearchContext (graph-search bidirectional state)
-src/lib/           → schema.ts (zod, 10 categories, quizQuestionSchema),
+src/lib/           → schema.ts (zod, 13 categories, quizQuestionSchema),
                      content.ts (manifest/entry loaders),
                      quiz-storage.ts (localStorage attempts + SM-2 SRS schedule)
 src/generated/     → content-manifest.json (gitignored, entries + graph + streak)
@@ -107,10 +107,10 @@ public/            → search-index.json (gitignored, SearchDialog lazy fetch용
 - `node scripts/shadow-benchmark.mjs` — Layer 3 Phase 3 섀도우 벤치마크 (적중률 + 토큰 절감 측정)
 - `node scripts/fix-one-way-connections.mjs [--apply]` — 일방향 연결 감지 + 역링크 일괄 추가
 - `node scripts/graph-query.mjs <cmd>` — 지식 그래프 쿼리 CLI (neighbors/dangling/islands/hubs/path/weak-links/suggest)
-- `node scripts/scan-promotions.mjs` — 솔루션 승격 스캐너 (N=3+ 자동 감지 → 승격 제안, --json CI 연동)
+- `node scripts/scan-promotions.mjs` — 솔루션 승격 스캐너 (N=3+ 자동 감지 → 승격 제안, --json 출력)
 - `node scripts/backfill-frontmatter.mjs [--apply]` — MDX frontmatter 백필 (last_verified + applicable_to, dry-run 기본)
-- `npm run check:skills` — Skillify Step 8: `.claude/commands/*.md` ↔ CLAUDE.md `## Skill routing` 정합성 감사 (unreachable + orphan 감지, `--project <path>` 으로 타 프로젝트 감사, `--json` CI 연동)
-- `npm run eval:resolver` — Skillify Step 7: `data/resolver-eval-cases.json` golden set 기반 라우팅 정확도 측정 (structural, LLM 없음). exit 0/1로 CI 연동
+- `npm run check:skills` — Skillify Step 8: `.claude/commands/*.md` ↔ CLAUDE.md `## Skill routing` 정합성 감사 (unreachable + orphan 감지, `--project <path>` 으로 타 프로젝트 감사, `--json` 출력)
+- `npm run eval:resolver` — Skillify Step 7: `data/resolver-eval-cases.json` golden set 기반 라우팅 정확도 측정 (structural, LLM 없음). exit 0/1
 - `npm run extract:failures [-- --limit N --since YYYY-MM-DD]` — Skillify Step 5 씨드: `~/.claude/projects/*/` transcript에서 frustration 순간 추출 (한/영 curse·재시도 패턴). resolver eval golden set 씨드 공급원
 
 ## Content System
@@ -135,26 +135,16 @@ public/            → search-index.json (gitignored, SearchDialog lazy fetch용
 - 카테고리 우선순위: AI 방법론(2.0x) > iOS/Frontend(1.5x) > Infrastructure(0.7x)
 - 환경변수: GEMINI_API_KEY
 
-## Components (주요)
-- `KnowledgeGraph` — force-directed 그래프 (react-force-graph-2d, ssr:false)
-- `SearchDialog` — Cmd+K 검색 + GraphSearchContext. `public/search-index.json` lazy fetch. layout.tsx 글로벌 1회 mount
-- `Sidebar` — 카테고리 트리 + `SeriesSubGroup` (frontmatter `series` 기반). 새 시리즈는 `SERIES_LABELS` (schema.ts) 한 줄 추가
-- `MermaidRenderer` — 클라이언트 DOM 직접 렌더. `rehypeMermaid` 플러그인과 쌍 (Shiki 간섭 우회)
-- `Quiz` / `QuizWidget` — frontmatter quiz 배열 기반 자가 점검 + SM-2 SRS 스케줄
-
-## API Routes
-- `/api/og` — OG 이미지 자동 생성 (Edge Runtime, next/og, Noto Sans KR)
-- `/api/auth/login` — 관리자 로그인 (HMAC-SHA256 쿠키)
-- `/api/auth/logout` — 로그아웃
-- `/api/admin/entries` — 엔트리 목록(GET) + 생성(POST)
-- `/api/admin/entries/[...slug]` — 조회(GET) + 수정(PUT) + 삭제(DELETE)
-
 ## Admin / Auth & Security
 - HMAC-SHA256 쿠키 인증 (middleware.ts), Rate Limiting 15분/5회
 - 환경변수: ADMIN_PASSWORD, ADMIN_SECRET, GITHUB_TOKEN, GITHUB_REPO — **미설정 시 런타임 throw**
 - Security Headers: CSP, HSTS, X-Frame-Options (`next.config.ts`)
 - GitHub Contents API로 MDX CRUD → Vercel 자동 재배포
 - 보안 상세: `content/harness-engineering/security-hardening-checklist.mdx`
+
+## 하네스 인프라 · 코드 레퍼런스
+- **[docs/HARNESS.md](./docs/HARNESS.md)** — 훅·슬래시 커맨드·룰·Compound Engineering 흐름·주요 컴포넌트·API Routes 상세
+- 훅은 `$CLAUDE_PROJECT_DIR` 기준 경로로 등록 (클론 위치 무관). 정본 클론: `~/Personal/ai-study`
 
 ## Roadmap
 - See TODOS.md for deferred items and backlog
@@ -165,35 +155,11 @@ All font choices, colors, spacing, and aesthetic direction are defined there.
 Do not deviate without explicit user approval.
 In QA mode, flag any code that doesn't match DESIGN.md.
 
-## Compound Engineering
-
-```
-코드 작업 → git commit → 🔒 자동 빌드 체크 (실패시 차단)
-                              ↓ 통과
-                         git push → 📦 /compound 리마인더
-                                         ↓
-                              CHANGELOG + 회고 + 솔루션 자동 생성
-```
-
-- `git commit` 전 — `npm run build` 자동 실행, 실패하면 커밋 차단
-- `git push` 후 — "/compound 실행하세요" 리마인더
-- `/compound` 실행 — CHANGELOG + 회고 + 솔루션 문서 자동 생성
-
-### 지식 저장소
-
-| 저장소 | 용도 | 접근 |
-|--------|------|------|
-| `docs/solutions/` | 구체적 문제 해결 기록 | git (카테고리별 정리) |
-| `docs/retros/` | 스프린트 회고 | git (날짜별) |
-| Claude 메모리 | 유저 선호/패턴 | Claude Code (개인) |
-
-솔루션 카테고리: build-errors, runtime-errors, next-patterns, mdx, ai-pipeline, performance, workflow, github-actions
-
 ## Frozen Snapshot 원칙 (Hermes + aidy-architect 이식)
 
 - 활성 세션 중 CLAUDE.md 수정 금지 (캐시 전체 무효화 + 1.25x 오버헤드)
 - 변경이 필요하면 메모리에 기록만 하고, `/compound` Phase 3에서 일괄 반영
-- CLAUDE.md ≤ 200줄 유지, 상세는 슬래시 커맨드로 분리
+- CLAUDE.md ≤ 200줄 유지, 상세는 슬래시 커맨드·`docs/HARNESS.md` 로 분리 (`gc-drift-detector.sh` 가 200줄 초과 시 경고)
 
 ## Skill routing
 
@@ -222,17 +188,3 @@ Key routing rules:
 - solutions N=3+ 누적, 코드 게이트 승격 판단 → invoke promote-solution
 - 특정 도메인 전문가 자문, 법률/보안/마케팅/기술 전문 조언 → invoke consult
 - 워커 프로젝트에 메시지 전송, 허브↔워커 비동기 통신 → invoke message
-
-## .claude/ 인프라
-
-- `.claude/hooks/no-company-names.sh` — PreToolUse(Edit/Write) 가드. `gma-ios|GreenCar|LOTTIMS` 패턴 grep → 차단. 메모리 룰 보강용 행동 레벨 가드. 화이트리스트: `.claude/projects/.../memory/`, 훅 자체
-- `.claude/commands/cross-session-review.md` — Journal 019 5단 프로토콜 슬래시 커맨드
-- `.claude/commands/validate-mdx.md` — MDX/Mermaid 5대 함정 사전 grep (mdx solutions 5건 추출)
-- `.claude/commands/validate-ai-output.md` — AI 생성물 4대 함정 검증 (ai-pipeline solutions 4건 추출)
-- `.claude/commands/promote-solution.md` — N=3+ 솔루션 코드 게이트 승격 프로세스 (workflow solutions 7건 추출)
-- `.claude/commands/consult.md` — perpetual-engine ConsultantFactory 이식. 온디맨드 에페메럴 전문가 소환 + 진실성 가드
-- `.claude/commands/message.md` — perpetual-engine MessageQueue 이식. 허브↔워커 파일 기반 비동기 메시지 (messages/ JSON)
-- `scripts/lib/mermaid-fix.mjs` — Mermaid 자동 수정 3규칙(괄호 quoting / `<br/>` → `·` / 콜론 quoting) + subgraph/node ID 충돌 error 감지 + `→` warning
-- `scripts/__tests__/validate-content.test.mjs` — mermaid-fix 34 회귀 테스트 (`npm test`로 vitest 실행)
-
-<!-- RTK instructions: 전역 ~/.claude/CLAUDE.md의 @RTK.md로 로드됨. 이중 로딩 방지를 위해 프로젝트 레벨에서 제거 (A1 토큰 레버). -->

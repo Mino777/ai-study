@@ -14,7 +14,7 @@ except Exception:
     pass
 " 2>/dev/null)
 
-AI_STUDY_CONTENT="/Users/jominho/Develop/ai-study/content"
+AI_STUDY_CONTENT="$HOME/Personal/ai-study/content"
 
 # ai-study/content/ 하위 .mdx 파일만 대상
 case "$FILE_PATH" in
@@ -34,7 +34,7 @@ case "$BASENAME" in
 esac
 
 echo "💡 JIT_SEARCH: ai-study 위키 MDX를 직접 읽기 전에 검색을 먼저 실행하세요." >&2
-echo "   cd /Users/jominho/Develop/ai-study && npm run search -- \"<질문>\" 3 --inject" >&2
+echo "   cd ~/Personal/ai-study && npm run search -- \"<질문>\" 3 --inject" >&2
 echo "   검색으로 충분하면 파일을 직접 열 필요 없습니다. (331K → ~800 tokens 절감)" >&2
 echo "   이미 검색했거나 특정 파일을 의도적으로 읽는 경우라면 무시하세요." >&2
 

@@ -126,7 +126,7 @@ git -C <project-root> worktree add -b <branch-name> /tmp/<project-name>-<branch-
 
 이식 방법:
 ```bash
-cp /Users/jominho/Develop/ai-study/.claude/commands/wt-branch.md \
+cp ~/Personal/ai-study/.claude/commands/wt-branch.md \
    <other-project>/.claude/commands/wt-branch.md
 ```
 

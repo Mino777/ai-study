@@ -152,7 +152,7 @@
 | Runtime Validator 커버리지 | 10/10 AI 에이전트 (Layer 1-4 완료) |
 | 토큰 절감 | 47.4M tokens (RTK), ~50% context 축소 (.claudeignore) |
 | 자동화 슬래시 커맨드 | 7개 (개발 워크플로우 표준화) |
-| CI/CD 자동 머지 | 3 프로젝트 ai-review.yml 통합 |
+| CI/CD 자동 머지 | 3 프로젝트 ai-review.yml 통합 (2026-10-12 전체 삭제) |
 | LLM-as-a-Judge | 3 프로젝트 품질 자동 평가 적용 |
 
 ---
