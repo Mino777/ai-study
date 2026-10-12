@@ -35,6 +35,11 @@ const nextConfig: NextConfig = {
         source: "/:path*",
         headers: securityHeaders,
       },
+      // AI 전화영어는 음성 대화를 위해 마이크가 필요 — 같은 키는 뒤 규칙이 덮어쓴다
+      {
+        source: "/english/:path*",
+        headers: [{ key: "Permissions-Policy", value: "camera=(), microphone=(self), geolocation=()" }],
+      },
     ];
   },
 };

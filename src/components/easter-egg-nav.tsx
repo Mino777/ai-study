@@ -8,6 +8,7 @@ import { useRouter, usePathname } from "next/navigation";
  *   R × 5 → /resume
  *   I × 5 → /interview
  *   S × 5 → /stock
+ *   E × 5 → /english
  *
  * Resets after 1.5s of inactivity.
  * Disabled on target pages (already there).
@@ -28,7 +29,7 @@ export function EasterEggNav() {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
 
       const key = e.key.toLowerCase();
-      if (key !== "r" && key !== "i" && key !== "s") {
+      if (key !== "r" && key !== "i" && key !== "s" && key !== "e") {
         bufferRef.current = [];
         return;
       }
@@ -46,7 +47,8 @@ export function EasterEggNav() {
 
       // Check for 5 consecutive
       if (bufferRef.current.length >= 5) {
-        const target = key === "r" ? "/resume" : key === "i" ? "/interview" : "/stock";
+        const target =
+          key === "r" ? "/resume" : key === "i" ? "/interview" : key === "e" ? "/english" : "/stock";
         bufferRef.current = [];
         if (pathname !== target) {
           router.push(target);

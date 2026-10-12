@@ -13,6 +13,8 @@ const NAV_ITEMS = [
 
 export function MobileNav() {
   const pathname = usePathname();
+  // 전화영어는 자체 하단 탭을 쓴다
+  if (pathname.startsWith("/english")) return null;
 
   return (
     <nav aria-label="모바일 네비게이션" className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-bg/95 backdrop-blur-sm lg:hidden">
