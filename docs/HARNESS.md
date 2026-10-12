@@ -21,7 +21,7 @@
 | PreToolUse(Edit/Write) | `no-company-names.sh` | 회사 식별자 패턴이 들어간 쓰기 차단. 화이트리스트: 메모리 디렉터리, 훅 자체 |
 | PostToolUse(Edit/Write) | settings.json 인라인 | `npx tsc --noEmit` 타입 에러 감지 |
 | PostToolUse(Bash: `git push`) | settings.json 인라인 | `/compound` 실행 리마인더 |
-| (미등록) | `jit-search-first.sh` | 위키 MDX 직접 Read 전 JIT 검색 권장. 전역 settings 에 붙이도록 설계됐으나 현재 어디에도 등록돼 있지 않다 |
+| PreToolUse(Read) | `jit-search-first.sh` | `content/**/*.mdx` 직접 Read 전 JIT 검색 권장 (경고만, 차단 X). 2026-10-12 프로젝트 settings 에 등록 — 전역 아님 |
 
 ## 슬래시 커맨드 (`.claude/commands/`, 13개)
 
@@ -52,6 +52,7 @@
 
 - `scripts/lib/mermaid-fix.mjs` — Mermaid 자동 수정 3규칙(괄호 quoting / `<br/>` → `·` / 콜론 quoting) + subgraph/node ID 충돌 error 감지 + `→` warning
 - `scripts/__tests__/validate-content.test.mjs` 등 — `npm test` (vitest, 2026-10-12 기준 71/71 통과)
+- 정본 클론은 `~/Personal/ai-study`. 옛 클론 `~/Develop/ai-study` 는 2026-10-12 정리됨 (백업: `.git/old-develop-clone-2026-10-12.bundle`, 로컬 전용)
 - `.claude/scripts/` — 런타임에 생성되는 플러그인 스크립트 심링크. 머신별 절대경로라 커밋 금지 (`.gitignore`)
 
 ## Compound Engineering 흐름

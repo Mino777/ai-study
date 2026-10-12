@@ -48,6 +48,16 @@
             "timeout": 5000
           }
         ]
+      },
+      {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/jit-search-first.sh",
+            "timeout": 5000
+          }
+        ]
       }
     ],
     "PostToolUse": [
