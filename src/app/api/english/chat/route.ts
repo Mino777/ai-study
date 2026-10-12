@@ -7,6 +7,7 @@ import {
   buildChatSystemPrompt,
   parseChatResponse,
   sanitizeMemory,
+  sanitizeClientNow,
   sanitizeProfile,
   sanitizeTurns,
 } from "@/lib/english/prompts";
@@ -43,6 +44,11 @@ export async function POST(req: NextRequest) {
     recentSummaries: (Array.isArray(body.recentSummaries) ? body.recentSummaries : [])
       .map((s) => String(s).slice(0, 400))
       .slice(-LIMITS.recentSummaries),
+    clientNow: sanitizeClientNow(body.clientNow),
+    daysSinceLastCall:
+      typeof body.daysSinceLastCall === "number" && body.daysSinceLastCall >= 0
+        ? Math.floor(body.daysSinceLastCall)
+        : null,
   };
 
   try {

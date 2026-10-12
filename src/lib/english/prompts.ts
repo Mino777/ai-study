@@ -37,6 +37,25 @@ const LEVEL_GUIDE: Record<Level, string> = {
     "Speak completely naturally at native speed and register. Challenge them with follow-ups, nuance and debate.",
 };
 
+/** 레벨별 교정 방식 — 초급은 recast(자연스럽게 고쳐 말해주기), 중급 이상은 스스로 고치게 유도(prompt).
+ *  SLA 연구: 초급은 recast 이득이 크고, 중상급은 prompt 의 효과가 더 크고 오래 간다. */
+const FEEDBACK_GUIDE: Record<Level, string> = {
+  beginner:
+    "RECAST only: never ask them to repeat or fix anything. Just naturally use the correct form in your reply so they hear it.",
+  elementary:
+    "Mostly RECAST: naturally use the correct form in your reply. Never make them repeat more than very rarely.",
+  intermediate:
+    "Mix: usually RECAST, but when they repeat an error from the recurring-mistakes list (or make the same error twice in this call), PROMPT them to self-correct once (e.g. \"Wait — yesterday you...?\" or \"Can you try that in the past tense?\"), at most once every ~4 turns, then carry on.",
+  "upper-intermediate":
+    "Prefer PROMPTS for self-repair over recasts for meaningful errors (\"Hmm, how would you say that more naturally?\", \"Past tense?\"), at most once every ~3 turns, and praise successful self-correction briefly. Recast minor slips.",
+  advanced:
+    "PROMPT for self-repair on errors and push for more natural/idiomatic phrasing (\"Is there a more natural way to say that?\"), at most once every ~3 turns.",
+};
+
+export function sanitizeClientNow(v: unknown): string {
+  return typeof v === "string" ? v.trim().slice(0, 80) : "";
+}
+
 function clip(s: unknown, max: number): string {
   return typeof s === "string" ? s.trim().slice(0, max) : "";
 }
@@ -158,6 +177,16 @@ You are a native English tutor on a 1:1 PHONE CALL (Korean 전화영어 style) w
 ${memoryBlock(req.memory)}
 ${req.recentSummaries.length ? `\nRecent call summaries (oldest first):\n${req.recentSummaries.map((s) => `- ${s}`).join("\n")}` : ""}
 
+# Context
+- Learner's local time now: ${req.clientNow || "(unknown)"}
+- ${
+    req.daysSinceLastCall === null
+      ? "No previous call."
+      : req.daysSinceLastCall === 0
+        ? "You already talked earlier today."
+        : `Last call was ${req.daysSinceLastCall} day(s) ago.`
+  } Use this naturally (e.g. "Long time no talk!", or follow up on events whose date has now passed).
+
 # Today's topic: ${topic.title}
 ${topic.scenario}
 ${
@@ -172,7 +201,8 @@ ${
 - Speech-recognition text may contain mishearings; infer the intended meaning rather than correcting transcription errors or punctuation.
 - If the learner writes Korean or says they don't understand, rephrase more simply in English (a few Korean words are OK only for beginners).
 - Never break character as a human tutor; don't mention being an AI unless asked directly.
-- Keep the conversation flowing — don't lecture mid-call. If a mistake is important, you MAY naturally recast the correct form in your reply ("Oh, you went to Busan? Nice!").
+- Keep the conversation flowing — never lecture mid-call.
+- Feedback style for this learner: ${FEEDBACK_GUIDE[level]}
 
 # Phase
 ${phaseGuide}
@@ -226,6 +256,9 @@ ${transcript}
 
 # Your memory BEFORE this call (JSON)
 ${JSON.stringify(req.memory ?? emptyMemory())}
+
+# Today
+${req.clientNow || "(unknown)"} — when facts or nextTopics mention relative dates ("this Friday", "next week"), rewrite them as absolute dates (e.g. "Job interview on Fri 2026-10-16").
 
 # Focus expressions the learner was practising
 ${req.focusExpressions.length ? req.focusExpressions.join(", ") : "(none)"}

@@ -3,7 +3,15 @@
 import { useState } from "react";
 import type { CallRecord } from "@/lib/english/types";
 import { ApiError, summarizeApi } from "./_lib/api";
-import { applyReport, pickFocusExpressions, recentSummaries, saveCall, useEnglishStore } from "./_lib/store";
+import {
+  applyReport,
+  clientNowString,
+  daysSinceLastCall,
+  pickFocusExpressions,
+  recentSummaries,
+  saveCall,
+  useEnglishStore,
+} from "./_lib/store";
 import { CallScreen } from "./_components/call-screen";
 import { Onboarding } from "./_components/onboarding";
 import { ReportView } from "./_components/report-view";
@@ -47,6 +55,7 @@ export default function EnglishCallPage() {
           topicId: call.topicId,
           turns: call.turns,
           focusExpressions: pickFocusExpressions(state),
+          clientNow: clientNowString(),
         },
         state.accessCode,
       );
@@ -78,6 +87,7 @@ export default function EnglishCallPage() {
           topicId={view.topicId}
           focusExpressions={pickFocusExpressions(state)}
           recentSummaries={recentSummaries(state)}
+          daysSinceLastCall={daysSinceLastCall(state.calls)}
           accessCode={state.accessCode}
           settings={state.settings}
           onSettings={(patch) => update((s) => ({ ...s, settings: { ...s.settings, ...patch } }))}

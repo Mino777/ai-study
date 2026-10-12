@@ -66,6 +66,10 @@ export interface ExpressionCard {
   /** 통화 중 실제로 사용한 횟수 */
   usedCount: number;
   mastered: boolean;
+  /** 간격 반복 단계 (SRS_INTERVALS 인덱스) */
+  step: number;
+  /** 다음 복습 시각 (ISO) */
+  dueAt: string;
 }
 
 export interface CallReport {
@@ -102,6 +106,9 @@ export interface ChatRequest {
   elapsedSec: number;
   focusExpressions: string[];
   recentSummaries: string[];
+  /** 학습자 현지 시각 (예: "Monday, October 12, 2026, 3:20 PM") */
+  clientNow: string;
+  daysSinceLastCall: number | null;
 }
 
 export interface ChatResponse {
@@ -117,6 +124,7 @@ export interface SummarizeRequest {
   topicId: string;
   turns: Turn[];
   focusExpressions: string[];
+  clientNow: string;
 }
 
 export interface SummarizeResponse {

@@ -6,6 +6,7 @@ import {
   buildSummarizePrompt,
   parseSummarizeResponse,
   sanitizeMemory,
+  sanitizeClientNow,
   sanitizeProfile,
   sanitizeTurns,
 } from "@/lib/english/prompts";
@@ -30,6 +31,7 @@ export async function POST(req: NextRequest) {
     focusExpressions: (Array.isArray(body.focusExpressions) ? body.focusExpressions : [])
       .map((e) => String(e).slice(0, 120))
       .slice(0, LIMITS.focusExpressions),
+    clientNow: sanitizeClientNow(body.clientNow),
   };
   if (!sumReq.turns.some((t) => t.role === "learner")) {
     return NextResponse.json({ error: "대화 내용이 없어요" }, { status: 400 });

@@ -13,7 +13,56 @@ import type {
 
 const KEY = "english-call-v1";
 const MAX_CALLS = 60;
-export const MASTERED_AFTER_USES = 2;
+
+// 간격 반복 (일). 위키 퀴즈 SRS(quiz-storage.ts)와 같은 사다리.
+// 알아요/통화 중 실제 사용 → 한 단계 위로, 애매 → 유지, 몰라요 → 처음부터.
+export const SRS_INTERVALS = [1, 3, 7, 14, 30, 60];
+/** 이 단계에 오르면 '익힘' (다음 복습이 30일 뒤) */
+export const MASTER_STEP = 4;
+export type ReviewGrade = "again" | "hard" | "good";
+
+const DAY = 86_400_000;
+
+export function scheduleCard(card: ExpressionCard, grade: ReviewGrade, now = new Date()): ExpressionCard {
+  const step =
+    grade === "good" ? Math.min(card.step + 1, SRS_INTERVALS.length - 1) : grade === "hard" ? card.step : 0;
+  return {
+    ...card,
+    step,
+    mastered: step >= MASTER_STEP,
+    dueAt: new Date(now.getTime() + SRS_INTERVALS[step] * DAY).toISOString(),
+  };
+}
+
+export function dueExpressions(s: EnglishState, now = new Date()): ExpressionCard[] {
+  return s.expressions.filter((e) => e.dueAt <= now.toISOString()).sort((a, b) => a.dueAt.localeCompare(b.dueAt));
+}
+
+/** 서버 프롬프트용 학습자 현지 시각 */
+export function clientNowString(now = new Date()): string {
+  return now.toLocaleString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+export function daysSinceLastCall(calls: CallRecord[], now = new Date()): number | null {
+  if (!calls.length) return null;
+  const last = new Date(calls[0].startedAt);
+  const startOf = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  return Math.round((startOf(now) - startOf(last)) / DAY);
+}
+
+/** 예전 버전 카드(step/dueAt 없음) 보정 */
+function migrateCard(e: ExpressionCard): ExpressionCard {
+  if (typeof e.step === "number" && e.dueAt) return e;
+  const step = e.mastered ? MASTER_STEP : Math.min(e.usedCount ?? 0, MASTER_STEP - 1);
+  return { ...e, step, dueAt: new Date(new Date(e.addedAt).getTime() + DAY).toISOString() };
+}
 
 export interface EnglishState {
   profile: Profile | null;
@@ -21,7 +70,14 @@ export interface EnglishState {
   calls: CallRecord[];
   expressions: ExpressionCard[];
   accessCode: string;
-  settings: { handsFree: boolean; captions: boolean; speechRate: number; silenceMs: number };
+  settings: {
+    handsFree: boolean;
+    captions: boolean;
+    speechRate: number;
+    silenceMs: number;
+    /** ai: Gemini TTS(자연스러운 목소리), browser: 브라우저 기본 음성 */
+    voice: "ai" | "browser";
+  };
 }
 
 export const DEFAULT_STATE: EnglishState = {
@@ -30,7 +86,7 @@ export const DEFAULT_STATE: EnglishState = {
   calls: [],
   expressions: [],
   accessCode: "",
-  settings: { handsFree: true, captions: true, speechRate: 1, silenceMs: 1800 },
+  settings: { handsFree: true, captions: true, speechRate: 1, silenceMs: 1800, voice: "ai" },
 };
 
 function load(): EnglishState {
@@ -38,7 +94,12 @@ function load(): EnglishState {
     const raw = localStorage.getItem(KEY);
     if (!raw) return DEFAULT_STATE;
     const parsed = JSON.parse(raw) as Partial<EnglishState>;
-    return { ...DEFAULT_STATE, ...parsed, settings: { ...DEFAULT_STATE.settings, ...parsed.settings } };
+    return {
+      ...DEFAULT_STATE,
+      ...parsed,
+      expressions: (parsed.expressions ?? []).map(migrateCard),
+      settings: { ...DEFAULT_STATE.settings, ...parsed.settings },
+    };
   } catch {
     return DEFAULT_STATE;
   }
@@ -74,7 +135,7 @@ export function saveCall(s: EnglishState, call: CallRecord): EnglishState {
   return { ...s, calls };
 }
 
-/** 리포트 반영: 통화 기록 + 메모리 교체 + 새 표현 추가 + 사용한 포커스 표현 카운트 */
+/** 리포트 반영: 통화 기록 + 메모리 교체 + 새 표현 추가 + 통화 중 쓴 포커스 표현은 복습 성공 처리 */
 export function applyReport(
   s: EnglishState,
   callId: string,
@@ -85,14 +146,21 @@ export function applyReport(
   const existing = new Set(s.expressions.map((e) => e.expression.toLowerCase()));
   const now = new Date().toISOString();
 
-  const updated = s.expressions.map((e) => {
-    if (!used.has(e.expression.toLowerCase())) return e;
-    const usedCount = e.usedCount + 1;
-    return { ...e, usedCount, mastered: e.mastered || usedCount >= MASTERED_AFTER_USES };
-  });
+  // 통화 중 실제로 쓴 표현 = 가장 강한 복습 성공
+  const updated = s.expressions.map((e) =>
+    used.has(e.expression.toLowerCase()) ? { ...scheduleCard(e, "good"), usedCount: e.usedCount + 1 } : e,
+  );
   const added: ExpressionCard[] = report.expressions
     .filter((e) => !existing.has(e.expression.toLowerCase()))
-    .map((e) => ({ ...e, id: crypto.randomUUID(), addedAt: now, usedCount: 0, mastered: false }));
+    .map((e) => ({
+      ...e,
+      id: crypto.randomUUID(),
+      addedAt: now,
+      usedCount: 0,
+      mastered: false,
+      step: 0,
+      dueAt: new Date(Date.now() + DAY).toISOString(),
+    }));
 
   return {
     ...s,
@@ -102,11 +170,11 @@ export function applyReport(
   };
 }
 
-/** 다음 통화에서 써보게 할 표현: 아직 못 익힌 것 중 사용 횟수 적고 최근 것 */
+/** 다음 통화에서 써보게 할 표현: 아직 못 익힌 것 중 복습 기한이 가장 급한 것 */
 export function pickFocusExpressions(s: EnglishState, n = 3): string[] {
   return s.expressions
     .filter((e) => !e.mastered)
-    .sort((a, b) => a.usedCount - b.usedCount || b.addedAt.localeCompare(a.addedAt))
+    .sort((a, b) => a.dueAt.localeCompare(b.dueAt) || b.addedAt.localeCompare(a.addedAt))
     .slice(0, n)
     .map((e) => e.expression);
 }

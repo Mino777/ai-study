@@ -2,10 +2,20 @@
 
 import { useRef, useState } from "react";
 import { TOPICS, getTeacher, getTopic } from "@/lib/english/catalog";
-import { LEVEL_LABELS, type TeacherMemory } from "@/lib/english/types";
-import { MASTERED_AFTER_USES, callStreak, pickFocusExpressions, type EnglishState } from "../_lib/store";
+import { LEVEL_LABELS, type ExpressionCard, type TeacherMemory } from "@/lib/english/types";
+import {
+  MASTER_STEP,
+  SRS_INTERVALS,
+  callStreak,
+  dueExpressions,
+  pickFocusExpressions,
+  scheduleCard,
+  type EnglishState,
+  type ReviewGrade,
+} from "../_lib/store";
 import { isRecognitionSupported } from "../_lib/speech";
 import { ProfileForm } from "./onboarding";
+import { SayIt } from "./say-it";
 import { Card } from "./report-view";
 
 /* ---------------- 홈 ---------------- */
@@ -141,25 +151,49 @@ export function HistoryTab(props: { state: EnglishState; onOpenCall: (id: string
   );
 }
 
-/* ---------------- 표현 노트 ---------------- */
+/* ---------------- 표현 노트 (간격 반복 복습) ---------------- */
 
 export function NotesTab(props: { state: EnglishState; update: (fn: (s: EnglishState) => EnglishState) => void }) {
   const { expressions } = props.state;
   const [filter, setFilter] = useState<"learning" | "mastered">("learning");
-  const [revealed, setRevealed] = useState<Set<string>>(new Set());
+  const [reviewing, setReviewing] = useState(false);
+  const due = dueExpressions(props.state);
   const list = expressions.filter((e) => (filter === "mastered" ? e.mastered : !e.mastered));
 
-  const toggleMastered = (id: string) =>
-    props.update((s) => ({ ...s, expressions: s.expressions.map((e) => (e.id === id ? { ...e, mastered: !e.mastered } : e)) }));
+  const patch = (id: string, fn: (e: ExpressionCard) => ExpressionCard) =>
+    props.update((s) => ({ ...s, expressions: s.expressions.map((e) => (e.id === id ? fn(e) : e)) }));
   const remove = (id: string) => props.update((s) => ({ ...s, expressions: s.expressions.filter((e) => e.id !== id) }));
+
+  if (reviewing) {
+    return (
+      <ReviewSession
+        // 세션 시작 시점의 목록을 고정해야 채점 후 목록이 줄어도 순서가 흔들리지 않는다
+        cards={due}
+        onGrade={(id, grade) => patch(id, (e) => scheduleCard(e, grade))}
+        onExit={() => setReviewing(false)}
+      />
+    );
+  }
 
   return (
     <div className="space-y-3 py-4">
       <h1 className="text-xl font-bold">표현 노트</h1>
-      <p className="text-xs text-[var(--muted)]">
-        통화에서 배운 표현이 쌓여요. 아직 못 익힌 표현은 선생님이 다음 통화에서 자연스럽게 써보게 유도하고, 실제로{" "}
-        {MASTERED_AFTER_USES}번 쓰면 자동으로 &lsquo;익힘&rsquo;이 돼요. 카드를 누르면 뜻이 보여요.
-      </p>
+
+      <section className="rounded-xl border border-[var(--accent)]/40 bg-[var(--accent)]/10 p-4">
+        <p className="text-sm font-semibold">오늘 복습할 표현 {due.length}개</p>
+        <p className="mt-1 text-xs text-[var(--muted)]">
+          뜻을 보고 영어로 <b className="text-[var(--text)]">소리 내어</b> 떠올려요. 기억할수록 복습 간격이 1→3→7→14→30일로
+          늘어나고, 통화 중에 실제로 쓰면 그것도 복습 성공으로 쳐요.
+        </p>
+        <button
+          disabled={!due.length}
+          onClick={() => setReviewing(true)}
+          className="mt-3 w-full rounded-lg bg-[var(--accent)] py-2 text-sm font-semibold text-white disabled:opacity-40"
+        >
+          {due.length ? "복습 시작" : "오늘 복습 끝! 🎉"}
+        </button>
+      </section>
+
       <div className="flex gap-2">
         {(["learning", "mastered"] as const).map((f) => (
           <button
@@ -172,45 +206,127 @@ export function NotesTab(props: { state: EnglishState; update: (fn: (s: EnglishS
         ))}
       </div>
       {!list.length && <Empty text={filter === "learning" ? "통화를 하면 표현이 여기 쌓여요." : "아직 익힌 표현이 없어요."} />}
-      {list.map((e) => {
-        const open = revealed.has(e.id);
-        return (
-          <div key={e.id} className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3">
-            <button
-              className="w-full text-left"
-              onClick={() =>
-                setRevealed((prev) => {
-                  const n = new Set(prev);
-                  if (n.has(e.id)) n.delete(e.id);
-                  else n.add(e.id);
-                  return n;
-                })
-              }
-            >
-              <p className="font-semibold">{e.expression}</p>
-              {open ? (
-                <>
-                  <p className="text-sm text-[var(--muted)]">{e.meaning}</p>
-                  <p className="text-sm italic">“{e.example}”</p>
-                </>
-              ) : (
-                <p className="text-xs text-[var(--muted)]">뜻 보기</p>
-              )}
-            </button>
-            <div className="mt-2 flex items-center justify-between text-xs text-[var(--muted)]">
-              <span>통화에서 {e.usedCount}번 사용</span>
-              <span className="flex gap-3">
-                <button onClick={() => toggleMastered(e.id)} className="underline">
-                  {e.mastered ? "다시 익히기" : "익힘 처리"}
-                </button>
-                <button onClick={() => remove(e.id)} className="underline">
-                  삭제
-                </button>
-              </span>
-            </div>
+      {list.map((e) => (
+        <div key={e.id} className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3">
+          <p className="font-semibold">{e.expression}</p>
+          <p className="text-sm text-[var(--muted)]">{e.meaning}</p>
+          <p className="text-sm italic">“{e.example}”</p>
+          <div className="mt-2 flex items-center justify-between text-xs text-[var(--muted)]">
+            <span>
+              다음 복습 {dueLabel(e.dueAt)} · 통화에서 {e.usedCount}번 사용
+            </span>
+            <span className="flex gap-3">
+              <button
+                onClick={() =>
+                  patch(e.id, (c) => (c.mastered ? scheduleCard({ ...c, step: 0 }, "again") : scheduleCard({ ...c, step: MASTER_STEP - 1 }, "good")))
+                }
+                className="underline"
+              >
+                {e.mastered ? "다시 익히기" : "익힘 처리"}
+              </button>
+              <button onClick={() => remove(e.id)} className="underline">
+                삭제
+              </button>
+            </span>
           </div>
-        );
-      })}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function dueLabel(dueAt: string): string {
+  const days = Math.ceil((new Date(dueAt).getTime() - Date.now()) / 86_400_000);
+  return days <= 0 ? "오늘" : days === 1 ? "내일" : `${days}일 뒤`;
+}
+
+function ReviewSession(props: {
+  cards: ExpressionCard[];
+  onGrade: (id: string, grade: ReviewGrade) => void;
+  onExit: () => void;
+}) {
+  const [cards] = useState(props.cards);
+  const [idx, setIdx] = useState(0);
+  const [revealed, setRevealed] = useState(false);
+  const [spokeRight, setSpokeRight] = useState<boolean | null>(null);
+  const card = cards[idx];
+
+  if (!card) {
+    return (
+      <div className="space-y-4 py-10 text-center">
+        <p className="text-4xl">🎉</p>
+        <p className="font-semibold">{cards.length}개 복습 완료!</p>
+        <p className="text-sm text-[var(--muted)]">못 떠올린 표현은 다음 통화에서 선생님이 다시 써보게 유도해요.</p>
+        <button onClick={props.onExit} className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm text-white">
+          돌아가기
+        </button>
+      </div>
+    );
+  }
+
+  const grade = (g: ReviewGrade) => {
+    props.onGrade(card.id, g);
+    setIdx((i) => i + 1);
+    setRevealed(false);
+    setSpokeRight(null);
+  };
+
+  return (
+    <div className="space-y-4 py-4">
+      <div className="flex items-center justify-between text-sm">
+        <button onClick={props.onExit} className="text-[var(--muted)]">
+          ← 그만하기
+        </button>
+        <span className="tabular-nums text-[var(--muted)]">
+          {idx + 1} / {cards.length}
+        </span>
+      </div>
+
+      <div className="space-y-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 text-center">
+        <p className="text-xs text-[var(--muted)]">이 뜻을 영어로 말해보세요</p>
+        <p className="text-xl font-semibold">{card.meaning}</p>
+        <div className="flex justify-center">
+          <SayIt
+            key={card.id}
+            target={card.expression}
+            label="말해서 확인"
+            onResult={(ok) => {
+              setSpokeRight(ok);
+              setRevealed(true);
+            }}
+          />
+        </div>
+        {revealed ? (
+          <div className="space-y-1">
+            <p className="text-lg font-bold text-[var(--accent)]">{card.expression}</p>
+            <p className="text-sm italic text-[var(--muted)]">“{card.example}”</p>
+          </div>
+        ) : (
+          <button onClick={() => setRevealed(true)} className="text-sm underline">
+            정답 보기
+          </button>
+        )}
+      </div>
+
+      {revealed && (
+        <div className="grid grid-cols-3 gap-2 text-sm">
+          <button onClick={() => grade("again")} className="rounded-lg bg-[var(--error)]/20 py-3">
+            몰랐어요
+            <span className="block text-xs text-[var(--muted)]">내일</span>
+          </button>
+          <button onClick={() => grade("hard")} className="rounded-lg bg-[var(--warning)]/20 py-3">
+            애매해요
+            <span className="block text-xs text-[var(--muted)]">{SRS_INTERVALS[card.step]}일 뒤</span>
+          </button>
+          <button
+            onClick={() => grade("good")}
+            className={`rounded-lg py-3 ${spokeRight ? "bg-[var(--success)] text-white" : "bg-[var(--success)]/20"}`}
+          >
+            알았어요
+            <span className="block text-xs opacity-70">{SRS_INTERVALS[Math.min(card.step + 1, SRS_INTERVALS.length - 1)]}일 뒤</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -327,6 +443,21 @@ export function MeTab(props: { state: EnglishState; update: (fn: (s: EnglishStat
               checked={state.settings.handsFree}
               onChange={(e) => update((s) => ({ ...s, settings: { ...s.settings, handsFree: e.target.checked } }))}
             />
+          </label>
+          <label className="flex items-center justify-between gap-3">
+            <span>
+              선생님 목소리 <span className="text-xs text-[var(--muted)]">(AI 음성이 안 되면 자동으로 기본 음성)</span>
+            </span>
+            <select
+              value={state.settings.voice}
+              onChange={(e) =>
+                update((s) => ({ ...s, settings: { ...s.settings, voice: e.target.value as EnglishState["settings"]["voice"] } }))
+              }
+              className="rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1"
+            >
+              <option value="ai">자연스러운 AI 음성</option>
+              <option value="browser">브라우저 기본 음성</option>
+            </select>
           </label>
           <label className="flex items-center justify-between gap-3">
             <span>

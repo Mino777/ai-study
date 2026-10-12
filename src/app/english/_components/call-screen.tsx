@@ -3,9 +3,18 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { getTeacher, getTopic } from "@/lib/english/catalog";
 import type { CallPhase, CallRecord, ChatResponse, Profile, TeacherMemory, Turn } from "@/lib/english/types";
-import { ApiError, chatApi } from "../_lib/api";
-import type { EnglishState } from "../_lib/store";
-import { isRecognitionSupported, listenOnce, pickVoice, speak, startRingtone, useVoices } from "../_lib/speech";
+import { ApiError, chatApi, ttsApi } from "../_lib/api";
+import { clientNowString, type EnglishState } from "../_lib/store";
+import {
+  isRecognitionSupported,
+  listenOnce,
+  pickVoice,
+  speak,
+  speakWithAudio,
+  startRingtone,
+  unlockAudio,
+  useVoices,
+} from "../_lib/speech";
 
 type Status = "ringing" | "connecting" | "speaking" | "listening" | "idle" | "thinking" | "ended";
 
@@ -15,6 +24,7 @@ interface Props {
   topicId: string;
   focusExpressions: string[];
   recentSummaries: string[];
+  daysSinceLastCall: number | null;
   accessCode: string;
   settings: EnglishState["settings"];
   onSettings: (s: Partial<EnglishState["settings"]>) => void;
@@ -76,6 +86,8 @@ export function CallScreen(props: Props) {
         elapsedSec: startedAtRef.current ? Math.round((Date.now() - startedAtRef.current) / 1000) : 0,
         focusExpressions: p.focusExpressions,
         recentSummaries: p.recentSummaries,
+        clientNow: clientNowString(),
+        daysSinceLastCall: p.daysSinceLastCall,
       },
       p.accessCode,
     );
@@ -110,22 +122,28 @@ export function CallScreen(props: Props) {
       // 이전 발화 체인을 먼저 끊어야 cancel 의 onerror 가 옛 체인을 이어가지 않는다
       stopSpeakRef.current();
       setStatus("speaking");
-      stopSpeakRef.current = speak(text, {
-        voice: voiceRef.current,
-        lang: teacher.voiceLang,
-        rate: settingsRef.current.speechRate,
-        onEnd: () => {
-          if (endedRef.current) return;
-          if (isClosing) {
-            setTimeout(finishCall, 600);
-            return;
-          }
-          if (settingsRef.current.handsFree && sttSupported) listenRef.current();
-          else setStatus("idle");
-        },
-      });
+      const { speechRate: rate, voice } = settingsRef.current;
+      const onEnd = () => {
+        if (endedRef.current) return;
+        if (isClosing) {
+          setTimeout(finishCall, 600);
+          return;
+        }
+        if (settingsRef.current.handsFree && sttSupported) listenRef.current();
+        else setStatus("idle");
+      };
+      const browserVoice = (done: () => void) =>
+        speak(text, { voice: voiceRef.current, lang: teacher.voiceLang, rate, onEnd: done });
+      stopSpeakRef.current =
+        voice === "ai"
+          ? speakWithAudio((signal) => ttsApi(text, teacher.id, propsRef.current.accessCode, signal), {
+              rate,
+              onEnd,
+              fallback: browserVoice,
+            })
+          : browserVoice(onEnd);
     },
-    [finishCall, sttSupported, teacher.voiceLang],
+    [finishCall, sttSupported, teacher.id, teacher.voiceLang],
   );
 
   const teacherSay = useCallback(
@@ -239,8 +257,8 @@ export function CallScreen(props: Props) {
   const accept = async () => {
     startedAtRef.current = Date.now();
     setStatus("connecting");
-    // 일부 브라우저는 사용자 제스처 안에서 한 번 speak 해야 이후 발화가 허용됨
-    if ("speechSynthesis" in window) window.speechSynthesis.speak(new SpeechSynthesisUtterance(""));
+    // 일부 브라우저(iOS Safari 등)는 사용자 제스처 안에서 한 번 재생해야 이후 자동 재생이 허용됨
+    unlockAudio();
     try {
       const res = await (openingRef.current ?? requestTeacher("opening"));
       teacherSay(res, false);

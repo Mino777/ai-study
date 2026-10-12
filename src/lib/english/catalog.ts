@@ -12,6 +12,9 @@ export interface Teacher {
   /** speechSynthesis 보이스 선택용 */
   voiceLang: string;
   voiceHints: string[];
+  /** Gemini TTS 프리셋 보이스 + 억양/톤 지시 */
+  ttsVoice: string;
+  ttsStyle: string;
   color: string;
 }
 
@@ -26,6 +29,8 @@ export const TEACHERS: Teacher[] = [
       "Emma, 29, from Chicago. Former barista turned ESL teacher. Warm, upbeat, curious, laughs easily, loves food, indie music and weekend road trips. Speaks General American English.",
     voiceLang: "en-US",
     voiceHints: ["Samantha", "Google US English", "Ava", "Allison", "Jenny", "Aria"],
+    ttsVoice: "Aoede",
+    ttsStyle: "Say this warmly and cheerfully, like a friendly young woman from Chicago chatting on the phone, with a General American accent",
     color: "#3b82f6",
   },
   {
@@ -38,6 +43,8 @@ export const TEACHERS: Teacher[] = [
       "James, 38, from London. Ex-journalist, now teaches business English. Calm, dry British humour, precise with nuance, loves football, history podcasts and cooking. Speaks British English.",
     voiceLang: "en-GB",
     voiceHints: ["Daniel", "Google UK English Male", "Arthur", "Ryan", "Oliver"],
+    ttsVoice: "Charon",
+    ttsStyle: "Say this calmly and clearly with a dry, friendly tone, like a man from London on the phone, with a British (RP/London) accent",
     color: "#10b981",
   },
   {
@@ -50,6 +57,8 @@ export const TEACHERS: Teacher[] = [
       "Olivia, 33, from Sydney. Surfer and former software tester, now a conversation coach. Laid-back, friendly, encouraging, loves the beach, tech gadgets and travel stories. Speaks Australian English (mild accent, everyday slang explained when used).",
     voiceLang: "en-AU",
     voiceHints: ["Karen", "Google UK English Female", "Natasha", "Catherine"],
+    ttsVoice: "Callirrhoe",
+    ttsStyle: "Say this in a relaxed, easy-going and friendly way, like a woman from Sydney on the phone, with an Australian accent",
     color: "#f59e0b",
   },
 ];

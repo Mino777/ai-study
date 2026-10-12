@@ -2,6 +2,7 @@
 
 import { getTeacher, getTopic } from "@/lib/english/catalog";
 import { LEVEL_LABELS, type CallRecord } from "@/lib/english/types";
+import { SayIt } from "./say-it";
 
 export function ReportView(props: {
   call: CallRecord;
@@ -73,13 +74,16 @@ export function ReportView(props: {
           )}
 
           {r.corrections.length > 0 && (
-            <Card title="✏️ 이렇게 말하면 더 자연스러워요">
+            <Card title="✏️ 이렇게 말하면 더 자연스러워요 — 소리 내어 따라 해보세요">
               <ul className="space-y-3">
                 {r.corrections.map((c, i) => (
                   <li key={i} className="text-sm">
                     <p className="text-[var(--muted)] line-through">{c.original}</p>
                     <p className="font-medium text-[var(--success)]">→ {c.better}</p>
                     <p className="text-xs text-[var(--muted)]">{c.explanation}</p>
+                    <div className="mt-1">
+                      <SayIt target={c.better} />
+                    </div>
                   </li>
                 ))}
               </ul>

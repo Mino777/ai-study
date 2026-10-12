@@ -211,3 +211,77 @@ export function startRingtone(): () => void {
     navigator.vibrate?.(0);
   };
 }
+
+/* ---------- 선생님 AI 음성 (Gemini TTS → <audio>) ---------- */
+
+let sharedAudio: HTMLAudioElement | null = null;
+
+function audioEl(): HTMLAudioElement {
+  sharedAudio ??= new Audio();
+  return sharedAudio;
+}
+
+// 아주 짧은 무음 WAV — 사용자 제스처 안에서 한 번 재생해 iOS Safari 자동재생 제한을 푼다
+const SILENT_WAV =
+  "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQQAAAAAAAAA";
+
+export function unlockAudio() {
+  if (typeof window === "undefined") return;
+  const el = audioEl();
+  el.src = SILENT_WAV;
+  el.play().catch(() => {});
+  if ("speechSynthesis" in window) window.speechSynthesis.speak(new SpeechSynthesisUtterance(""));
+}
+
+/**
+ * fetchAudio 로 받은 음성을 재생하고, 없거나 실패하면 브라우저 음성(fallback)으로 읽는다.
+ * 반환값으로 중단 가능.
+ */
+export function speakWithAudio(
+  fetchAudio: (signal: AbortSignal) => Promise<Blob | null>,
+  opts: { rate: number; onEnd: () => void; fallback: (onEnd: () => void) => () => void },
+): () => void {
+  const ctrl = new AbortController();
+  let cancelled = false;
+  let stopFallback: (() => void) | null = null;
+  let url = "";
+  const el = audioEl();
+
+  const cleanup = () => {
+    el.onended = null;
+    el.onerror = null;
+    if (url) URL.revokeObjectURL(url);
+    url = "";
+  };
+  const done = () => {
+    cleanup();
+    if (!cancelled) opts.onEnd();
+  };
+  const useFallback = () => {
+    cleanup();
+    if (!cancelled) stopFallback = opts.fallback(opts.onEnd);
+  };
+
+  fetchAudio(ctrl.signal)
+    .then((blob) => {
+      if (cancelled) return;
+      if (!blob) return useFallback();
+      url = URL.createObjectURL(blob);
+      el.src = url;
+      el.playbackRate = opts.rate;
+      el.onended = done;
+      el.onerror = useFallback;
+      return el.play().catch(useFallback);
+    })
+    .catch(() => {
+      if (!ctrl.signal.aborted) useFallback();
+    });
+
+  return () => {
+    cancelled = true;
+    ctrl.abort();
+    el.pause();
+    cleanup();
+    stopFallback?.();
+  };
+}

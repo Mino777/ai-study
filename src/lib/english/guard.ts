@@ -18,17 +18,24 @@ function hit(key: string, max: number, windowMs: number): number | null {
   return b.count > max ? Math.ceil((b.resetAt - now) / 1000) : null;
 }
 
+// [최대 요청 수, 윈도우(ms)] — 10분 기준
+const LIMITS = {
+  chat: [120, 10 * 60_000],
+  tts: [120, 10 * 60_000],
+  summarize: [20, 10 * 60_000],
+} as const;
+
 /** 통과하면 null, 막히면 에러 응답 */
 export function guardEnglishRequest(
   req: NextRequest,
-  scope: "chat" | "summarize",
+  scope: keyof typeof LIMITS,
 ): NextResponse | null {
   const code = process.env.ENGLISH_ACCESS_CODE;
   if (code && req.headers.get("x-english-code") !== code) {
     return NextResponse.json({ error: "접근 코드가 필요합니다", code: "ACCESS_CODE" }, { status: 401 });
   }
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-  const [max, windowMs] = scope === "chat" ? [120, 10 * 60_000] : [20, 10 * 60_000];
+  const [max, windowMs] = LIMITS[scope];
   const retryAfter = hit(`${scope}:${ip}`, max, windowMs);
   if (retryAfter !== null) {
     return NextResponse.json(

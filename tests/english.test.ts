@@ -1,4 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { pcmToWav, synthesizeSpeech } from "@/lib/english/llm";
+import { speechMatchScore } from "@/app/english/_lib/match";
 import {
   buildChatContents,
   buildChatSystemPrompt,
@@ -13,7 +15,10 @@ import {
   DEFAULT_STATE,
   applyReport,
   callStreak,
+  daysSinceLastCall,
+  dueExpressions,
   pickFocusExpressions,
+  scheduleCard,
   type EnglishState,
 } from "@/app/english/_lib/store";
 
@@ -66,6 +71,8 @@ describe("buildChatSystemPrompt", () => {
     elapsedSec: 0,
     focusExpressions: [],
     recentSummaries: [],
+    clientNow: "Monday, October 12, 2026 at 3:20 PM",
+    daysSinceLastCall: null,
   };
 
   it("첫 통화는 FIRST call 안내, 페르소나·주제 포함", () => {
@@ -83,6 +90,19 @@ describe("buildChatSystemPrompt", () => {
     expect(p).toContain('"call it a day"');
     expect(p).toContain("Level: advanced");
     expect(p).not.toContain("FIRST call");
+  });
+
+  it("오늘 날짜와 지난 통화 경과일이 들어간다", () => {
+    const p = buildChatSystemPrompt({ ...base, daysSinceLastCall: 5 });
+    expect(p).toContain("Monday, October 12, 2026");
+    expect(p).toContain("5 day(s) ago");
+  });
+
+  it("교정 방식: 초급은 recast 만, 중상급은 스스로 고치게 유도", () => {
+    const beginner = buildChatSystemPrompt({ ...base, profile: { ...profile, level: "beginner" } });
+    const upper = buildChatSystemPrompt({ ...base, profile: { ...profile, level: "upper-intermediate" } });
+    expect(beginner).toContain("RECAST only");
+    expect(upper).toContain("Prefer PROMPTS for self-repair");
   });
 });
 
@@ -133,22 +153,24 @@ describe("LLM 출력 정제", () => {
 });
 
 describe("store — 개인화 루프", () => {
-  const card = (expression: string, usedCount = 0, addedAt = "2026-10-01") => ({
+  const card = (expression: string, step = 0, dueAt = "2026-10-01T00:00:00.000Z") => ({
     id: expression,
     expression,
     meaning: "",
     example: "",
-    addedAt,
-    usedCount,
+    addedAt: "2026-09-01T00:00:00.000Z",
+    usedCount: 0,
     mastered: false,
+    step,
+    dueAt,
   });
 
-  it("리포트 반영: 메모리 교체, 새 표현 추가(중복 제외), 2번 쓰면 익힘", () => {
+  it("리포트 반영: 메모리 교체, 새 표현은 내일 복습으로 추가, 통화 중 쓴 표현은 복습 성공", () => {
     const s: EnglishState = {
       ...DEFAULT_STATE,
       profile,
       calls: [{ id: "c1", startedAt: "2026-10-12", durationSec: 60, teacherId: "james", topicId: "catch-up", turns: [] }],
-      expressions: [card("call it a day", 1)],
+      expressions: [card("call it a day", 3)],
     };
     const memory = { ...emptyMemory(), facts: ["new fact"] };
     const next = applyReport(
@@ -172,15 +194,42 @@ describe("store — 개인화 루프", () => {
     expect(next.memory?.facts).toEqual(["new fact"]);
     expect(next.calls[0].report?.fluency).toBe(70);
     expect(next.expressions.map((e) => e.expression)).toEqual(["I'm swamped", "call it a day"]);
-    expect(next.expressions[1]).toMatchObject({ usedCount: 2, mastered: true });
+    expect(next.expressions[0]).toMatchObject({ step: 0, mastered: false });
+    expect(new Date(next.expressions[0].dueAt).getTime()).toBeGreaterThan(Date.now());
+    // step 3 → 4 = 익힘
+    expect(next.expressions[1]).toMatchObject({ usedCount: 1, step: 4, mastered: true });
   });
 
-  it("포커스 표현: 익힌 것 제외, 덜 쓴 것·최근 것 우선", () => {
+  it("간격 반복: 알았어요 → 한 단계 위, 애매 → 유지, 몰랐어요 → 처음부터", () => {
+    const now = new Date("2026-10-12T00:00:00Z");
+    const c = card("x", 2);
+    const days = (d: string) => Math.round((new Date(d).getTime() - now.getTime()) / 86400000);
+    expect(days(scheduleCard(c, "good", now).dueAt)).toBe(14);
+    expect(days(scheduleCard(c, "hard", now).dueAt)).toBe(7);
+    expect(scheduleCard(c, "again", now)).toMatchObject({ step: 0 });
+    expect(scheduleCard(card("y", 5), "good", now).step).toBe(5); // 상한
+  });
+
+  it("복습 대상·포커스 표현: 기한 지난 것 우선, 익힌 것은 포커스 제외", () => {
     const s: EnglishState = {
       ...DEFAULT_STATE,
-      expressions: [card("old", 0, "2026-09-01"), card("used", 1), card("new", 0, "2026-10-10"), { ...card("done"), mastered: true }],
+      expressions: [
+        card("later", 0, "2999-01-01T00:00:00.000Z"),
+        card("overdue", 0, "2026-01-01T00:00:00.000Z"),
+        card("due", 0, "2026-10-01T00:00:00.000Z"),
+        { ...card("done", 4, "2026-01-01T00:00:00.000Z"), mastered: true },
+      ],
     };
-    expect(pickFocusExpressions(s, 2)).toEqual(["new", "old"]);
+    expect(pickFocusExpressions(s, 2)).toEqual(["overdue", "due"]);
+    expect(dueExpressions(s).map((e) => e.expression)).toEqual(["overdue", "done", "due"]);
+  });
+
+  it("지난 통화 경과일은 달력 날짜 기준", () => {
+    const now = new Date(2026, 9, 12, 9, 0);
+    const call = (d: Date) => ({ id: "c", startedAt: d.toISOString(), durationSec: 60, teacherId: "emma", topicId: "catch-up", turns: [] });
+    expect(daysSinceLastCall([], now)).toBeNull();
+    expect(daysSinceLastCall([call(new Date(2026, 9, 11, 23, 0))], now)).toBe(1);
+    expect(daysSinceLastCall([call(new Date(2026, 9, 12, 1, 0))], now)).toBe(0);
   });
 
   it("연속 통화일: 오늘 통화 없으면 어제부터 센다", () => {
@@ -189,5 +238,55 @@ describe("store — 개인화 루프", () => {
     expect(callStreak([call(1), call(2), call(4)])).toBe(2);
     expect(callStreak([call(0), call(1)])).toBe(2);
     expect(callStreak([call(3)])).toBe(0);
+  });
+});
+
+describe("말하기 채점", () => {
+  it("축약형·대소문자·문장부호는 같게, 앞뒤 군말은 감점 없음", () => {
+    expect(speechMatchScore("I'm swamped with work.", "um I am swamped with work")).toBe(1);
+    expect(speechMatchScore("call it a day", "Let's call it a day!")).toBe(1);
+  });
+  it("빠진 단어·순서 바뀜은 감점", () => {
+    expect(speechMatchScore("I went to the gym yesterday", "I go to the gym yesterday")).toBeCloseTo(5 / 6);
+    expect(speechMatchScore("call it a day", "day a it call")).toBe(0.25);
+    expect(speechMatchScore("", "anything")).toBe(0);
+  });
+});
+
+describe("TTS", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
+
+  it("PCM → WAV 헤더", () => {
+    const wav = pcmToWav(Buffer.alloc(100), 24000);
+    expect(wav.toString("ascii", 0, 4)).toBe("RIFF");
+    expect(wav.readUInt32LE(24)).toBe(24000);
+    expect(wav.readUInt32LE(40)).toBe(100);
+    expect(wav.length).toBe(144);
+  });
+
+  it("키가 없으면 null (클라이언트가 브라우저 음성으로 대체)", async () => {
+    vi.stubEnv("GEMINI_API_KEY", "");
+    expect(await synthesizeSpeech("hi", "Kore", "Say")).toBeNull();
+  });
+
+  it("첫 모델이 404 면 다음 후보로 넘어가고 rate 를 mimeType 에서 읽는다", async () => {
+    vi.stubEnv("GEMINI_API_KEY", "test");
+    const urls: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        urls.push(url);
+        if (urls.length === 1) return new Response("not found", { status: 404 });
+        const audio = { inlineData: { mimeType: "audio/L16;codec=pcm;rate=16000", data: Buffer.alloc(4).toString("base64") } };
+        return Response.json({ candidates: [{ content: { parts: [audio] } }] });
+      }),
+    );
+    const wav = await synthesizeSpeech("hi", "Kore", "Say");
+    expect(urls).toHaveLength(2);
+    expect(urls[0]).not.toBe(urls[1]);
+    expect(wav?.readUInt32LE(24)).toBe(16000);
   });
 });
