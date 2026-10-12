@@ -21,8 +21,8 @@
 
 | Prefix | 용도 | 처리 |
 |---|---|---|
-| `tips/` | 소형 환경 QoL 팁 (30줄 이하, 1 사이클 미만) | `ai-review.yml`이 자동 PR + Test Gate + Squash Merge. 허브는 사후 검토만 |
-| **`patterns/`** | **하네스 박제 후보** (Journal / solution / pattern entry 수준) | **`ai-review.yml`이 자동 PR 생성 + `patterns` 라벨 부착. 자동 머지 X. 이 커맨드가 처리** |
+| `tips/` | 소형 환경 QoL 팁 (30줄 이하, 1 사이클 미만) | 수동 PR + Squash Merge. 허브는 사후 검토만 |
+| **`patterns/`** | **하네스 박제 후보** (Journal / solution / pattern entry 수준) | **수동 PR 생성 + `patterns` 라벨 부착. 이 커맨드가 처리** |
 
 **구분 기준**: *"3 프로젝트 중 2개 이상에 이식할 가치가 있는가?"* → YES면 `patterns/`, NO면 `tips/`.
 
@@ -268,7 +268,7 @@ rtk gh pr close <원본-num>
 
 | 카테고리 | 머지 방식 |
 |---|---|
-| tips / solution | ✅ 자동 머지 OK (`ai-review.yml`이 처리) |
+| tips / solution | ✅ 바로 squash merge OK |
 | journal / pattern-entry | ❌ 사용자 리뷰 필수. `needs-review` 라벨 부착 |
 | reject | 원본 PR 닫기만. 새 PR 생성 없음 |
 | needs-review | 사용자에게 *"이 패턴을 [A/B/C 중 어느 카테고리]로 박제할까요?"* 질문 |

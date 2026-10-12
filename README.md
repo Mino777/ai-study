@@ -18,54 +18,16 @@ AI가 초안을 쓴다 → 내가 읽고 배운다 → 틀린 부분을 고친�
 
 ## AI 과외 선생님 파이프라인
 
-매일 아침 AI가 과외 선생님처럼 오늘의 학습 주제를 추천하고, 내가 고르면 기술 블로그급 콘텐츠를 자동 생성합니다.
+AI가 과외 선생님처럼 학습 주제를 추천하고, 내가 고르면 기술 블로그급 콘텐츠를 생성합니다. 스케줄 자동 실행은 없고 로컬에서 직접 실행합니다.
 
+```bash
+npm run generate-lesson                          # 1단계: 지식 그래프 분석 → 주제 3개 추천
+npm run generate-lesson generate <slug>          # 2단계: 고른 주제로 MDX 생성 (Gemini 2.5 Flash)
+npm run generate-lesson generate-custom <텍스트>  # 자유 주제로 생성
 ```
-┌─────────────────────────────────────────────────────────────┐
-│  1단계: 매일 09:05 KST (GitHub Actions cron)                │
-│                                                              │
-│  content-manifest.json 분석                                  │
-│  → 지식 그래프의 빈 곳 / 약한 곳 파악                        │
-│  → 카테고리 우선순위 적용                                    │
-│  → 상위 3개 주제 추천                                        │
-│  → GitHub Issue 자동 생성                                    │
-│                                                              │
-│  "오늘의 학습 주제를 골라주세요"                              │
-│   1️⃣ [Prompt Engineering] System Prompting                   │
-│   2️⃣ [iOS + AI] Core ML Introduction                        │
-│   3️⃣ [RAG] Reranking                                        │
-└─────────────────────────────────────────────────────────────┘
-                          │
-              번호(1/2/3) 또는 자유 텍스트 댓글
-                          │
-                          ▼
-┌─────────────────────────────────────────────────────────────┐
-│  2단계: 콘텐츠 생성 (Gemini 2.5 Flash)                      │
-│                                                              │
-│  선택된 주제로 기술 블로그급 MDX 자동 생성:                   │
-│  - 커스텀 텍스트 입력 시 Gemini가 제목/설명 자동 정제        │
-│  - 핵심 개념 설명 (왜 중요한지부터)                          │
-│  - 실제 동작하는 코드 예제 (Swift / TypeScript / Python)     │
-│  - Mermaid 아키텍처 다이어그램                               │
-│  - 자기 점검 퀴즈 + 실습 과제                                │
-│                                                              │
-│  → 자동 PR 생성 → Issue 닫힘                                │
-└─────────────────────────────────────────────────────────────┘
-                          │
-                   사용자가 PR을 읽고 수정
-                          │
-                          ▼
-┌─────────────────────────────────────────────────────────────┐
-│  3단계: 학습 완료                                            │
-│                                                              │
-│  PR 머지 → Vercel 자동 배포                                  │
-│  → 위키에 새 엔트리 반영                                     │
-│  → 지식 그래프에 새 노드 등장                                │
-│  → 대시보드 진도 업데이트                                    │
-│                                                              │
-│  수정한 git diff = 나의 학습 기록                            │
-└─────────────────────────────────────────────────────────────┘
-```
+
+- 생성물: 핵심 개념 설명 · 실제 동작하는 코드 예제 · Mermaid 다이어그램 · 자기 점검 퀴즈
+- 3단계: 생성된 MDX를 읽고 수정 → 커밋·머지 → Vercel 자동 배포 → 위키·그래프·대시보드 반영 (수정한 git diff = 나의 학습 기록)
 
 ### 주제 추천 알고리즘
 
@@ -173,7 +135,6 @@ JSON-LD 구조화 데이터 (Article schema), canonical URL, 전 페이지 OG �
 | GitHub API | Contents API (Admin 에디터 CRUD) |
 | OG Image | next/og ImageResponse (Edge Runtime) |
 | Test | Vitest (manifest 단위 테스트) |
-| CI/CD | GitHub Actions (CI + daily lesson) |
 | Analytics | Vercel Analytics + Speed Insights |
 | Token Optimization | RTK (Rust Token Killer) |
 | Deploy | Vercel (GitHub auto-deploy) |
@@ -207,7 +168,7 @@ JSON-LD 구조화 데이터 (Article schema), canonical URL, 전 페이지 OG �
   │     10 카테고리 정의, 첫 엔트리 작성
   │
   ├─ 🤖 AI 과외 선생님 파이프라인
-  │     GitHub Actions cron → Gemini가 매일 MDX 생성
+  │     GitHub Actions cron → Gemini가 매일 MDX 생성 (2026-10 워크플로 전체 삭제, 현재는 수동 실행)
   │     지식 그래프 분석 기반 주제 추천 알고리즘
   │
   ├─ 📊 학습 대시보드
@@ -290,9 +251,6 @@ ai-study/
 │   │   ├── projects-sync.md   # /projects-sync — 워커 프로젝트 진단
 │   │   └── wt-branch.md       # /wt-branch — worktree 안전 분기
 │   └── settings.json          # 빌드 게이트 + compound 훅
-├── .github/workflows/
-│   ├── daily-lesson.yml       # 매일 09:05 주제 추천 Issue
-│   └── generate-on-pick.yml   # 댓글 선택 → MDX 생성 → PR
 ├── CHANGELOG.md               # 변경 이력
 ├── CLAUDE.md                  # 프로젝트 규칙
 ├── DESIGN.md                  # 디자인 시스템
@@ -329,7 +287,7 @@ npm run build
 
 | 변수 | 용도 | 필요 시점 |
 |------|------|----------|
-| `GEMINI_API_KEY` | AI 콘텐츠 생성 | generate-lesson, GitHub Actions |
+| `GEMINI_API_KEY` | AI 콘텐츠 생성 | generate-lesson |
 | `ADMIN_PASSWORD` | Admin 로그인 비밀번호 | Vercel |
 | `ADMIN_SECRET` | 토큰 서명 키 | Vercel |
 | `GITHUB_TOKEN` | Admin 에디터 파일 CRUD | Vercel |

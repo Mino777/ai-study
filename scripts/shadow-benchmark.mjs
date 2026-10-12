@@ -238,7 +238,7 @@ async function main() {
   console.log(`   ${hitPass ? "✅" : "❌"} 적중률 (Top-K) ≥ 70% → ${hitRate}%`);
   console.log(`   ${tokenPass && hitPass ? "✅ Phase 3 통과!" : "⚠️ 기준 미달 — 개선 필요"}`);
 
-  // CI 파싱용 영문 summary (weekly-search-benchmark.yml grep 패턴 대상)
+  // 파싱용 영문 summary
   console.log("");
   console.log(`Hit Rate: ${hitRate}%`);
   console.log(`Token Savings: ${savingsPercent}%`);

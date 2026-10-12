@@ -25,7 +25,6 @@ QA 3회 실패 시: `git reset --hard autoceo-round-N-before`
 - `.env*` — 환경변수
 - `package.json` dependencies 버전 변경 금지
 - `.claude/settings.json` — 훅 설정
-- `.github/workflows/*` — CI/CD 워크플로우
 
 ### 3. 원자적 커밋
 - 커밋당 10파일 이하 목표. 초과 시 논리적 단위로 분할.
