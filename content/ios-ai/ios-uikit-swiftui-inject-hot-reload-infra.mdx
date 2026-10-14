@@ -307,7 +307,7 @@ override func setupViews() {
 }
 ```
 
-이 패턴이 **RIBs + SnapKit + RxSwift 조합에서 안전하지 않다**는 게 실측됐다. hot reload 한 번 할 때마다 화면이 ~~8pt씩 아래로 밀리고 button tap 1회가 3번 fire되는 식.
+이 패턴이 **RIBs + SnapKit + RxSwift 조합에서 안전하지 않다**는 게 실측됐다. hot reload 한 번 할 때마다 화면이 약 8pt씩 아래로 밀리고 button tap 1회가 3번 fire되는 식.
 
 ### 절대 금지: `Inject.ViewControllerHost(viewController)` 래핑
 
