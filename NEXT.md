@@ -98,7 +98,8 @@ NEXT.md 는 "위키 콘텐츠 큐"만 담고 있었다.
 | 커밋 | 707 | main 기준 |
 
 ### 자동화 현황 — 전부 삭제됨 (2026-10-12)
-- GitHub Actions 워크플로 13개(데일리 레슨·Blake/긱뉴스 스카우트·주간 리포트/벤치마크·auto-merge·CI) 전부 삭제 (PR #365). 실제로는 6월부터 대부분 `disabled_inactivity` 상태였다.
+- GitHub Actions 워크플로 13개(데일리 레슨·Blake/긱뉴스 스카우트·주간 리포트/벤치마크·auto-merge·CI) 전부 삭제 (PR #365). ~~6월부터 대부분 disabled_inactivity~~ → **정정(2026-10-14 실측):** 스케줄은 10월까지 월 140회씩 계속 돌았고, 데일리 스카우트 3개는 6/28부터 301회 연속 실패였다. 상세: Harness Journal 040
+- 2026-10-14 저장소 설정에서 Actions 자체 비활성화 (ai-study + aidy 4개). 옛 브랜치(`job-prep` 에 워크플로 13개 잔존) push로 auto-merge가 부활하는 경로 차단
 - 봇이 남긴 원격 브랜치 92개 + 열린 PR #300 정리 완료. aidy 4개 저장소 워크플로·브랜치도 같은 날 정리.
 - 콘텐츠 생성이 필요하면 로컬 수동 실행: `npm run generate-lesson` · `node scripts/scout-geeknews.mjs --dry-run` 등
 - 하네스 인프라 상세: `docs/HARNESS.md`
@@ -113,7 +114,6 @@ NEXT.md 는 "위키 콘텐츠 큐"만 담고 있었다.
 ### Backlog
 - auto-trade JIT 검색 실제 테스트
 - `/interview` 실전 모의면접 모드 (Quiz + Flashcard 랜덤 출제)
-- iOS Harness Journal 026 후보 (JIT recall L1~L7 / 지식시스템 v2 bitemporal)
 - 직장인 사이드 7개 프로젝트 솔루션 cross-pollination 점검
 - ⚠️ `interview-stories/09`·`12` 에 실제 모듈 코드네임 잔존 (저위험이나 치환 권장 — `12` 자체에 평가 기재됨)
 - ✅ ~~CLAUDE.md 238줄~~ → **2026-10-12 190줄로 해소.** `.claude/ 인프라`·Compound Engineering·Components·API Routes 를 `docs/HARNESS.md` 로 분리

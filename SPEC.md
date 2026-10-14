@@ -292,7 +292,7 @@ AI 에이전트가 이 저장소에서 작업할 때 *지켜야 할 계약*:
 | 항목 | 값 |
 |---|---|
 | 총 엔트리 | 313 (harness-engineering 148 · ios-ai 53 · agents 45 · context-engineering 20 · 기타 47) |
-| 시리즈 | Harness Journal 000~039 · iOS Journal 000~029 · Aidy Journal 000~018 |
+| 시리즈 | Harness Journal 000–040 · iOS Journal 000–029 · Aidy Journal 000–018 |
 | 슬래시 커맨드 | 13개 (`docs/HARNESS.md`) |
 | 활성 카테고리 | 13 / 13 (전 카테고리 1건 이상) |
 | 자동화 | GitHub Actions 전체 삭제 (2026-10-12). 콘텐츠 생성·스카우트·벤치마크는 수동 실행 |

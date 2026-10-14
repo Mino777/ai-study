@@ -3,9 +3,10 @@
 > `CLAUDE.md` 200줄 상한(Frozen Snapshot 원칙)을 지키려고 분리한 상세 문서. 마지막 전수 점검: **2026-10-12**.
 > 수정 규칙은 `.claude/rules/harness-meta.md` 를 따른다.
 
-## 자동화 현황 (2026-10-12)
+## 자동화 현황 (2026-10-14)
 
 - **GitHub Actions: 없음.** 데일리 레슨·스카우트·주간 리포트/벤치마크·auto-merge(`ai-review.yml`)·CI 를 포함한 워크플로 13개를 전부 삭제했다 (PR #365). aidy 4개 저장소도 같은 날 전부 삭제.
+- **저장소 설정에서 Actions 자체를 꺼 둠** (2026-10-14, ai-study + aidy 4개, `actions/permissions enabled=false`). 파일 삭제만으로는 삭제 전에 분기한 브랜치(`job-prep` 등)에 push할 때 옛 워크플로가 되살아난다 — 실제로 auto-merge가 한 번 부활해 PR #369를 봇이 머지했다. 다시 쓰려면 이 설정부터 켠다. 경위: Harness Journal 040
 - 남은 자동 검증은 **로컬 Claude Code 훅뿐**이다 (아래 표). 레슨 생성·스카우트·벤치마크 스크립트는 `scripts/` 에 그대로 있고 필요할 때 수동 실행한다.
 - 배포는 Vercel GitHub 연동(push = 배포) 그대로.
 
